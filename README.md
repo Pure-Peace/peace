@@ -8,6 +8,9 @@ Currently learning and experimental,
 
 Recommended development tool: **Vscode**
 
+![vscode](http://miya.ink/nice.png)
+Soo good
+
 **With plugins:**
 
 ```
