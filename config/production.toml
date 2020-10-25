@@ -1,0 +1,27 @@
+# If true, will check the database connection pools on created
+check_pools_on_created = true
+debug = false
+
+
+# Docs for postgres config: 
+# https://docs.rs/deadpool-postgres/0.5.6/deadpool_postgres/config/struct.Config.html
+[postgres]
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "123456"
+dbname = "postgres"
+
+[postgres.pool]
+max_size = 16
+
+
+# Docs for redis config: 
+# https://docs.rs/deadpool-redis/0.6.1/deadpool_redis/struct.Config.html
+[redis]
+# Format here:
+# redis://[:<passwd>@]<hostname>[:port][/<db>]
+url = "redis://127.0.0.1:6379"
+
+[redis.pool]
+max_size = 16

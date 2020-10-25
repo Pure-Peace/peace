@@ -1,0 +1,8 @@
+[hello]
+world = "hi"
+
+[server]
+host = "127.0.0.1"
+port = 8080
+token = "key"
+secret = "secret"
