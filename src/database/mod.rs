@@ -1,8 +1,8 @@
-pub mod pools;
+pub mod connectors;
 
 use crate::settings::types::Settings;
 
-use pools::*;
+use connectors::*;
 
 /// Database object
 /// 
