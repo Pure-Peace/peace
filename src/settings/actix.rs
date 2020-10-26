@@ -1,5 +1,5 @@
 use crate::database::Database;
-use crate::handlers::bancho::*;
+use crate::routes;
 
 use actix_web::{dev::Server, App, HttpServer};
 use config::Config;
@@ -30,7 +30,7 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()> {
     // Start server
     let addr: &str = cfg.get("addr").unwrap_or("127.0.0.1:8080");
-    let server = HttpServer::new(move || App::new().data(database.clone()).service(index))
+    let server = HttpServer::new(move || App::new().data(database.clone()).configure(routes::init))
         .bind(&addr)
         .unwrap()
         .run();

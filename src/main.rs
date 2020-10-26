@@ -6,6 +6,7 @@ extern crate serde;
 
 mod database;
 mod handlers;
+mod routes;
 mod settings;
 
 use database::Database;
