@@ -2,6 +2,20 @@
 check_pools_on_created = true
 debug = false
 
+# Logger config,
+# Level is selected from logger.mode
+[logger]
+level = "info"
+
+# Logger mode is env_logger config
+# Support filter: "trace,mio::sys=info"
+# https://docs.rs/env_logger/0.8.1/env_logger/index.html
+[logger.mode]
+debug = "trace"
+info = "info"
+error = "error"
+warn = "warn"
+
 
 # Docs for postgres config: 
 # https://docs.rs/deadpool-postgres/0.5.6/deadpool_postgres/config/struct.Config.html

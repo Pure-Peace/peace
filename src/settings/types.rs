@@ -9,6 +9,7 @@ pub struct Settings {
     pub env: String,
     pub debug: bool,
     pub server: Server,
+    pub logger: Logger,
     hello: Hello,
 }
 
@@ -23,4 +24,18 @@ pub struct Server {
     pub port: String,
     pub token: String,
     pub secret: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LoggerMode {
+    debug: String,
+    error: String,
+    warn: String,
+    info: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Logger {
+    pub level: String,
+    pub mode: LoggerMode,
 }

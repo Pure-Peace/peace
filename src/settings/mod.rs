@@ -1,17 +1,18 @@
 pub mod actix;
 pub mod types;
+pub mod logger;
 
 use dotenv::dotenv;
 use config::{Config, ConfigError, /* Environment, */ File};
 use std::env;
 use types::*;
 
+
+
 impl Settings {
     pub fn new() -> Result<(Config, Self), ConfigError> {
         // Load .env
         dotenv().ok();
-        
-        let mut cfg = Config::new();
 
         // Current env
         // Default to 'development' env
@@ -20,6 +21,9 @@ impl Settings {
             None => env::var("RUN_MODE").unwrap_or_else(|_| "development".into()),
             Some(any) => any,
         };
+
+        // New cfg
+        let mut cfg = Config::new();
 
         // Set the env
         cfg.set("env", env.clone())?;
@@ -32,6 +36,9 @@ impl Settings {
             .expect(
                 "Please make sure that the configuration file of the current environment exists",
             );
+
+        // Initial logger
+        Logger::init(&cfg);
 
         // Set the addr
         let (host, port): (String, String) = (cfg.get("server.host")?, cfg.get("server.port")?);
