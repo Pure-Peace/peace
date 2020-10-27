@@ -11,11 +11,16 @@ mod handlers;
 mod routes;
 mod settings;
 
+use colored::Colorize;
 use database::Database;
-use settings::types::Settings;
+use settings::{types::Settings, BANNER};
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Print banner
+    println!("{}", BANNER.green());
+
     // Create Peace's settings
     let (cfg, settings) = Settings::new().unwrap();
 

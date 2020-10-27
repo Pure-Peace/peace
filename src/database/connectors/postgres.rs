@@ -2,9 +2,9 @@
 
 use crate::settings::types::Settings;
 
+use colored::Colorize;
 use deadpool_postgres::{Client, Pool};
 use tokio_postgres::{types::ToSql, NoTls, Row, Statement};
-
 
 /// Postgres object
 #[derive(Clone)]
@@ -27,11 +27,16 @@ impl Postgres {
     /// ```
     /// if check_pools_on_created is true, will test usability when creating connection pool
     pub async fn new(settings: &Settings) -> Self {
+        print!("> {}", "Creating postgres connection pool...".bright_purple());
         let pool = settings.postgres.create_pool(NoTls).unwrap();
+        let pool_status = format!("OK -> Max size: {}", pool.status().max_size).green();
+        println!(" {}", pool_status);
         if settings.check_pools_on_created == true {
+            print!("> {}", "Check postgres connection...".bright_purple());
             pool.get()
                 .await
                 .expect("Please make sure you can connect to the postgres.");
+            println!(" {}", "OK".green());
         };
         Postgres { pool }
     }
@@ -136,7 +141,11 @@ impl Postgres {
     /// ```
     /// let size: u64 = execute("YOUR SQL $1", ["params $1-$n", ...]);
     /// ```
-    pub async fn execute(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + std::marker::Sync)]) -> u64 {
+    pub async fn execute(
+        &self,
+        query: &str,
+        params: &[&(dyn tokio_postgres::types::ToSql + std::marker::Sync)],
+    ) -> u64 {
         let (c, s) = self.get_ready(query).await;
         let size = c.execute(&s, params).await.unwrap();
         size

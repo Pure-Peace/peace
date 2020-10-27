@@ -1,24 +1,24 @@
 #![allow(dead_code)]
 
 use crate::settings::types::Settings;
+use colored::Colorize;
 
-use std::marker::Send;
 use deadpool_redis::{
     cmd as _cmd,
     redis::{FromRedisValue, RedisResult, ToRedisArgs},
     Cmd, Connection, Pool,
 };
-
+use std::marker::Send;
 
 /// Redis object
-/// 
+///
 /// # Examples:
-/// 
+///
 /// ```
 /// // normal
 /// let mut conn = pool.get().await.unwrap();
 /// let res: String = cmd("get").arg("a").query_async(&mut conn).await.unwrap();
-/// 
+///
 /// // extend
 /// let cmd = cmd(name: "get").arg("e");
 /// let res: i32 = query_cmd(cmd).await;
@@ -29,7 +29,7 @@ use deadpool_redis::{
 /// let res: i32 = query(name: "get", arg: "gg").await;
 /// let res: String = query(name: "get", arg: &["gg"]).await;
 /// let z = execute(name: "set", arg: &["ok", "no"]).await;
-/// 
+///
 /// println!("{:?}", res);
 /// ```
 #[derive(Clone)]
@@ -52,11 +52,16 @@ impl Redis {
     /// ```
     /// if check_pools_on_created is true, will test usability when creating connection pool
     pub async fn new(settings: &Settings) -> Self {
+        print!("> {}", "Creating redis connection pool...".bright_purple());
         let pool = settings.redis.create_pool().unwrap();
+        let pool_status = format!("OK -> Max size: {}", pool.status().max_size).green();
+        println!(" {}", pool_status);
         if settings.check_pools_on_created == true {
+            print!("> {}", "Check redis connection...".bright_purple());
             pool.get()
                 .await
                 .expect("Please make sure you can connect to the redis.");
+            println!(" {}", "OK".green());
         };
         Redis { pool }
     }
@@ -111,7 +116,11 @@ impl Redis {
     /// let result = query("get", &["key"])
     /// let result = query("get", "key")
     /// ```
-    pub async fn query<T: Send + FromRedisValue, ARG: ToRedisArgs>(&self, name: &str, arg: ARG) -> T {
+    pub async fn query<T: Send + FromRedisValue, ARG: ToRedisArgs>(
+        &self,
+        name: &str,
+        arg: ARG,
+    ) -> T {
         let mut conn = self.get_conn().await;
         _cmd(name).arg(arg).query_async(&mut conn).await.unwrap()
     }
