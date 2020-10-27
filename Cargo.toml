@@ -14,7 +14,7 @@ deadpool-redis = "0.6.1"
 config = "0.10.1"
 dotenv = "0.15.0"
 serde = { version = "1.0.117", features = ["derive"] }
-serde_derive = "^1.0.8"
 log = "0.4.11"
 env_logger = "0.8.1"
 colored = "2.0.0"
+lazy_static = "1.4.0"
