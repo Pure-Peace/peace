@@ -4,7 +4,7 @@ debug = false
 
 # Logger config
 [logger]
-# # Level is selected from logger.mode
+# Level is selected from logger.mode
 level = "info"
 
 # Actix logger middleware format

@@ -27,10 +27,12 @@ impl Postgres {
     /// ```
     /// if check_pools_on_created is true, will test usability when creating connection pool
     pub async fn new(settings: &Settings) -> Self {
+        // Create pool
         print!("> {}", "Creating postgres connection pool...".bright_purple());
         let pool = settings.postgres.create_pool(NoTls).unwrap();
-        let pool_status = format!("OK -> Max size: {}", pool.status().max_size).green();
-        println!(" {}", pool_status);
+        let pool_status = format!("Max size: {}", pool.status().max_size).green();
+        println!(" {} -> {}", "OK".green(), pool_status);
+        // Check connection, it will panic if failed
         if settings.check_pools_on_created == true {
             print!("> {}", "Check postgres connection...".bright_purple());
             pool.get()

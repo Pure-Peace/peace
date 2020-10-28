@@ -27,7 +27,7 @@ pub async fn before_start(cfg: &Config) -> (String, String) {
 /// Actix started
 pub async fn started(cfg: &Config, addr: &str) -> Instant {
     // Server started
-    let text = format!("Service is Running at http://{}", addr).green();
+    let text = format!("Service is Running at http://{}", addr).bold().green();
     info!("{}", text);
     Instant::now()
 }
@@ -36,7 +36,7 @@ pub async fn started(cfg: &Config, addr: &str) -> Instant {
 pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()> {
     // Waiting for server stopped
     let err = server.await;
-    let title = format!("Service has Stopped!").yellow();
+    let title = format!("Service has Stopped!").bold().yellow();
     let time_string = format!("Service running time: {:?}\n", start_time.elapsed()).bold().bright_blue();
     info!("{} \n\n {}", title, time_string);
     err
