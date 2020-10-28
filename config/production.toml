@@ -45,3 +45,9 @@ url = "redis://127.0.0.1:6379"
 
 [redis.pool]
 max_size = 16
+
+
+[prometheus]
+namespace = "peace"
+endpoint = "/metrics"
+exclude_endpoint_log = true

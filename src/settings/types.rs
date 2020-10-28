@@ -38,5 +38,12 @@ pub struct LoggerMode {
 pub struct Logger {
     pub level: String,
     pub mode: LoggerMode,
-    pub actix_log_format: String
+    pub actix_log_format: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Prometheus {
+    pub namespace: String,
+    pub endpoint: String,
+    pub exclude_endpoint_log: bool,
 }

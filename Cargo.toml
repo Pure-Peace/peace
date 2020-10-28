@@ -18,3 +18,5 @@ log = "0.4.11"
 env_logger = "0.8.1"
 colored = "2.0.0"
 lazy_static = "1.4.0"
+actix-web-prom = "0.5.0"
+prometheus = { version = "0.10.0", features = ["process"]}

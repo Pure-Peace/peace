@@ -7,6 +7,9 @@ use std::time::Instant;
 
 use colored::Colorize;
 
+use actix_web_prom::PrometheusMetrics;
+use prometheus::{opts, IntCounterVec};
+use std::collections::HashMap;
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -27,7 +30,9 @@ pub async fn before_start(cfg: &Config) -> (String, String) {
 /// Actix started
 pub async fn started(cfg: &Config, addr: &str) -> Instant {
     // Server started
-    let text = format!("Service is Running at http://{}", addr).bold().green();
+    let text = format!("Service is Running at http://{}", addr)
+        .bold()
+        .green();
     info!("{}", text);
     Instant::now()
 }
@@ -37,19 +42,54 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
     // Waiting for server stopped
     let err = server.await;
     let title = format!("Service has Stopped!").bold().yellow();
-    let time_string = format!("Service running time: {:?}\n", start_time.elapsed()).bold().bright_blue();
+    let time_string = format!("Service running time: {:?}\n", start_time.elapsed())
+        .bold()
+        .bright_blue();
     info!("{} \n\n {}", title, time_string);
     err
 }
 
 /// Run actix
 pub async fn start_server(cfg: &Config, database: Database) -> std::io::Result<()> {
+    // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
+    let exclude_endpoint_log = cfg.get_bool("prometheus.exclude_endpoint_log").unwrap_or(false);
+    let prom_endpoint = cfg.get_str("prometheus.endpoint").unwrap_or("/metrics".to_string());
+    let prom_namespace = cfg.get_str("prometheus.namespace").unwrap_or("peace".to_string());
+
+    // Ready prometheus
+    let endpoint_tip = format!("Prometheus endpoint: {}", prom_endpoint).green();
+    let namespace_tip = format!("Prometheus namespace: {}", prom_namespace).green();
+    let prom_tip = format!("Prometheus metrics address: http://{}{}", addr, prom_endpoint).bold().green();
+    println!("> {}", endpoint_tip);
+    println!("> {}", namespace_tip);
+    println!("> {}\n", prom_tip);
+
+    // Labels
+    let mut labels = HashMap::new();
+    labels.insert("job".to_string(), prom_namespace.to_string());
+
+    // Counter
+    let counter_opts = opts!("counter", "some random counter").namespace("api");
+    let counter = IntCounterVec::new(counter_opts, &["endpoint", "method", "status"]).unwrap();
+
+    // Init prometheus
+    let prometheus = PrometheusMetrics::new(&prom_namespace, Some(&prom_endpoint), Some(labels));
+    prometheus
+        .registry
+        .register(Box::new(counter.clone()))
+        .unwrap();
+    
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
     let server = HttpServer::new(move || {
         App::new()
-            .wrap(Logger::new(&log_format))
+            .wrap(match exclude_endpoint_log {
+                true => Logger::new(&log_format).exclude(&prom_endpoint),
+                false => Logger::new(&log_format)
+            })
+            .wrap(prometheus.clone())
+            .data(counter.clone())
             .data(database.clone())
             .configure(routes::init)
     })
