@@ -50,12 +50,13 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 }
 
 /// Run actix
-pub async fn start_server(cfg: &Config, database: Database) -> std::io::Result<()> {
+pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
-    let exclude_endpoint_log = cfg.get_bool("prometheus.exclude_endpoint_log").unwrap_or(false);
+    let prom_exclude_endpoint_log = cfg.get_bool("prometheus.exclude_endpoint_log").unwrap_or(false);
     let prom_endpoint = cfg.get_str("prometheus.endpoint").unwrap_or("/metrics".to_string());
     let prom_namespace = cfg.get_str("prometheus.namespace").unwrap_or("peace".to_string());
+    let excludes_endpoint_log: Vec<String> = cfg.get("logger.exclude_endpoints").unwrap_or(vec!["/favicon.ico".to_string()]);
 
     // Ready prometheus
     let endpoint_tip = format!("Prometheus endpoint: {}", prom_endpoint).green();
@@ -82,12 +83,24 @@ pub async fn start_server(cfg: &Config, database: Database) -> std::io::Result<(
     
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
+    
     let server = HttpServer::new(move || {
+
+        let t = |mut logger: Logger| {
+            for i in excludes_endpoint_log.iter() {
+                println!("{}", i);
+                logger = logger.exclude(i as &str);
+            }
+            logger
+        };
+
+        let logger = t(match prom_exclude_endpoint_log {
+            true => Logger::new(&log_format).exclude(&prom_endpoint),
+            false => Logger::new(&log_format)
+        });
+
         App::new()
-            .wrap(match exclude_endpoint_log {
-                true => Logger::new(&log_format).exclude(&prom_endpoint),
-                false => Logger::new(&log_format)
-            })
+            .wrap(logger)
             .wrap(prometheus.clone())
             .data(counter.clone())
             .data(database.clone())

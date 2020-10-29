@@ -28,5 +28,5 @@ async fn main() -> std::io::Result<()> {
     let database = Database::new(&settings).await;
 
     // Start actix server
-    settings::actix::start_server(&cfg, database).await
+    settings::actix::start_server(cfg, database).await
 }
