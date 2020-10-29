@@ -99,7 +99,6 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
         // Logger
         let make_logger = |mut logger: Logger| {
             for i in excludes_endpoint_log.iter() {
-                println!("{}", i);
                 logger = logger.exclude(i as &str);
             }
             logger
