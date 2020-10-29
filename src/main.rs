@@ -15,7 +15,6 @@ use colored::Colorize;
 use database::Database;
 use settings::{types::Settings, BANNER};
 
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Print banner

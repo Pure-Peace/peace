@@ -53,15 +53,28 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
-    let prom_exclude_endpoint_log = cfg.get_bool("prometheus.exclude_endpoint_log").unwrap_or(false);
-    let prom_endpoint = cfg.get_str("prometheus.endpoint").unwrap_or("/metrics".to_string());
-    let prom_namespace = cfg.get_str("prometheus.namespace").unwrap_or("peace".to_string());
-    let excludes_endpoint_log: Vec<String> = cfg.get("logger.exclude_endpoints").unwrap_or(vec!["/favicon.ico".to_string()]);
+    let prom_exclude_endpoint_log = cfg
+        .get_bool("prometheus.exclude_endpoint_log")
+        .unwrap_or(false);
+    let prom_endpoint = cfg
+        .get_str("prometheus.endpoint")
+        .unwrap_or("/metrics".to_string());
+    let prom_namespace = cfg
+        .get_str("prometheus.namespace")
+        .unwrap_or("peace".to_string());
+    let excludes_endpoint_log: Vec<String> = cfg
+        .get("logger.exclude_endpoints")
+        .unwrap_or(vec!["/favicon.ico".to_string()]);
 
     // Ready prometheus
     let endpoint_tip = format!("Prometheus endpoint: {}", prom_endpoint).green();
     let namespace_tip = format!("Prometheus namespace: {}", prom_namespace).green();
-    let prom_tip = format!("Prometheus metrics address: http://{}{}", addr, prom_endpoint).bold().green();
+    let prom_tip = format!(
+        "Prometheus metrics address: http://{}{}",
+        addr, prom_endpoint
+    )
+    .bold()
+    .green();
     println!("> {}", endpoint_tip);
     println!("> {}", namespace_tip);
     println!("> {}\n", prom_tip);
@@ -80,25 +93,22 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
         .registry
         .register(Box::new(counter.clone()))
         .unwrap();
-    
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
-    
     let server = HttpServer::new(move || {
-
-        let t = |mut logger: Logger| {
+        // Logger
+        let make_logger = |mut logger: Logger| {
             for i in excludes_endpoint_log.iter() {
                 println!("{}", i);
                 logger = logger.exclude(i as &str);
             }
             logger
         };
-
-        let logger = t(match prom_exclude_endpoint_log {
+        let logger = make_logger(match prom_exclude_endpoint_log {
             true => Logger::new(&log_format).exclude(&prom_endpoint),
-            false => Logger::new(&log_format)
+            false => Logger::new(&log_format),
         });
-
+        // App
         App::new()
             .wrap(logger)
             .wrap(prometheus.clone())
