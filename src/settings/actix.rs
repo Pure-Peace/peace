@@ -45,7 +45,7 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
     let time_string = format!("Service running time: {:?}\n", start_time.elapsed())
         .bold()
         .bright_blue();
-    info!("{} \n\n {}", title, time_string);
+    warn!("{} \n\n {}", title, time_string);
     err
 }
 
