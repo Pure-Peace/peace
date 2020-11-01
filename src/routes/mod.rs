@@ -25,7 +25,8 @@ fn init_root(cfg: &mut ServiceConfig) {
 fn init_bancho() -> impl HttpServiceFactory {
     use bancho::*;
     scope("/bancho")
-        .service(main)
+        .service(get_main)
+        .service(post_main)
 }
 
 /// Routes for api_v1

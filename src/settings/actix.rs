@@ -28,7 +28,7 @@ pub async fn before_start(cfg: &Config) -> (String, String) {
 }
 
 /// Actix started
-pub async fn started(cfg: &Config, addr: &str) -> Instant {
+pub async fn started(_cfg: &Config, addr: &str) -> Instant {
     // Server started
     let text = format!("Service is Running at http://{}", addr)
         .bold()
@@ -118,6 +118,7 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
             .data(database.clone())
             .configure(routes::init)
     })
+    .keep_alive(90)
     .bind(&addr)
     .unwrap()
     .run();
