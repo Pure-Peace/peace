@@ -1,2 +1,8 @@
 [target.x86_64-unknown-linux-musl]
 linker = "musl-gcc"
+
+[alias]
+debug = "run"
+start = "run --release"
+cross_linux = "build --release --target x86_64-unknown-linux-musl"
+rbuild = "build --release"

@@ -66,18 +66,20 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
         .get("logger.exclude_endpoints")
         .unwrap_or(vec!["/favicon.ico".to_string()]);
 
-    // Ready prometheus
-    let endpoint_tip = format!("Prometheus endpoint: {}", prom_endpoint).green();
-    let namespace_tip = format!("Prometheus namespace: {}", prom_namespace).green();
-    let prom_tip = format!(
-        "Prometheus metrics address: http://{}{}",
-        addr, prom_endpoint
-    )
-    .bold()
-    .green();
-    println!("> {}", endpoint_tip);
-    println!("> {}", namespace_tip);
-    println!("> {}\n", prom_tip);
+    {
+        // Ready prometheus
+        let endpoint_tip = format!("Prometheus endpoint: {}", prom_endpoint).green();
+        let namespace_tip = format!("Prometheus namespace: {}", prom_namespace).green();
+        let prom_tip = format!(
+            "Prometheus metrics address: http://{}{}",
+            addr, prom_endpoint
+        )
+        .bold()
+        .green();
+        println!("> {}", endpoint_tip);
+        println!("> {}", namespace_tip);
+        println!("> {}\n", prom_tip);
+    }
 
     // Labels
     let mut labels = HashMap::new();
@@ -93,6 +95,7 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
         .registry
         .register(Box::new(counter.clone()))
         .unwrap();
+        
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
     let server = HttpServer::new(move || {
