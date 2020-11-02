@@ -1,21 +1,55 @@
 use actix_web::web::{Bytes, Data};
-use actix_web::{get, post, HttpResponse, Responder};
+use actix_web::{get, post, HttpResponse, Responder, HttpRequest};
 use prometheus::IntCounterVec;
 
-/// GET
-#[get("*")]
-pub async fn get_main(counter: Data<IntCounterVec>, body: Bytes) -> impl Responder {
+use crate::handlers::bancho;
+
+
+pub async fn get_main(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> impl Responder {
     counter.with_label_values(&["/bancho", "get", "start"]).inc();
-    println!("GET Body {:?}!", &body);
+    println!("GET Body {:?}", &body);
+    println!("REQ {:?}\n--------------", req);
     //let contents = "Hello bancho!";
     HttpResponse::Ok().body(body)
 }
 
-/// POST
-#[post("*")]
-pub async fn post_main(counter: Data<IntCounterVec>, body: Bytes) -> impl Responder {
+
+pub async fn post_main(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> impl Responder {
+    // Prom counter
     counter.with_label_values(&["/bancho", "post", "start"]).inc();
-    println!("POST Body {:?}!", &body);
-    //let contents = "Hello bancho!";
+
+    // Print
+    println!("POST Body {:?}", &body);
+    println!("REQ {:?}\n--------------", req);
+    
+    // Get info
+    let headers = req.headers();
+    let request_ip = match req.connection_info().realip_remote_addr() {
+        Some(ip) => ip.to_string(),
+        None => return HttpResponse::NonAuthoritativeInformation().body("wtf")
+    };
+    let osu_version = match headers.get("osu-version") {
+        Some(version) => version.to_str().unwrap_or("unknown").to_string(),
+        None => "unknown".to_string()
+    };
+    
+    // If not login
+    if !headers.contains_key("osu-token") {
+        let (resp_body, token) = bancho::login(&body, request_ip, osu_version).await;
+        return HttpResponse::Ok().set_header("cho-token", token).body(resp_body)
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
     HttpResponse::Ok().body(body)
 }
