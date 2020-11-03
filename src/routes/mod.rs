@@ -37,6 +37,10 @@ fn init_web() -> impl HttpServiceFactory {
     use web::*;
     scope("/web")
         .service(lastfm)
+        .service(check_updates)
+        .service(osu_session)
+        .service(osu_error)
+        .service(bancho_connect)
 }
 
 /// Routes for api_v1

@@ -19,5 +19,9 @@ env_logger = "0.8.1"
 colored = "2.0.0"
 lazy_static = "1.4.0"
 actix-web-prom = "0.5.0"
-prometheus = { version = "0.10.0", features = ["process"]}
+prometheus = { version = "0.10.0", features = ["process"] }
 bytes = "0.6.0"
+actix-multipart = "0.3"
+futures = "0.3.7"
+serde_qs = "0.7.0"
+serde_derive = "1.0.117"
