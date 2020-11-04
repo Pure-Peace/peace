@@ -12,7 +12,7 @@ pub async fn get_main(
     counter
         .with_label_values(&["/bancho", "get", "start"])
         .inc();
-    println!("GET Body {:?}", &body);
+    //println!("GET Body {:?}", &body);
     println!("REQ {:?}\n--------------", req);
     //let contents = "Hello bancho!";
     HttpResponse::Ok().body(body)
