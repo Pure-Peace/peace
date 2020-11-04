@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use serde_qs;
 
 
+/// Get deserialized multipart/form-data
 pub async fn get_form_data<T: serde::de::DeserializeOwned> (payload: &mut Multipart) -> T {
     let mut query: String = String::new();
 

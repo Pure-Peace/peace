@@ -3,9 +3,9 @@ use actix_web::{get, post, HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
 use serde::Deserialize;
 
+use crate::utils;
 use actix_multipart::Multipart;
 use std::borrow::BorrowMut;
-use crate::utils;
 
 #[derive(Debug, Deserialize)]
 pub struct Lastfm {
@@ -29,7 +29,7 @@ pub struct BanchoConnect {
     h: String,
     fx: String,
     ch: String,
-    retry: u32,
+    retry: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,6 +37,29 @@ pub struct OsuSession {
     u: String,
     h: String,
     action: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OsuError {
+    u: String,
+    p: String,
+    i: i32,
+    osumode: String,
+    gamemode: String,
+    gametime: u32,
+    audiotime: u32,
+    culture: String,
+    beatmap_id: u32,
+    beatmap_checksum: String,
+    exception: String,
+    feedback: String,
+    stacktrace: String,
+    soft: String,
+    beatmap_count: u32,
+    compatibility: u32,
+    version: String,
+    exehash: String,
+    config: String,
 }
 
 #[get("/lastfm.php")]
@@ -60,7 +83,6 @@ pub async fn lastfm(
 
     success()
 }
-//{'b', 'action', 'us', 'ha'}
 
 #[get("/check-updates.php")]
 pub async fn check_updates(
@@ -82,7 +104,7 @@ pub async fn check_updates(
 #[post("/osu-session.php")]
 pub async fn osu_session(
     req: HttpRequest,
-    mut form: Multipart,
+    mut formData: Multipart,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
     let success = || {
@@ -91,7 +113,7 @@ pub async fn osu_session(
             .inc();
         HttpResponse::Ok().body(Bytes::from("-3"))
     };
-    let data: OsuSession = utils::get_form_data(form.borrow_mut()).await;
+    let data: OsuSession = utils::get_form_data(formData.borrow_mut()).await;
     println!("{:?}", data);
 
     success()
@@ -100,7 +122,7 @@ pub async fn osu_session(
 #[post("/osu-error.php")]
 pub async fn osu_error(
     req: HttpRequest,
-    body: Bytes,
+    mut formData: Multipart,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
     let success = || {
@@ -109,7 +131,8 @@ pub async fn osu_error(
             .inc();
         HttpResponse::Ok().body(Bytes::from("-3"))
     };
-    //println!("body: {:?}", body);
+    let data: OsuError = utils::get_form_data(formData.borrow_mut()).await;
+    //println!("{:?}", data);
 
     success()
 }
