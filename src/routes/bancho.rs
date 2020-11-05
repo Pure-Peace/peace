@@ -13,7 +13,7 @@ pub async fn get_main(
         .with_label_values(&["/bancho", "get", "start"])
         .inc();
     //println!("GET Body {:?}", &body);
-    println!("REQ {:?}\n--------------", req);
+    //println!("REQ {:?}\n--------------", req);
     //let contents = "Hello bancho!";
     HttpResponse::Ok().body(body)
 }
@@ -28,9 +28,6 @@ pub async fn post_main(
         .with_label_values(&["/bancho", "post", "start"])
         .inc();
 
-    // Print
-    //println!("POST Body {:?}", &body);
-    //println!("REQ {:?}\n--------------", req);
     // Get headers
     let headers = req.headers();
 

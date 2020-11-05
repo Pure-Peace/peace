@@ -6,6 +6,7 @@ extern crate log;
 extern crate config;
 extern crate serde;
 
+mod packets;
 mod utils;
 mod database;
 mod handlers;

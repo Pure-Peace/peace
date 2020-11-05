@@ -1,5 +1,7 @@
 use actix_web::{http::HeaderMap, web::Bytes};
 
+use crate::packets;
+
 /// Bancho login handler
 pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Bytes, String) {
     // Get string body
@@ -45,5 +47,5 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (By
     println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
 
 
-    (Bytes::from("gg"), "ggg".to_string())
+    (packets::notification("asd"), "ggg".to_string())
 }
