@@ -1,4 +1,5 @@
 use actix_multipart::{Field, Multipart};
+use actix_web::HttpRequest;
 use actix_web::web::Bytes;
 
 use futures::StreamExt;
@@ -22,4 +23,29 @@ pub async fn get_form_data<T: serde::de::DeserializeOwned> (payload: &mut Multip
         }
     }
     serde_qs::from_str(&query).unwrap()
+}
+
+
+/// Get real ip from request
+pub async fn get_realip (req: &HttpRequest) -> Result<String, ()> {
+    match req.connection_info().realip_remote_addr() {
+        Some(ip) => Ok(ip.to_string()),
+        None => Err(()),
+    }
+}
+
+/// Get osu version from headers
+pub async fn get_osuver (req: &HttpRequest) -> String {
+    match req.headers().get("osu-version") {
+        Some(version) => version.to_str().unwrap_or("unknown").to_string(),
+        None => "unknown".to_string(),
+    }
+}
+
+/// Get osu token from headers
+pub async fn get_token (req: &HttpRequest) -> String {
+    match req.headers().get("osu-token") {
+        Some(version) => version.to_str().unwrap_or("unknown").to_string(),
+        None => "unknown".to_string(),
+    }
 }

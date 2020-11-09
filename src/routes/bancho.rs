@@ -2,6 +2,8 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{get, post, HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
 
+use crate::utils;
+
 use crate::handlers::bancho;
 
 pub async fn get_main(
@@ -32,22 +34,17 @@ pub async fn post_main(
     let headers = req.headers();
 
     // Get real request ip
-    let request_ip = match req.connection_info().realip_remote_addr() {
-        Some(ip) => ip.to_string(),
-        None => return HttpResponse::NonAuthoritativeInformation().body("wtf"),
-    };
+    let request_ip = utils::get_realip(&req).await.expect("Cannot get request ip");
 
     // Get osu ver
-    let osu_version = match headers.get("osu-version") {
-        Some(version) => version.to_str().unwrap_or("unknown").to_string(),
-        None => "unknown".to_string(),
-    };
+    let osu_version = utils::get_osuver(&req).await;
 
     // If not login
     if !headers.contains_key("osu-token") {
         let (resp_body, token) = bancho::login(&body, request_ip, osu_version).await;
         return HttpResponse::Ok()
             .set_header("cho-token", token)
+            .set_header("cho-protocol", "19")
             .body(resp_body);
     }
 

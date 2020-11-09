@@ -3,7 +3,7 @@ use actix_web::{http::HeaderMap, web::Bytes};
 use crate::packets;
 
 /// Bancho login handler
-pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Bytes, String) {
+pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Vec<u8>, String) {
     // Get string body
     let body = String::from_utf8(body.to_vec()).unwrap();
 
@@ -47,5 +47,5 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (By
     println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
 
 
-    (packets::notification("asd"), "ggg".to_string())
+    (packets::notification("test notifitication!!!!! you win!!!").await, "ggg".to_string())
 }

@@ -184,7 +184,7 @@ pub async fn check_updates(
 #[post("/osu-session.php")]
 pub async fn osu_session(
     req: HttpRequest,
-    mut formData: Multipart,
+    mut form_data: Multipart,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
     let success = || {
@@ -193,7 +193,7 @@ pub async fn osu_session(
             .inc();
         HttpResponse::Ok().body(Bytes::from(""))
     };
-    let data: OsuSession = utils::get_form_data(formData.borrow_mut()).await;
+    let data: OsuSession = utils::get_form_data(form_data.borrow_mut()).await;
     println!("{:?}", data);
 
     success()
@@ -202,7 +202,7 @@ pub async fn osu_session(
 #[post("/osu-error.php")]
 pub async fn osu_error(
     req: HttpRequest,
-    mut formData: Multipart,
+    mut form_data: Multipart,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
     let success = || {
@@ -211,7 +211,7 @@ pub async fn osu_error(
             .inc();
         HttpResponse::Ok().body(Bytes::from("-3"))
     };
-    let data: OsuError = utils::get_form_data(formData.borrow_mut()).await;
+    let data: OsuError = utils::get_form_data(form_data.borrow_mut()).await;
     //println!("{:?}", data);
 
     success()
