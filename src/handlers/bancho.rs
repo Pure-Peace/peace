@@ -42,10 +42,12 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Ve
     }
 
 
-
+    let mut packet = packets::empty();
+    packet.extend(packets::notification("test notifitication!!!!! you win!!!"));
+    packet.extend(packets::notification("#哈哈哈中文"));
+    packet.extend(packets::notification("\n呃-----\n额----!!!！@"));
     
-    println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
+    //println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
 
-
-    (packets::notification("test notifitication!!!!! you win!!!").await, "ggg".to_string())
+    (packet, "ggg".to_string())
 }
