@@ -2,47 +2,48 @@ use actix_web::web::Bytes;
 
 pub mod id;
 
-pub async fn notification(msg: &str) -> Vec<u8> {
-    let mut ret: Vec<u8> = vec![id::BANCHO_NOTIFICATION, 0, 0];
-    ret.extend(write_string(msg).await);
+/// Create a empty packets
+pub fn empty() -> Vec<u8> {
+    Vec::with_capacity(7)
+}
+
+/// Initial a packets by id
+pub fn new(packet_id: u8) -> Vec<u8> {
+    vec![packet_id, 0, 0]
+}
+
+pub fn output(mut ret: Vec<u8>) -> Vec<u8> {
     ret.splice(3..3, vec![(ret.len() - 3) as u8, 0, 0, 0]);
     ret
 }
-/*     return write(
-    Packets.CHO_NOTIFICATION,
-    (msg, osuTypes.string)
-) */
 
-pub async fn write_packet(packet: u8) {
-    let mut ret: Vec<u8> = vec![packet, 0, 0];
-    ret.extend(write_string("阿萨德").await);
-    ret.splice(3..3, vec![(ret.len() - 3) as u8, 0, 0, 0]);
-
-    //assert_eq!(ret, b"\x18\x00\x00\x03\x00\x00\x00\x0b\x01a".to_vec());
-    println!("{:?}", ret);
+pub fn notification(msg: &str) -> Vec<u8> {
+    let mut ret = new(id::BANCHO_NOTIFICATION);
+    ret.extend(write_string(msg));
+    output(ret)
 }
 
-pub async fn write_string(s: &str) -> Vec<u8> {
-    let byte_data = s.as_bytes();
-    let byte_length = byte_data.len();
-    // [0] is b"\x00", empty
-    let mut data: Vec<u8> = vec![0];
+pub fn write_string(string: &str) -> Vec<u8> {
+    let byte_data = string.as_bytes();
+    let byte_length = string.len();
+    let mut data: Vec<u8> = Vec::with_capacity(byte_length + 5);
     if byte_length > 0 {
-        // [11] is b"\x0b", not empty
-        let mut content = vec![11];
-        content.extend(write_uleb128(byte_length).await);
-        content.extend(byte_data);
-        data.splice(0..1, content);
+        data.push(11); // 0x0b, means not empty
+        data.extend(uleb128(byte_length as u32));
+        data.extend(byte_data);
+    } else {
+        data.push(0); // 0x00, means empty
     }
     data
 }
 
-pub async fn write_uleb128(mut num: usize) -> Vec<u8> {
-    let mut out: Vec<u8> = vec![];
-    while num >= 0x80 {
-        out.push(((num & 0x7f) | 0x80) as u8);
-        num >>= 7;
+/// Unsigned to uleb128
+fn uleb128(mut unsigned: u32) -> Vec<u8> {
+    let mut data: Vec<u8> = Vec::new();
+    while unsigned >= 0x80 {
+        data.push(((unsigned & 0x7f) | 0x80) as u8);
+        unsigned >>= 7;
     }
-    out.push(num as u8);
-    out
+    data.push(unsigned as u8);
+    data
 }
