@@ -1,5 +1,3 @@
-use actix_web::web::Bytes;
-
 pub mod id;
 
 pub fn notification(msg: &str) -> Vec<u8> {

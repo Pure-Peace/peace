@@ -1,5 +1,5 @@
 use actix_web::web::{Bytes, Data};
-use actix_web::{get, post, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
 
 use crate::utils;

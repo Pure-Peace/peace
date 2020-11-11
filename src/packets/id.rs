@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /*
     Thanks to gulag
     https://github.com/cmyui/gulag/blob/master/packets.py
