@@ -15,14 +15,21 @@ pub fn empty() -> Vec<u8> {
     Vec::with_capacity(11)
 }
 
-/// Initial a packets by id
+/// Initial a packet by id
 ///
 /// Packets posit:
 /// ```
-/// [0..=2]: packet id
+/// [0..=1]: packet id
+/// [2]: null
 /// [3..=6]: packet length
-/// [7..=N]: data length(uleb128)  + data
+/// [7..=N]: data length(uleb128) + data
 /// ```
+/// The maximum value of u8 is 255, 
+/// 
+/// but currently the largest packet id of bancho is only 109, 
+/// 
+/// so I think it is sufficient to insert the packet_id in the first position
+/// 
 pub fn new(packet_id: u8) -> Vec<u8> {
     vec![packet_id, 0, 0, 0, 0, 0, 0]
 }

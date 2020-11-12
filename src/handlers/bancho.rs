@@ -20,10 +20,10 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Ve
     // Get client info lines
     //  rows:
     //      0: osu version
-    //      1: time offset
-    //      2: unused1
+    //      1: time offset (utc)
+    //      2: location (unused1)
     //      3: client hash set
-    //      4: unused2
+    //      4: block non-friend pm (unused2)
     let client_info_line: Vec<&str> = data_lines[2].split("|").collect();
     if client_info_line.len() < 5 {
         panic!("gg2");
