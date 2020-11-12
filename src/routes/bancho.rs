@@ -6,7 +6,7 @@ use crate::utils;
 
 use crate::handlers::bancho;
 
-pub async fn get_main(
+pub async fn get(
     req: HttpRequest,
     body: Bytes,
     counter: Data<IntCounterVec>,
@@ -20,7 +20,7 @@ pub async fn get_main(
     HttpResponse::Ok().body(body)
 }
 
-pub async fn post_main(
+pub async fn post(
     req: HttpRequest,
     body: Bytes,
     counter: Data<IntCounterVec>,
