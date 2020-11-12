@@ -6,12 +6,13 @@ extern crate log;
 extern crate config;
 extern crate serde;
 
-mod packets;
-mod utils;
+mod constants;
 mod database;
 mod handlers;
+mod packets;
 mod routes;
 mod settings;
+mod utils;
 
 use colored::Colorize;
 use database::Database;
