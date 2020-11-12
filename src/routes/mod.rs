@@ -1,4 +1,4 @@
-use actix_web::web::{get, post, scope, ServiceConfig};
+use actix_web::{middleware, web::{get, post, scope, ServiceConfig}};
 use actix_web::{dev::HttpServiceFactory, guard};
 
 pub mod web;
@@ -25,7 +25,6 @@ fn init_root(cfg: &mut ServiceConfig) {
 
 /// Routes for bancho
 fn init_bancho() -> impl HttpServiceFactory {
-    use bancho;
     scope("/bancho")
         .route("", get().to(bancho::get))
         .route("", post().guard(guard::Header("user-agent", "osu!")).to(bancho::post),

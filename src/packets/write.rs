@@ -22,6 +22,27 @@ pub fn empty() -> Vec<u8> {
     Vec::with_capacity(11)
 }
 
+
+pub struct Packet {
+    content: Vec<u8>
+}
+
+impl Packet {
+    pub fn new() -> Self {
+        Packet { content: empty() }
+    }
+
+    pub fn add(mut self, packet: Vec<u8>) -> Packet {
+        self.content.extend(packet);
+        self
+    }
+
+    pub fn done(self) -> Vec<u8> {
+        self.content
+    }
+}
+
+
 /// Initial a packet by id
 ///
 /// Packets posit:
