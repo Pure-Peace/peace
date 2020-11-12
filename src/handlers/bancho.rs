@@ -1,6 +1,6 @@
 use actix_web::{http::HeaderMap, web::Bytes};
 
-use crate::packets;
+use crate::{constants, packets};
 
 /// Bancho login handler
 pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Vec<u8>, String) {
@@ -45,6 +45,7 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Ve
     let mut packet = packets::empty();
     packet.extend(packets::notification("test notifitication!!!!! you win!!!"));
     packet.extend(packets::notification("#哈哈哈中文"));
+    packet.extend(packets::login_reply(constants::LoginReply::InvalidCredentials));
     packet.extend(packets::notification("\n呃-----\n额----!!!！@"));
     
     //println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
