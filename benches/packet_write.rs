@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 #[path = "../src/packets/mod.rs"]
@@ -14,7 +16,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| packets::notification("hello"))
     });
     c.bench_function("login_reply packet", |b| {
-        b.iter(|| packets::login_reply(constants::LoginReply::InvalidCredentials))
+        b.iter(|| packets::login_reply(constants::packets::LoginReply::InvalidCredentials))
     });
 }
 

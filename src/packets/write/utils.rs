@@ -1,47 +1,35 @@
-//use crate::constants;
-use crate::{constants::packets::*, packets::id};
-
-pub fn notification(msg: &str) -> Vec<u8> {
-    let mut packet = new(id::BANCHO_NOTIFICATION);
-    packet.extend(write_string(msg));
-    output(packet)
+#![allow(dead_code)]
+pub struct PacketBuilder {
+    content: Vec<u8>,
 }
 
-pub fn login_reply(reply: LoginReply) -> Vec<u8> {
-    let mut packet = new(id::BANCHO_USER_LOGIN_REPLY);
-    packet.extend((reply as i32).to_le_bytes().iter());
-    output(packet)
-}
+impl PacketBuilder {
+    /// Initial an empty packet
+    pub fn new() -> Self {
+        PacketBuilder { content: empty() }
+    }
 
-pub fn match_join_fail() -> Vec<u8> {
-    new(id::BANCHO_MATCH_JOIN_FAIL)
+    /// Initial from packet data
+    pub fn from(packet: Vec<u8>) -> PacketBuilder {
+        PacketBuilder { content: packet }
+    }
+
+    /// Add packet data
+    pub fn add(mut self, packet: Vec<u8>) -> PacketBuilder {
+        self.content.extend(packet);
+        self
+    }
+
+    /// Build packet
+    pub fn done(self) -> Vec<u8> {
+        self.content
+    }
 }
 
 /// Create a empty packets
 pub fn empty() -> Vec<u8> {
     Vec::with_capacity(11)
 }
-
-
-pub struct Packet {
-    content: Vec<u8>
-}
-
-impl Packet {
-    pub fn new() -> Self {
-        Packet { content: empty() }
-    }
-
-    pub fn add(mut self, packet: Vec<u8>) -> Packet {
-        self.content.extend(packet);
-        self
-    }
-
-    pub fn done(self) -> Vec<u8> {
-        self.content
-    }
-}
-
 
 /// Initial a packet by id
 ///
@@ -93,20 +81,4 @@ fn uleb128(mut unsigned: u32) -> Vec<u8> {
     }
     data.push(unsigned as u8);
     data
-}
-
-#[test]
-fn test_login_reply() {
-    assert_eq!(
-        login_reply(LoginReply::InvalidCredentials),
-        vec![5, 0, 0, 4, 0, 0, 0, 255, 255, 255, 255]
-    )
-}
-
-#[test]
-fn test_login_notfication() {
-    assert_eq!(
-        notification("hello"),
-        vec![24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111]
-    )
 }

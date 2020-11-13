@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 use actix_web::{http::HeaderMap, web::Bytes};
 
 use crate::{constants, packets};
@@ -44,9 +47,9 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Ve
         panic!("gg3");
     }
 
-    let packet = packets::Packet::new()
+    let packet = packets::PacketBuilder::new()
         .add(packets::notification("hihi"))
-        .add(packets::login_reply(constants::LoginReply::ServerError))
+        .add(packets::login_reply(constants::packets::LoginReply::AccountPasswordRest))
         .add(packets::notification("you' re fired"))
         .done();
     //println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);

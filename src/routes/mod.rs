@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 use actix_web::{middleware, web::{get, post, scope, ServiceConfig}};
 use actix_web::{dev::HttpServiceFactory, guard};
 

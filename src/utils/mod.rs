@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 use actix_multipart::{Field, Multipart};
 use actix_web::HttpRequest;
 use actix_web::web::Bytes;

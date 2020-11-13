@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 use actix_web::web::{Bytes, Data};
 use actix_web::{HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
