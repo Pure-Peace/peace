@@ -18,6 +18,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("login_reply packet", |b| {
         b.iter(|| packets::login_reply(constants::packets::LoginReply::InvalidCredentials))
     });
+    c.bench_function("send massage packet", |b| {
+        b.iter(|| packets::send_message("PurePeace", 1001, "hello", "osu"))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);
