@@ -5,24 +5,23 @@ use actix_web::{middleware, web::{get, post, scope, ServiceConfig}};
 use actix_web::{dev::HttpServiceFactory, guard};
 
 pub mod web;
-pub mod api_v1;
-pub mod api_v2;
+pub mod api;
 pub mod bancho;
-pub mod root;
+pub mod default;
 
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes
 pub fn init(cfg: &mut ServiceConfig) {
-    init_root(cfg);
+    init_default(cfg);
     cfg.service(init_bancho());
     cfg.service(init_web());
     cfg.service(init_api_v1());
     cfg.service(init_api_v2());
 }
 
-/// Routes for root
-fn init_root(cfg: &mut ServiceConfig) {
-    use root::*;
+/// Routes for default
+fn init_default(cfg: &mut ServiceConfig) {
+    use default::*;
     cfg.service(index);
 }
 
@@ -47,7 +46,7 @@ fn init_web() -> impl HttpServiceFactory {
 
 /// Routes for api_v1
 fn init_api_v1() -> impl HttpServiceFactory {
-    use api_v1::*;
+    use api::v1::*;
     scope("/api/v1")
         .service(index)
         .service(is_online)
@@ -60,6 +59,6 @@ fn init_api_v1() -> impl HttpServiceFactory {
 
 /// Routes for api_v2
 fn init_api_v2() -> impl HttpServiceFactory {
-    use api_v2::*;
+    use api::v2::*;
     scope("/api/v2").service(index)
 }
