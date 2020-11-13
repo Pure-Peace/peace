@@ -9,8 +9,21 @@ impl PacketBuilder {
         PacketBuilder { content: empty() }
     }
 
+    /// Initial a packet with id and length
+    pub fn id(packet_id: u8) -> Self {
+        PacketBuilder { content: new(packet_id) }
+    }
+
     /// Initial from packet data
     pub fn from(packet: Vec<u8>) -> PacketBuilder {
+        PacketBuilder { content: packet }
+    }
+
+    pub fn from_multiple(packets: &[Vec<u8>]) -> PacketBuilder {
+        let mut packet = empty();
+        for i in packets.iter() {
+            packet.extend(i)
+        }
         PacketBuilder { content: packet }
     }
 
@@ -23,6 +36,21 @@ impl PacketBuilder {
     /// Build packet
     pub fn done(self) -> Vec<u8> {
         self.content
+    }
+
+    /// Write out packet
+    pub fn write_out(self) -> Vec<u8> {
+        output(self.content)
+    }
+}
+
+pub trait Integer {
+    fn to_bytes(&self) -> Vec<u8>;
+}
+
+impl Integer for i32 {
+    fn to_bytes(&self) -> Vec<u8> {
+        Vec::from(self.to_le_bytes())
     }
 }
 
@@ -70,6 +98,48 @@ pub fn write_string(string: &str) -> Vec<u8> {
         data.push(0); // 0x00, means empty
     }
     data
+}
+
+/// Write message packet
+/// 
+/// ### impl 1:
+/// ```
+/// PacketBuilder::from_multiple(&[
+///     write_string(sender),
+///     write_string(content),
+///     write_string(channel),
+///     write_integer(sender_id),
+/// ])
+/// .done()
+/// ```
+/// 
+/// ### impl 2:
+/// ```
+/// PacketBuilder::new()
+///     .add(write_string(sender))
+///     .add(write_string(content))
+///     .add(write_string(channel))
+///     .add(write_integer(sender_id))
+///     .done()
+/// ```
+/// 
+/// ### impl 3 (best performance):
+/// ```
+/// now impl
+/// ```
+pub fn write_message(sender: &str, sender_id: i32, content: &str, channel: &str) -> Vec<u8> {
+    let mut data: Vec<u8> = Vec::with_capacity(30);
+    data.extend(write_string(sender));
+    data.extend(write_string(content));
+    data.extend(write_string(channel));
+    data.extend(write_integer(sender_id));
+    data
+    
+}
+
+/// Write integer packet
+pub fn write_integer<T: Integer>(integer: T) -> Vec<u8> {
+    integer.to_bytes()
 }
 
 /// Unsigned to uleb128
