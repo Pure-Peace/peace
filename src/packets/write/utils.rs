@@ -10,7 +10,7 @@ impl PacketBuilder {
     }
 
     /// Initial a packet with id and length
-    pub fn id(packet_id: u8) -> Self {
+    pub fn with(packet_id: u8) -> Self {
         PacketBuilder { content: new(packet_id) }
     }
 
