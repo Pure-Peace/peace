@@ -38,3 +38,11 @@ fn test_change_username() {
         ]
     )
 }
+
+#[test]
+fn test_rtx() {
+    assert_eq!(
+        rtx("Peace"),
+        vec![105, 0, 0, 7, 0, 0, 0, 11, 5, 80, 101, 97, 99, 101]
+    )
+}

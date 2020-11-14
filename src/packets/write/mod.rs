@@ -316,6 +316,7 @@ pub fn account_restricted() -> PacketData {
 }
 
 /// #105: BANCHO_RTX
+/// deprecated
 pub fn rtx(msg: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_RTX)
         .add(write_string(msg))
