@@ -54,6 +54,12 @@ impl Integer for i32 {
     }
 }
 
+impl Integer for u8 {
+    fn to_bytes(&self) -> Vec<u8> {
+        Vec::from(self.to_le_bytes())
+    }
+}
+
 /// Create a empty packets
 pub fn empty() -> Vec<u8> {
     Vec::with_capacity(11)

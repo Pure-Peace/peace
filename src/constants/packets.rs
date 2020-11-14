@@ -61,7 +61,7 @@ pub mod id {
     pub const OSU_SEND_PRIVATE_MESSAGE:           u8 = 25;
     pub const BANCHO_UPDATE_MATCH:                u8 = 26;
     pub const BANCHO_NEW_MATCH:                   u8 = 27;
-    pub const BANCHO_DISPOSE_MATCH:               u8 = 28;
+    pub const BANCHO_DISBAND_MATCH:                u8 = 28;
     pub const OSU_PART_LOBBY:                     u8 = 29;
     pub const OSU_JOIN_LOBBY:                     u8 = 30;
     pub const OSU_CREATE_MATCH:                   u8 = 31;
