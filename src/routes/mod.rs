@@ -28,6 +28,7 @@ fn init_default(cfg: &mut ServiceConfig) {
     cfg.service(index);
     cfg.service(test_pg);
     cfg.service(test_redis);
+    cfg.service(test_async_lock);
 }
 
 /// Routes for bancho

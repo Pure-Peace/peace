@@ -14,7 +14,11 @@ mod routes;
 mod settings;
 mod utils;
 
+use fast_async_mutex::mutex::Mutex;
+use std::sync::Arc;
+
 use colored::Colorize;
+use constants::types::TestType;
 use database::Database;
 use settings::{types::Settings, BANNER};
 
@@ -28,7 +32,7 @@ async fn main() -> std::io::Result<()> {
 
     // Create database object includes postgres and redis pool
     let database = Database::new(&settings).await;
-
+    let data: TestType = Arc::new(Mutex::new(0));
     // Start actix server
-    settings::actix::start_server(cfg, database).await
+    settings::actix::start_server(cfg, database, data).await
 }

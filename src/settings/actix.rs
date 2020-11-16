@@ -1,7 +1,7 @@
 use crate::database::Database;
 use crate::routes;
 
-use actix_web::{dev::Server, middleware::Logger, App, HttpServer};
+use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
 use config::Config;
 use std::time::Instant;
 
@@ -10,6 +10,8 @@ use colored::Colorize;
 use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
+
+use crate::constants::types::TestType;
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -50,7 +52,7 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 }
 
 /// Run actix
-pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()> {
+pub async fn start_server(cfg: Config, database: Database, data: TestType) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
     let prom_exclude_endpoint_log = cfg
@@ -95,7 +97,9 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
         .registry
         .register(Box::new(counter.clone()))
         .unwrap();
-        
+
+    let test_appdata: Data<TestType> = Data::new(data);
+
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
     let server = HttpServer::new(move || {
@@ -114,6 +118,7 @@ pub async fn start_server(cfg: Config, database: Database) -> std::io::Result<()
         App::new()
             .wrap(logger)
             .wrap(prometheus.clone())
+            .app_data(test_appdata.clone())
             .data(counter.clone())
             .data(database.clone())
             .configure(routes::init)

@@ -1,4 +1,6 @@
+use crate::constants::types::TestType;
 use crate::database::Database;
+
 use actix_web::web::Data;
 use actix_web::{get, HttpResponse, Responder};
 
@@ -53,4 +55,16 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
         .body(contents)
+}
+
+/// GET "/test_async_lock"
+#[get("/test_async_lock")]
+pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
+    let start = Instant::now();
+    let mut guard = testdata.lock().await;
+    *guard += 1;
+    let end = start.elapsed();
+    HttpResponse::Ok()
+        .set_header("Content-Type", "text/html; charset=UTF-8")
+        .body(&format!("{:?} {:.2?}", *guard, end))
 }
