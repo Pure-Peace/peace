@@ -1,13 +1,16 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-use actix_web::{middleware, web::{get, post, scope, ServiceConfig}};
 use actix_web::{dev::HttpServiceFactory, guard};
+use actix_web::{
+    middleware,
+    web::{get, post, scope, ServiceConfig},
+};
 
-pub mod web;
 pub mod api;
 pub mod bancho;
 pub mod default;
+pub mod web;
 
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes
@@ -23,13 +26,17 @@ pub fn init(cfg: &mut ServiceConfig) {
 fn init_default(cfg: &mut ServiceConfig) {
     use default::*;
     cfg.service(index);
+    cfg.service(test_pg);
+    cfg.service(test_redis);
 }
 
 /// Routes for bancho
 fn init_bancho() -> impl HttpServiceFactory {
-    scope("/bancho")
-        .route("", get().to(bancho::get))
-        .route("", post().guard(guard::Header("user-agent", "osu!")).to(bancho::post),
+    scope("/bancho").route("", get().to(bancho::get)).route(
+        "",
+        post()
+            .guard(guard::Header("user-agent", "osu!"))
+            .to(bancho::post),
     )
 }
 
