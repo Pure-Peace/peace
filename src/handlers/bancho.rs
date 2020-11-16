@@ -15,7 +15,7 @@ use crate::{constants, packets};
 /// ```
 fn parse_login_data(body: &String) -> Result<Vec<&str>, ()> {
     let data_lines: Vec<&str> = body.split("\n").filter(|i| i != &"").collect();
-    match data_lines.len() < 3 {
+    match data_lines.len() >= 3 {
         true => Ok(data_lines),
         false => Err(()),
     }
@@ -30,9 +30,9 @@ fn parse_login_data(body: &String) -> Result<Vec<&str>, ()> {
 ///      3: client hash set
 ///      4: block non-friend pm (unused2)
 /// ```
-fn parse_client_info(data_lines: Vec<&str>) -> Result<Vec<&str>, ()> {
-    let client_info_line: Vec<&str> = data_lines[2].split("|").collect();
-    match client_info_line.len() < 5 {
+fn parse_client_info(data_lines: &str) -> Result<Vec<&str>, ()> {
+    let client_info_line: Vec<&str> = data_lines.split("|").collect();
+    match client_info_line.len() >= 5 {
         true => Ok(client_info_line),
         false => Err(()),
     }
@@ -49,7 +49,7 @@ fn parse_client_info(data_lines: Vec<&str>) -> Result<Vec<&str>, ()> {
 /// ```
 fn parse_client_hashes(client_hashes: &str) -> Result<Vec<&str>, ()> {
     let hashes_data: Vec<&str> = client_hashes.split(":").filter(|i| i != &"").collect();
-    match hashes_data.len() < 5 {
+    match hashes_data.len() >= 5 {
         true => Ok(hashes_data),
         false => Err(()),
     }
@@ -64,7 +64,7 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Pa
     let data_lines = parse_login_data(&body).unwrap();
 
     // Parse client info
-    let client_info_line = parse_client_info(data_lines.clone()).unwrap();
+    let client_info_line = parse_client_info(data_lines[2]).unwrap();
 
     // Parse client hashes
     let client_hash_set = parse_client_hashes(client_info_line[3]).unwrap();
