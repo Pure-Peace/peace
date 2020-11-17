@@ -1,6 +1,6 @@
 # Peace
 
-## osu! server written by Rust.
+## osu! server written in Rust.
 
 Currently learning and experimental,
 
