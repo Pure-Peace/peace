@@ -6,6 +6,7 @@ use actix_web::{http::HeaderMap, web::Bytes};
 use crate::packets::PacketData;
 use crate::{constants, packets};
 
+#[inline(always)]
 /// Get Login data lines
 /// ```
 ///  rows:
@@ -13,14 +14,14 @@ use crate::{constants, packets};
 ///      1: password hash
 ///      2: client info and hardware info
 /// ```
-fn parse_login_data(body: &str) -> Result<Vec<&str>, ()> {
+async fn parse_login_data(body: &str) -> Result<Vec<&str>, ()> {
     let data_lines: Vec<&str> = body.split("\n").filter(|i| i != &"").collect();
     match data_lines.len() >= 3 {
         true => Ok(data_lines),
         false => Err(()),
     }
 }
-
+#[inline(always)]
 /// Get client info lines
 /// ```
 ///  rows:
@@ -30,14 +31,14 @@ fn parse_login_data(body: &str) -> Result<Vec<&str>, ()> {
 ///      3: client hash set
 ///      4: block non-friend pm (unused2)
 /// ```
-fn parse_client_info(data_lines: &str) -> Result<Vec<&str>, ()> {
+async fn parse_client_info(data_lines: &str) -> Result<Vec<&str>, ()> {
     let client_info_line: Vec<&str> = data_lines.split("|").collect();
     match client_info_line.len() >= 5 {
         true => Ok(client_info_line),
         false => Err(()),
     }
 }
-
+#[inline(always)]
 /// Get client hash set
 /// ```
 ///  rows:
@@ -47,7 +48,7 @@ fn parse_client_info(data_lines: &str) -> Result<Vec<&str>, ()> {
 ///      3: uniqueid1 (osu! uninstall id)
 ///      4: uniqueid2 (disk signature/serial num)
 /// ```
-fn parse_client_hashes(client_hashes: &str) -> Result<Vec<&str>, ()> {
+async fn parse_client_hashes(client_hashes: &str) -> Result<Vec<&str>, ()> {
     let hashes_data: Vec<&str> = client_hashes.split(":").filter(|i| i != &"").collect();
     match hashes_data.len() >= 5 {
         true => Ok(hashes_data),
@@ -61,23 +62,23 @@ pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (Pa
     let body = String::from_utf8(body.to_vec()).unwrap();
 
     // Parse body
-    let data_lines = parse_login_data(&body).unwrap();
+    let data_lines = parse_login_data(&body).await.unwrap();
 
     // Parse client info
-    let client_info_line = parse_client_info(data_lines[2]).unwrap();
+    let client_info_line = parse_client_info(data_lines[2]).await.unwrap();
 
     // Parse client hashes
-    let client_hash_set = parse_client_hashes(client_info_line[3]).unwrap();
+    let client_hash_set = parse_client_hashes(client_info_line[3]).await.unwrap();
 
     // println!("{:?}", data_lines);
 
     /* let packet = packets::PacketBuilder::new()
-        .add(packets::notification("hihi"))
-        //.add(packets::login_reply(constants::packets::LoginReply::AccountPasswordRest))
-        .add(packets::notification("you' re fired"))
-        .add(packets::rtx("you' re fired"))
-        .add(packets::bancho_restart(3000))
-        .done(); */
+    .add(packets::notification("hihi"))
+    //.add(packets::login_reply(constants::packets::LoginReply::AccountPasswordRest))
+    .add(packets::notification("you' re fired"))
+    .add(packets::rtx("you' re fired"))
+    .add(packets::bancho_restart(3000))
+    .done(); */
     //println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
 
     (

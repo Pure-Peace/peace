@@ -65,11 +65,13 @@ impl Integer for u8 {
     }
 }
 
+#[inline(always)]
 /// Create a empty packets
 pub fn empty() -> PacketData {
     Vec::with_capacity(11)
 }
 
+#[inline(always)]
 /// Initial a packet by id
 ///
 /// Packets posit:
@@ -89,6 +91,7 @@ pub fn new(packet_id: u8) -> PacketData {
     vec![packet_id, 0, 0, 0, 0, 0, 0]
 }
 
+#[inline(always)]
 /// Add packet length and write out
 pub fn output(mut packet: PacketData) -> PacketData {
     for (index, value) in ((packet.len() - 7) as i32).to_le_bytes().iter().enumerate() {
@@ -147,11 +150,13 @@ pub fn write_message(sender: &str, sender_id: i32, content: &str, channel: &str)
     data
 }
 
+#[inline(always)]
 /// Write integer packet
 pub fn write_integer<T: Integer>(integer: T) -> PacketData {
     integer.to_bytes()
 }
 
+#[inline(always)]
 /// Unsigned to uleb128
 fn uleb128(mut unsigned: u32) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(2);
