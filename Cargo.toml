@@ -33,3 +33,13 @@ criterion = "0.3.3"
 [[bench]]
 name = "packet_write"
 harness = false
+
+# link-time-optimization
+# Enabling makes the compiled program size smaller and higher performance, but it will extend compilation time.
+[profile.release]
+lto = true
+
+# link-time-optimization
+# Enabling makes the compiled program size smaller and higher performance, but it will extend compilation time.
+[profile.bench]
+lto = true
