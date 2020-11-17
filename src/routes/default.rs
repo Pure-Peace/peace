@@ -6,10 +6,6 @@ use actix_web::{get, HttpResponse, Responder};
 
 use std::time::Instant;
 
-/* lazy_static! {
-  static ref TESTS: Vec<> = 42
-} */
-
 /// GET "/"
 #[get("/")]
 pub async fn index() -> impl Responder {
@@ -46,7 +42,7 @@ pub async fn test_pg(database: Data<Database>) -> impl Responder {
 #[get("/test_redis")]
 pub async fn test_redis(database: Data<Database>) -> impl Responder {
     let start = Instant::now();
-    let _ =  database.redis.set("test", &["PurePeace", "NX"]).await;
+    let _ = database.redis.set("test", &["PurePeace", "NX"]).await;
     let contents: String = database.redis.get("test").await.unwrap();
     let end = start.elapsed();
     HttpResponse::Ok()
@@ -58,8 +54,10 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 #[get("/test_async_lock")]
 pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
     let start = Instant::now();
-    let mut guard = testdata.lock().await;
+    let mut guard = testdata.write().await;
     *guard += 1;
+    // Test io handle (sleep 1s)
+    // async_std::task::sleep(std::time::Duration::from_secs(1)).await;
     let end = start.elapsed();
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")

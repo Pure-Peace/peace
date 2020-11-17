@@ -10,14 +10,16 @@ edition = "2018"
 actix-multipart = "0.3"
 actix-web = "3.2.0"
 actix-web-prom = "0.5.0"
+async-std = "1.7.0"
 bytes = "0.6.0"
 colored = "2.0.0"
 config = "0.10.1"
+dashmap = "3.11.10"
 deadpool-postgres = "0.5.6"
 deadpool-redis = "0.6.1"
 dotenv = "0.15.0"
 env_logger = "0.8.1"
-futures = "0.3.7"
+futures = "0.3.8"
 lazy_static = "1.4.0"
 log = "0.4.11"
 prometheus = { version = "0.10.0", features = ["process"] }
@@ -25,7 +27,6 @@ serde = { version = "1.0.117", features = ["derive"] }
 serde_derive = "1.0.117"
 serde_qs = "0.7.0"
 tokio-postgres = "0.5.5"
-fast-async-mutex = "0.6.3"
 
 [dev-dependencies]
 criterion = "0.3.3"
@@ -35,11 +36,13 @@ name = "packet_write"
 harness = false
 
 # link-time-optimization
-# Enabling makes the compiled program size smaller and higher performance, but it will extend compilation time.
+# Enabling makes the compiled program size smaller and higher performance, 
+# but it will extend compilation time.
 [profile.release]
-lto = true
+lto = false
 
 # link-time-optimization
-# Enabling makes the compiled program size smaller and higher performance, but it will extend compilation time.
+# Enabling makes the compiled program size smaller and higher performance, 
+# but it will extend compilation time.
 [profile.bench]
-lto = true
+lto = false

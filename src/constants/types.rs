@@ -1,6 +1,5 @@
 #![allow(dead_code)]
-use fast_async_mutex::mutex::Mutex;
+use async_std::sync::RwLock;
 use std::sync::Arc;
 
-
-pub type TestType = Arc<Mutex<i32>>;
+pub type TestType = Arc<RwLock<i32>>;
