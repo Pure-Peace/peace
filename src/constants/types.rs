@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use fast_async_mutex::mutex::Mutex;
 use std::sync::Arc;
 

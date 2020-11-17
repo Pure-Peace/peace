@@ -13,7 +13,7 @@ use crate::{constants, packets};
 ///      1: password hash
 ///      2: client info and hardware info
 /// ```
-fn parse_login_data(body: &String) -> Result<Vec<&str>, ()> {
+fn parse_login_data(body: &str) -> Result<Vec<&str>, ()> {
     let data_lines: Vec<&str> = body.split("\n").filter(|i| i != &"").collect();
     match data_lines.len() >= 3 {
         true => Ok(data_lines),

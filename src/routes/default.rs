@@ -33,28 +33,25 @@ pub async fn test_pg(database: Data<Database>) -> impl Responder {
     let start = Instant::now();
     let contents = database
         .pg
-        .get_all_simple(r#"SELECT name FROM students WHERE id = 1;"#)
+        .get_first_simple(r#"SELECT 'PurePeace' as "name";"#)
         .await;
     let end = start.elapsed();
-    let mut name: String = contents[0].get("name");
-    name.push_str("\n");
-    name.push_str(&format!("{:.2?}", end));
+    let name: String = contents.get("name");
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
-        .body(name)
+        .body(format!("{}\n{:.2?}", name, end))
 }
 
 /// GET "/test_redis"
 #[get("/test_redis")]
 pub async fn test_redis(database: Data<Database>) -> impl Responder {
     let start = Instant::now();
-    let mut contents: String = database.redis.get("test").await.unwrap();
+    let _ =  database.redis.set("test", &["PurePeace", "NX"]).await;
+    let contents: String = database.redis.get("test").await.unwrap();
     let end = start.elapsed();
-    contents.push_str("\n");
-    contents.push_str(&format!("{:.2?}", end));
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
-        .body(contents)
+        .body(format!("{}\n{:.2?}", contents, end))
 }
 
 /// GET "/test_async_lock"
@@ -66,5 +63,5 @@ pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
     let end = start.elapsed();
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
-        .body(&format!("{:?} {:.2?}", *guard, end))
+        .body(&format!("{:?}\n{:.2?}", *guard, end))
 }
