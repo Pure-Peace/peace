@@ -16,16 +16,12 @@ mod settings;
 mod types;
 mod utils;
 
-use std::sync::Arc;
-
 use async_std::sync::RwLock;
 use colored::Colorize;
 
 use database::Database;
 use settings::{types::Settings, BANNER};
-use types::{PlayerMap, TestType};
-
-use dashmap::DashMap;
+use types::{PlayerSessions, TestType};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -37,8 +33,8 @@ async fn main() -> std::io::Result<()> {
 
     // Create database object includes postgres and redis pool
     let database = Database::new(&settings).await;
-    let data: TestType = Arc::new(RwLock::new(0));
-    let player_map: PlayerMap = Arc::new(DashMap::with_capacity(100));
+    let data: TestType = RwLock::new(0);
+    let player_sessions_map: PlayerSessions = RwLock::new(hashbrown::HashMap::with_capacity(100));
     // Start actix server
-    settings::actix::start_server(cfg, database, data, player_map).await
+    settings::actix::start_server(cfg, database, data, player_sessions_map).await
 }

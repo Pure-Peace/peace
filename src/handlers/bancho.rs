@@ -1,10 +1,11 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-use actix_web::{http::HeaderMap, web::Bytes};
+use actix_web::http::HeaderMap;
+use actix_web::web::{Bytes, Data};
 
-use crate::packets::PacketData;
 use crate::{constants, packets};
+use crate::{objects::Player, packets::PacketData, types::PlayerSessions};
 
 #[inline(always)]
 /// Get Login data lines
@@ -57,20 +58,31 @@ async fn parse_client_hashes(client_hashes: &str) -> Result<Vec<&str>, ()> {
 }
 
 /// Bancho login handler
-pub async fn login(body: &Bytes, request_ip: String, osu_version: String) -> (PacketData, String) {
+pub async fn login(
+    body: &Bytes,
+    request_ip: String,
+    osu_version: String,
+    player_sessions: Data<PlayerSessions>,
+) -> (PacketData, String) {
     // Get string body
     let body = String::from_utf8(body.to_vec()).unwrap();
-
     // Parse body
     let data_lines = parse_login_data(&body).await.unwrap();
-
     // Parse client info
     let client_info_line = parse_client_info(data_lines[2]).await.unwrap();
-
     // Parse client hashes
     let client_hash_set = parse_client_hashes(client_info_line[3]).await.unwrap();
 
     // println!("{:?}", data_lines);
+
+    let player = Player {
+        name: "world".to_string(),
+        money: 10000,
+        age: 16,
+    };
+    let mut player_sessions = player_sessions.write().await;
+    player_sessions.insert("test".to_string(), player);
+    println!("create a player: {:?}", player_sessions);
 
     /* let packet = packets::PacketBuilder::new()
     .add(packets::notification("hihi"))

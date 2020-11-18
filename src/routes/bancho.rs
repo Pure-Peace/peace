@@ -5,15 +5,12 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
 
+use crate::handlers::bancho;
+use crate::objects::Player;
+use crate::types::PlayerSessions;
 use crate::utils;
 
-use crate::handlers::bancho;
-
-pub async fn get(
-    req: HttpRequest,
-    body: Bytes,
-    counter: Data<IntCounterVec>,
-) -> impl Responder {
+pub async fn get(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> impl Responder {
     counter
         .with_label_values(&["/bancho", "get", "start"])
         .inc();
@@ -26,6 +23,7 @@ pub async fn get(
 pub async fn post(
     req: HttpRequest,
     body: Bytes,
+    player_sessions: Data<PlayerSessions>,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
     // Prom counter
@@ -37,14 +35,16 @@ pub async fn post(
     let headers = req.headers();
 
     // Get real request ip
-    let request_ip = utils::get_realip(&req).await.expect("Cannot get request ip");
+    let request_ip = utils::get_realip(&req)
+        .await
+        .expect("Cannot get request ip");
 
     // Get osu ver
     let osu_version = utils::get_osuver(&req).await;
 
     // If not login
     if !headers.contains_key("osu-token") {
-        let (resp_body, token) = bancho::login(&body, request_ip, osu_version).await;
+        let (resp_body, token) = bancho::login(&body, request_ip, osu_version, player_sessions).await;
         return HttpResponse::Ok()
             .set_header("cho-token", token)
             .set_header("cho-protocol", "19")

@@ -1,6 +1,7 @@
 use crate::database::Database;
 use crate::routes;
 
+use actix_cors::Cors;
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
 use config::Config;
 use std::time::Instant;
@@ -11,7 +12,7 @@ use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
-use crate::types::{TestType, PlayerMap};
+use crate::types::{PlayerSessions, TestType};
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -52,7 +53,12 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 }
 
 /// Run actix
-pub async fn start_server(cfg: Config, database: Database, data: TestType, player_map: PlayerMap) -> std::io::Result<()> {
+pub async fn start_server(
+    cfg: Config,
+    database: Database,
+    data: TestType,
+    player_sessions_map: PlayerSessions,
+) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
     let prom_exclude_endpoint_log = cfg
@@ -99,6 +105,7 @@ pub async fn start_server(cfg: Config, database: Database, data: TestType, playe
         .unwrap();
 
     let test_appdata: Data<TestType> = Data::new(data);
+    let player_sessions: Data<PlayerSessions> = Data::new(player_sessions_map);
 
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
@@ -118,7 +125,15 @@ pub async fn start_server(cfg: Config, database: Database, data: TestType, playe
         App::new()
             .wrap(logger)
             .wrap(prometheus.clone())
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_header()
+                    .allow_any_method()
+                    .supports_credentials(),
+            )
             .app_data(test_appdata.clone())
+            .app_data(player_sessions.clone())
             .data(counter.clone())
             .data(database.clone())
             .configure(routes::init)
