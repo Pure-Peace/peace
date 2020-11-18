@@ -13,6 +13,7 @@ mod objects;
 mod packets;
 mod routes;
 mod settings;
+mod types;
 mod utils;
 
 use std::sync::Arc;
@@ -20,9 +21,9 @@ use std::sync::Arc;
 use async_std::sync::RwLock;
 use colored::Colorize;
 
-use constants::types::{PlayerMap, TestType};
 use database::Database;
 use settings::{types::Settings, BANNER};
+use types::{PlayerMap, TestType};
 
 use dashmap::DashMap;
 

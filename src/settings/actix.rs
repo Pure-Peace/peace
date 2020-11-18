@@ -11,7 +11,7 @@ use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
-use crate::constants::types::{TestType, PlayerMap};
+use crate::types::{TestType, PlayerMap};
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {

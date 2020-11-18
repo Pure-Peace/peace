@@ -1,4 +1,4 @@
-use crate::constants::types::TestType;
+use crate::types::TestType;
 use crate::database::Database;
 
 use actix_web::web::Data;
