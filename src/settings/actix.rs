@@ -11,7 +11,7 @@ use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
-use crate::constants::types::TestType;
+use crate::constants::types::{TestType, PlayerMap};
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -52,7 +52,7 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 }
 
 /// Run actix
-pub async fn start_server(cfg: Config, database: Database, data: TestType) -> std::io::Result<()> {
+pub async fn start_server(cfg: Config, database: Database, data: TestType, player_map: PlayerMap) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
     let prom_exclude_endpoint_log = cfg
