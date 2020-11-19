@@ -28,6 +28,7 @@ serde = { version = "1.0.117", features = ["derive"] }
 serde_derive = "1.0.117"
 serde_qs = "0.7.0"
 tokio-postgres = "0.5.5"
+uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 criterion = "0.3.3"
