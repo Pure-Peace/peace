@@ -2,12 +2,13 @@
 use async_std::sync::RwLock;
 use uuid::Uuid;
 
-use crate::types::{PlayerHandler, PlayerSessionMap, TokenString};
+use crate::types::{PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString};
 
 use super::Player;
 
 pub struct PlayerSessions {
     pub map: PlayerSessionMap,
+    pub id_session_map: PlayerIdSessionMap
 }
 
 impl PlayerSessions {
@@ -15,26 +16,56 @@ impl PlayerSessions {
     pub fn new(capacity: usize) -> Self {
         PlayerSessions {
             map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
         }
     }
 
-    /// Create token, and login a player into sessions
+    /// Create new token, and login a player into PlayerSessions
     pub async fn login(&self, player: Player) -> TokenString {
-        let uuid = Uuid::new_v4().to_string();
-        let mut player_sessions = self.map.write().await;
-        player_sessions.insert(uuid.clone(), player);
-        uuid
+        let token = Uuid::new_v4().to_string();
+        let player_id = player.id;
+        self.map.write().await.insert(token.clone(), player);
+        self.id_session_map.write().await.insert(player_id, token.clone());
+        token
     }
 
-    /// For debug, get PlayerSessions string
-    pub async fn to_string(&self) -> String {
+    /// Login a player into PlayerSessions with a token
+    pub async fn login_with_token(&self, player: Player, token: TokenString) -> TokenString {
+        let player_id = player.id;
+        self.map.write().await.insert(token.clone(), player);
+        self.id_session_map.write().await.insert(player_id, token.clone());
+        token
+    }
+
+    /// Logout a player from the PlayerSessions
+    pub async fn logout(&self, token: TokenString) -> Option<(TokenString, Player)> {
+        match self.map.write().await.remove_entry(&token) {
+            Some((token_string, player)) => {
+                self.id_session_map.write().await.remove(&player.id);
+                Some((token_string, player))
+            },
+            None => None
+        }
+    }
+
+    /// For debug, get PlayerSessions.map to string
+    pub async fn map_to_string(&self) -> String {
         format!("{:?}", self.map.read().await)
+    }
+
+    /// For debug, get PlayerSessions.id_session_map to string
+    pub async fn id_map_to_string(&self) -> String {
+        format!("{:?}", self.id_session_map.read().await)
+    }
+
+    /// Token is exists or not
+    pub async fn token_is_exists(&self, token: TokenString) -> bool {
+        self.map.read().await.contains_key(&token)
     }
 
     /// Get a player data (readonly)
     pub async fn get_player_data(&self, token: TokenString) -> Option<Player> {
-        let player_sessions = self.map.read().await;
-        match player_sessions.get(&token) {
+        match self.map.read().await.get(&token) {
             Some(player) => Some(player.clone()),
             None => None,
         }
@@ -46,8 +77,7 @@ impl PlayerSessions {
         token: TokenString,
         handler: PlayerHandler,
     ) -> Option<Player> {
-        let mut player_sessions = self.map.write().await;
-        match player_sessions.get_mut(&token) {
+        match self.map.write().await.get_mut(&token) {
             Some(player) => {
                 handler(player);
                 Some(player.clone())
