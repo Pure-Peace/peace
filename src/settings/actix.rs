@@ -12,7 +12,8 @@ use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
-use crate::types::{PlayerSessions, TestType};
+use crate::objects::PlayerSessions;
+use crate::types::TestType;
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -57,7 +58,7 @@ pub async fn start_server(
     cfg: Config,
     database: Database,
     data: TestType,
-    player_sessions_map: PlayerSessions,
+    player_sessions: PlayerSessions,
 ) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
@@ -105,7 +106,7 @@ pub async fn start_server(
         .unwrap();
 
     let test_appdata: Data<TestType> = Data::new(data);
-    let player_sessions: Data<PlayerSessions> = Data::new(player_sessions_map);
+    let player_sessions: Data<PlayerSessions> = Data::new(player_sessions);
 
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());

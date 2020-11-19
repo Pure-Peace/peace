@@ -6,8 +6,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
 
 use crate::handlers::bancho;
-use crate::objects::Player;
-use crate::types::PlayerSessions;
+use crate::objects::{Player, PlayerSessions};
 use crate::utils;
 
 pub async fn get(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> impl Responder {

@@ -5,7 +5,10 @@ use actix_web::http::HeaderMap;
 use actix_web::web::{Bytes, Data};
 
 use crate::{constants, packets};
-use crate::{objects::Player, packets::PacketData, types::PlayerSessions};
+use crate::{
+    objects::{Player, PlayerSessions},
+    packets::PacketData,
+};
 
 #[inline(always)]
 /// Get Login data lines
@@ -80,9 +83,8 @@ pub async fn login(
         money: 10000,
         age: 16,
     };
-    let mut player_sessions = player_sessions.write().await;
-    player_sessions.insert("test".to_string(), player);
-    println!("create a player: {:?}", player_sessions);
+    let token = player_sessions.login(player).await;
+    println!("created a player: {}\nnow sessions:  {:?}", token, player_sessions.to_string().await);
 
     /* let packet = packets::PacketBuilder::new()
     .add(packets::notification("hihi"))
@@ -134,6 +136,6 @@ pub async fn login(
             0, 1, 0, 0, 0, 83, 0, 0, 30, 0, 0, 0, 232, 3, 0, 0, 11, 9, 80, 117, 114, 101, 80, 101,
             97, 99, 101, 32, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
         ],
-        "ggg".to_string(),
+        token,
     )
 }

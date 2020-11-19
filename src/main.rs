@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-//#![allow(unused_imports)]
 
 #[macro_use]
 extern crate log;
@@ -21,7 +20,9 @@ use colored::Colorize;
 
 use database::Database;
 use settings::{types::Settings, BANNER};
-use types::{PlayerSessions, TestType};
+use types::TestType;
+
+use objects::PlayerSessions;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -34,7 +35,7 @@ async fn main() -> std::io::Result<()> {
     // Create database object includes postgres and redis pool
     let database = Database::new(&settings).await;
     let data: TestType = RwLock::new(0);
-    let player_sessions_map: PlayerSessions = RwLock::new(hashbrown::HashMap::with_capacity(100));
+    let player_sessions = PlayerSessions::new(100);
     // Start actix server
-    settings::actix::start_server(cfg, database, data, player_sessions_map).await
+    settings::actix::start_server(cfg, database, data, player_sessions).await
 }
