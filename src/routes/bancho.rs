@@ -43,7 +43,7 @@ pub async fn post(
 
     // If not login
     if !headers.contains_key("osu-token") {
-        let (resp_body, token) = bancho::login(&body, request_ip, osu_version, player_sessions).await;
+        let (resp_body, token) = bancho::login(req, &body, request_ip, osu_version, player_sessions).await;
         return HttpResponse::Ok()
             .set_header("cho-token", token)
             .set_header("cho-protocol", "19")

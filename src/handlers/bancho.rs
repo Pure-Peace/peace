@@ -1,14 +1,16 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-use actix_web::http::HeaderMap;
 use actix_web::web::{Bytes, Data};
+use actix_web::{http::HeaderMap, HttpRequest};
 
 use crate::{constants, packets};
 use crate::{
     objects::{Player, PlayerSessions},
     packets::PacketData,
 };
+
+use crate::types::{ClientHashes, ClientInfo, Password, Username};
 
 #[inline(always)]
 /// Get Login data lines
@@ -18,8 +20,12 @@ use crate::{
 ///      1: password hash
 ///      2: client info and hardware info
 /// ```
-async fn parse_login_data(body: &str) -> Result<Vec<&str>, ()> {
-    let data_lines: Vec<&str> = body.split("\n").filter(|i| i != &"").collect();
+async fn parse_data_lines(body: &String) -> Result<Vec<String>, ()> {
+    let data_lines: Vec<String> = body
+        .split("\n")
+        .filter(|i| i != &"")
+        .map(|s| s.to_string())
+        .collect();
     match data_lines.len() >= 3 {
         true => Ok(data_lines),
         false => Err(()),
@@ -35,8 +41,8 @@ async fn parse_login_data(body: &str) -> Result<Vec<&str>, ()> {
 ///      3: client hash set
 ///      4: block non-friend pm (unused2)
 /// ```
-async fn parse_client_info(data_lines: &str) -> Result<Vec<&str>, ()> {
-    let client_info_line: Vec<&str> = data_lines.split("|").collect();
+async fn parse_client_info(data_lines: String) -> Result<Vec<String>, ()> {
+    let client_info_line: Vec<String> = data_lines.split("|").map(|s| s.to_string()).collect();
     match client_info_line.len() >= 5 {
         true => Ok(client_info_line),
         false => Err(()),
@@ -52,39 +58,107 @@ async fn parse_client_info(data_lines: &str) -> Result<Vec<&str>, ()> {
 ///      3: uniqueid1 (osu! uninstall id)
 ///      4: uniqueid2 (disk signature/serial num)
 /// ```
-async fn parse_client_hashes(client_hashes: &str) -> Result<Vec<&str>, ()> {
-    let hashes_data: Vec<&str> = client_hashes.split(":").filter(|i| i != &"").collect();
+async fn parse_client_hashes(client_hashes: String) -> Result<Vec<String>, ()> {
+    let hashes_data: Vec<String> = client_hashes
+        .split(":")
+        .filter(|i| i != &"")
+        .map(|s| s.to_string())
+        .collect();
     match hashes_data.len() >= 5 {
         true => Ok(hashes_data),
         false => Err(()),
     }
 }
 
+#[inline(always)]
+/// Parse login data
+async fn parse_login_data(
+    body: &Bytes,
+) -> Result<(Username, Password, ClientInfo, ClientHashes), i32> {
+    // Body to string
+    let body = match String::from_utf8(body.to_vec()) {
+        Ok(body) => body,
+        Err(_) => {
+            error!("Failed: parse_body;");
+            return Err(-1);
+        }
+    };
+    // Parse body
+    let data_lines = match parse_data_lines(&body).await {
+        Ok(data_lines) => data_lines,
+        Err(_) => {
+            error!("Failed: parse_data_lines; Request body: @{}@", body);
+            return Err(-2);
+        }
+    };
+    // Check username and password
+    let username = data_lines[0].clone();
+    let password = data_lines[1].clone();
+    if username.len() < 1 || password.len() < 33 {
+        error!("Failed: invalid username or password; username: {}, password: {}", username, password);
+        return Err(-5);
+    }
+    // Parse client info
+    let client_info_line = match parse_client_info(data_lines[2].to_string()).await {
+        Ok(client_info_line) => client_info_line,
+        Err(_) => {
+            error!("Failed: parse_client_info; Request body: @{}@", body);
+            return Err(-3);
+        }
+    };
+    // Parse client hashes
+    let client_hash_set = match parse_client_hashes(client_info_line[3].to_string()).await {
+        Ok(client_hash_set) => client_hash_set,
+        Err(_) => {
+            error!("Failed: parse_client_hashes; Request body: @{}@", body);
+            return Err(-4);
+        }
+    };
+
+    Ok((username, password, client_info_line, client_hash_set))
+}
+
+#[inline(always)]
 /// Bancho login handler
 pub async fn login(
+    req: HttpRequest,
     body: &Bytes,
     request_ip: String,
     osu_version: String,
     player_sessions: Data<PlayerSessions>,
 ) -> (PacketData, String) {
-    // Get string body
-    let body = String::from_utf8(body.to_vec()).unwrap();
-    // Parse body
-    let data_lines = parse_login_data(&body).await.unwrap();
-    // Parse client info
-    let client_info_line = parse_client_info(data_lines[2]).await.unwrap();
-    // Parse client hashes
-    let client_hash_set = parse_client_hashes(client_info_line[3]).await.unwrap();
-
-    // println!("{:?}", data_lines);
+    let parse_start = std::time::Instant::now();
+    // Parse login data first
+    let (username, password, client_info_line, client_hash_set) = match parse_login_data(body).await
+    {
+        Ok(login_data) => login_data,
+        Err(err_integer) => {
+            error!(
+                "Failed: parse_login_data; request_ip: {}; osu_version: {}",
+                request_ip, osu_version
+            );
+            return (vec![0], "login failed".to_string());
+        }
+    };
+    let parse_duration = parse_start.elapsed();
+    debug!(
+        "Login - data parsed, time spent: {:.2?}; ip: {}, osu_version: {};",
+        parse_duration, request_ip, osu_version
+    );
 
     let player = Player {
+        id: 1,
         name: "world".to_string(),
         money: 10000,
         age: 16,
     };
+
     let token = player_sessions.login(player).await;
-    println!("created a player: {}\nnow sessions:  {:?}", token, player_sessions.to_string().await);
+    /* println!(
+        "created a player: {}\nnow sessions:  {:?}",
+        token,
+        player_sessions.map_to_string().await
+    ); */
 
     /* let packet = packets::PacketBuilder::new()
     .add(packets::notification("hihi"))

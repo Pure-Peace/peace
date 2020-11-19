@@ -9,7 +9,7 @@ debug = false
 # Logger config
 [logger]
 # Level is selected from logger.mode
-level = "info"
+level = "debug"
 
 # Actix logger middleware format
 # Default is: '%a "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T'
@@ -27,7 +27,7 @@ exclude_endpoints = ["/favicon.ico"]
 # Support filter: "trace,mio::sys=info"
 # https://docs.rs/env_logger/0.8.1/env_logger/index.html
 [logger.mode]
-debug = "trace"
+debug = "debug"
 info = "info"
 error = "error"
 warn = "warn"

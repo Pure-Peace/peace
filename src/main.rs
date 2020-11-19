@@ -34,8 +34,12 @@ async fn main() -> std::io::Result<()> {
 
     // Create database object includes postgres and redis pool
     let database = Database::new(&settings).await;
+
     let data: TestType = RwLock::new(0);
+
+    // Create PlayerSession for this server
     let player_sessions = PlayerSessions::new(100);
+
     // Start actix server
     settings::actix::start_server(cfg, database, data, player_sessions).await
 }
