@@ -34,6 +34,8 @@ fn init_default(cfg: &mut ServiceConfig) {
     cfg.service(test_player_money_reduce);
     cfg.service(test_player_money_reduce_special);
     cfg.service(pleyer_sessions_all);
+    cfg.service(pleyer_sessions_kick);
+    cfg.service(pleyer_sessions_kick_uid);
 }
 
 /// Routes for bancho

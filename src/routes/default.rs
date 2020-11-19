@@ -150,3 +150,16 @@ pub async fn pleyer_sessions_kick(
         None => "non this player".to_string(),
     })
 }
+
+
+/// GET "/pleyer_sessions_kick_uid"
+#[get("/pleyer_sessions_kick_uid/{user_id}")]
+pub async fn pleyer_sessions_kick_uid(
+    user_id: Path<i32>,
+    player_sessions: Data<PlayerSessions>,
+) -> impl Responder {
+    HttpResponse::Ok().body(match player_sessions.logout_with_id(user_id.0).await {
+        Some((token, player)) => format!("{}\n{:?}", token, player),
+        None => "non this player".to_string(),
+    })
+}
