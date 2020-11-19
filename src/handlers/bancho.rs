@@ -95,7 +95,10 @@ async fn parse_login_data(
     let username = data_lines[0].clone();
     let password = data_lines[1].clone();
     if username.len() < 1 || password.len() < 33 {
-        error!("Failed: invalid username or password; username: {}, password: {}", username, password);
+        error!(
+            "Failed: invalid username or password; username: {}, password: {}",
+            username, password
+        );
         return Err(-5);
     }
     // Parse client info
@@ -145,6 +148,11 @@ pub async fn login(
         "Login - data parsed, time spent: {:.2?}; ip: {}, osu_version: {};",
         parse_duration, request_ip, osu_version
     );
+
+    // TODO: select user_id from database,
+    // then check is the user_id already login ?
+    // if true, logout it
+    // let is_logined = player_sessions.user_is_logined(user_id).await;
 
     let player = Player {
         id: 1,
