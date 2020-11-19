@@ -1,7 +1,8 @@
 use crate::database::Database;
-use crate::types::{PlayerSessions, TestType};
+use crate::objects::PlayerSessions;
+use crate::types::TestType;
 
-use actix_web::web::Data;
+use actix_web::web::{Data, Path};
 use actix_web::{get, HttpResponse, Responder};
 
 use std::time::Instant;
@@ -65,12 +66,14 @@ pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
 }
 
 /// GET "/test_player_read"
-#[get("/test_player_read")]
-pub async fn test_player_read(player_sessions: Data<PlayerSessions>) -> impl Responder {
+#[get("/test_player_read/{token}")]
+pub async fn test_player_read(
+    token: Path<String>,
+    player_sessions: Data<PlayerSessions>,
+) -> impl Responder {
     let start = Instant::now();
-    let player_sessions = player_sessions.read().await;
-    let player_info = match player_sessions.get("test") {
-        Some(player) => format!("{:?}", *player),
+    let player_info = match player_sessions.get_player_data(token.0).await {
+        Some(player) => format!("{:?}", player),
         None => "non this player".to_string(),
     };
     let end = start.elapsed();
@@ -78,14 +81,17 @@ pub async fn test_player_read(player_sessions: Data<PlayerSessions>) -> impl Res
 }
 
 /// GET "/test_player_money_add"
-#[get("/test_player_money_add")]
-pub async fn test_player_money_add(player_sessions: Data<PlayerSessions>) -> impl Responder {
+#[get("/test_player_money_add/{token}")]
+pub async fn test_player_money_add(
+    token: Path<String>,
+    player_sessions: Data<PlayerSessions>,
+) -> impl Responder {
     let start = Instant::now();
-    let mut player_sessions = player_sessions.write().await;
-    let player_info = match player_sessions.get_mut("test") {
+    let mut player_sessions = player_sessions.map.write().await;
+    let player_info = match player_sessions.get_mut(&token.0) {
         Some(mut player) => {
             (*player).money += 1;
-            async_std::task::sleep(std::time::Duration::from_secs(1)).await;
+            //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
             format!("{:?}", *player)
         }
         None => "non this player".to_string(),
@@ -95,11 +101,14 @@ pub async fn test_player_money_add(player_sessions: Data<PlayerSessions>) -> imp
 }
 
 /// GET "/test_player_money_reduce"
-#[get("/test_player_money_reduce")]
-pub async fn test_player_money_reduce(player_sessions: Data<PlayerSessions>) -> impl Responder {
+#[get("/test_player_money_reduce/{token}")]
+pub async fn test_player_money_reduce(
+    token: Path<String>,
+    player_sessions: Data<PlayerSessions>,
+) -> impl Responder {
     let start = Instant::now();
-    let mut player_sessions = player_sessions.write().await;
-    let player_info = match player_sessions.get_mut("test") {
+    let mut player_sessions = player_sessions.map.write().await;
+    let player_info = match player_sessions.get_mut(&token.0) {
         Some(mut player) => {
             (*player).money -= 1;
             format!("{:?}", *player)
@@ -107,5 +116,19 @@ pub async fn test_player_money_reduce(player_sessions: Data<PlayerSessions>) -> 
         None => "non this player".to_string(),
     };
     let end = start.elapsed();
-    HttpResponse::Ok().body(format!("{} {:.2?}", player_info, end))
+    HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
+}
+
+/// GET "/test_player_money_reduce_special"
+#[get("/test_player_money_reduce_special/{token}")]
+pub async fn test_player_money_reduce_special(
+    token: Path<String>,
+    player_sessions: Data<PlayerSessions>,
+) -> impl Responder {
+    let start = Instant::now();
+    let player_info = player_sessions
+        .handle_player(token.0, |player| (*player).money -= 1)
+        .await;
+    let end = start.elapsed();
+    HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
 }
