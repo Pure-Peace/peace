@@ -132,3 +132,21 @@ pub async fn test_player_money_reduce_special(
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
 }
+
+/// GET "/pleyer_sessions_all"
+#[get("/pleyer_sessions_all")]
+pub async fn pleyer_sessions_all(player_sessions: Data<PlayerSessions>) -> impl Responder {
+    HttpResponse::Ok().body(player_sessions.map_to_string().await)
+}
+
+/// GET "/pleyer_sessions_kick"
+#[get("/pleyer_sessions_kick/{token}")]
+pub async fn pleyer_sessions_kick(
+    token: Path<String>,
+    player_sessions: Data<PlayerSessions>,
+) -> impl Responder {
+    HttpResponse::Ok().body(match player_sessions.logout(token.0).await {
+        Some((token, player)) => format!("{}\n{:?}", token, player),
+        None => "non this player".to_string(),
+    })
+}
