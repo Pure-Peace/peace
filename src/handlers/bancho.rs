@@ -130,8 +130,11 @@ pub async fn login(
     osu_version: String,
     player_sessions: Data<PlayerSessions>,
 ) -> (PacketData, String) {
+    // Response packet data
+    let response_packet_data = packets::PacketBuilder::new();
+
+    // Parse login data start ----------
     let parse_start = std::time::Instant::now();
-    // Parse login data first
     let (username, password, client_info_line, client_hash_set) = match parse_login_data(body).await
     {
         Ok(login_data) => login_data,
@@ -140,7 +143,13 @@ pub async fn login(
                 "Failed: parse_login_data; request_ip: {}; osu_version: {}",
                 request_ip, osu_version
             );
-            return (vec![0], "login failed".to_string());
+            // Login failed
+            return (
+                response_packet_data.add(packets::login_reply(
+                    constants::packets::LoginReply::InvalidCredentials,
+                )).write_out(),
+                "login_failed".to_string(),
+            );
         }
     };
     let parse_duration = parse_start.elapsed();
@@ -148,20 +157,37 @@ pub async fn login(
         "Login - data parsed, time spent: {:.2?}; ip: {}, osu_version: {};",
         parse_duration, request_ip, osu_version
     );
+    // Parse login data end ----------
 
-    // TODO: select user_id from database,
-    // then check is the user_id already login ?
-    // if true, logout it
-    // let is_logined = player_sessions.user_is_logined(user_id).await;
+    // TODO: select user_id from database
+    let user_id = 1;
 
+    // Check is the user_id already login, if true, logout it ----------
+    let already_logined = player_sessions.user_is_logined(user_id).await;
+    if already_logined {
+        // TODO: send notification to old session first
+        // Logout old session
+        player_sessions.logout_with_id(user_id).await;
+        // Send notification to current session
+        response_packet_data.add(packets::notification(
+            "There is another person logging in with your account! ! \n
+            Now the server has logged out another session.\n
+            If it is not you, please change your password in time.",
+        ));
+    }
+
+    // Create player object
     let player = Player {
-        id: 1,
+        id: user_id,
         name: "world".to_string(),
         money: 10000,
         age: 16,
     };
 
+    // Login player to sessions
     let token = player_sessions.login(player).await;
+
+    
     /* println!(
         "created a player: {}\nnow sessions:  {:?}",
         token,
