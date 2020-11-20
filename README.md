@@ -2,6 +2,8 @@
 
 ## osu! server written in Rust.
 
+[![Rust](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
+
 Currently learning and experimental,
 
 ### but you can still star :p
