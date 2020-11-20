@@ -8,7 +8,7 @@ Currently learning and experimental,
 
 Recommended development tool: **Vscode**
 
-![vscode](http://miya.ink/nice.png)
+![vscode](http://miya.ink/news.png)
 Soo good
 
 **With plugins:**
