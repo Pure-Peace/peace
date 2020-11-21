@@ -4,7 +4,7 @@
 use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 
-use crate::{constants, packets};
+use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerSessions},
     packets::PacketData,
@@ -128,6 +128,7 @@ pub async fn login(
     body: &Bytes,
     request_ip: String,
     osu_version: String,
+    database: &Data<Database>,
     player_sessions: Data<PlayerSessions>,
 ) -> (PacketData, String) {
     // Response packet data
@@ -145,9 +146,11 @@ pub async fn login(
             );
             // Login failed
             return (
-                response_packet_data.add(packets::login_reply(
-                    constants::packets::LoginReply::InvalidCredentials,
-                )).write_out(),
+                response_packet_data
+                    .add(packets::login_reply(
+                        constants::packets::LoginReply::InvalidCredentials,
+                    ))
+                    .write_out(),
                 "login_failed".to_string(),
             );
         }
@@ -159,8 +162,35 @@ pub async fn login(
     );
     // Parse login data end ----------
 
-    // TODO: select user_id from database
-    let user_id = 1;
+    // Select user base info from database
+    let user_base = match database
+        .pg
+        .query_first(
+            r#"SELECT 
+                "id", "name", "privileges", "country" 
+                FROM "user"."base" WHERE 
+                "name_safe" = $1 and "password" = $2;"#,
+            &[&username.to_lowercase().replace(" ", "_"), &password],
+        )
+        .await
+    {
+        Ok(user_base) => user_base,
+        Err(err) => {
+            debug!("{:?}", err.to_string());
+            // Login failed
+            return (
+                response_packet_data
+                    .add(packets::login_reply(
+                        constants::packets::LoginReply::InvalidCredentials,
+                    ))
+                    .write_out(),
+                "login_failed".to_string(),
+            );
+        }
+    };
+    debug!("{:?}", user_base);
+    let user_id: i32 = user_base.get("id");
+    let username: String = user_base.get("name");
 
     // Check is the user_id already login, if true, logout it ----------
     let already_logined = player_sessions.user_is_logined(user_id).await;
@@ -179,7 +209,7 @@ pub async fn login(
     // Create player object
     let player = Player {
         id: user_id,
-        name: "world".to_string(),
+        name: username,
         money: 10000,
         age: 16,
     };
@@ -187,7 +217,6 @@ pub async fn login(
     // Login player to sessions
     let token = player_sessions.login(player).await;
 
-    
     /* println!(
         "created a player: {}\nnow sessions:  {:?}",
         token,

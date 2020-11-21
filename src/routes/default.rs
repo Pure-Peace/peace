@@ -30,7 +30,7 @@ pub async fn test_pg(database: Data<Database>) -> impl Responder {
     let start = Instant::now();
     let contents = database
         .pg
-        .get_first_simple(r#"SELECT 'PurePeace' as "name";"#)
+        .query_first_simple(r#"SELECT 'PurePeace' as "name";"#)
         .await;
     let end = start.elapsed();
     let name: String = contents.get("name");
