@@ -1,0 +1,4 @@
+CREATE DATABASE "peace"
+WITH
+  ENCODING = 'utF8'
+;
