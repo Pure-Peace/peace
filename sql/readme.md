@@ -14,3 +14,15 @@ init_database.bat
 init_database.sh
 ```
 
+
+## Raw
+
+### Export database
+```
+psql -U <your postgresql username> peace > peace.sql 
+```
+
+### Import database
+```
+psql -U <your postgresql username> peace < peace.sql
+```
