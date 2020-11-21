@@ -19,7 +19,7 @@ init_database.sh
 
 ### Export database
 ```
-pg_dump -U <your postgresql username> peace > peace.sql 
+pg_dump -O --column-inserts -U <your postgresql username> peace > peace.sql
 ```
 
 ### Import database
