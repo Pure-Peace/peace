@@ -37,11 +37,23 @@ CREATE SCHEMA "user";
 CREATE FUNCTION public.update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
-
 	new.update_time = CURRENT_TIMESTAMP;
-
 	RETURN new;
-
+END$$;
+
+
+--
+-- Name: safe_user_info(); Type: FUNCTION; Schema: user; Owner: -
+--
+
+CREATE FUNCTION "user".safe_user_info() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+		NEW.name = REPLACE(BTRIM(NEW.name), '_', ' ');
+		NEW.email = LOWER(NEW.email);
+		NEW.country = UPPER(NEW.country);
+		NEW.name_safe = REPLACE(LOWER(NEW.name), ' ', '_');
+	RETURN NEW;
 END$$;
 
 
@@ -56,17 +68,21 @@ SET default_with_oids = false;
 CREATE TABLE "user".address (
     id integer NOT NULL,
     user_id integer NOT NULL,
-    ip character varying(255),
-    version character varying(255),
-    time_offset character varying(255),
-    location character varying(255),
-    path character varying(255),
-    adapters text,
-    adapters_hash character varying(255),
-    uninstall_id character varying,
-    disk_id character varying(255),
+    time_offset character varying(255) NOT NULL,
+    path character varying(255) NOT NULL,
+    adapters text NOT NULL,
+    adapters_hash character varying(255) NOT NULL,
+    uninstall_id character varying NOT NULL,
+    disk_id character varying(255) NOT NULL,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+
+--
+-- Name: TABLE address; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON TABLE "user".address IS 'User''s login hardware address';
 
 
 --
@@ -84,31 +100,10 @@ COMMENT ON COLUMN "user".address.user_id IS 'user_id, int 32';
 
 
 --
--- Name: COLUMN address.ip; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON COLUMN "user".address.ip IS 'ip address';
-
-
---
--- Name: COLUMN address.version; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON COLUMN "user".address.version IS 'osu_version';
-
-
---
 -- Name: COLUMN address.time_offset; Type: COMMENT; Schema: user; Owner: -
 --
 
 COMMENT ON COLUMN "user".address.time_offset IS 'time_offset';
-
-
---
--- Name: COLUMN address.location; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON COLUMN "user".address.location IS 'location';
 
 
 --
@@ -158,10 +153,11 @@ COMMENT ON COLUMN "user".address.create_time IS 'create_time';
 --
 
 CREATE SEQUENCE "user".address_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1;
 
 
@@ -187,6 +183,13 @@ CREATE TABLE "user".base (
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+
+--
+-- Name: TABLE base; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON TABLE "user".base IS 'Basic user information, such as user name, password, email, etc.';
 
 
 --
@@ -284,6 +287,13 @@ CREATE TABLE "user".friends (
 
 
 --
+-- Name: TABLE friends; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON TABLE "user".friends IS 'User’s friends';
+
+
+--
 -- Name: COLUMN friends.user_id; Type: COMMENT; Schema: user; Owner: -
 --
 
@@ -319,18 +329,24 @@ CREATE TABLE "user".login_records (
     id integer NOT NULL,
     user_id integer NOT NULL,
     address_id integer NOT NULL,
-    count integer DEFAULT 1 NOT NULL,
-    timestamps character varying[] NOT NULL,
-    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    ip character varying(255) NOT NULL,
+    version character varying(255) NOT NULL,
+    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+
+--
+-- Name: TABLE login_records; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON TABLE "user".login_records IS 'The user''s login record, associated with the user''s login address';
 
 
 --
 -- Name: COLUMN login_records.id; Type: COMMENT; Schema: user; Owner: -
 --
 
-COMMENT ON COLUMN "user".login_records.id IS 'login_records id, unique';
+COMMENT ON COLUMN "user".login_records.id IS 'login record id';
 
 
 --
@@ -348,17 +364,17 @@ COMMENT ON COLUMN "user".login_records.address_id IS 'user.address.id';
 
 
 --
--- Name: COLUMN login_records.count; Type: COMMENT; Schema: user; Owner: -
+-- Name: COLUMN login_records.ip; Type: COMMENT; Schema: user; Owner: -
 --
 
-COMMENT ON COLUMN "user".login_records.count IS 'address login count';
+COMMENT ON COLUMN "user".login_records.ip IS 'ip address';
 
 
 --
--- Name: COLUMN login_records.timestamps; Type: COMMENT; Schema: user; Owner: -
+-- Name: COLUMN login_records.version; Type: COMMENT; Schema: user; Owner: -
 --
 
-COMMENT ON COLUMN "user".login_records.timestamps IS 'each login timestamps';
+COMMENT ON COLUMN "user".login_records.version IS 'osu version';
 
 
 --
@@ -369,21 +385,15 @@ COMMENT ON COLUMN "user".login_records.create_time IS 'create_time, auto';
 
 
 --
--- Name: COLUMN login_records.update_time; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON COLUMN "user".login_records.update_time IS 'update_time, auto';
-
-
---
 -- Name: login_records_id_seq; Type: SEQUENCE; Schema: user; Owner: -
 --
 
 CREATE SEQUENCE "user".login_records_id_seq
+    AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1;
 
 
@@ -407,6 +417,13 @@ CREATE TABLE "user".notes (
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+
+--
+-- Name: TABLE notes; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON TABLE "user".notes IS 'User’s notes, which may be rewards or warnings etc.';
 
 
 --
@@ -509,81 +526,72 @@ ALTER TABLE ONLY "user".notes ALTER COLUMN id SET DEFAULT nextval('"user".notes_
 -- Data for Name: address; Type: TABLE DATA; Schema: user; Owner: -
 --
 
+INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (1, 1009, '1', 'a', 'a', 'a', 'a', 'a', '2020-11-22 00:54:58.723191+08');
+INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (2, 1009, '2', 'b', 'b', 'b', 'b', 'b', '2020-11-22 00:55:05.122778+08');
+INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (3, 1011, '3', 'c', 'c', 'c', 'c', 'c', '2020-11-22 00:55:12.680359+08');
 
 
 --
 -- Data for Name: base; Type: TABLE DATA; Schema: user; Owner: -
 --
 
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1009, 'PurePeace', 'purepeace', '931ffe4c39bc9fdc875cf8f691bf1f57', '940857703@qq.com', 1, 'CN', '2020-11-21 23:42:00.487276+08', '2020-11-21 23:42:15.498228+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1011, 'Chino', 'chino', '931ffe4c39bc9fdc875cf8f691bf1f57', 'chino@kafuu.com', 1, 'UN', '2020-11-21 23:43:18.460883+08', '2020-11-21 23:43:18.460883+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1012, 'usao', 'usao', '931ffe4c39bc9fdc875cf8f691bf1f57', '1', 1, 'UN', '2020-11-21 23:43:32.801019+08', '2020-11-21 23:43:32.801019+08');
 
 
 --
 -- Data for Name: friends; Type: TABLE DATA; Schema: user; Owner: -
 --
 
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1009, 1011, NULL, '2020-11-21 23:45:28.794136+08');
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1009, 1012, NULL, '2020-11-21 23:45:37.559363+08');
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1011, 1009, NULL, '2020-11-21 23:45:47.362144+08');
 
 
 --
 -- Data for Name: login_records; Type: TABLE DATA; Schema: user; Owner: -
 --
 
+INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (3, 1009, 1, 'a', 'a', '2020-11-22 00:55:26.9644+08');
+INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (4, 1009, 1, 'f', 'f', '2020-11-22 00:55:36.010122+08');
+INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (5, 1009, 2, 'c', 'c', '2020-11-22 00:55:42.297614+08');
+INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (6, 1011, 3, 'g', 'g', '2020-11-22 00:55:50.493531+08');
 
 
 --
 -- Data for Name: notes; Type: TABLE DATA; Schema: user; Owner: -
 --
 
+INSERT INTO "user".notes (id, user_id, note, type, added_by, create_time, update_time) VALUES (1, 1009, 'boss', 0, NULL, '2020-11-21 23:46:12.296661+08', '2020-11-21 23:46:12.296661+08');
 
 
 --
 -- Name: address_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".address_id_seq', 1, false);
+SELECT pg_catalog.setval('"user".address_id_seq', 3, true);
 
 
 --
 -- Name: base_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".base_id_seq', 1000, false);
+SELECT pg_catalog.setval('"user".base_id_seq', 1012, true);
 
 
 --
 -- Name: login_records_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".login_records_id_seq', 1, false);
+SELECT pg_catalog.setval('"user".login_records_id_seq', 6, true);
 
 
 --
 -- Name: notes_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".notes_id_seq', 1, false);
-
-
---
--- Name: address Address.id; Type: CONSTRAINT; Schema: user; Owner: -
---
-
-ALTER TABLE ONLY "user".address
-    ADD CONSTRAINT "Address.id" UNIQUE (id);
-
-
---
--- Name: login_records Login_records.id; Type: CONSTRAINT; Schema: user; Owner: -
---
-
-ALTER TABLE ONLY "user".login_records
-    ADD CONSTRAINT "Login_records.id" UNIQUE (id);
-
-
---
--- Name: CONSTRAINT "Login_records.id" ON login_records; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON CONSTRAINT "Login_records.id" ON "user".login_records IS 'Login_records.id';
+SELECT pg_catalog.setval('"user".notes_id_seq', 1, true);
 
 
 --
@@ -641,11 +649,19 @@ ALTER TABLE ONLY "user".friends
 
 
 --
+-- Name: login_records login_records_id; Type: CONSTRAINT; Schema: user; Owner: -
+--
+
+ALTER TABLE ONLY "user".login_records
+    ADD CONSTRAINT login_records_id UNIQUE (id);
+
+
+--
 -- Name: login_records login_records_pkey; Type: CONSTRAINT; Schema: user; Owner: -
 --
 
 ALTER TABLE ONLY "user".login_records
-    ADD CONSTRAINT login_records_pkey PRIMARY KEY (id, user_id, address_id);
+    ADD CONSTRAINT login_records_pkey PRIMARY KEY (id, user_id);
 
 
 --
@@ -664,6 +680,27 @@ CREATE UNIQUE INDEX "User.name" ON "user".base USING btree (name, name_safe);
 
 
 --
+-- Name: user_address; Type: INDEX; Schema: user; Owner: -
+--
+
+CREATE INDEX user_address ON "user".address USING btree (user_id);
+
+
+--
+-- Name: base safe_user_info; Type: TRIGGER; Schema: user; Owner: -
+--
+
+CREATE TRIGGER safe_user_info BEFORE INSERT OR UPDATE ON "user".base FOR EACH ROW EXECUTE PROCEDURE "user".safe_user_info();
+
+
+--
+-- Name: TRIGGER safe_user_info ON base; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON TRIGGER safe_user_info ON "user".base IS 'auto make the user info safety';
+
+
+--
 -- Name: base update_time_auto; Type: TRIGGER; Schema: user; Owner: -
 --
 
@@ -678,20 +715,6 @@ COMMENT ON TRIGGER update_time_auto ON "user".base IS 'auto update the update_ti
 
 
 --
--- Name: login_records update_time_auto; Type: TRIGGER; Schema: user; Owner: -
---
-
-CREATE TRIGGER update_time_auto BEFORE UPDATE ON "user".login_records FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
-
-
---
--- Name: TRIGGER update_time_auto ON login_records; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON TRIGGER update_time_auto ON "user".login_records IS 'auto update the update_time after update user info';
-
-
---
 -- Name: notes update_time_auto; Type: TRIGGER; Schema: user; Owner: -
 --
 
@@ -703,29 +726,6 @@ CREATE TRIGGER update_time_auto BEFORE UPDATE ON "user".notes FOR EACH ROW EXECU
 --
 
 COMMENT ON TRIGGER update_time_auto ON "user".notes IS 'auto update the update_time after update note info';
-
-
---
--- Name: login_records Address.id; Type: FK CONSTRAINT; Schema: user; Owner: -
---
-
-ALTER TABLE ONLY "user".login_records
-    ADD CONSTRAINT "Address.id" FOREIGN KEY (address_id) REFERENCES "user".address(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: CONSTRAINT "Address.id" ON login_records; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON CONSTRAINT "Address.id" ON "user".login_records IS 'address_id';
-
-
---
--- Name: address User.id; Type: FK CONSTRAINT; Schema: user; Owner: -
---
-
-ALTER TABLE ONLY "user".address
-    ADD CONSTRAINT "User.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -752,18 +752,11 @@ ALTER TABLE ONLY "user".notes
 
 
 --
--- Name: login_records User.id; Type: FK CONSTRAINT; Schema: user; Owner: -
+-- Name: address User.id; Type: FK CONSTRAINT; Schema: user; Owner: -
 --
 
-ALTER TABLE ONLY "user".login_records
+ALTER TABLE ONLY "user".address
     ADD CONSTRAINT "User.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: CONSTRAINT "User.id" ON login_records; Type: COMMENT; Schema: user; Owner: -
---
-
-COMMENT ON CONSTRAINT "User.id" ON "user".login_records IS 'user_id';
 
 
 --
@@ -787,6 +780,14 @@ ALTER TABLE ONLY "user".friends
 --
 
 COMMENT ON CONSTRAINT "User.id (friend)" ON "user".friends IS 'user_id (friend)';
+
+
+--
+-- Name: login_records login_records; Type: FK CONSTRAINT; Schema: user; Owner: -
+--
+
+ALTER TABLE ONLY "user".login_records
+    ADD CONSTRAINT login_records FOREIGN KEY (address_id, user_id) REFERENCES "user".address(id, user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
