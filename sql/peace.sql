@@ -42,9 +42,15 @@ CREATE FUNCTION public.update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
 
+
+
 	new.update_time = CURRENT_TIMESTAMP;
 
+
+
 	RETURN new;
+
+
 
 END$$;
 
@@ -688,6 +694,13 @@ ALTER TABLE ONLY "user".login_records
 
 ALTER TABLE ONLY "user".notes
     ADD CONSTRAINT notes_pkey1 PRIMARY KEY (id, user_id);
+
+
+--
+-- Name: User.name; Type: INDEX; Schema: user; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "User.name" ON "user".base USING btree (name, name_safe);
 
 
 --
