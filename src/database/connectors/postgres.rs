@@ -4,7 +4,7 @@ use crate::settings::types::Settings;
 
 use colored::Colorize;
 use deadpool_postgres::{Client, Pool};
-use tokio_postgres::{types::ToSql, NoTls, Row, Statement};
+use tokio_postgres::{types::ToSql, Error, NoTls, Row, Statement};
 
 /// Postgres object
 #[derive(Clone)]
@@ -28,7 +28,10 @@ impl Postgres {
     /// if check_pools_on_created is true, will test usability when creating connection pool
     pub async fn new(settings: &Settings) -> Self {
         // Create pool
-        print!("> {}", "Creating postgres connection pool...".bright_purple());
+        print!(
+            "> {}",
+            "Creating postgres connection pool...".bright_purple()
+        );
         let pool = settings.postgres.create_pool(NoTls).unwrap();
         let pool_status = format!("Max size: {}", pool.status().max_size).green();
         println!(" {} -> {}", "OK".green(), pool_status);
@@ -53,6 +56,7 @@ impl Postgres {
         }
     }
 
+    #[inline(always)]
     /// Ready to query
     ///
     /// # Examples:
@@ -81,59 +85,63 @@ impl Postgres {
             .expect("Unable to get postgres client!")
     }
 
+    #[inline(always)]
     /// Query and get all result rows
     ///
     /// # Examples:
     ///
     /// ```
-    /// let rows: Vec<Row> = get_all("YOUR SQL $1", ["params $1-$n", ...]);
+    /// let rows: Vec<Row> = query("YOUR SQL $1", ["params $1-$n", ...]);
     /// ```
-    pub async fn get_all(&self, query: &str, params: &[&(dyn ToSql + Sync)]) -> Vec<Row> {
+    pub async fn query(
+        &self,
+        query: &str,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Vec<Row>, Error> {
         let (c, s) = self.get_ready(query).await;
-        let rows = c.query(&s, params).await.unwrap();
-        rows
+        c.query(&s, params).await
     }
 
-    /// Query and get the frist result row
+    #[inline(always)]
+    /// Query and query the frist result row
     /// ### The query using this method must return a result row.
     /// ### If you are not sure whether the result will be returned, please use get_all instead of get_first.
     ///
     /// # Examples:
     ///
     /// ```
-    /// let row: Row = get_first("YOUR SQL $1", ["params $1-$n", ...]);
+    /// let row: Row = query_first("YOUR SQL $1", ["params $1-$n", ...]);
     /// ```
-    pub async fn get_first(&self, query: &str, params: &[&(dyn ToSql + Sync)]) -> Row {
+    pub async fn query_first(
+        &self,
+        query: &str,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Row, Error> {
         let (c, s) = self.get_ready(query).await;
-        let row = c
-            .query_one(&s, params)
-            .await
-            .expect("Maybe this query did not return result rows?
-            But the query using this method must return a result row.
-            If you are not sure whether the result will be returned, please use get_all instead of get_first.");
-        row
+        c.query_one(&s, params).await
     }
 
-    /// Query and get the frist result row (no params)
+    #[inline(always)]
+    /// Query and query the frist result row (no params)
     ///
     /// # Examples:
     ///
     /// ```
-    /// let row: Row = get_first_simple("YOUR SQL");
+    /// let row: Row = query_first_simple("YOUR SQL");
     /// ```
-    pub async fn get_first_simple(&self, query: &str) -> Row {
-        self.get_first(query, &[]).await
+    pub async fn query_first_simple(&self, query: &str) -> Row {
+        self.query_first(query, &[]).await.unwrap()
     }
 
-    /// Query and get all result rows (no params)
+    /// Query and query all result rows (no params)
     ///
     /// # Examples:
     ///
     /// ```
-    /// let row: Vec<Row> = get_all_simple("YOUR SQL");
+    /// let row: Vec<Row> = query_simple("YOUR SQL");
     /// ```
-    pub async fn get_all_simple(&self, query: &str) -> Vec<Row> {
-        self.get_all(query, &[]).await
+    pub async fn query_simple(&self, query: &str) -> Result<Vec<Row>, Error> {
+        self.query(query, &[]).await
     }
 
     /// Query and return the number of result rows
