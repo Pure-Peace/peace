@@ -90,7 +90,7 @@ pub async fn test_player_money_add(
     let mut player_sessions = player_sessions.map.write().await;
     let player_info = match player_sessions.get_mut(&token.0) {
         Some(mut player) => {
-            (*player).money += 1;
+            // (*player).money += 1;
             //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
             format!("{:?}", *player)
         }
@@ -110,7 +110,7 @@ pub async fn test_player_money_reduce(
     let mut player_sessions = player_sessions.map.write().await;
     let player_info = match player_sessions.get_mut(&token.0) {
         Some(mut player) => {
-            (*player).money -= 1;
+            // (*player).money -= 1;
             format!("{:?}", *player)
         }
         None => "non this player".to_string(),
@@ -127,7 +127,7 @@ pub async fn test_player_money_reduce_special(
 ) -> impl Responder {
     let start = Instant::now();
     let player_info = player_sessions
-        .handle_player(token.0, |player| (*player).money -= 1)
+        .handle_player(token.0, |player| {}/* (*player).money -= 1 */)
         .await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))

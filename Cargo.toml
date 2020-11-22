@@ -26,6 +26,7 @@ log = "0.4.11"
 prometheus = { version = "0.10.0", features = ["process"] }
 serde = { version = "1.0.117", features = ["derive"] }
 serde_derive = "1.0.117"
+serde_postgres = "0.2.0"
 serde_qs = "0.7.0"
 tokio-postgres = "0.5.5"
 uuid = { version = "0.8.1", features = ["v4"] }
