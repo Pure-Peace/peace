@@ -6,120 +6,13 @@ use actix_web::{http::HeaderMap, HttpRequest};
 
 use crate::{constants, database::Database, packets};
 use crate::{
-    objects::{Player, PlayerSessions},
+    objects::{Player, PlayerBase, PlayerSessions},
     packets::PacketData,
 };
 
-use crate::types::{ClientHashes, ClientInfo, Password, Username};
-
-#[inline(always)]
-/// Get Login data lines
-/// ```
-///  rows:
-///      0: username
-///      1: password hash
-///      2: client info and hardware info
-/// ```
-async fn parse_data_lines(body: &String) -> Result<Vec<String>, ()> {
-    let data_lines: Vec<String> = body
-        .split("\n")
-        .filter(|i| i != &"")
-        .map(|s| s.to_string())
-        .collect();
-    match data_lines.len() >= 3 {
-        true => Ok(data_lines),
-        false => Err(()),
-    }
-}
-#[inline(always)]
-/// Get client info lines
-/// ```
-///  rows:
-///      0: osu version
-///      1: time offset (utc)
-///      2: location (unused1)
-///      3: client hash set
-///      4: block non-friend pm (unused2)
-/// ```
-async fn parse_client_info(data_lines: String) -> Result<Vec<String>, ()> {
-    let client_info_line: Vec<String> = data_lines.split("|").map(|s| s.to_string()).collect();
-    match client_info_line.len() >= 5 {
-        true => Ok(client_info_line),
-        false => Err(()),
-    }
-}
-#[inline(always)]
-/// Get client hash set
-/// ```
-///  rows:
-///      0: osu path md5
-///      1: adapters (network physical addresses delimited by '.')
-///      2: adapters md5
-///      3: uniqueid1 (osu! uninstall id)
-///      4: uniqueid2 (disk signature/serial num)
-/// ```
-async fn parse_client_hashes(client_hashes: String) -> Result<Vec<String>, ()> {
-    let hashes_data: Vec<String> = client_hashes
-        .split(":")
-        .filter(|i| i != &"")
-        .map(|s| s.to_string())
-        .collect();
-    match hashes_data.len() >= 5 {
-        true => Ok(hashes_data),
-        false => Err(()),
-    }
-}
-
-#[inline(always)]
-/// Parse login data
-async fn parse_login_data(
-    body: &Bytes,
-) -> Result<(Username, Password, ClientInfo, ClientHashes), i32> {
-    // Body to string
-    let body = match String::from_utf8(body.to_vec()) {
-        Ok(body) => body,
-        Err(_) => {
-            error!("Failed: parse_body;");
-            return Err(-1);
-        }
-    };
-    // Parse body
-    let data_lines = match parse_data_lines(&body).await {
-        Ok(data_lines) => data_lines,
-        Err(_) => {
-            error!("Failed: parse_data_lines; Request body: @{}@", body);
-            return Err(-2);
-        }
-    };
-    // Check username and password
-    let username = data_lines[0].clone();
-    let password = data_lines[1].clone();
-    if username.len() < 1 || password.len() < 30 {
-        error!(
-            "Failed: invalid username or password; username: {}, password: {}",
-            username, password
-        );
-        return Err(-5);
-    }
-    // Parse client info
-    let client_info_line = match parse_client_info(data_lines[2].to_string()).await {
-        Ok(client_info_line) => client_info_line,
-        Err(_) => {
-            error!("Failed: parse_client_info; Request body: @{}@", body);
-            return Err(-3);
-        }
-    };
-    // Parse client hashes
-    let client_hash_set = match parse_client_hashes(client_info_line[3].to_string()).await {
-        Ok(client_hash_set) => client_hash_set,
-        Err(_) => {
-            error!("Failed: parse_client_hashes; Request body: @{}@", body);
-            return Err(-4);
-        }
-    };
-
-    Ok((username, password, client_info_line, client_hash_set))
-}
+use super::parser;
+use constants::packets::LoginReply;
+use constants::Privileges;
 
 #[inline(always)]
 /// Bancho login handler
@@ -132,38 +25,37 @@ pub async fn login(
     player_sessions: Data<PlayerSessions>,
 ) -> (PacketData, String) {
     // Response packet data
-    let response_packet_data = packets::PacketBuilder::new();
+    let resp = packets::PacketBuilder::new();
 
     // Parse login data start ----------
     let parse_start = std::time::Instant::now();
-    let (username, password, client_info_line, client_hash_set) = match parse_login_data(body).await
-    {
-        Ok(login_data) => login_data,
-        Err(err_integer) => {
-            error!(
-                "Failed: parse_login_data; request_ip: {}; osu_version: {}",
-                request_ip, osu_version
-            );
-            // Login failed
-            return (
-                response_packet_data
-                    .add(packets::login_reply(
+    let (username, password, client_info_line, client_hash_set) =
+        match parser::parse_login_data(body).await {
+            Ok(login_data) => login_data,
+            Err(err_integer) => {
+                error!(
+                    "Failed: parse_login_data; request_ip: {}; osu_version: {}",
+                    request_ip, osu_version
+                );
+                // Login failed
+                return (
+                    resp.add(packets::login_reply(
                         constants::packets::LoginReply::InvalidCredentials,
                     ))
                     .write_out(),
-                "login_failed".to_string(),
-            );
-        }
-    };
+                    "login_failed".to_string(),
+                );
+            }
+        };
     let parse_duration = parse_start.elapsed();
-    debug!(
-        "Login - data parsed, time spent: {:.2?}; ip: {}, osu_version: {};",
-        parse_duration, request_ip, osu_version
+    info!(
+        "data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
+        parse_duration, request_ip, osu_version, username
     );
     // Parse login data end ----------
 
     // Select user base info from database
-    let user_base = match database
+    let player_base = match database
         .pg
         .query_first(
             r#"SELECT 
@@ -174,32 +66,42 @@ pub async fn login(
         )
         .await
     {
-        Ok(user_base) => user_base,
-        Err(err) => {
-            debug!("{:?}", err.to_string());
+        Ok(row) => {
+            serde_postgres::from_row::<PlayerBase>(&row).expect("could not deserialize player base")
+        }
+        Err(_) => {
+            warn!("{} login failed, invalid credentials", username);
             // Login failed
             return (
-                response_packet_data
-                    .add(packets::login_reply(
-                        constants::packets::LoginReply::InvalidCredentials,
-                    ))
+                resp.add(packets::login_reply(LoginReply::InvalidCredentials))
                     .write_out(),
                 "login_failed".to_string(),
             );
         }
     };
-    debug!("{:?}", user_base);
-    let user_id: i32 = user_base.get("id");
-    let username: String = user_base.get("name");
+    debug!("success to get player base info: {:?}", player_base);
+    let user_id = player_base.id;
+    let username = player_base.name.clone();
 
-    // Check is the user_id already login, if true, logout it ----------
-    let already_logined = player_sessions.user_is_logined(user_id).await;
-    if already_logined {
+    // Check user's priviliges
+    if Privileges::Normal.not_enough(player_base.privileges) {
+        warn!("refuse login, beacuse user {}({}) has banned", username, user_id);
+        return (
+            resp.add(packets::login_reply(LoginReply::UserBanned))
+                .add(packets::notification("you have been slained."))
+                .write_out(),
+            "login_failed".to_string(),
+        );
+    }
+
+    // Check is the user_id already login,
+    // if true, logout old session
+    if player_sessions.user_is_logined(user_id).await {
         // TODO: send notification to old session first
         // Logout old session
         player_sessions.logout_with_id(user_id).await;
         // Send notification to current session
-        response_packet_data.add(packets::notification(
+        resp.add(packets::notification(
             "There is another person logging in with your account! ! \n
             Now the server has logged out another session.\n
             If it is not you, please change your password in time.",
@@ -207,15 +109,11 @@ pub async fn login(
     }
 
     // Create player object
-    let player = Player {
-        id: user_id,
-        name: username,
-        money: 10000,
-        age: 16,
-    };
+    let player = Player::from_base(player_base).await;
 
     // Login player to sessions
     let token = player_sessions.login(player).await;
+    info!("user {}({}) has logged in!", username, user_id);
 
     /* println!(
         "created a player: {}\nnow sessions:  {:?}",
