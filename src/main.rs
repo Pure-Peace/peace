@@ -38,7 +38,7 @@ async fn main() -> std::io::Result<()> {
     let data: TestType = RwLock::new(0);
 
     // Create PlayerSession for this server
-    let player_sessions = PlayerSessions::new(100);
+    let player_sessions = RwLock::new(PlayerSessions::new(100));
 
     // Start actix server
     settings::actix::start_server(cfg, database, data, player_sessions).await

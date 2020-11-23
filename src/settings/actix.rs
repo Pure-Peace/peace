@@ -3,6 +3,7 @@ use crate::routes;
 
 use actix_cors::Cors;
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
+use async_std::sync::RwLock;
 use config::Config;
 use std::time::Instant;
 
@@ -58,7 +59,7 @@ pub async fn start_server(
     cfg: Config,
     database: Database,
     data: TestType,
-    player_sessions: PlayerSessions,
+    player_sessions: RwLock<PlayerSessions>,
 ) -> std::io::Result<()> {
     // Ready cfg
     let (addr, log_format): (String, String) = before_start(&cfg).await;
@@ -106,7 +107,7 @@ pub async fn start_server(
         .unwrap();
 
     let test_appdata: Data<TestType> = Data::new(data);
-    let player_sessions: Data<PlayerSessions> = Data::new(player_sessions);
+    let player_sessions = Data::new(player_sessions);
 
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());

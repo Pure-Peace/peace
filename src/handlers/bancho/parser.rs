@@ -13,7 +13,7 @@ use crate::types::{ClientHashes, ClientInfo, Password, Username};
 /// ```
 async fn parse_data_lines(body: &String) -> Result<Vec<String>, ()> {
     let data_lines: Vec<String> = body
-        .split("\n")
+        .split("\\n")
         .filter(|i| i != &"")
         .map(|s| s.to_string())
         .collect();

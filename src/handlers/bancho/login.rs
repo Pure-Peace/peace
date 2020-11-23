@@ -3,6 +3,7 @@
 
 use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
+use async_std::sync::RwLock;
 
 use crate::{constants, database::Database, packets};
 use crate::{
@@ -24,13 +25,12 @@ pub async fn login(
     request_ip: String,
     osu_version: String,
     database: &Data<Database>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
     counter: &Data<IntCounterVec>,
 ) -> (PacketData, String) {
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
-
     // Response packet data
     let resp = packets::PacketBuilder::new();
 
@@ -103,6 +103,9 @@ pub async fn login(
             "login_failed".to_string(),
         );
     }
+
+    // Lock the PlayerSessions before we handle it
+    let player_sessions = player_sessions.write().await;
 
     // Check is the user_id already login,
     // if true, logout old session

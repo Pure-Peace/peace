@@ -4,6 +4,7 @@ use crate::types::TestType;
 
 use actix_web::web::{Data, Path};
 use actix_web::{get, HttpResponse, Responder};
+use async_std::sync::RwLock;
 
 use std::time::Instant;
 
@@ -69,10 +70,10 @@ pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
 #[get("/test_player_read/{token}")]
 pub async fn test_player_read(
     token: Path<String>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
-    let player_info = match player_sessions.get_player_data(token.0).await {
+    let player_info = match player_sessions.read().await.get_player_data(token.0).await {
         Some(player) => format!("{:?}", player),
         None => "non this player".to_string(),
     };
@@ -84,11 +85,12 @@ pub async fn test_player_read(
 #[get("/test_player_money_add/{token}")]
 pub async fn test_player_money_add(
     token: Path<String>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
-    let mut player_sessions = player_sessions.map.write().await;
-    let player_info = match player_sessions.get_mut(&token.0) {
+    let player_sessions = player_sessions.write().await;
+    let mut map = player_sessions.map.write().await;
+    let player_info = match map.get_mut(&token.0) {
         Some(mut player) => {
             // (*player).money += 1;
             //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
@@ -104,11 +106,12 @@ pub async fn test_player_money_add(
 #[get("/test_player_money_reduce/{token}")]
 pub async fn test_player_money_reduce(
     token: Path<String>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
-    let mut player_sessions = player_sessions.map.write().await;
-    let player_info = match player_sessions.get_mut(&token.0) {
+    let player_sessions = player_sessions.write().await;
+    let mut map = player_sessions.map.write().await;
+    let player_info = match map.get_mut(&token.0) {
         Some(mut player) => {
             // (*player).money -= 1;
             format!("{:?}", *player)
@@ -123,11 +126,13 @@ pub async fn test_player_money_reduce(
 #[get("/test_player_money_reduce_special/{token}")]
 pub async fn test_player_money_reduce_special(
     token: Path<String>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
     let player_info = player_sessions
-        .handle_player(token.0, |player| {}/* (*player).money -= 1 */)
+        .write()
+        .await
+        .handle_player(token.0, |player| {} /* (*player).money -= 1 */)
         .await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
@@ -135,31 +140,37 @@ pub async fn test_player_money_reduce_special(
 
 /// GET "/pleyer_sessions_all"
 #[get("/pleyer_sessions_all")]
-pub async fn pleyer_sessions_all(player_sessions: Data<PlayerSessions>) -> impl Responder {
-    HttpResponse::Ok().body(player_sessions.map_to_string().await)
+pub async fn pleyer_sessions_all(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
+    HttpResponse::Ok().body(player_sessions.read().await.map_to_string().await)
 }
 
 /// GET "/pleyer_sessions_kick"
 #[get("/pleyer_sessions_kick/{token}")]
 pub async fn pleyer_sessions_kick(
     token: Path<String>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
-    HttpResponse::Ok().body(match player_sessions.logout(token.0).await {
+    HttpResponse::Ok().body(match player_sessions.write().await.logout(token.0).await {
         Some((token, player)) => format!("{}\n{:?}", token, player),
         None => "non this player".to_string(),
     })
 }
 
-
 /// GET "/pleyer_sessions_kick_uid"
 #[get("/pleyer_sessions_kick_uid/{user_id}")]
 pub async fn pleyer_sessions_kick_uid(
     user_id: Path<i32>,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
-    HttpResponse::Ok().body(match player_sessions.logout_with_id(user_id.0).await {
-        Some((token, player)) => format!("{}\n{:?}", token, player),
-        None => "non this player".to_string(),
-    })
+    HttpResponse::Ok().body(
+        match player_sessions
+            .write()
+            .await
+            .logout_with_id(user_id.0)
+            .await
+        {
+            Some((token, player)) => format!("{}\n{:?}", token, player),
+            None => "non this player".to_string(),
+        },
+    )
 }

@@ -3,6 +3,7 @@
 
 use actix_web::web::{Bytes, Data};
 use actix_web::{HttpRequest, HttpResponse, Responder};
+use async_std::sync::RwLock;
 use prometheus::IntCounterVec;
 
 use crate::objects::{Player, PlayerSessions};
@@ -22,7 +23,7 @@ pub async fn get(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) ->
 pub async fn post(
     req: HttpRequest,
     body: Bytes,
-    player_sessions: Data<PlayerSessions>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
