@@ -5,9 +5,9 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{HttpRequest, HttpResponse, Responder};
 use prometheus::IntCounterVec;
 
-use crate::{database::Database, handlers::bancho};
 use crate::objects::{Player, PlayerSessions};
 use crate::utils;
+use crate::{database::Database, handlers::bancho};
 
 pub async fn get(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> impl Responder {
     counter
@@ -44,7 +44,21 @@ pub async fn post(
 
     // If not login
     if !headers.contains_key("osu-token") {
-        let (resp_body, token) = bancho::login(req, &body, request_ip, osu_version, &database, player_sessions).await;
+        let (resp_body, token) = bancho::login(
+            req,
+            &body,
+            request_ip,
+            osu_version,
+            &database,
+            player_sessions,
+            &counter,
+        )
+        .await;
+        if token == "login_failed" {
+            counter
+                .with_label_values(&["/bancho", "post", "login.failed"])
+                .inc();
+        }
         return HttpResponse::Ok()
             .set_header("cho-token", token)
             .set_header("cho-protocol", "19")

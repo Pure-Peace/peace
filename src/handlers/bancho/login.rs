@@ -14,6 +14,8 @@ use super::parser;
 use constants::packets::LoginReply;
 use constants::Privileges;
 
+use prometheus::IntCounterVec;
+
 #[inline(always)]
 /// Bancho login handler
 pub async fn login(
@@ -23,7 +25,12 @@ pub async fn login(
     osu_version: String,
     database: &Data<Database>,
     player_sessions: Data<PlayerSessions>,
+    counter: &Data<IntCounterVec>,
 ) -> (PacketData, String) {
+    counter
+        .with_label_values(&["/bancho", "post", "login.start"])
+        .inc();
+
     // Response packet data
     let resp = packets::PacketBuilder::new();
 
@@ -85,7 +92,10 @@ pub async fn login(
 
     // Check user's priviliges
     if Privileges::Normal.not_enough(player_base.privileges) {
-        warn!("refuse login, beacuse user {}({}) has banned", username, user_id);
+        warn!(
+            "refuse login, beacuse user {}({}) has banned",
+            username, user_id
+        );
         return (
             resp.add(packets::login_reply(LoginReply::UserBanned))
                 .add(packets::notification("you have been slained."))
@@ -129,7 +139,9 @@ pub async fn login(
     .add(packets::bancho_restart(3000))
     .done(); */
     //println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
-
+    counter
+        .with_label_values(&["/bancho", "post", "login.success"])
+        .inc();
     (
         vec![
             24, 0, 0, 32, 0, 0, 0, 11, 30, 230, 172, 162, 232, 191, 142, 230, 130, 168, 239, 188,
