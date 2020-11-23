@@ -55,11 +55,14 @@ pub async fn login(
             }
         };
     let parse_duration = parse_start.elapsed();
+    // Parse login data end ----------
+
+    let osu_version = client_info_line[0].clone();
+    let utc_offset = client_info_line[1].parse().unwrap_or(0);
     info!(
         "data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
     );
-    // Parse login data end ----------
 
     // Select user base info from database
     let player_base = match database
@@ -122,7 +125,7 @@ pub async fn login(
     }
 
     // Create player object
-    let player = Player::from_base(player_base).await;
+    let player = Player::from_base(player_base, osu_version, utc_offset).await;
 
     // Login player to sessions
     let token = player_sessions.login(player).await;

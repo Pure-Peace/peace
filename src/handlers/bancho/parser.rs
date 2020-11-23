@@ -2,7 +2,6 @@ use actix_web::web::Bytes;
 
 use crate::types::{ClientHashes, ClientInfo, Password, Username};
 
-
 #[inline(always)]
 /// Get Login data lines
 /// ```
