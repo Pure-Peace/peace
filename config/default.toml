@@ -6,3 +6,12 @@ host = "127.0.0.1"
 port = 8080
 token = "key"
 secret = "secret"
+
+[bancho]
+
+
+[bancho.session]
+# each interval check once
+recycle_check_interval = 45
+# player session timeout
+timeout = 45

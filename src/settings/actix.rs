@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use crate::objects::PlayerSessions;
 use crate::types::TestType;
 
+use crate::handlers::session_recycle_handler;
+
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
     // Load cfg
@@ -75,6 +77,12 @@ pub async fn start_server(
     let excludes_endpoint_log: Vec<String> = cfg
         .get("logger.exclude_endpoints")
         .unwrap_or(vec!["/favicon.ico".to_string()]);
+    let recycle_check_interval = cfg
+        .get_int("bancho.session.recycle_check_interval")
+        .unwrap_or(45) as u64;
+    let session_timeout = cfg
+        .get_int("bancho.session.timeout")
+        .unwrap_or(45);
 
     {
         // Ready prometheus
@@ -108,6 +116,16 @@ pub async fn start_server(
 
     let test_appdata: Data<TestType> = Data::new(data);
     let player_sessions = Data::new(player_sessions);
+    let player_sessions_cloned = player_sessions.clone();
+
+    // Start auto recycle task,
+    // it will auto logout deactive players each interval
+    async_std::task::spawn(async move {
+        loop {
+            async_std::task::sleep(std::time::Duration::from_secs(recycle_check_interval)).await;
+            session_recycle_handler(&player_sessions_cloned, session_timeout).await;
+        }
+    });
 
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
