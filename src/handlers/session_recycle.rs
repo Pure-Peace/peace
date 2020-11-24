@@ -2,7 +2,7 @@ use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
 
-use crate::objects::{Player, PlayerSessions};
+use crate::objects::{PlayerData, PlayerSessions};
 
 /// Auto PlayerSession recycle
 #[inline(always)]
@@ -13,9 +13,9 @@ pub async fn session_recycle_handler(
     debug!("session recycle task start!");
     let sessions = player_sessions.read().await;
     let session_map = sessions.map.read().await;
-    let map_data: Vec<(String, Player)> = session_map
+    let map_data: Vec<(String, PlayerData)> = session_map
         .iter()
-        .map(|(token, player)| (token.to_string(), player.clone()))
+        .map(|(token, player)| (token.to_string(), PlayerData::from(player)))
         .collect();
     drop(session_map);
     for (token, player) in map_data {

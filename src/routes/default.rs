@@ -74,7 +74,7 @@ pub async fn test_player_read(
 ) -> impl Responder {
     let start = Instant::now();
     let player_info = match player_sessions.read().await.get_player_data(token.0).await {
-        Some(player) => format!("{:?}", player),
+        Some(player_data) => format!("{:?}", player_data),
         None => "non this player".to_string(),
     };
     let end = start.elapsed();

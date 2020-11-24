@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use super::PacketData;
+pub type PacketData = Vec<u8>;
 
 pub struct PacketBuilder {
     content: PacketData,

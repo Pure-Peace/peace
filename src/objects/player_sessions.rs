@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 use async_std::sync::RwLock;
+use queue::Queue;
 use uuid::Uuid;
 
 use crate::types::{PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId};
 
-use super::Player;
+use super::{Player, PlayerData};
 
 pub struct PlayerSessions {
     pub map: PlayerSessionMap,
@@ -15,7 +16,9 @@ impl PlayerSessions {
     /// Create new PlayerSessions with capacity
     pub fn new(capacity: usize) -> Self {
         PlayerSessions {
+            /// Key: token, Value: Player
             map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            /// Key: Player.id, Value: token
             id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
         }
     }
@@ -58,7 +61,7 @@ impl PlayerSessions {
     pub async fn logout_with_id(&self, user_id: UserId) -> Option<(TokenString, Player)> {
         let token = match self.id_session_map.read().await.get(&user_id) {
             Some(token) => token.to_string(),
-            None => return None
+            None => return None,
         };
         self.logout(token).await
     }
@@ -84,9 +87,9 @@ impl PlayerSessions {
     }
 
     /// Get a player data (readonly)
-    pub async fn get_player_data(&self, token: TokenString) -> Option<Player> {
+    pub async fn get_player_data(&self, token: TokenString) -> Option<PlayerData> {
         match self.map.read().await.get(&token) {
-            Some(player) => Some(player.clone()),
+            Some(player) => Some(PlayerData::from(player)),
             None => None,
         }
     }
@@ -96,11 +99,11 @@ impl PlayerSessions {
         &self,
         token: TokenString,
         handler: PlayerHandler,
-    ) -> Option<Player> {
+    ) -> Option<PlayerData> {
         match self.map.write().await.get_mut(&token) {
             Some(player) => {
                 handler(player);
-                Some(player.clone())
+                Some(PlayerData::from(player))
             }
             None => None,
         }

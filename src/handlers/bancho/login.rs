@@ -5,15 +5,12 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
+use crate::objects::{Player, PlayerBase, PlayerSessions};
+use crate::types::PacketData;
 use crate::{constants, database::Database, packets};
-use crate::{
-    objects::{Player, PlayerBase, PlayerSessions},
-    packets::PacketData,
-};
 
 use super::parser;
-use constants::packets::LoginReply;
-use constants::Privileges;
+use constants::{packets::LoginReply, Privileges};
 
 use prometheus::IntCounterVec;
 

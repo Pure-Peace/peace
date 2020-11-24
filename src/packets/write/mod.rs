@@ -6,7 +6,7 @@ pub use utils::*;
 
 use crate::constants::packets::*;
 
-use super::PacketData;
+pub type PacketData = Vec<u8>;
 
 /// #5: BANCHO_USER_LOGIN_REPLY
 pub fn login_reply(reply: LoginReply) -> PacketData {
