@@ -5,7 +5,7 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
-use crate::objects::{Player, PlayerBase, PlayerSessions};
+use crate::objects::{Player, PlayerAddress, PlayerBase, PlayerSessions};
 use crate::types::PacketData;
 use crate::{constants, database::Database, packets};
 
@@ -56,26 +56,32 @@ pub async fn login(
     let parse_duration = parse_start.elapsed();
     // Parse login data end ----------
     let osu_version = client_info.osu_version.clone();
+    let username_safe = username.to_lowercase().replace(" ", "_");
     info!(
         "data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
     );
 
-    // Select user base info from database
-    let player_base = match database
+    // Select user base info from database ----------
+    let select_base_start = std::time::Instant::now();
+    let player_base: PlayerBase = match database
         .pg
         .query_first(
             r#"SELECT 
-                "id", "name", "privileges", "country" 
-                FROM "user"."base" WHERE 
-                "name_safe" = $1 and "password" = $2;"#,
-            &[&username.to_lowercase().replace(" ", "_"), &password],
+                    "id", "name", "privileges", "country" 
+                    FROM "user"."base" WHERE 
+                    "name_safe" = $1 and "password" = $2;"#,
+            &[&username_safe, &password],
         )
         .await
     {
-        Ok(row) => {
-            serde_postgres::from_row::<PlayerBase>(&row).expect("could not deserialize player base")
-        }
+        Ok(row) => serde_postgres::from_row(&row).unwrap_or_else(|err| {
+            error!(
+                "could not deserialize player base: {}; err: {:?}",
+                username, err
+            );
+            panic!();
+        }),
         Err(_) => {
             warn!("{} login failed, invalid credentials", username);
             // Login failed
@@ -86,9 +92,13 @@ pub async fn login(
             );
         }
     };
-    debug!("success to get player base info: {:?}", player_base);
+    let select_base_duration = select_base_start.elapsed();
     let user_id = player_base.id;
     let username = player_base.name.clone();
+    info!(
+        "success to get player base info {}({}); time spent: {:.2?}; ",
+        username, user_id, select_base_duration
+    );
 
     // Check user's priviliges
     if Privileges::Normal.not_enough(player_base.privileges) {
@@ -103,6 +113,99 @@ pub async fn login(
             default_token,
         );
     }
+
+    // Check user's hardware addresses
+    let select_addresses_start = std::time::Instant::now();
+    let player_addresses: Vec<PlayerAddress> = match database
+        .pg
+        .query(
+            r#"SELECT 
+                "id", "user_id", "adapters_hash", "uninstall_id", "disk_id" 
+                FROM "user"."address" 
+                WHERE "adapters_hash" = $1 
+                OR "uninstall_id" = $2 
+                OR "disk_id" = $3;"#,
+            &[
+                &client_hashes.apadaters_hash,
+                &client_hashes.uninstall_id,
+                &client_hashes.disk_id,
+            ],
+        )
+        .await
+    {
+        Ok(row) => serde_postgres::from_rows(&row).unwrap_or_else(|err| {
+            error!(
+                "could not deserialize player hardward address: {}; err: {:?}",
+                username, err
+            );
+            panic!();
+        }),
+        Err(err) => {
+            warn!(
+                "{} login failed, errors when checking hardware addresses; err: {:?}",
+                username, err
+            );
+            // Login failed
+            return (
+                resp.add(packets::login_reply(LoginReply::InvalidCredentials))
+                    .write_out(),
+                default_token,
+            );
+        }
+    };
+    let select_addresses_duration = select_addresses_start.elapsed();
+    info!(
+        "success to get player addresses info {}({}); time spent: {:.2?}; addresses: {:?}",
+        username, user_id, select_addresses_duration, player_addresses
+    );
+
+    // If not any addresses matched, insert it
+    if player_addresses.len() == 0 {
+        let insert_address_start = std::time::Instant::now();
+        let address_id: i32 = match database
+            .pg
+            .query_first(
+                r#"INSERT INTO "user"."address" (
+                        "user_id", 
+                        "time_offset", 
+                        "path", 
+                        "adapters", 
+                        "adapters_hash", 
+                        "uninstall_id", 
+                        "disk_id"
+                     ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING "id";"#,
+                &[
+                    &user_id,
+                    &client_info.utc_offset,
+                    &client_hashes.osu_path,
+                    &client_hashes.apadaters,
+                    &client_hashes.apadaters_hash,
+                    &client_hashes.uninstall_id,
+                    &client_hashes.disk_id,
+                ],
+            )
+            .await
+        {
+            Ok(row) => row.get("id"),
+            Err(err) => {
+                warn!(
+                    "{} login failed, errors when insert user address; err: {:?}",
+                    username, err
+                );
+                // Login failed
+                return (
+                    resp.add(packets::login_reply(LoginReply::InvalidCredentials))
+                        .write_out(),
+                    default_token,
+                );
+            }
+        };
+        let insert_address_duration = insert_address_start.elapsed();
+        info!(
+            "success to insert a new player address {}({}), address id: {}; time spent: {:.2?}",
+            username, user_id, address_id, insert_address_duration
+        );
+    };
 
     // Lock the PlayerSessions before we handle it
     let player_sessions = player_sessions.write().await;
