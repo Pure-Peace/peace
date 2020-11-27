@@ -13,7 +13,8 @@ pub struct PlayerSessions {
 }
 
 impl PlayerSessions {
-    /// Create new PlayerSessions with capacity
+    /// Create new PlayerSessions with a default capacity
+    /// Automatically expand when capacity is exceeded
     pub fn new(capacity: usize) -> Self {
         PlayerSessions {
             /// Key: token, Value: Player

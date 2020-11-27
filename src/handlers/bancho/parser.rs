@@ -1,6 +1,21 @@
 use actix_web::web::Bytes;
 
-use crate::types::{ClientHashes, ClientInfo, Password, Username};
+use crate::types::{Password, Username};
+
+pub struct ClientInfo {
+    pub osu_version: String,
+    pub utc_offset: i32,
+    pub display_city: bool,
+    pub only_friend_pm_allowed: bool,
+}
+
+pub struct ClientHashes {
+    pub osu_path: String,
+    pub apadaters: String,
+    pub apadaters_hash: String,
+    pub uninstall_id: String,
+    pub disk_id: String,
+}
 
 #[inline(always)]
 /// Get Login data lines
@@ -27,14 +42,37 @@ async fn parse_data_lines(body: &String) -> Result<Vec<String>, ()> {
 ///  rows:
 ///      0: osu version
 ///      1: time offset (utc)
-///      2: location (unused1)
+///      2: display city (location unused)
 ///      3: client hash set
-///      4: block non-friend pm (unused2)
+///      4: block non-friend pm (unused)
 /// ```
-async fn parse_client_info(data_lines: String) -> Result<Vec<String>, ()> {
+async fn parse_client_info(data_lines: String) -> Result<(ClientInfo, String), ()> {
     let client_info_line: Vec<String> = data_lines.split("|").map(|s| s.to_string()).collect();
     match client_info_line.len() >= 5 {
-        true => Ok(client_info_line),
+        true => {
+            // Parse osu version
+            // TODO: check the osu version
+            let osu_version = client_info_line[0].clone();
+
+            // Parse utc offset
+            let utc_offset = client_info_line[1].parse().unwrap();
+
+            // Display city in bancho or not
+            let display_city = client_info_line[2] == "1".to_string();
+
+            // Only allow friend's pm
+            let only_friend_pm_allowed = client_info_line[4] == "1".to_string();
+
+            Ok((
+                ClientInfo {
+                    osu_version,
+                    utc_offset,
+                    display_city,
+                    only_friend_pm_allowed,
+                },
+                client_info_line[3].clone(),
+            ))
+        }
         false => Err(()),
     }
 }
@@ -48,14 +86,20 @@ async fn parse_client_info(data_lines: String) -> Result<Vec<String>, ()> {
 ///      3: uniqueid1 (osu! uninstall id)
 ///      4: uniqueid2 (disk signature/serial num)
 /// ```
-async fn parse_client_hashes(client_hashes: String) -> Result<Vec<String>, ()> {
+async fn parse_client_hashes(client_hashes: String) -> Result<ClientHashes, ()> {
     let hashes_data: Vec<String> = client_hashes
         .split(":")
         .filter(|i| i != &"")
         .map(|s| s.to_string())
         .collect();
     match hashes_data.len() >= 5 {
-        true => Ok(hashes_data),
+        true => Ok(ClientHashes {
+            osu_path: hashes_data[0].clone(),
+            apadaters: hashes_data[1].clone(),
+            apadaters_hash: hashes_data[2].clone(),
+            uninstall_id: hashes_data[3].clone(),
+            disk_id: hashes_data[4].clone(),
+        }),
         false => Err(()),
     }
 }
@@ -92,21 +136,21 @@ pub async fn parse_login_data(
         return Err(-5);
     }
     // Parse client info
-    let client_info_line = match parse_client_info(data_lines[2].to_string()).await {
-        Ok(client_info_line) => client_info_line,
+    let (client_info, client_hash_set) = match parse_client_info(data_lines[2].to_string()).await {
+        Ok(result) => result,
         Err(_) => {
             error!("Failed: parse_client_info; Request body: @{}@", body);
             return Err(-3);
         }
     };
     // Parse client hashes
-    let client_hash_set = match parse_client_hashes(client_info_line[3].to_string()).await {
-        Ok(client_hash_set) => client_hash_set,
+    let client_hashes = match parse_client_hashes(client_hash_set).await {
+        Ok(client_hashes) => client_hashes,
         Err(_) => {
             error!("Failed: parse_client_hashes; Request body: @{}@", body);
             return Err(-4);
         }
     };
 
-    Ok((username, password, client_info_line, client_hash_set))
+    Ok((username, password, client_info, client_hashes))
 }

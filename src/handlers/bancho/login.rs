@@ -30,10 +30,12 @@ pub async fn login(
         .inc();
     // Response packet data
     let resp = packets::PacketBuilder::new();
+    // Default token for login failed
+    let default_token = String::from("login_failed");
 
     // Parse login data start ----------
     let parse_start = std::time::Instant::now();
-    let (username, password, client_info_line, client_hash_set) =
+    let (username, password, client_info, client_hashes) =
         match parser::parse_login_data(body).await {
             Ok(login_data) => login_data,
             Err(err_integer) => {
@@ -47,15 +49,13 @@ pub async fn login(
                         constants::packets::LoginReply::InvalidCredentials,
                     ))
                     .write_out(),
-                    "login_failed".to_string(),
+                    default_token,
                 );
             }
         };
     let parse_duration = parse_start.elapsed();
     // Parse login data end ----------
-
-    let osu_version = client_info_line[0].clone();
-    let utc_offset = client_info_line[1].parse().unwrap_or(0);
+    let osu_version = client_info.osu_version.clone();
     info!(
         "data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
@@ -82,7 +82,7 @@ pub async fn login(
             return (
                 resp.add(packets::login_reply(LoginReply::InvalidCredentials))
                     .write_out(),
-                "login_failed".to_string(),
+                default_token,
             );
         }
     };
@@ -100,7 +100,7 @@ pub async fn login(
             resp.add(packets::login_reply(LoginReply::UserBanned))
                 .add(packets::notification("you have been slained."))
                 .write_out(),
-            "login_failed".to_string(),
+            default_token,
         );
     }
 
@@ -122,7 +122,7 @@ pub async fn login(
     }
 
     // Create player object
-    let player = Player::from_base(player_base, osu_version, utc_offset).await;
+    let player = Player::from_base(player_base, osu_version, client_info.utc_offset).await;
 
     // Login player to sessions
     let token = player_sessions.login(player).await;
