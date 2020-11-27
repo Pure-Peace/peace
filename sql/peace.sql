@@ -52,6 +52,7 @@ CREATE FUNCTION "user".safe_user_info() RETURNS trigger
 		NEW.name = REPLACE(BTRIM(NEW.name), '_', ' ');
 		NEW.email = LOWER(NEW.email);
 		NEW.country = UPPER(NEW.country);
+		NEW.password = LOWER(NEW.password);
 		NEW.name_safe = REPLACE(LOWER(NEW.name), ' ', '_');
 	RETURN NEW;
 END$$;
@@ -68,11 +69,11 @@ SET default_with_oids = false;
 CREATE TABLE "user".address (
     id integer NOT NULL,
     user_id integer NOT NULL,
-    time_offset character varying(255) NOT NULL,
+    time_offset integer NOT NULL,
     path character varying(255) NOT NULL,
     adapters text NOT NULL,
     adapters_hash character varying(255) NOT NULL,
-    uninstall_id character varying NOT NULL,
+    uninstall_id character varying(255) NOT NULL,
     disk_id character varying(255) NOT NULL,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -526,18 +527,16 @@ ALTER TABLE ONLY "user".notes ALTER COLUMN id SET DEFAULT nextval('"user".notes_
 -- Data for Name: address; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (1, 1009, '1', 'a', 'a', 'a', 'a', 'a', '2020-11-22 00:54:58.723191+08');
-INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (2, 1009, '2', 'b', 'b', 'b', 'b', 'b', '2020-11-22 00:55:05.122778+08');
-INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (3, 1011, '3', 'c', 'c', 'c', 'c', 'c', '2020-11-22 00:55:12.680359+08');
 
 
 --
 -- Data for Name: base; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1009, 'PurePeace', 'purepeace', '931ffe4c39bc9fdc875cf8f691bf1f57', '940857703@qq.com', 1, 'CN', '2020-11-21 23:42:00.487276+08', '2020-11-21 23:42:15.498228+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1011, 'Chino', 'chino', '931ffe4c39bc9fdc875cf8f691bf1f57', 'chino@kafuu.com', 1, 'UN', '2020-11-21 23:43:18.460883+08', '2020-11-21 23:43:18.460883+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1012, 'usao', 'usao', '931ffe4c39bc9fdc875cf8f691bf1f57', '1', 1, 'UN', '2020-11-21 23:43:32.801019+08', '2020-11-21 23:43:32.801019+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1017, 'z', 'z', 'g', '4', 1, 'UN', '2020-11-22 01:03:41.930436+08', '2020-11-22 01:03:41.930436+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1011, 'Chino', 'chino', '931ffe4c39bc9fdc875cf8f691bf1f57', 'chino@kafuu.com', 1, 'UN', '2020-11-21 23:43:18.460883+08', '2020-11-23 05:01:57.730942+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1009, 'PurePeace', 'purepeace', '931ffe4c39bc9fdc875cf8f691bf1f57', '940857703@qq.com', 1, 'CN', '2020-11-21 23:42:00.487276+08', '2020-11-23 21:03:49.085718+08');
 
 
 --
@@ -553,10 +552,6 @@ INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (101
 -- Data for Name: login_records; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (3, 1009, 1, 'a', 'a', '2020-11-22 00:55:26.9644+08');
-INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (4, 1009, 1, 'f', 'f', '2020-11-22 00:55:36.010122+08');
-INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (5, 1009, 2, 'c', 'c', '2020-11-22 00:55:42.297614+08');
-INSERT INTO "user".login_records (id, user_id, address_id, ip, version, create_time) VALUES (6, 1011, 3, 'g', 'g', '2020-11-22 00:55:50.493531+08');
 
 
 --
@@ -570,14 +565,14 @@ INSERT INTO "user".notes (id, user_id, note, type, added_by, create_time, update
 -- Name: address_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".address_id_seq', 3, true);
+SELECT pg_catalog.setval('"user".address_id_seq', 7, true);
 
 
 --
 -- Name: base_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".base_id_seq', 1012, true);
+SELECT pg_catalog.setval('"user".base_id_seq', 1017, true);
 
 
 --
@@ -610,18 +605,41 @@ COMMENT ON CONSTRAINT "Note.id" ON "user".notes IS 'note id should be unique';
 
 
 --
--- Name: base Unique - some user info; Type: CONSTRAINT; Schema: user; Owner: -
+-- Name: base Unique - email; Type: CONSTRAINT; Schema: user; Owner: -
 --
 
 ALTER TABLE ONLY "user".base
-    ADD CONSTRAINT "Unique - some user info" UNIQUE (id, name, name_safe, email);
+    ADD CONSTRAINT "Unique - email" UNIQUE (email);
 
 
 --
--- Name: CONSTRAINT "Unique - some user info" ON base; Type: COMMENT; Schema: user; Owner: -
+-- Name: CONSTRAINT "Unique - email" ON base; Type: COMMENT; Schema: user; Owner: -
 --
 
-COMMENT ON CONSTRAINT "Unique - some user info" ON "user".base IS 'id, name, name_safe, email should be unique';
+COMMENT ON CONSTRAINT "Unique - email" ON "user".base IS 'email should be unique';
+
+
+--
+-- Name: base Unique - name; Type: CONSTRAINT; Schema: user; Owner: -
+--
+
+ALTER TABLE ONLY "user".base
+    ADD CONSTRAINT "Unique - name" UNIQUE (name);
+
+
+--
+-- Name: base Unique - name safe; Type: CONSTRAINT; Schema: user; Owner: -
+--
+
+ALTER TABLE ONLY "user".base
+    ADD CONSTRAINT "Unique - name safe" UNIQUE (name_safe);
+
+
+--
+-- Name: CONSTRAINT "Unique - name safe" ON base; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON CONSTRAINT "Unique - name safe" ON "user".base IS 'name safe should be unique';
 
 
 --
