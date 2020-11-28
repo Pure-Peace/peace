@@ -144,6 +144,7 @@ impl Postgres {
         self.query(query, &[]).await
     }
 
+    #[inline(always)]
     /// Query and return the number of result rows
     ///
     /// # Examples:

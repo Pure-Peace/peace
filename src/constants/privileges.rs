@@ -1,5 +1,7 @@
+#![allow(dead_code)]
+
 pub enum Privileges {
-    Normal = 1 << 0,
+    Normal      = 1 << 0,
     Verified    = 1 << 1, // has logged in to the server in-game.
 
     // has bypass to low-ceiling anticheat measures (trusted).

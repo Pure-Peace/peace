@@ -316,7 +316,7 @@ impl Redis {
     ///     "default".to_string()
     /// });
     /// ```
-    pub async fn get<T: Send + FromRedisValue>(&self, key: &str) -> Result<T, RedisError> {
+    pub async fn get<T: Send + FromRedisValue, A: ToRedisArgs>(&self, key: A) -> Result<T, RedisError> {
         let mut conn = self.get_conn().await;
         match _cmd("GET").arg(key).query_async(&mut conn).await {
             Ok(res) => Ok(res),
