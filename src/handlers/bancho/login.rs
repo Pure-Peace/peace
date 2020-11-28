@@ -205,6 +205,19 @@ pub async fn login(
             "success to insert a new player address {}({}), address id: {}; time spent: {:.2?}",
             username, user_id, address_id, insert_address_duration
         );
+
+        database
+            .pg
+            .execute(
+                r#"INSERT INTO "user"."login_records" (
+                        "user_id", 
+                        "address_id", 
+                        "ip", 
+                        "version"
+                     ) VALUES ($1, $2, $3, $4);"#,
+                &[&user_id, &address_id, &request_ip, &osu_version],
+            )
+            .await;
     };
 
     // Lock the PlayerSessions before we handle it
