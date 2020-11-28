@@ -126,7 +126,7 @@ pub async fn login(
                 OR "uninstall_id" = $2 
                 OR "disk_id" = $3;"#,
             &[
-                &client_hashes.apadaters_hash,
+                &client_hashes.adapters_hash,
                 &client_hashes.uninstall_id,
                 &client_hashes.disk_id,
             ],
@@ -178,8 +178,8 @@ pub async fn login(
                     &user_id,
                     &client_info.utc_offset,
                     &client_hashes.osu_path,
-                    &client_hashes.apadaters,
-                    &client_hashes.apadaters_hash,
+                    &client_hashes.adapters,
+                    &client_hashes.adapters_hash,
                     &client_hashes.uninstall_id,
                     &client_hashes.disk_id,
                 ],

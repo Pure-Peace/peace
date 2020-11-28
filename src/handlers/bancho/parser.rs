@@ -11,8 +11,8 @@ pub struct ClientInfo {
 
 pub struct ClientHashes {
     pub osu_path: String,
-    pub apadaters: String,
-    pub apadaters_hash: String,
+    pub adapters: String,
+    pub adapters_hash: String,
     pub uninstall_id: String,
     pub disk_id: String,
 }
@@ -95,8 +95,8 @@ async fn parse_client_hashes(client_hashes: String) -> Result<ClientHashes, ()> 
     match hashes_data.len() >= 5 {
         true => Ok(ClientHashes {
             osu_path: hashes_data[0].clone(),
-            apadaters: hashes_data[1].clone(),
-            apadaters_hash: hashes_data[2].clone(),
+            adapters: hashes_data[1].clone(),
+            adapters_hash: hashes_data[2].clone(),
             uninstall_id: hashes_data[3].clone(),
             disk_id: hashes_data[4].clone(),
         }),
