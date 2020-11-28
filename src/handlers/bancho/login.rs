@@ -19,7 +19,7 @@ use prometheus::IntCounterVec;
 pub async fn login(
     req: HttpRequest,
     body: &Bytes,
-    request_ip: String,
+    request_ip: &String,
     osu_version: String,
     database: &Data<Database>,
     player_sessions: Data<RwLock<PlayerSessions>>,
@@ -107,8 +107,8 @@ pub async fn login(
             username, user_id
         );
         return (
-            resp.add(packets::login_reply(LoginReply::UserBanned))
-                .add(packets::notification("you have been slained."))
+            resp.add(packets::notification("you have been slained."))
+                .add(packets::login_reply(LoginReply::UserBanned))
                 .write_out(),
             default_token,
         );
@@ -120,11 +120,14 @@ pub async fn login(
         .pg
         .query(
             r#"SELECT 
-                "id", "user_id", "adapters_hash", "uninstall_id", "disk_id" 
+                "user"."address"."id", "user_id", "adapters_hash", "uninstall_id", "disk_id", "privileges" 
                 FROM "user"."address" 
-                WHERE "adapters_hash" = $1 
-                OR "uninstall_id" = $2 
-                OR "disk_id" = $3;"#,
+                LEFT JOIN "user"."base" 
+                    ON "user_id" = "user"."base"."id"
+                WHERE 
+                    "adapters_hash" = $1 
+                    OR "uninstall_id" = $2 
+                    OR "disk_id" = $3;"#,
             &[
                 &client_hashes.adapters_hash,
                 &client_hashes.uninstall_id,
@@ -142,7 +145,7 @@ pub async fn login(
         }),
         Err(err) => {
             warn!(
-                "{} login failed, errors when checking hardware addresses; err: {:?}",
+                "user {} login failed, errors when checking hardware addresses; err: {:?}",
                 username, err
             );
             // Login failed
@@ -155,121 +158,147 @@ pub async fn login(
     };
     let select_addresses_duration = select_addresses_start.elapsed();
     info!(
-        "success to get player addresses info {}({}); time spent: {:.2?}; addresses: {:?}",
-        username, user_id, select_addresses_duration, player_addresses
+        "success to get player addresses info {}({}); time spent: {:.2?}; address count: {}",
+        username,
+        user_id,
+        select_addresses_duration,
+        player_addresses.len()
     );
 
-    // If not any addresses matched, create it
-    if player_addresses.len() == 0 {
-        let insert_address_start = std::time::Instant::now();
-        let address_id: i32 = match database
-            .pg
-            .query_first(
-                r#"INSERT INTO "user"."address" (
-                        "user_id", 
-                        "time_offset", 
-                        "path", 
-                        "adapters", 
-                        "adapters_hash", 
-                        "uninstall_id", 
-                        "disk_id"
-                     ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING "id";"#,
-                &[
-                    &user_id,
-                    &client_info.utc_offset,
-                    &client_hashes.osu_path,
-                    &client_hashes.adapters,
-                    &client_hashes.adapters_hash,
-                    &client_hashes.uninstall_id,
-                    &client_hashes.disk_id,
-                ],
-            )
-            .await
-        {
-            Ok(row) => row.get("id"),
-            Err(err) => {
+    // PlayerAddress handle
+    match player_addresses.len() {
+        // If not any addresses matched, create it
+        0 => {
+            let insert_address_start = std::time::Instant::now();
+            let address_id: i32 = match database
+                .pg
+                .query_first(
+                    r#"INSERT INTO "user"."address" (
+                            "user_id", 
+                            "time_offset", 
+                            "path", 
+                            "adapters", 
+                            "adapters_hash", 
+                            "uninstall_id", 
+                            "disk_id"
+                         ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING "id";"#,
+                    &[
+                        &user_id,
+                        &client_info.utc_offset,
+                        &client_hashes.osu_path,
+                        &client_hashes.adapters,
+                        &client_hashes.adapters_hash,
+                        &client_hashes.uninstall_id,
+                        &client_hashes.disk_id,
+                    ],
+                )
+                .await
+            {
+                Ok(row) => row.get("id"),
+                Err(err) => {
+                    warn!(
+                        "{} login failed, errors when insert user address; err: {:?}",
+                        username, err
+                    );
+                    // Login failed
+                    return (
+                        resp.add(packets::login_reply(LoginReply::InvalidCredentials))
+                            .write_out(),
+                        default_token,
+                    );
+                }
+            };
+            let insert_address_duration = insert_address_start.elapsed();
+            info!(
+                "success to create a new player address {}({}), address id: {}; time spent: {:.2?}",
+                username, user_id, address_id, insert_address_duration
+            );
+
+            // Create new login record for new address
+            database
+                .pg
+                .execute(
+                    r#"INSERT INTO "user"."login_records" (
+                            "user_id", 
+                            "address_id", 
+                            "ip", 
+                            "version"
+                         ) VALUES ($1, $2, $3, $4);"#,
+                    &[&user_id, &address_id, &request_ip, &osu_version],
+                )
+                .await;
+        }
+        // If any addresses matched
+        _ => {
+            // Calculate similarity
+            let mut similarities: Vec<(i32, &PlayerAddress)> = player_addresses
+                .iter()
+                .map(|address| {
+                    let mut similarity = 0;
+                    if address.adapters_hash == client_hashes.adapters_hash {
+                        similarity += 30;
+                    }
+                    if address.uninstall_id == client_hashes.uninstall_id {
+                        similarity += 20;
+                    }
+                    if address.disk_id == client_hashes.disk_id {
+                        similarity += 50;
+                    }
+                    if address.user_id == user_id {
+                        similarity += 1;
+                    }
+                    (similarity, address)
+                })
+                .collect();
+            // Reverse sort
+            similarities.sort_by(|(s1, _), (s2, _)| s2.cmp(&s1));
+
+            // Get the most similar
+            let (max_similarity, max_similar_address) = similarities[0];
+            info!(
+                "user({}) login with address id: {}; similarity: {};",
+                user_id, max_similar_address.id, max_similarity
+            );
+
+            // !Multiple account warning
+            if max_similar_address.user_id != user_id {
                 warn!(
-                    "{} login failed, errors when insert user address; err: {:?}",
-                    username, err
-                );
-                // Login failed
-                return (
-                    resp.add(packets::login_reply(LoginReply::InvalidCredentials))
-                        .write_out(),
-                    default_token,
+                    "Multi account warning - user({}) login with other user({})'s address({});",
+                    user_id, max_similar_address.user_id, max_similar_address.id
                 );
             }
-        };
-        let insert_address_duration = insert_address_start.elapsed();
-        info!(
-            "success to create a new player address {}({}), address id: {}; time spent: {:.2?}",
-            username, user_id, address_id, insert_address_duration
-        );
 
-        // Create new login record for new address
-        database
-            .pg
-            .execute(
-                r#"INSERT INTO "user"."login_records" (
-                        "user_id", 
-                        "address_id", 
-                        "ip", 
-                        "version"
-                     ) VALUES ($1, $2, $3, $4);"#,
-                &[&user_id, &address_id, &request_ip, &osu_version],
-            )
-            .await;
-    } else {
-        // Calculate similarity
-        let mut similarities: Vec<(i32, &PlayerAddress)> = player_addresses
-            .iter()
-            .map(|address| {
-                let mut similarity = 0;
-                if address.adapters_hash == client_hashes.adapters_hash {
-                    similarity += 30;
+            // !Banned account warning
+            for address in &player_addresses {
+                if Privileges::Normal.not_enough(address.privileges) {
+                    warn!(
+                        "Banned account warning - user({}) login with an address({}) that was banned user's ({})!",
+                        user_id, address.id, address.user_id
+                    )
                 }
-                if address.uninstall_id == client_hashes.uninstall_id {
-                    similarity += 20;
-                }
-                if address.disk_id == client_hashes.disk_id {
-                    similarity += 50;
-                }
-                if address.user_id == user_id {
-                    similarity += 1;
-                }
-                (similarity, address)
-            })
-            .collect();
-        // Reverse sort
-        similarities.sort_by(|(s1, _), (s2, _)| s2.cmp(&s1));
+            }
 
-        // Get the most similar
-        let (max_similarity, max_similar_address) = similarities[0];
-        info!(
-            "user({}) login with address id: {}; similarity: {};",
-            user_id, max_similar_address.id, max_similarity
-        );
-
-        // Create new login record for exists address
-        database
-            .pg
-            .execute(
-                r#"INSERT INTO "user"."login_records" (
+            // Create new login record for exists address
+            database
+                .pg
+                .execute(
+                    r#"INSERT INTO "user"."login_records" (
                     "user_id", 
                     "address_id", 
                     "ip", 
                     "version",
                     "similarity"
-                 ) VALUES ($1, $2, $3, $4, $5);"#,
-                &[
-                    &user_id,
-                    &max_similar_address.id,
-                    &request_ip,
-                    &osu_version,
-                    &max_similarity,
-                ],
-            )
-            .await;
+                ) VALUES ($1, $2, $3, $4, $5);"#,
+                    &[
+                        &user_id,
+                        &max_similar_address.id,
+                        &request_ip,
+                        &osu_version,
+                        &max_similarity,
+                    ],
+                )
+                .await;
+        }
     }
 
     // Lock the PlayerSessions before we handle it

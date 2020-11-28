@@ -6,4 +6,5 @@ pub struct PlayerAddress {
     pub adapters_hash: String,
     pub uninstall_id: String,
     pub disk_id: String,
+    pub privileges: i32,
 }
