@@ -159,7 +159,7 @@ pub async fn login(
         username, user_id, select_addresses_duration, player_addresses
     );
 
-    // If not any addresses matched, insert it
+    // If not any addresses matched, create it
     if player_addresses.len() == 0 {
         let insert_address_start = std::time::Instant::now();
         let address_id: i32 = match database
@@ -202,10 +202,11 @@ pub async fn login(
         };
         let insert_address_duration = insert_address_start.elapsed();
         info!(
-            "success to insert a new player address {}({}), address id: {}; time spent: {:.2?}",
+            "success to create a new player address {}({}), address id: {}; time spent: {:.2?}",
             username, user_id, address_id, insert_address_duration
         );
 
+        // Create new login record for new address
         database
             .pg
             .execute(
@@ -218,7 +219,58 @@ pub async fn login(
                 &[&user_id, &address_id, &request_ip, &osu_version],
             )
             .await;
-    };
+    } else {
+        // Calculate similarity
+        let mut similarities: Vec<(i32, &PlayerAddress)> = player_addresses
+            .iter()
+            .map(|address| {
+                let mut similarity = 0;
+                if address.adapters_hash == client_hashes.adapters_hash {
+                    similarity += 30;
+                }
+                if address.uninstall_id == client_hashes.uninstall_id {
+                    similarity += 20;
+                }
+                if address.disk_id == client_hashes.disk_id {
+                    similarity += 50;
+                }
+                if address.user_id == user_id {
+                    similarity += 1;
+                }
+                (similarity, address)
+            })
+            .collect();
+        // Reverse sort
+        similarities.sort_by(|(s1, _), (s2, _)| s2.cmp(&s1));
+
+        // Get the most similar
+        let (max_similarity, max_similar_address) = similarities[0];
+        info!(
+            "user({}) login with address id: {}; similarity: {};",
+            user_id, max_similar_address.id, max_similarity
+        );
+
+        // Create new login record for exists address
+        database
+            .pg
+            .execute(
+                r#"INSERT INTO "user"."login_records" (
+                    "user_id", 
+                    "address_id", 
+                    "ip", 
+                    "version",
+                    "similarity"
+                 ) VALUES ($1, $2, $3, $4, $5);"#,
+                &[
+                    &user_id,
+                    &max_similar_address.id,
+                    &request_ip,
+                    &osu_version,
+                    &max_similarity,
+                ],
+            )
+            .await;
+    }
 
     // Lock the PlayerSessions before we handle it
     let player_sessions = player_sessions.write().await;
