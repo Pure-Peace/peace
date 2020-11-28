@@ -11,3 +11,8 @@ Cargo.lock
 
 # Env
 .env
+
+# configs
+default.toml
+development.toml
+production.toml
