@@ -332,6 +332,7 @@ CREATE TABLE "user".login_records (
     address_id integer NOT NULL,
     ip character varying(255) NOT NULL,
     version character varying(255) NOT NULL,
+    similarity integer DEFAULT 101 NOT NULL,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -376,6 +377,13 @@ COMMENT ON COLUMN "user".login_records.ip IS 'ip address';
 --
 
 COMMENT ON COLUMN "user".login_records.version IS 'osu version';
+
+
+--
+-- Name: COLUMN login_records.similarity; Type: COMMENT; Schema: user; Owner: -
+--
+
+COMMENT ON COLUMN "user".login_records.similarity IS 'certainty of the address';
 
 
 --
@@ -565,7 +573,7 @@ INSERT INTO "user".notes (id, user_id, note, type, added_by, create_time, update
 -- Name: address_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".address_id_seq', 7, true);
+SELECT pg_catalog.setval('"user".address_id_seq', 11, true);
 
 
 --
@@ -579,7 +587,7 @@ SELECT pg_catalog.setval('"user".base_id_seq', 1017, true);
 -- Name: login_records_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".login_records_id_seq', 6, true);
+SELECT pg_catalog.setval('"user".login_records_id_seq', 16, true);
 
 
 --
@@ -647,7 +655,7 @@ COMMENT ON CONSTRAINT "Unique - name safe" ON "user".base IS 'name safe should b
 --
 
 ALTER TABLE ONLY "user".address
-    ADD CONSTRAINT address_pkey PRIMARY KEY (id, user_id);
+    ADD CONSTRAINT address_pkey PRIMARY KEY (id);
 
 
 --
@@ -679,7 +687,7 @@ ALTER TABLE ONLY "user".login_records
 --
 
 ALTER TABLE ONLY "user".login_records
-    ADD CONSTRAINT login_records_pkey PRIMARY KEY (id, user_id);
+    ADD CONSTRAINT login_records_pkey PRIMARY KEY (id);
 
 
 --
@@ -801,11 +809,11 @@ COMMENT ON CONSTRAINT "User.id (friend)" ON "user".friends IS 'user_id (friend)'
 
 
 --
--- Name: login_records login_records; Type: FK CONSTRAINT; Schema: user; Owner: -
+-- Name: login_records address.id; Type: FK CONSTRAINT; Schema: user; Owner: -
 --
 
 ALTER TABLE ONLY "user".login_records
-    ADD CONSTRAINT login_records FOREIGN KEY (address_id, user_id) REFERENCES "user".address(id, user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT "address.id" FOREIGN KEY (address_id) REFERENCES "user".address(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
