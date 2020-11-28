@@ -10,9 +10,16 @@ pub async fn session_recycle_handler(
     player_sessions: &Data<RwLock<PlayerSessions>>,
     session_timeout: i64,
 ) {
-    debug!("session recycle task start!");
+    // Get read lock
     let sessions = player_sessions.read().await;
     let session_map = sessions.map.read().await;
+
+    // If not any sessions, just break
+    if session_map.len() == 0 {
+        return ();
+    };
+
+    debug!("session recycle task start!");
     let map_data: Vec<(String, PlayerData)> = session_map
         .iter()
         .map(|(token, player)| (token.to_string(), PlayerData::from(player)))
