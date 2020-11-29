@@ -16,6 +16,7 @@ use crate::{database::Database, handlers::bancho};
 
 const MAX_FAILED_COUNT: i32 = 4;
 const EXPIRE_SECS: i32 = 300;
+const DEFAULT_TOKEN: &str = "login_failed";
 
 pub async fn get(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> impl Responder {
     counter
@@ -70,7 +71,7 @@ pub async fn post(
         }
 
         // Login handle
-        let (resp_body, token) = bancho::login(
+        let (resp_body, token) = match bancho::login(
             req,
             &body,
             &request_ip,
@@ -79,24 +80,33 @@ pub async fn post(
             player_sessions,
             &counter,
         )
-        .await;
-
-        // Login failed handle
-        if token == "login_failed" {
-            // Record login failed
-            counter
-                .with_label_values(&["/bancho", "post", "login.failed"])
-                .inc();
-            // Increase failed count for this ip
-            let failed_count: i32 = database.redis.query("INCR", &[failed_key.clone()]).await;
-            let _ = database.redis.expire(failed_key, EXPIRE_SECS).await;
-            if failed_count > MAX_FAILED_COUNT {
-                warn!(
-                    "ip: {} login failed, count: {}, will temporarily restrict their login",
-                    &request_ip, failed_count
-                );
+        .await
+        {
+            Ok((packet_data, token)) => (packet_data, token),
+            Err((error_str, packet_data)) => {
+                // Record login failed
+                counter
+                    .with_label_values(&["/bancho", "post", &format!("login.failed.{}", error_str)])
+                    .inc();
+                // Increase failed count for this ip
+                let failed_count: i32 = database.redis.query("INCR", &[failed_key.clone()]).await;
+                let _ = database.redis.expire(failed_key, EXPIRE_SECS).await;
+                if failed_count > MAX_FAILED_COUNT {
+                    warn!(
+                        "ip: {} login failed, count: {}, will temporarily restrict their login",
+                        &request_ip, failed_count
+                    );
+                };
+                (
+                    packet_data.unwrap_or(
+                        packets::PacketBuilder::new()
+                            .add(packets::login_reply(LoginReply::InvalidCredentials))
+                            .write_out(),
+                    ),
+                    DEFAULT_TOKEN.to_string(),
+                )
             }
-        }
+        };
 
         return HttpResponse::Ok()
             .set_header("cho-token", token)

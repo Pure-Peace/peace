@@ -24,14 +24,12 @@ pub async fn login(
     database: &Data<Database>,
     player_sessions: Data<RwLock<PlayerSessions>>,
     counter: &Data<IntCounterVec>,
-) -> (PacketData, String) {
+) -> Result<(PacketData, String), (&'static str, Option<PacketData>)> {
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
     // Response packet data
     let resp = packets::PacketBuilder::new();
-    // Default token for login failed
-    let default_token = String::from("login_failed");
 
     // Parse login data start ----------
     let parse_start = std::time::Instant::now();
@@ -43,14 +41,7 @@ pub async fn login(
                     "Failed: parse_login_data; request_ip: {}; osu_version: {}",
                     request_ip, osu_version
                 );
-                // Login failed
-                return (
-                    resp.add(packets::login_reply(
-                        constants::packets::LoginReply::InvalidCredentials,
-                    ))
-                    .write_out(),
-                    default_token,
-                );
+                return Err(("parse_login_data", None));
             }
         };
     let parse_duration = parse_start.elapsed();
@@ -84,12 +75,7 @@ pub async fn login(
         }),
         Err(_) => {
             warn!("{} login failed, invalid credentials", username);
-            // Login failed
-            return (
-                resp.add(packets::login_reply(LoginReply::InvalidCredentials))
-                    .write_out(),
-                default_token,
-            );
+            return Err(("invalid_credentials", None));
         }
     };
     let select_base_duration = select_base_start.elapsed();
@@ -106,12 +92,14 @@ pub async fn login(
             "refuse login, beacuse user {}({}) has banned",
             username, user_id
         );
-        return (
-            resp.add(packets::notification("you have been slained."))
-                .add(packets::login_reply(LoginReply::UserBanned))
-                .write_out(),
-            default_token,
-        );
+        return Err((
+            "user_banned",
+            Some(
+                resp.add(packets::notification("you have been slained."))
+                    .add(packets::login_reply(LoginReply::UserBanned))
+                    .write_out(),
+            ),
+        ));
     }
 
     // Check user's hardware addresses
@@ -144,16 +132,11 @@ pub async fn login(
             panic!();
         }),
         Err(err) => {
-            warn!(
+            error!(
                 "user {} login failed, errors when checking hardware addresses; err: {:?}",
                 username, err
             );
-            // Login failed
-            return (
-                resp.add(packets::login_reply(LoginReply::InvalidCredentials))
-                    .write_out(),
-                default_token,
-            );
+            return Err(("checking_hardware_addresses", None));
         }
     };
     let select_addresses_duration = select_addresses_start.elapsed();
@@ -196,16 +179,11 @@ pub async fn login(
             {
                 Ok(row) => row.get("id"),
                 Err(err) => {
-                    warn!(
+                    error!(
                         "{} login failed, errors when insert user address; err: {:?}",
                         username, err
                     );
-                    // Login failed
-                    return (
-                        resp.add(packets::login_reply(LoginReply::InvalidCredentials))
-                            .write_out(),
-                        default_token,
-                    );
+                    return Err(("insert user address", None));
                 }
             };
             let insert_address_duration = insert_address_start.elapsed();
@@ -247,9 +225,19 @@ pub async fn login(
                     if address.user_id == user_id {
                         similarity += 1;
                     }
+
+                    // !Banned account warning
+                    if Privileges::Normal.not_enough(address.privileges) {
+                        warn!(
+                            "Banned account warning - user({}) login with an address({}) that was banned user's ({})!",
+                            user_id, address.id, address.user_id
+                        )
+                    }
+
                     (similarity, address)
                 })
                 .collect();
+
             // Reverse sort
             similarities.sort_by(|(s1, _), (s2, _)| s2.cmp(&s1));
 
@@ -266,16 +254,6 @@ pub async fn login(
                     "Multi account warning - user({}) login with other user({})'s address({});",
                     user_id, max_similar_address.user_id, max_similar_address.id
                 );
-            }
-
-            // !Banned account warning
-            for address in &player_addresses {
-                if Privileges::Normal.not_enough(address.privileges) {
-                    warn!(
-                        "Banned account warning - user({}) login with an address({}) that was banned user's ({})!",
-                        user_id, address.id, address.user_id
-                    )
-                }
             }
 
             // Create new login record for exists address
@@ -325,24 +303,11 @@ pub async fn login(
     let token = player_sessions.login(player).await;
     info!("user {}({}) has logged in!", username, user_id);
 
-    /* println!(
-        "created a player: {}\nnow sessions:  {:?}",
-        token,
-        player_sessions.map_to_string().await
-    ); */
-
-    /* let packet = packets::PacketBuilder::new()
-    .add(packets::notification("hihi"))
-    //.add(packets::login_reply(constants::packets::LoginReply::AccountPasswordRest))
-    .add(packets::notification("you' re fired"))
-    .add(packets::rtx("you' re fired"))
-    .add(packets::bancho_restart(3000))
-    .done(); */
-    //println!("data_lines: {:?}\nclient_info_line: {:?}\nclient_hash_set: {:?}", data_lines, client_info_line, client_hash_set);
     counter
         .with_label_values(&["/bancho", "post", "login.success"])
         .inc();
-    (
+
+    Ok((
         vec![
             24, 0, 0, 32, 0, 0, 0, 11, 30, 230, 172, 162, 232, 191, 142, 230, 130, 168, 239, 188,
             140, 233, 171, 152, 232, 180, 181, 231, 154, 132, 230, 146, 146, 230, 179, 188, 231,
@@ -384,5 +349,5 @@ pub async fn login(
             97, 99, 101, 32, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
         ],
         token,
-    )
+    ))
 }
