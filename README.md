@@ -4,7 +4,7 @@
 
 [![Rust](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
 
-Currently learning and experimental,
+Fully asynchronous, high concurrency, high performance, and high security.
 
 ### but you can still star :p
 
