@@ -1,4 +1,4 @@
 pub mod packets;
 mod privileges;
 
-pub use privileges::Privileges;
+pub use privileges::{Privileges, BanchoPrivileges};

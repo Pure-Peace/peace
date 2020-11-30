@@ -9,9 +9,9 @@ use crate::constants::packets::*;
 pub type PacketData = Vec<u8>;
 
 /// #5: BANCHO_USER_LOGIN_REPLY
-pub fn login_reply(reply: LoginReply) -> PacketData {
+pub fn login_reply(reply: impl LoginReply) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_LOGIN_REPLY)
-        .add(write_integer(reply as i32))
+        .add(write_integer(reply.val()))
         .write_out()
 }
 
@@ -214,9 +214,9 @@ pub fn protocol_version(version: i32) -> PacketData {
 }
 
 /// #76: BANCHO_MAIN_MENU_ICON
-pub fn main_menu_icon(menu_icons: &str) -> PacketData {
+pub fn main_menu_icon(image_url: &str, click_url: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_MAIN_MENU_ICON)
-        .add(write_string(menu_icons))
+        .add(write_string(&format!("{}|{}", image_url, click_url)))
         .write_out()
 }
 

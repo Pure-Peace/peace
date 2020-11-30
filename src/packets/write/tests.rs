@@ -4,7 +4,7 @@ use super::*;
 #[test]
 fn test_login_reply() {
     assert_eq!(
-        login_reply(LoginReply::InvalidCredentials),
+        login_reply(LoginFailed::InvalidCredentials),
         vec![5, 0, 0, 4, 0, 0, 0, 255, 255, 255, 255]
     )
 }

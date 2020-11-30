@@ -8,7 +8,7 @@ use prometheus::IntCounterVec;
 
 use crate::utils;
 use crate::{
-    constants::packets::LoginReply,
+    constants::packets::LoginFailed,
     objects::{Player, PlayerSessions},
     packets,
 };
@@ -65,7 +65,7 @@ pub async fn post(
                 .set_header("cho-token", "login_refused")
                 .set_header("cho-protocol", "19")
                 .body(
-                    packets::PacketBuilder::from(packets::login_reply(LoginReply::ServerError))
+                    packets::PacketBuilder::from(packets::login_reply(LoginFailed::ServerError))
                         .write_out(),
                 );
         }
@@ -100,7 +100,7 @@ pub async fn post(
                 (
                     packet_data.unwrap_or(
                         packets::PacketBuilder::new()
-                            .add(packets::login_reply(LoginReply::InvalidCredentials))
+                            .add(packets::login_reply(LoginFailed::InvalidCredentials))
                             .write_out(),
                     ),
                     DEFAULT_TOKEN.to_string(),
