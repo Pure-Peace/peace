@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::settings::types::Settings;
+use crate::settings::objects::Settings;
 use colored::Colorize;
 
 use deadpool_redis::redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs};

@@ -23,7 +23,7 @@ use async_std::sync::RwLock;
 use colored::Colorize;
 
 use database::Database;
-use settings::{types::Settings, BANNER};
+use settings::{objects::Settings, BANNER};
 use types::TestType;
 
 use objects::PlayerSessions;

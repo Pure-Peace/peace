@@ -1,12 +1,12 @@
 pub mod actix;
 pub mod logger;
-pub mod types;
+pub mod objects;
 
 use colored::Colorize;
 use config::{Config, ConfigError, /* Environment, */ File};
 use dotenv::dotenv;
 use std::env;
-use types::{Logger, Settings};
+use objects::{Logger, Settings};
 
 pub const BANNER: &str = r#"
 
