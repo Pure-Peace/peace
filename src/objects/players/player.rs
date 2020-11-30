@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use super::PlayerBase;
 
+use crate::constants::{BanchoPrivileges, Privileges};
 use crate::types::PacketData;
 
 use async_std::sync::Mutex;
@@ -12,6 +13,7 @@ pub struct Player {
     pub id: i32,
     pub name: String,
     pub privileges: i32,
+    pub bancho_privileges: i32,
     pub country: String,
     pub osu_version: String,
     pub utc_offset: i32,
@@ -31,6 +33,7 @@ impl Player {
             id: base.id,
             name: base.name,
             privileges: base.privileges,
+            bancho_privileges: Player::bancho_privileges(base.privileges),
             country: base.country,
             osu_version,
             utc_offset,
@@ -38,6 +41,31 @@ impl Player {
             login_time: now_time,
             last_active_time: now_time,
         }
+    }
+
+    pub fn bancho_privileges(privileges: i32) -> i32 {
+        let mut bancho_priv = 0;
+
+        if Privileges::Normal.enough(privileges) {
+            // all players have in-game "supporter".
+            // this enables stuff like osu!direct,
+            // multiplayer in cutting edge, etc.
+            bancho_priv |= BanchoPrivileges::Player as i32 | BanchoPrivileges::Supporter as i32
+        }
+
+        if Privileges::Mod.enough(privileges) {
+            bancho_priv |= BanchoPrivileges::Moderator as i32
+        }
+
+        if Privileges::Admin.enough(privileges) {
+            bancho_priv |= BanchoPrivileges::Developer as i32
+        }
+
+        if Privileges::Dangerous.enough(privileges) {
+            bancho_priv |= BanchoPrivileges::Owner as i32
+        }
+
+        bancho_priv
     }
 
     pub fn update_active(&mut self) {
