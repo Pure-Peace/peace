@@ -10,7 +10,7 @@ use crate::types::PacketData;
 use crate::{constants, database::Database, packets};
 
 use super::parser;
-use constants::{packets::LoginReply, Privileges};
+use constants::{packets::LoginFailed, Privileges};
 
 use prometheus::IntCounterVec;
 
@@ -56,7 +56,7 @@ pub async fn login(
 
     // Select user base info from database ----------
     let select_base_start = std::time::Instant::now();
-    let player_base: PlayerBase = match database
+    let mut player_base: PlayerBase = match database
         .pg
         .query_first(
             r#"SELECT 
@@ -97,7 +97,7 @@ pub async fn login(
             "user_banned",
             Some(
                 resp.add(packets::notification("you have been slained."))
-                    .add(packets::login_reply(LoginReply::UserBanned))
+                    .add(packets::login_reply(LoginFailed::UserBanned))
                     .write_out(),
             ),
         ));
@@ -280,12 +280,47 @@ pub async fn login(
         }
     }
 
+    // Verify the user
+    if Privileges::Verified.not_enough(player_base.privileges) {
+        player_base.privileges |= Privileges::Verified as i32;
+        let _ = database
+            .pg
+            .execute(
+                r#"UPDATE "user"."base" SET "privileges" = $1 WHERE "id" = $2"#,
+                &[&player_base.privileges, &player_base.id],
+            )
+            .await;
+        info!(
+            "user {}({}) has verified now!",
+            player_base.name, player_base.id
+        );
+    }
+
+    // Create player object
+    let player = Player::from_base(player_base, osu_version, client_info.utc_offset).await;
+
+    let resp = resp
+        .add(packets::login_reply(
+            constants::packets::LoginSuccess::Verified(player.id),
+        ))
+        .add(packets::protocol_version(19))
+        .add(packets::bancho_privileges(player.bancho_privileges))
+        .add(packets::notification("Welcome to Peace!"))
+        .add(packets::main_menu_icon(
+            "https://i.kafuu.pro/welcome.png",
+            "https://www.baidu.com",
+        ))
+        .add(packets::silence_end(0))
+        .add(packets::channel_info_end());
+
+    // TODO: add this player presence, stats to all PlayerSessions
+
     // Lock the PlayerSessions before we handle it
     let player_sessions = player_sessions.write().await;
 
     // Check is the user_id already login,
     // if true, logout old session
-    if player_sessions.user_is_logined(user_id).await {
+    let resp = if player_sessions.user_is_logined(user_id).await {
         // TODO: send notification to old session first
         // Logout old session
         player_sessions.logout_with_id(user_id).await;
@@ -294,11 +329,10 @@ pub async fn login(
             "There is another person logging in with your account! ! \n
             Now the server has logged out another session.\n
             If it is not you, please change your password in time.",
-        ));
-    }
-
-    // Create player object
-    let player = Player::from_base(player_base, osu_version, client_info.utc_offset).await;
+        ))
+    } else {
+        resp
+    };
 
     // Login player to sessions
     let token = player_sessions.login(player).await;
