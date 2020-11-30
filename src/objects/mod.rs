@@ -1,9 +1,3 @@
-mod player;
-mod player_data;
-mod player_sessions;
-mod player_address;
+mod players;
 
-pub use player::*;
-pub use player_data::PlayerData;
-pub use player_sessions::PlayerSessions;
-pub use player_address::PlayerAddress;
+pub use players::*;

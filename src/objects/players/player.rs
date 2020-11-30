@@ -1,17 +1,11 @@
 #![allow(dead_code)]
+use super::PlayerBase;
+
 use crate::types::PacketData;
-use async_std::sync::{Mutex, RwLock};
+
+use async_std::sync::Mutex;
 use chrono::prelude::{DateTime, Local};
 use queue::Queue;
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct PlayerBase {
-    pub id: i32,
-    pub name: String,
-    pub privileges: i32,
-    pub country: String,
-}
 
 #[derive(Debug)]
 pub struct Player {

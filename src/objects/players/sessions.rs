@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use async_std::sync::RwLock;
-use queue::Queue;
 use uuid::Uuid;
 
 use crate::types::{PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId};
