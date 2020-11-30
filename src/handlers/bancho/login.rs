@@ -25,6 +25,7 @@ pub async fn login(
     player_sessions: Data<RwLock<PlayerSessions>>,
     counter: &Data<IntCounterVec>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketData>)> {
+    let login_start = std::time::Instant::now();
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
@@ -301,7 +302,12 @@ pub async fn login(
 
     // Login player to sessions
     let token = player_sessions.login(player).await;
-    info!("user {}({}) has logged in!", username, user_id);
+
+    let login_end = login_start.elapsed();
+    info!(
+        "user {}({}) has logged in; time spent: {:.2?}",
+        username, user_id, login_end
+    );
 
     counter
         .with_label_values(&["/bancho", "post", "login.success"])
