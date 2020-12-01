@@ -54,7 +54,7 @@ pub async fn post(
     // If not login
     if !headers.contains_key("osu-token") {
         let failed_key = format!("{}-bancho_login_failed", &request_ip);
-        let failed_count = database.redis.get(failed_key.clone()).await.unwrap_or(0);
+        let failed_count = database.redis.get(&failed_key).await.unwrap_or(0);
         // Too many failed in 300s, refuse login
         if failed_count > MAX_FAILED_COUNT {
             warn!(
@@ -89,8 +89,8 @@ pub async fn post(
                     .with_label_values(&["/bancho", "post", &format!("login.failed.{}", error_str)])
                     .inc();
                 // Increase failed count for this ip
-                let failed_count: i32 = database.redis.query("INCR", &[failed_key.clone()]).await;
-                let _ = database.redis.expire(failed_key, EXPIRE_SECS).await;
+                let failed_count: i32 = database.redis.query("INCR", &[&failed_key]).await;
+                let _ = database.redis.expire(&failed_key, EXPIRE_SECS).await;
                 if failed_count > MAX_FAILED_COUNT {
                     warn!(
                         "ip: {} login failed, count: {}, will temporarily restrict their login",
