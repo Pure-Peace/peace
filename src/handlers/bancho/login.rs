@@ -297,7 +297,10 @@ pub async fn login(
     }
 
     // Create player object
-    let player = Player::from_base(player_base, osu_version, client_info.utc_offset).await;
+    let mut player = Player::from_base(player_base, osu_version, client_info.utc_offset).await;
+
+    // Update some player info
+    player.update_friends_from_database(database).await;
 
     let resp = resp
         .add(packets::login_reply(
@@ -311,8 +314,8 @@ pub async fn login(
             "https://www.baidu.com",
         ))
         .add(packets::silence_end(0))
-        .add(packets::channel_info_end())
-        .add(packets::match_join_fail());
+        .add(packets::friends_list(&player.friends))
+        .add(packets::channel_info_end());
 
     // TODO: add this player presence, stats to all PlayerSessions
 

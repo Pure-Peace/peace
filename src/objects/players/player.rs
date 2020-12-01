@@ -1,9 +1,13 @@
 #![allow(dead_code)]
 use super::PlayerBase;
 
-use crate::constants::{BanchoPrivileges, Privileges};
 use crate::types::PacketData;
+use crate::{
+    constants::{BanchoPrivileges, Privileges},
+    database::Database,
+};
 
+use actix_web::web::Data;
 use async_std::sync::Mutex;
 use chrono::prelude::{DateTime, Local};
 use queue::Queue;
@@ -14,6 +18,7 @@ pub struct Player {
     pub name: String,
     pub privileges: i32,
     pub bancho_privileges: i32,
+    pub friends: Vec<i32>,
     pub country: String,
     pub osu_version: String,
     pub utc_offset: i32,
@@ -34,6 +39,7 @@ impl Player {
             name: base.name,
             privileges: base.privileges,
             bancho_privileges: Player::bancho_privileges(base.privileges),
+            friends: Vec::new(),
             country: base.country,
             osu_version,
             utc_offset,
@@ -70,6 +76,27 @@ impl Player {
 
     pub fn update_active(&mut self) {
         self.last_active_time = Local::now();
+    }
+
+    pub async fn update_friends_from_database(&mut self, database: &Data<Database>) {
+        match database
+            .pg
+            .query(
+                r#"SELECT "friend_id" FROM "user"."friends" WHERE "user_id" = $1;"#,
+                &[&self.id],
+            )
+            .await
+        {
+            Ok(rows) => {
+                let mut friends = vec![self.id];
+                friends.extend::<Vec<i32>>(rows.iter().map(|row| row.get("friend_id")).collect());
+                self.friends = friends;
+            }
+            Err(err) => error!(
+                "error when update_friends_from_database; user: {}({}); err: {:?}",
+                self.name, self.id, err
+            ),
+        };
     }
 
     /// Enqueue a packet into queue, returns the length of queue
