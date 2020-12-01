@@ -46,3 +46,29 @@ fn test_rtx() {
         vec![105, 0, 0, 7, 0, 0, 0, 11, 5, 80, 101, 97, 99, 101]
     )
 }
+
+#[test]
+fn test_login() {
+    let resp = PacketBuilder::new();
+    let resp = resp
+        .add(login_reply(LoginSuccess::Verified(1009)))
+        .add(protocol_version(19))
+        .add(notification("Welcome to Peace!"))
+        .add(main_menu_icon(
+            "https://i.kafuu.pro/welcome.png",
+            "https://www.baidu.com",
+        ))
+        .add(silence_end(0))
+        .add(channel_info_end());
+    assert_eq!(
+        resp.write_out(),
+        vec![
+            5, 0, 0, 4, 0, 0, 0, 241, 3, 0, 0, 75, 0, 0, 4, 0, 0, 0, 19, 0, 0, 0, 24, 0, 0, 19, 0,
+            0, 0, 11, 17, 87, 101, 108, 99, 111, 109, 101, 32, 116, 111, 32, 80, 101, 97, 99, 101,
+            33, 76, 0, 0, 55, 0, 0, 0, 11, 53, 104, 116, 116, 112, 115, 58, 47, 47, 105, 46, 107,
+            97, 102, 117, 117, 46, 112, 114, 111, 47, 119, 101, 108, 99, 111, 109, 101, 46, 112,
+            110, 103, 124, 104, 116, 116, 112, 115, 58, 47, 47, 119, 119, 119, 46, 98, 97, 105,
+            100, 117, 46, 99, 111, 109, 92, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 89, 0, 0, 0, 0, 0, 0
+        ]
+    )
+}
