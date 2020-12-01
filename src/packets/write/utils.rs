@@ -7,23 +7,29 @@ pub struct PacketBuilder {
 }
 
 impl PacketBuilder {
+    #[inline(always)]
     /// Initial an empty packet
     pub fn new() -> Self {
         PacketBuilder { content: empty() }
     }
 
-    /// Initial a packet with id and length
+    #[inline(always)]
+    /// Initial a packet with id
+    /// 
+    /// !Note: Packet length is not included,
     pub fn with(packet_id: u8) -> Self {
         PacketBuilder {
             content: new(packet_id),
         }
     }
 
+    #[inline(always)]
     /// Initial from packet data
     pub fn from(packet: PacketData) -> PacketBuilder {
         PacketBuilder { content: packet }
     }
 
+    #[inline(always)]
     pub fn from_multiple(packets: &[PacketData]) -> PacketBuilder {
         let mut packet = empty();
         for i in packets.iter() {
@@ -32,19 +38,24 @@ impl PacketBuilder {
         PacketBuilder { content: packet }
     }
 
+    #[inline(always)]
     /// Add packet data
     pub fn add(mut self, packet: PacketData) -> PacketBuilder {
         self.content.extend(packet);
         self
     }
 
-    /// Build packet
-    pub fn done(self) -> PacketData {
+    #[inline(always)]
+    /// Write out the packet
+    pub fn write_out(self) -> PacketData {
         self.content
     }
 
-    /// Write out packet
-    pub fn write_out(self) -> PacketData {
+    #[inline(always)]
+    /// Pack the packet
+    /// 
+    /// !Note: Packet length will be added
+    pub fn pack(self) -> PacketData {
         output(self.content)
     }
 }
@@ -54,12 +65,14 @@ pub trait Integer {
 }
 
 impl Integer for i32 {
+    #[inline(always)]
     fn to_bytes(&self) -> PacketData {
         Vec::from(self.to_le_bytes())
     }
 }
 
 impl Integer for u8 {
+    #[inline(always)]
     fn to_bytes(&self) -> PacketData {
         Vec::from(self.to_le_bytes())
     }
@@ -73,6 +86,11 @@ pub fn empty() -> PacketData {
 
 #[inline(always)]
 /// Initial a packet by id
+/// 
+/// !Note: Packet length is not included,
+/// 
+/// !Requires output() to add packet length.
+///
 ///
 /// Packets posit:
 /// ```
@@ -89,6 +107,14 @@ pub fn empty() -> PacketData {
 ///
 pub fn new(packet_id: u8) -> PacketData {
     vec![packet_id, 0, 0, 0, 0, 0, 0]
+}
+
+#[inline(always)]
+/// Simple packaging for output(new(packet_id))
+/// 
+/// !Note: Packet length is included
+pub fn simple_pack(packet_id: u8) -> PacketData {
+    output(new(packet_id))
 }
 
 #[inline(always)]
@@ -114,6 +140,7 @@ pub fn write_string(string: &str) -> PacketData {
     data
 }
 
+#[inline(always)]
 /// Write message packet
 ///
 /// ### impl 1:
