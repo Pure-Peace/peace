@@ -541,19 +541,16 @@ ALTER TABLE ONLY "user".notes ALTER COLUMN id SET DEFAULT nextval('"user".notes_
 -- Data for Name: base; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1012, 'usao', 'usao', '931ffe4c39bc9fdc875cf8f691bf1f57', '1', 1, 'UN', '2020-11-21 23:43:32.801019+08', '2020-11-21 23:43:32.801019+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1017, 'z', 'z', 'g', '4', 1, 'UN', '2020-11-22 01:03:41.930436+08', '2020-11-22 01:03:41.930436+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1011, 'Chino', 'chino', '931ffe4c39bc9fdc875cf8f691bf1f57', 'chino@kafuu.com', 1, 'UN', '2020-11-21 23:43:18.460883+08', '2020-11-23 05:01:57.730942+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1009, 'PurePeace', 'purepeace', '931ffe4c39bc9fdc875cf8f691bf1f57', '940857703@qq.com', 1, 'CN', '2020-11-21 23:42:00.487276+08', '2020-11-23 21:03:49.085718+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1000, 'PurePeace', 'purepeace', '931ffe4c39bc9fdc875cf8f691bf1f57', '940857703@qq.com', 3, 'CN', '2020-11-21 23:42:00.487276+08', '2020-12-01 20:47:55.930682+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1001, 'Chino', 'chino', '931ffe4c39bc9fdc875cf8f691bf1f57', 'chino@kafuu.com', 0, 'UN', '2020-11-21 23:43:18.460883+08', '2020-12-01 20:48:04.615355+08');
 
 
 --
 -- Data for Name: friends; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1009, 1011, NULL, '2020-11-21 23:45:28.794136+08');
-INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1009, 1012, NULL, '2020-11-21 23:45:37.559363+08');
-INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1011, 1009, NULL, '2020-11-21 23:45:47.362144+08');
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1001, 1000, NULL, '2020-11-21 23:45:47.362144+08');
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (1000, 1001, NULL, '2020-11-21 23:45:28.794136+08');
 
 
 --
@@ -566,28 +563,27 @@ INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (101
 -- Data for Name: notes; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".notes (id, user_id, note, type, added_by, create_time, update_time) VALUES (1, 1009, 'boss', 0, NULL, '2020-11-21 23:46:12.296661+08', '2020-11-21 23:46:12.296661+08');
 
 
 --
 -- Name: address_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".address_id_seq', 11, true);
+SELECT pg_catalog.setval('"user".address_id_seq', 1, true);
 
 
 --
 -- Name: base_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".base_id_seq', 1017, true);
+SELECT pg_catalog.setval('"user".base_id_seq', 1001, true);
 
 
 --
 -- Name: login_records_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".login_records_id_seq', 16, true);
+SELECT pg_catalog.setval('"user".login_records_id_seq', 1, true);
 
 
 --

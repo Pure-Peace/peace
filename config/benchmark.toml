@@ -1,0 +1,74 @@
+# Production config
+# Run with:
+# Cargo run production --release
+
+# If true, will check the database connection pools on created
+check_pools_on_created = true
+debug = false
+
+# Logger config
+[logger]
+# Level is selected from logger.mode
+level = "error"
+
+# Actix logger middleware format
+# Default is: '%a "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T'
+# If using reverse proxy, use %{r}a instead of %a
+# https://actix.rs/actix-web/actix_web/middleware/struct.Logger.html
+actix_log_format = '%s - %{r}a "%r" %b %T'
+
+# Logger will not record logs of these endpoints
+# For example,
+# i don't want logger to print logs about endpoint "/favicon.ico", so i fill it in
+exclude_endpoints = ["/favicon.ico"]
+
+
+# Logger mode is env_logger config
+# Support filter: "trace,mio::sys=info"
+# https://docs.rs/env_logger/0.8.1/env_logger/index.html
+[logger.mode]
+debug = "trace"
+info = "info"
+error = "error"
+warn = "warn"
+
+
+# Docs for postgres config: 
+# https://docs.rs/deadpool-postgres/0.5.6/deadpool_postgres/config/struct.Config.html
+[postgres]
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "123456"
+dbname = "peace"
+
+[postgres.pool]
+max_size = 16
+
+
+# Docs for redis config: 
+# https://docs.rs/deadpool-redis/0.6.1/deadpool_redis/struct.Config.html
+[redis]
+# Format here:
+# redis://[:<passwd>@]<hostname>[:port][/<db>]
+url = "redis://127.0.0.1:6379"
+
+[redis.pool]
+max_size = 16
+
+
+# Prometheus is an open-source monitoring metrics solution
+# It can help you monitor the status of databases, systems, web applications, and collect data
+# https://prometheus.io/
+# And, with grafana, we can make real-time visualization charts!
+# https://grafana.com/
+[prometheus]
+# Your application name
+namespace = "peace"
+
+# Data collection address,
+# Means you can access: http://host:port<endpoint>
+endpoint = "/metrics"
+
+# If true, logger will not log endpoints
+exclude_endpoint_log = true

@@ -91,7 +91,7 @@ pub async fn test_player_money_add(
     let player_sessions = player_sessions.write().await;
     let mut map = player_sessions.map.write().await;
     let player_info = match map.get_mut(&token.0) {
-        Some(mut player) => {
+        Some(player) => {
             // (*player).money += 1;
             //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
             format!("{:?}", *player)
@@ -112,7 +112,7 @@ pub async fn test_player_money_reduce(
     let player_sessions = player_sessions.write().await;
     let mut map = player_sessions.map.write().await;
     let player_info = match map.get_mut(&token.0) {
-        Some(mut player) => {
+        Some(player) => {
             // (*player).money -= 1;
             format!("{:?}", *player)
         }
