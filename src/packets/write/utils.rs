@@ -15,7 +15,7 @@ impl PacketBuilder {
 
     #[inline(always)]
     /// Initial a packet with id
-    /// 
+    ///
     /// !Note: Packet length is not included,
     pub fn with(packet_id: u8) -> Self {
         PacketBuilder {
@@ -53,7 +53,7 @@ impl PacketBuilder {
 
     #[inline(always)]
     /// Pack the packet
-    /// 
+    ///
     /// !Note: Packet length will be added
     pub fn pack(self) -> PacketData {
         output(self.content)
@@ -86,9 +86,9 @@ pub fn empty() -> PacketData {
 
 #[inline(always)]
 /// Initial a packet by id
-/// 
+///
 /// !Note: Packet length is not included,
-/// 
+///
 /// !Requires output() to add packet length.
 ///
 ///
@@ -111,7 +111,7 @@ pub fn new(packet_id: u8) -> PacketData {
 
 #[inline(always)]
 /// Simple packaging for output(new(packet_id))
-/// 
+///
 /// !Note: Packet length is included
 pub fn simple_pack(packet_id: u8) -> PacketData {
     output(new(packet_id))
@@ -179,8 +179,18 @@ pub fn write_message(sender: &str, sender_id: i32, content: &str, channel: &str)
 
 #[inline(always)]
 /// Write integer packet
-pub fn write_integer<T: Integer>(integer: T) -> PacketData {
+pub fn write_integer<I: Integer>(integer: I) -> PacketData {
     integer.to_bytes()
+}
+
+#[inline(always)]
+/// Write int list packet
+pub fn write_int_list<I: Integer>(integer_list: &Vec<I>) -> PacketData {
+    let mut ret = Vec::from((integer_list.len() as u16).to_le_bytes());
+    for int in integer_list {
+        ret.extend(int.to_bytes());
+    }
+    ret
 }
 
 #[inline(always)]

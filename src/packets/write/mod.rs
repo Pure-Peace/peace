@@ -203,8 +203,11 @@ pub fn bancho_privileges(privileges: i32) -> PacketData {
 }
 
 /// #72: BANCHO_FRIENDS_LIST
-/// TODO
-pub fn friends_list() {}
+pub fn friends_list(friends: &Vec<i32>) -> PacketData {
+    PacketBuilder::with(id::BANCHO_FRIENDS_LIST)
+        .add(write_int_list(friends))
+        .pack()
+}
 
 /// #75: BANCHO_PROTOCOL_VERSION
 pub fn protocol_version(version: i32) -> PacketData {
@@ -282,7 +285,11 @@ pub fn user_presence_single(user_id: i32) -> PacketData {
 
 /// #96: BANCHO_USER_PRESENCE_BUNDLE
 /// UNUSED
-pub fn user_presence_bundle() {}
+pub fn user_presence_bundle(player_id_list: &Vec<i32>) -> PacketData {
+    PacketBuilder::with(id::BANCHO_USER_PRESENCE_BUNDLE)
+        .add(write_int_list(player_id_list))
+        .pack()
+}
 
 /// #100: BANCHO_USER_DM_BLOCKED
 pub fn user_dm_blocked(target: &str) -> PacketData {
