@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use super::PlayerBase;
 
-use crate::types::PacketData;
+use crate::{constants::ClientInfo, types::PacketData};
 use crate::{
     constants::{BanchoPrivileges, Privileges},
     database::Database,
@@ -11,6 +11,7 @@ use actix_web::web::Data;
 use async_std::sync::Mutex;
 use chrono::prelude::{DateTime, Local};
 use queue::Queue;
+use tokio_postgres::types::ToSql;
 
 #[derive(Debug)]
 pub struct Player {
@@ -20,10 +21,16 @@ pub struct Player {
     pub bancho_privileges: i32,
     pub friends: Vec<i32>,
     pub country: String,
+    pub ip: String,
+    pub address_id: i32,
+    pub address_similarity: i32,
+    pub only_friend_pm_allowed: bool,
+    pub display_city: bool,
     pub osu_version: String,
     pub utc_offset: i32,
     pub queue: Mutex<Queue<PacketData>>,
     pub login_time: DateTime<Local>,
+    pub login_record_id: i32,
     pub last_active_time: DateTime<Local>,
 }
 
@@ -32,7 +39,13 @@ impl Player {
         format!("{:?}", self)
     }
 
-    pub async fn from_base(base: PlayerBase, osu_version: String, utc_offset: i32) -> Self {
+    pub async fn from_base(
+        base: PlayerBase,
+        client_info: ClientInfo,
+        ip: String,
+        address_id: i32,
+        address_similarity: i32,
+    ) -> Self {
         let now_time = Local::now();
         Player {
             id: base.id,
@@ -41,10 +54,16 @@ impl Player {
             bancho_privileges: Player::bancho_privileges(base.privileges),
             friends: Vec::new(),
             country: base.country,
-            osu_version,
-            utc_offset,
+            ip,
+            address_id,
+            address_similarity,
+            only_friend_pm_allowed: client_info.only_friend_pm_allowed,
+            display_city: client_info.display_city,
+            osu_version: client_info.osu_version,
+            utc_offset: client_info.utc_offset,
             queue: Mutex::new(Queue::new()),
             login_time: now_time,
+            login_record_id: -1,
             last_active_time: now_time,
         }
     }
@@ -74,6 +93,7 @@ impl Player {
         bancho_priv
     }
 
+    #[inline(always)]
     pub fn update_active(&mut self) {
         self.last_active_time = Local::now();
     }
@@ -99,29 +119,67 @@ impl Player {
         };
     }
 
+    pub async fn update_login_record(&mut self, database: &Data<Database>) {
+        self.login_record_id = match database
+            .pg
+            .query_first(
+                r#"INSERT INTO "user_records"."login" (
+                    "user_id",
+                    "address_id",
+                    "ip",
+                    "version",
+                    "similarity"
+                 ) VALUES ($1, $2, $3, $4, $5) RETURNING "id";"#,
+                &[
+                    &self.id,
+                    &self.address_id,
+                    &self.ip,
+                    &self.osu_version,
+                    &self.address_similarity,
+                ],
+            )
+            .await
+        {
+            Ok(row) => row.get("id"),
+            Err(err) => {
+                error!(
+                    "failed to insert user {}({})'s login record, error: {:?}",
+                    self.name, self.id, err
+                );
+                -1
+            }
+        };
+    }
+
+    #[inline(always)]
     /// Enqueue a packet into queue, returns the length of queue
     async fn enqueue(&self, packet_data: PacketData) -> Result<usize, ()> {
         self.queue.lock().await.queue(packet_data)
     }
 
+    #[inline(always)]
     async fn dequeue(&self) -> Option<PacketData> {
         self.queue.lock().await.dequeue()
     }
 
+    #[inline(always)]
     /// Get the queue data as vec, readonly
     async fn queue_data(&self) -> Vec<PacketData> {
         self.queue.lock().await.vec().clone()
     }
 
+    #[inline(always)]
     /// Get the queue size
     async fn queue_len(&self) -> usize {
         self.queue.lock().await.len()
     }
 
+    #[inline(always)]
     async fn queue_peek(&self) -> Option<PacketData> {
         self.queue.lock().await.peek()
     }
 
+    #[inline(always)]
     async fn queue_is_empty(&self) -> bool {
         self.queue.lock().await.is_empty()
     }

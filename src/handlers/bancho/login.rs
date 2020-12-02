@@ -136,8 +136,8 @@ pub async fn login(
         }),
         Err(err) => {
             error!(
-                "user {} login failed, errors when checking hardware addresses; err: {:?}",
-                username, err
+                "user {}({}) login failed, errors when checking hardware addresses; err: {:?}",
+                username, user_id, err
             );
             return Err(("checking_hardware_addresses", None));
         }
@@ -152,7 +152,7 @@ pub async fn login(
     );
 
     // PlayerAddress handle
-    match player_addresses.len() {
+    let (address_id, similarity) = match player_addresses.len() {
         // If not any addresses matched, create it
         0 => {
             let insert_address_start = std::time::Instant::now();
@@ -183,8 +183,8 @@ pub async fn login(
                 Ok(row) => row.get("id"),
                 Err(err) => {
                     error!(
-                        "{} login failed, errors when insert user address; err: {:?}",
-                        username, err
+                        "user {}({}) login failed, errors when insert user address; err: {:?}",
+                        username, user_id, err
                     );
                     return Err(("insert user address", None));
                 }
@@ -195,19 +195,7 @@ pub async fn login(
                 username, user_id, address_id, insert_address_duration
             );
 
-            // Create new login record for new address
-            database
-                .pg
-                .execute(
-                    r#"INSERT INTO "user"."login_records" (
-                            "user_id", 
-                            "address_id", 
-                            "ip", 
-                            "version"
-                         ) VALUES ($1, $2, $3, $4);"#,
-                    &[&user_id, &address_id, &request_ip, &osu_version],
-                )
-                .await;
+            (address_id, 101)
         }
         // If any addresses matched
         _ => {
@@ -260,38 +248,28 @@ pub async fn login(
             }
 
             // Create new login record for exists address
-            database
-                .pg
-                .execute(
-                    r#"INSERT INTO "user"."login_records" (
-                    "user_id", 
-                    "address_id", 
-                    "ip", 
-                    "version",
-                    "similarity"
-                ) VALUES ($1, $2, $3, $4, $5);"#,
-                    &[
-                        &user_id,
-                        &max_similar_address.id,
-                        &request_ip,
-                        &osu_version,
-                        &max_similarity,
-                    ],
-                )
-                .await;
+            /*  */
+            (max_similar_address.id, max_similarity)
         }
-    }
+    };
 
     // Verify the user
     if Privileges::Verified.not_enough(player_base.privileges) {
         player_base.privileges |= Privileges::Verified as i32;
-        let _ = database
+        database
             .pg
             .execute(
                 r#"UPDATE "user"."base" SET "privileges" = $1 WHERE "id" = $2"#,
                 &[&player_base.privileges, &player_base.id],
             )
-            .await;
+            .await
+            .unwrap_or_else(|err| {
+                error!(
+                    "failed to update user {}({})'s privileges, error: {:?}",
+                    username, user_id, err
+                );
+                0
+            });
         info!(
             "user {}({}) has verified now!",
             player_base.name, player_base.id
@@ -299,11 +277,22 @@ pub async fn login(
     }
 
     // Create player object
-    let mut player = Player::from_base(player_base, osu_version, client_info.utc_offset).await;
+    let mut player = Player::from_base(
+        player_base,
+        client_info,
+        request_ip.clone(),
+        address_id,
+        similarity,
+    )
+    .await;
 
     // Update some player info
     player.update_friends_from_database(database).await;
 
+    // Add login record
+    player.update_login_record(database).await;
+
+    // Add response packet data
     let resp = resp
         .add(packets::login_reply(
             constants::packets::LoginSuccess::Verified(player.id),
