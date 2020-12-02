@@ -15,5 +15,3 @@ pub type PlayerIdSessionMap = RwLock<hashbrown::HashMap<UserId, TokenString>>;
 
 pub type Username = String;
 pub type Password = String;
-pub type ClientInfo = Vec<String>;
-pub type ClientHashes = Vec<String>;
