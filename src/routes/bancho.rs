@@ -66,6 +66,9 @@ pub async fn post(
                 .set_header("cho-protocol", "19")
                 .body(
                     packets::PacketBuilder::from(packets::login_reply(LoginFailed::ServerError))
+                        .add(packets::notification(
+                            "You are not allowed to login now, please wait!",
+                        ))
                         .write_out(),
                 );
         }
@@ -83,7 +86,15 @@ pub async fn post(
         .await
         {
             Ok((packet_data, token)) => (packet_data, token),
-            Err((error_str, packet_data)) => {
+            Err((error_str, packet_builder)) => {
+                // Notification string
+                let mut failed_notification = String::new();
+
+                // Default failed login reply is InvalidCredentials
+                let packet_builder = packet_builder.unwrap_or(packets::PacketBuilder::from(
+                    packets::login_reply(LoginFailed::InvalidCredentials),
+                ));
+
                 // Record login failed
                 counter
                     .with_label_values(&["/bancho", "post", &format!("login.failed.{}", error_str)])
@@ -91,18 +102,27 @@ pub async fn post(
                 // Increase failed count for this ip
                 let failed_count: i32 = database.redis.query("INCR", &[&failed_key]).await;
                 let _ = database.redis.expire(&failed_key, EXPIRE_SECS).await;
+
+                // Add notification string
+                failed_notification
+                    .push_str(&format!("Login failed {} time!!\n", failed_count));
+
+                // If reached the retires limit
                 if failed_count > MAX_FAILED_COUNT {
+                    failed_notification.push_str(&format!("Your login retries have reached the upper limit! \nPlease try again in {} seconds.", EXPIRE_SECS));
                     warn!(
                         "ip: {} login failed, count: {}, will temporarily restrict their login",
                         &request_ip, failed_count
                     );
+                } else {
+                    failed_notification.push_str(&format!("You can try {} more times.\n", MAX_FAILED_COUNT - failed_count + 1))
                 };
+
+                // Returns
                 (
-                    packet_data.unwrap_or(
-                        packets::PacketBuilder::new()
-                            .add(packets::login_reply(LoginFailed::InvalidCredentials))
-                            .write_out(),
-                    ),
+                    packet_builder
+                        .add(packets::notification(&failed_notification))
+                        .write_out(),
                     DEFAULT_TOKEN.to_string(),
                 )
             }
