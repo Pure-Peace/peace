@@ -46,6 +46,7 @@ impl Postgres {
         Postgres { pool }
     }
 
+    #[inline(always)]
     /// Test whether the connection pool can connect to the postgres
     ///
     /// Will returns bool
@@ -71,6 +72,7 @@ impl Postgres {
         (client, statement)
     }
 
+    #[inline(always)]
     /// Get postgres client from deadpool
     ///
     /// # Examples:
@@ -133,6 +135,7 @@ impl Postgres {
         self.query_first(query, &[]).await.unwrap()
     }
 
+    #[inline(always)]
     /// Query and query all result rows (no params)
     ///
     /// # Examples:
@@ -156,12 +159,12 @@ impl Postgres {
         &self,
         query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + std::marker::Sync)],
-    ) -> u64 {
+    ) -> Result<u64, Error> {
         let (c, s) = self.get_ready(query).await;
-        let size = c.execute(&s, params).await.unwrap();
-        size
+        c.execute(&s, params).await
     }
 
+    #[inline(always)]
     /// Query and return the number of result rows (no params)
     ///
     /// # Examples:
@@ -169,7 +172,7 @@ impl Postgres {
     /// ```
     /// let size: u64 = execute_simple("YOUR SQL");
     /// ```
-    pub async fn execute_simple(&self, query: &str) -> u64 {
+    pub async fn execute_simple(&self, query: &str) -> Result<u64, Error> {
         self.execute(query, &[]).await
     }
 }
