@@ -5,9 +5,12 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
-use crate::objects::{Player, PlayerAddress, PlayerBase, PlayerSessions};
 use crate::types::PacketData;
 use crate::{constants, database::Database, packets};
+use crate::{
+    objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
+    packets::PacketBuilder,
+};
 
 use super::parser;
 use constants::{packets::LoginFailed, Privileges};
@@ -24,13 +27,13 @@ pub async fn login(
     database: &Data<Database>,
     player_sessions: Data<RwLock<PlayerSessions>>,
     counter: &Data<IntCounterVec>,
-) -> Result<(PacketData, String), (&'static str, Option<PacketData>)> {
+) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
     let login_start = std::time::Instant::now();
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
     // Response packet data
-    let resp = packets::PacketBuilder::new();
+    let resp = PacketBuilder::new();
 
     // Parse login data start ----------
     let parse_start = std::time::Instant::now();
@@ -97,8 +100,7 @@ pub async fn login(
             "user_banned",
             Some(
                 resp.add(packets::notification("you have been slained."))
-                    .add(packets::login_reply(LoginFailed::UserBanned))
-                    .write_out(),
+                    .add(packets::login_reply(LoginFailed::UserBanned)),
             ),
         ));
     }
