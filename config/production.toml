@@ -9,7 +9,7 @@ debug = false
 # Logger config
 [logger]
 # Level is selected from logger.mode
-level = "warn"
+level = "info"
 
 # Actix logger middleware format
 # Default is: '%a "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T'

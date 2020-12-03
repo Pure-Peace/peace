@@ -150,7 +150,7 @@ pub async fn pleyer_sessions_kick(
     token: Path<String>,
     player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
-    HttpResponse::Ok().body(match player_sessions.write().await.logout(token.0).await {
+    HttpResponse::Ok().body(match player_sessions.write().await.logout(&token.0).await {
         Some((token, player)) => format!("{}\n{:?}", token, player),
         None => "non this player".to_string(),
     })

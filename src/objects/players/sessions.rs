@@ -49,12 +49,12 @@ impl PlayerSessions {
     }
 
     /// Logout a player from the PlayerSessions
-    pub async fn logout(&self, token: TokenString) -> Option<(TokenString, Player)> {
+    pub async fn logout(&self, token: &TokenString) -> Option<(TokenString, Player)> {
         // Get locks
         let (mut map, mut id_session_map) =
             (self.map.write().await, self.id_session_map.write().await);
         // Logout
-        match map.remove_entry(&token) {
+        match map.remove_entry(token) {
             Some((token_string, player)) => {
                 drop(map);
                 id_session_map.remove(&player.id);
@@ -87,11 +87,12 @@ impl PlayerSessions {
     #[inline(always)]
     /// Logout a player from the PlayerSessions with user id
     pub async fn logout_with_id(&self, user_id: UserId) -> Option<(TokenString, Player)> {
-        let token = match self.id_session_map.read().await.get(&user_id) {
-            Some(token) => token.to_string(),
-            None => return None,
-        };
-        self.logout(token).await
+        match self.id_session_map.read().await.get(&user_id) {
+            Some(token) => self.logout(token).await,
+            None => None,
+        }
+    }
+
     }
 
     #[inline(always)]
