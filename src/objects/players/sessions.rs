@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use async_std::sync::RwLock;
+use chrono::Local;
 use uuid::Uuid;
 
 use crate::{
@@ -93,6 +94,18 @@ impl PlayerSessions {
         }
     }
 
+    #[inline(always)]
+    pub async fn deactive_token_list(&self, session_timeout: i64) -> Vec<TokenString> {
+        let now_timestamp = Local::now().timestamp();
+        self.map
+            .read()
+            .await
+            .iter()
+            .filter(|(_, player)| {
+                now_timestamp - player.last_active_time.timestamp() > session_timeout
+            })
+            .map(|(token, _)| token.to_string())
+            .collect()
     }
 
     #[inline(always)]
