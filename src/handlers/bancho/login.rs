@@ -53,7 +53,7 @@ pub async fn login(
     let osu_version = client_info.osu_version.clone();
     let username_safe = username.to_lowercase().replace(" ", "_");
     info!(
-        "data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
+        "login data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
     );
 
@@ -129,8 +129,8 @@ pub async fn login(
     {
         Ok(row) => serde_postgres::from_rows(&row).unwrap_or_else(|err| {
             error!(
-                "could not deserialize player hardward address: {}; err: {:?}",
-                username, err
+                "could not deserialize player hardward address: {}({}); err: {:?}",
+                username, user_id, err
             );
             panic!();
         }),
@@ -191,7 +191,7 @@ pub async fn login(
             };
             let insert_address_duration = insert_address_start.elapsed();
             info!(
-                "success to create a new player address {}({}), address id: {}; time spent: {:.2?}",
+                "success to create a new player address for user {}({}), address id: {}; time spent: {:.2?}",
                 username, user_id, address_id, insert_address_duration
             );
 
@@ -220,8 +220,8 @@ pub async fn login(
                     // !Banned account warning
                     if Privileges::Normal.not_enough(address.privileges) {
                         warn!(
-                            "Banned account warning - user({}) login with an address({}) that was banned user's ({})!",
-                            user_id, address.id, address.user_id
+                            "Banned account warning - user {}({}) login with an address({}) that was banned user's ({})!",
+                            username, user_id, address.id, address.user_id
                         )
                     }
 
@@ -235,15 +235,15 @@ pub async fn login(
             // Get the most similar
             let (max_similarity, max_similar_address) = similarities[0];
             info!(
-                "user({}) login with address id: {}; similarity: {};",
-                user_id, max_similar_address.id, max_similarity
+                "user {}({}) login with address id: {}; similarity: {};",
+                username, user_id, max_similar_address.id, max_similarity
             );
 
             // !Multiple account warning
             if max_similar_address.user_id != user_id {
                 warn!(
-                    "Multi account warning - user({}) login with other user({})'s address({});",
-                    user_id, max_similar_address.user_id, max_similar_address.id
+                    "Multi account warning - user {}({}) login with other user({})'s address({});",
+                    username, user_id, max_similar_address.user_id, max_similar_address.id
                 );
             }
 

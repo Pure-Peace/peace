@@ -25,7 +25,7 @@ pub async fn session_recycle_handler(
         return;
     };
 
-    debug!("session recycle task start!");
+    info!("session recycle task start!");
     let mut recycled_sessions_count = 0;
     let session_recycle_start = std::time::Instant::now();
 
@@ -45,7 +45,7 @@ pub async fn session_recycle_handler(
     
     // Done
     let session_recycle_end = session_recycle_start.elapsed();
-    debug!(
+    info!(
         "session recycle task complete in {:.2?}; recycled: {} sessions.",
         session_recycle_end, recycled_sessions_count
     );
