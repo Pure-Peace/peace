@@ -116,7 +116,8 @@ pub async fn parse_login_data(
     // Check username and password
     let username = data_lines[0].clone();
     let password = data_lines[1].clone();
-    if username.len() < 1 || password.len() < 30 {
+    // Password (md5) length is 32
+    if username.len() < 1 || password.len() != 32 {
         error!(
             "Failed: invalid username or password; username: {}, password: {}",
             username, password
