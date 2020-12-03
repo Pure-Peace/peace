@@ -87,11 +87,21 @@ impl PlayerSessions {
 
     #[inline(always)]
     /// Logout a player from the PlayerSessions with user id
+    ///
+    /// Think, why not use the following code?
+    /// Because, passing a reference to the token directly will result in the read lock not being released, thus triggering a deadlock.
+    /// ```
+    /// match self.id_session_map.read().await.get(&user_id) {
+    ///     Some(token) => self.logout(token).await,
+    ///     None => None,
+    /// }
+    /// ```
     pub async fn logout_with_id(&self, user_id: UserId) -> Option<(TokenString, Player)> {
-        match self.id_session_map.read().await.get(&user_id) {
-            Some(token) => self.logout(token).await,
-            None => None,
-        }
+        let token = match self.id_session_map.read().await.get(&user_id) {
+            Some(token) => token.to_string(),
+            None => return None,
+        };
+        self.logout(&token).await
     }
 
     #[inline(always)]
