@@ -46,6 +46,13 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
+    /// Add packet data
+    pub fn add_ref(&mut self, packet: PacketData) -> &PacketBuilder {
+        self.content.extend(packet);
+        self
+    }
+
+    #[inline(always)]
     /// Write out the packet
     pub fn write_out(self) -> PacketData {
         self.content
@@ -64,19 +71,18 @@ pub trait Integer {
     fn to_bytes(&self) -> PacketData;
 }
 
-impl Integer for i32 {
-    #[inline(always)]
-    fn to_bytes(&self) -> PacketData {
-        Vec::from(self.to_le_bytes())
+macro_rules! impl_integer {
+    ($($t:ty),+) => {
+        $(impl Integer for $t {
+            #[inline(always)]
+            fn to_bytes(&self) -> PacketData {
+                Vec::from(self.to_le_bytes())
+            }
+        })+
     }
 }
 
-impl Integer for u8 {
-    #[inline(always)]
-    fn to_bytes(&self) -> PacketData {
-        Vec::from(self.to_le_bytes())
-    }
-}
+impl_integer!(u8, i16, i32, i64, f32);
 
 #[inline(always)]
 /// Create a empty packets
