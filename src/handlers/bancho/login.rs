@@ -90,10 +90,10 @@ pub async fn login(
         username, user_id, select_base_duration
     );
 
-    // Check user's priviliges
+    // Check user's privileges
     if Privileges::Normal.not_enough(player_base.privileges) {
         warn!(
-            "refuse login, beacuse user {}({}) has banned",
+            "refuse login, because user {}({}) has banned",
             username, user_id
         );
         return Err((
@@ -129,7 +129,7 @@ pub async fn login(
     {
         Ok(row) => serde_postgres::from_rows(&row).unwrap_or_else(|err| {
             error!(
-                "could not deserialize player hardward address: {}({}); err: {:?}",
+                "could not deserialize player hardware address: {}({}); err: {:?}",
                 username, user_id, err
             );
             panic!();
@@ -292,14 +292,19 @@ pub async fn login(
     // Add login record
     player.update_login_record(database).await;
 
+    // User data packet
+    let user_data_packet = packets::user_data(&player);
+
     // Add response packet data
-    let resp = resp
+    let mut resp = resp
         .add(packets::login_reply(
             constants::packets::LoginSuccess::Verified(player.id),
         ))
         .add(packets::protocol_version(19))
         .add(packets::bancho_privileges(player.bancho_privileges))
         .add(packets::notification("Welcome to Peace!"))
+        .add(user_data_packet.clone())
+        // TODO add user stats
         .add(packets::main_menu_icon(
             "https://i.kafuu.pro/welcome.png",
             "https://www.baidu.com",
@@ -315,17 +320,32 @@ pub async fn login(
 
     // Check is the user_id already login,
     // if true, logout old session
-    let resp = if player_sessions.user_is_logined(user_id).await {
+    if player_sessions.user_is_logined(user_id).await {
         // TODO: send notification to old session first
         // Logout old session
         player_sessions.logout_with_id(user_id).await;
         // Send notification to current session
-        resp.add(packets::notification(
+        resp.add_ref(packets::notification(
             "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
-        ))
-    } else {
-        resp
-    };
+        ));
+    }
+
+    // Send new user to them, and add them to this new user
+    for online_player in player_sessions.map.read().await.values() {
+        online_player
+            .enqueue(user_data_packet.clone())
+            .await
+            .unwrap_or_else(|_| {
+                error!(
+                    "could not enqueue packet to player {}({})",
+                    online_player.name, online_player.id
+                );
+                0
+            });
+
+        resp.add_ref(packets::user_data(&online_player));
+        // TODO add user stats
+    }
 
     // Login player to sessions
     let token = player_sessions.login(player).await;

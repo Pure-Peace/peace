@@ -9,7 +9,7 @@ pub struct PlayerData {
     pub privileges: i32,
     pub country: String,
     pub osu_version: String,
-    pub utc_offset: i32,
+    pub utc_offset: u8,
     pub login_time: DateTime<Local>,
     pub last_active_time: DateTime<Local>,
 }

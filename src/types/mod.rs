@@ -15,3 +15,6 @@ pub type PlayerIdSessionMap = RwLock<hashbrown::HashMap<UserId, TokenString>>;
 
 pub type Username = String;
 pub type Password = String;
+pub type Latitude = f32;
+pub type Longitude = f32;
+pub type Location = (Latitude, Longitude);

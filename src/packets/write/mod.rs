@@ -2,11 +2,14 @@
 mod tests;
 
 pub mod utils;
+use std::str::FromStr;
+
+use celes::Country;
 pub use utils::*;
 
 use crate::constants::packets::*;
-
-pub type PacketData = Vec<u8>;
+use crate::objects::Player;
+use crate::types::PacketData;
 
 /// #5: BANCHO_USER_LOGIN_REPLY
 pub fn login_reply(reply: impl LoginReply) -> PacketData {
@@ -39,7 +42,23 @@ pub fn change_username(username_old: &str, username_new: &str) -> PacketData {
 
 /// #11: BANCHO_USER_STATS
 /// TODO
-pub fn user_stats() {}
+pub fn user_stats(player: &Player) -> PacketData {
+    PacketBuilder::with(id::BANCHO_USER_STATS)
+        .add(write_integer(player.id))
+        .add(write_integer(0u8)) // action
+        .add(write_string("haha")) // info test
+        .add(write_string("")) // map md5
+        .add(write_integer(0i32)) // mods
+        .add(write_integer(0u8)) // mode.as_vanilla
+        .add(write_integer(0i32)) // map id
+        .add(write_integer(0i64)) // recent score
+        .add(write_integer(0.1f32)) // acc
+        .add(write_integer(10i32)) // plays
+        .add(write_integer(100000i64)) // total score
+        .add(write_integer(1i32)) // rank
+        .add(write_integer(10000i16)) // pp
+        .pack()
+}
 
 /// #12: BANCHO_USER_LOGOUT
 pub fn user_logout(user_id: i32) -> PacketData {
@@ -50,14 +69,14 @@ pub fn user_logout(user_id: i32) -> PacketData {
 }
 
 /// #13: BANCHO_SPECTATOR_JOINED
-pub fn specator_joined(user_id: i32) -> PacketData {
+pub fn spectator_joined(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SPECTATOR_JOINED)
         .add(write_integer(user_id))
         .pack()
 }
 
 /// #14: BANCHO_SPECTATOR_LEFT
-pub fn specator_left(user_id: i32) -> PacketData {
+pub fn spectator_left(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SPECTATOR_LEFT)
         .add(write_integer(user_id))
         .pack()
@@ -236,7 +255,21 @@ pub fn match_player_skipped(slot_id: i32) -> PacketData {
 
 /// #83: BANCHO_USER_PRESENCE
 /// TODO
-pub fn user_presence() {}
+pub fn user_presence(player: &Player) -> PacketData {
+    PacketBuilder::with(id::BANCHO_USER_PRESENCE)
+        .add(write_integer(player.id))
+        .add(write_string(&player.name))
+        .add(write_integer(player.utc_offset + 24))
+        .add(write_integer(match Country::from_str(&player.country) {
+            Ok(country) => country.value as u8,
+            Err(_) => 0,
+        }))
+        .add(write_integer((player.bancho_privileges | 0) as u8))
+        .add(write_integer(player.location.0))
+        .add(write_integer(player.location.1))
+        .add(write_integer(player.stats.rank))
+        .pack()
+}
 
 /// #86: BANCHO_RESTART
 pub fn bancho_restart(millis: i32) -> PacketData {
@@ -340,4 +373,10 @@ pub fn switch_tournament_server(ip: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_SWITCH_TOURNAMENT_SERVER)
         .add(write_string(ip))
         .pack()
+}
+
+#[inline(always)]
+/// #83 + #11: USER_DATA_PACKETDATA
+pub fn user_data(player: &Player) -> PacketData {
+    PacketBuilder::from_multiple(&[user_presence(&player), user_stats(&player)]).write_out()
 }
