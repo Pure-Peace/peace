@@ -1,5 +1,6 @@
-#[allow(unused_imports)]
+#![allow(unused_imports)]
 use super::*;
+use crate::constants::{LoginFailed, LoginSuccess};
 
 #[test]
 fn test_login_reply() {

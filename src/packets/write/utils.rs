@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-pub type PacketData = Vec<u8>;
+use crate::types::PacketData;
 
 pub struct PacketBuilder {
     content: PacketData,
@@ -30,12 +30,27 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub fn from_multiple(packets: &[PacketData]) -> PacketBuilder {
+    pub fn from_multiple(packets: &mut [PacketData]) -> PacketBuilder {
         let mut packet = empty();
-        for i in packets.iter() {
-            packet.extend(i)
+        for i in packets.iter_mut() {
+            packet.append(i)
         }
         PacketBuilder { content: packet }
+    }
+
+    #[inline(always)]
+    pub fn add_multiple_ref(&mut self, packets: &mut [PacketData]) {
+        for i in packets.iter_mut() {
+            self.content.append(i)
+        }
+    }
+
+    #[inline(always)]
+    pub fn add_multiple(mut self, packets: &mut [PacketData]) -> PacketBuilder {
+        for i in packets.iter_mut() {
+            self.content.append(i)
+        }
+        self
     }
 
     #[inline(always)]

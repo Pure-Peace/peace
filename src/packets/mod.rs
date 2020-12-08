@@ -1,3 +1,3 @@
-pub mod write;
+mod write;
 
 pub use write::*;
