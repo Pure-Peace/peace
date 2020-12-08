@@ -14,7 +14,6 @@ use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
 use crate::objects::PlayerSessions;
-use crate::types::TestType;
 
 use crate::handlers::session_recycle_handler;
 
@@ -60,7 +59,6 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 pub async fn start_server(
     cfg: Config,
     database: Database,
-    data: TestType,
     player_sessions: RwLock<PlayerSessions>,
 ) -> std::io::Result<()> {
     // Ready cfg
@@ -80,9 +78,7 @@ pub async fn start_server(
     let recycle_check_interval = cfg
         .get_int("bancho.session.recycle_check_interval")
         .unwrap_or(45) as u64;
-    let session_timeout = cfg
-        .get_int("bancho.session.timeout")
-        .unwrap_or(45);
+    let session_timeout = cfg.get_int("bancho.session.timeout").unwrap_or(45);
 
     {
         // Ready prometheus
@@ -114,7 +110,6 @@ pub async fn start_server(
         .register(Box::new(counter.clone()))
         .unwrap();
 
-    let test_appdata: Data<TestType> = Data::new(data);
     let player_sessions = Data::new(player_sessions);
     let player_sessions_cloned = player_sessions.clone();
 
@@ -152,7 +147,6 @@ pub async fn start_server(
                     .allow_any_method()
                     .supports_credentials(),
             )
-            .app_data(test_appdata.clone())
             .app_data(player_sessions.clone())
             .data(counter.clone())
             .data(database.clone())

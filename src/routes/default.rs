@@ -1,6 +1,5 @@
 use crate::database::Database;
 use crate::objects::PlayerSessions;
-use crate::types::TestType;
 
 use actix_web::web::{Data, Path};
 use actix_web::{get, HttpResponse, Responder};
@@ -53,7 +52,7 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 }
 
 /// GET "/test_async_lock"
-#[get("/test_async_lock")]
+/* #[get("/test_async_lock")]
 pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
     let start = Instant::now();
     let mut guard = testdata.write().await;
@@ -64,7 +63,7 @@ pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
         .body(&format!("{:?}\n{:.2?}", *guard, end))
-}
+} */
 
 /// GET "/test_player_read"
 #[get("/test_player_read/{token}")]
