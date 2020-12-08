@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::parser;
-use constants::{packets::LoginFailed, Privileges};
+use constants::{LoginFailed, Privileges};
 
 use prometheus::IntCounterVec;
 
@@ -33,7 +33,7 @@ pub async fn login(
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
     // Response packet data
-    let resp = PacketBuilder::new();
+    let mut resp = PacketBuilder::new();
 
     // Parse login data start ----------
     let parse_start = std::time::Instant::now();
@@ -296,22 +296,18 @@ pub async fn login(
     let user_data_packet = packets::user_data(&player);
 
     // Add response packet data
-    let mut resp = resp
-        .add(packets::login_reply(
-            constants::packets::LoginSuccess::Verified(player.id),
-        ))
-        .add(packets::protocol_version(19))
-        .add(packets::bancho_privileges(player.bancho_privileges))
-        .add(packets::notification("Welcome to Peace!"))
-        .add(user_data_packet.clone())
+    resp.add_multiple_ref(&mut [
+        packets::login_reply(constants::LoginSuccess::Verified(player.id)),
+        packets::protocol_version(19),
+        packets::bancho_privileges(player.bancho_privileges),
+        packets::notification("Welcome to Peace!"),
+        user_data_packet.clone(),
         // TODO add user stats
-        .add(packets::main_menu_icon(
-            "https://i.kafuu.pro/welcome.png",
-            "https://www.baidu.com",
-        ))
-        .add(packets::silence_end(0))
-        .add(packets::friends_list(&player.friends))
-        .add(packets::channel_info_end());
+        packets::main_menu_icon("https://i.kafuu.pro/welcome.png", "https://www.baidu.com"),
+        packets::silence_end(0),
+        packets::friends_list(&player.friends),
+        packets::channel_info_end(),
+    ]);
 
     // TODO: add this player presence, stats to all PlayerSessions
 
@@ -343,8 +339,8 @@ pub async fn login(
                 0
             });
 
+        // Add online players to this new player
         resp.add_ref(packets::user_data(&online_player));
-        // TODO add user stats
     }
 
     // Login player to sessions

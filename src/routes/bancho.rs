@@ -8,7 +8,7 @@ use prometheus::IntCounterVec;
 
 use crate::utils;
 use crate::{
-    constants::packets::LoginFailed,
+    constants::LoginFailed,
     objects::{Player, PlayerSessions},
     packets,
 };
