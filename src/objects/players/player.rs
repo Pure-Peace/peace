@@ -11,11 +11,9 @@ use crate::{
 };
 
 use actix_web::web::Data;
-use async_std::sync::{Mutex, RwLock};
+use async_std::sync::Mutex;
 use chrono::prelude::{DateTime, Local};
-use hashbrown::HashSet;
 use queue::Queue;
-use tokio_postgres::types::ToSql;
 
 #[derive(Debug)]
 pub struct Stats {

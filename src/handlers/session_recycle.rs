@@ -1,11 +1,7 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
-use chrono::Local;
 
-use crate::{
-    objects::{PlayerData, PlayerSessions},
-    types::TokenString,
-};
+use crate::objects::PlayerSessions;
 
 /// Auto PlayerSession recycle
 #[inline(always)]
@@ -42,7 +38,7 @@ pub async fn session_recycle_handler(
             None => {}
         }
     }
-    
+
     // Done
     let session_recycle_end = session_recycle_start.elapsed();
     info!(

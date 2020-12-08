@@ -10,6 +10,9 @@ extern crate lazy_static;
 extern crate config;
 extern crate serde;
 
+use async_std::sync::RwLock;
+use colored::Colorize;
+
 mod constants;
 mod database;
 mod handlers;
@@ -20,14 +23,9 @@ mod settings;
 mod types;
 mod utils;
 
-use async_std::sync::RwLock;
-use colored::Colorize;
-
 use database::Database;
-use settings::{objects::Settings, BANNER};
-use types::TestType;
-
 use objects::PlayerSessions;
+use settings::{model::Settings, BANNER};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -40,11 +38,9 @@ async fn main() -> std::io::Result<()> {
     // Create database object includes postgres and redis pool
     let database = Database::new(&settings).await;
 
-    let data: TestType = RwLock::new(0);
-
     // Create PlayerSession for this server
     let player_sessions = RwLock::new(PlayerSessions::new(100, database.clone()));
 
     // Start actix server
-    settings::actix::start_server(cfg, database, data, player_sessions).await
+    settings::actix::start_server(cfg, database, player_sessions).await
 }
