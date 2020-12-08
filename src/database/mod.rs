@@ -1,6 +1,6 @@
 pub mod connectors;
 
-use crate::settings::objects::Settings;
+use crate::settings::model::Settings;
 use colored::Colorize;
 
 use connectors::*;

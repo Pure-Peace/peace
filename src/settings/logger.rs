@@ -1,6 +1,6 @@
 use config::Config;
 
-use super::objects::Logger;
+use super::model::Logger;
 
 impl Logger {
     /// Init logger
