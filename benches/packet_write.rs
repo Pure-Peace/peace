@@ -1,12 +1,31 @@
 #![allow(unused_imports)]
+#![allow(dead_code)]
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[path = "../src/packets/mod.rs"]
-mod packets;
+#[macro_use]
+extern crate log;
+extern crate config;
+extern crate serde;
 
 #[path = "../src/constants/mod.rs"]
 mod constants;
+#[path = "../src/database/mod.rs"]
+mod database;
+#[path = "../src/handlers/mod.rs"]
+mod handlers;
+#[path = "../src/objects/mod.rs"]
+mod objects;
+#[path = "../src/packets/mod.rs"]
+mod packets;
+#[path = "../src/routes/mod.rs"]
+mod routes;
+#[path = "../src/settings/mod.rs"]
+mod settings;
+#[path = "../src/types/mod.rs"]
+mod types;
+#[path = "../src/utils/mod.rs"]
+mod utils;
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("match_join_failed packet", |b| {
@@ -23,17 +42,17 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| packets::notification("hello"))
     });
     c.bench_function("login_reply packet", |b| {
-        b.iter(|| packets::login_reply(constants::packets::LoginFailed::InvalidCredentials))
+        b.iter(|| packets::login_reply(constants::LoginFailed::InvalidCredentials))
     });
     c.bench_function("send massage packet", |b| {
         b.iter(|| packets::send_message("PurePeace", 1001, "hello", "osu"))
     });
-    c.bench_function("login mutiple packet test", |b| {
+    c.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             packets::PacketBuilder::new()
-                .add(packets::login_reply(
-                    constants::packets::LoginSuccess::Verified(1009),
-                ))
+                .add(packets::login_reply(constants::LoginSuccess::Verified(
+                    1009,
+                )))
                 .add(packets::protocol_version(19))
                 .add(packets::notification("Welcome to Peace!"))
                 .add(packets::main_menu_icon(
@@ -43,6 +62,19 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .add(packets::silence_end(0))
                 .add(packets::channel_info_end())
                 .write_out()
+        })
+    });
+    c.bench_function("login mutiple packet test2", |b| {
+        b.iter(|| {
+            packets::PacketBuilder::from_multiple(&mut [
+                packets::login_reply(constants::LoginSuccess::Verified(1009)),
+                packets::protocol_version(19),
+                packets::notification("Welcome to Peace!"),
+                packets::main_menu_icon("https://i.kafuu.pro/welcome.png", "https://www.baidu.com"),
+                packets::silence_end(0),
+                packets::channel_info_end(),
+            ])
+            .write_out()
         })
     });
 }
