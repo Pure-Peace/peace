@@ -78,6 +78,7 @@ pub async fn start_server(
     let recycle_check_interval = cfg
         .get_int("bancho.session.recycle_check_interval")
         .unwrap_or(45) as u64;
+    let recycle_check_duration = std::time::Duration::from_secs(recycle_check_interval);
     let session_timeout = cfg.get_int("bancho.session.timeout").unwrap_or(45);
 
     {
@@ -123,7 +124,7 @@ pub async fn start_server(
     // it will auto logout deactive players each interval
     async_std::task::spawn(async move {
         loop {
-            async_std::task::sleep(std::time::Duration::from_secs(recycle_check_interval)).await;
+            async_std::task::sleep(recycle_check_duration).await;
             session_recycle_handler(&player_sessions_cloned, session_timeout).await;
         }
     });
