@@ -17,9 +17,9 @@ pub fn login_reply(reply: impl LoginReply) -> PacketData {
 }
 
 /// #7: BANCHO_SEND_MESSAGE
-pub fn send_message(sender: &str, sender_id: i32, content: &str, channel: &str) -> PacketData {
+pub fn send_message(sender: &str, sender_id: i32, content: &str, channel_name: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_SEND_MESSAGE)
-        .add(write_message(sender, sender_id, content, channel))
+        .add(write_message(sender, sender_id, content, channel_name))
         .pack()
 }
 
@@ -189,20 +189,23 @@ pub fn match_skip() -> PacketData {
 }
 
 /// #64: BANCHO_CHANNEL_JOIN_SUCCESS
-pub fn channel_join(channel: &str) -> PacketData {
-    PacketBuilder::with(id::BANCHO_NOTIFICATION)
-        .add(write_string(channel))
+pub fn channel_join(channel_name: &str) -> PacketData {
+    PacketBuilder::with(id::BANCHO_CHANNEL_JOIN_SUCCESS)
+        .add(write_string(channel_name))
         .pack()
 }
 
 /// #65: BANCHO_CHANNEL_INFO
-/// TODO
-pub fn channel_info() {}
+pub fn channel_info(name: &str, title: &str, player_count: i16) -> PacketData {
+    PacketBuilder::with(id::BANCHO_CHANNEL_INFO)
+        .add(write_channel(name, title, player_count))
+        .pack()
+}
 
 /// #66: BANCHO_CHANNEL_KICK
-pub fn channel_kick(channel: &str) -> PacketData {
+pub fn channel_kick(channel_name: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_CHANNEL_KICK)
-        .add(write_string(channel))
+        .add(write_string(channel_name))
         .pack()
 }
 
@@ -254,6 +257,8 @@ pub fn match_player_skipped(slot_id: i32) -> PacketData {
 }
 
 /// #83: BANCHO_USER_PRESENCE
+/// 
+/// including player stats and presence
 /// TODO
 pub fn user_presence(player: &Player) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)

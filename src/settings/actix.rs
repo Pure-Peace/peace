@@ -13,7 +13,7 @@ use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
-use crate::objects::PlayerSessions;
+use crate::objects::{ChannelList, PlayerSessions};
 
 use crate::handlers::session_recycle_handler;
 
@@ -110,8 +110,14 @@ pub async fn start_server(
         .register(Box::new(counter.clone()))
         .unwrap();
 
+    // Player sessions
     let player_sessions = Data::new(player_sessions);
     let player_sessions_cloned = player_sessions.clone();
+
+    // Channel list
+    let channel_list = Data::new(RwLock::new(
+        ChannelList::new(&database, player_sessions.clone()).await,
+    ));
 
     // Start auto recycle task,
     // it will auto logout deactive players each interval
@@ -148,6 +154,7 @@ pub async fn start_server(
                     .supports_credentials(),
             )
             .app_data(player_sessions.clone())
+            .app_data(channel_list.clone())
             .data(counter.clone())
             .data(database.clone())
             .configure(routes::init)

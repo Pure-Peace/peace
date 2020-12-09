@@ -6,13 +6,13 @@ use actix_web::{HttpRequest, HttpResponse, Responder};
 use async_std::sync::RwLock;
 use prometheus::IntCounterVec;
 
-use crate::utils;
 use crate::{
     constants::LoginFailed,
     objects::{Player, PlayerSessions},
     packets,
 };
 use crate::{database::Database, handlers::bancho};
+use crate::{types::ChannelList, utils};
 
 const MAX_FAILED_COUNT: i32 = 4;
 const EXPIRE_SECS: i32 = 300;
@@ -33,6 +33,7 @@ pub async fn post(
     body: Bytes,
     player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
+    channel_list: Data<RwLock<ChannelList>>,
     counter: Data<IntCounterVec>,
 ) -> impl Responder {
     // Prom counter
@@ -80,7 +81,8 @@ pub async fn post(
             &request_ip,
             osu_version,
             &database,
-            player_sessions,
+            &player_sessions,
+            &channel_list,
             &counter,
         )
         .await
@@ -104,8 +106,7 @@ pub async fn post(
                 let _ = database.redis.expire(&failed_key, EXPIRE_SECS).await;
 
                 // Add notification string
-                failed_notification
-                    .push_str(&format!("Login failed {} time!!\n", failed_count));
+                failed_notification.push_str(&format!("Login failed {} time!!\n", failed_count));
 
                 // If reached the retires limit
                 if failed_count > MAX_FAILED_COUNT {
@@ -115,7 +116,10 @@ pub async fn post(
                         &request_ip, failed_count
                     );
                 } else {
-                    failed_notification.push_str(&format!("You can try {} more times.\n", MAX_FAILED_COUNT - failed_count + 1))
+                    failed_notification.push_str(&format!(
+                        "You can try {} more times.\n",
+                        MAX_FAILED_COUNT - failed_count + 1
+                    ))
                 };
 
                 // Returns

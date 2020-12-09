@@ -5,12 +5,12 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
-use crate::types::PacketData;
 use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
     packets::PacketBuilder,
 };
+use crate::{types::ChannelList, types::PacketData};
 
 use super::parser;
 use constants::{LoginFailed, Privileges};
@@ -25,7 +25,8 @@ pub async fn login(
     request_ip: &String,
     osu_version: String,
     database: &Data<Database>,
-    player_sessions: Data<RwLock<PlayerSessions>>,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+    channel_list: &Data<RwLock<ChannelList>>,
     counter: &Data<IntCounterVec>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
     let login_start = std::time::Instant::now();
@@ -292,7 +293,11 @@ pub async fn login(
     // Add login record
     player.update_login_record(database).await;
 
-    // User data packet
+    // TODO: update player's location (ip geo)
+
+    // TODO: update player's stats
+
+    // User data packet, including player stats and presence
     let user_data_packet = packets::user_data(&player);
 
     // Add response packet data
@@ -300,16 +305,41 @@ pub async fn login(
         packets::login_reply(constants::LoginSuccess::Verified(player.id)),
         packets::protocol_version(19),
         packets::bancho_privileges(player.bancho_privileges),
-        packets::notification("Welcome to Peace!"),
         user_data_packet.clone(),
-        // TODO add user stats
-        packets::main_menu_icon("https://i.kafuu.pro/welcome.png", "https://www.baidu.com"),
         packets::silence_end(0),
         packets::friends_list(&player.friends),
-        packets::channel_info_end(),
     ]);
 
-    // TODO: add this player presence, stats to all PlayerSessions
+    // TODO: get login notification from cache (init by database)
+    resp.add_ref(packets::notification("Welcome to Peace!"));
+
+    // TODO: get menu icon from cache (init by database)
+    resp.add_ref(packets::main_menu_icon(
+        "https://i.kafuu.pro/welcome.png",
+        "https://www.baidu.com",
+    ));
+
+    // Join player into channel
+    resp.add_ref(packets::channel_info_end());
+    for channel in channel_list.write().await.values_mut() {
+        // Have not privileges to join the channel
+        if (player.privileges & channel.read_priv) <= 0 {
+            continue;
+        }
+
+        // Try to join player into channel
+        if channel.auto_join && channel.join(&player).await {
+            // Send channel join to client
+            resp.add_ref(packets::channel_join(&channel.name));
+        }
+
+        // Send channel info to client
+        resp.add_ref(packets::channel_info(
+            &channel.name,
+            &channel.title,
+            channel.players.read().await.len() as i16,
+        ));
+    }
 
     // Lock the PlayerSessions before we handle it
     let player_sessions = player_sessions.write().await;
@@ -326,7 +356,7 @@ pub async fn login(
         ));
     }
 
-    // Send new user to them, and add them to this new user
+    // Send new user to online users, and add online users to this new user
     for online_player in player_sessions.map.read().await.values() {
         online_player
             .enqueue(user_data_packet.clone())

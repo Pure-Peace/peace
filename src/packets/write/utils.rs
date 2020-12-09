@@ -169,7 +169,7 @@ pub fn write_string(string: &str) -> PacketData {
 /// PacketBuilder::from_multiple(&[
 ///     write_string(sender),
 ///     write_string(content),
-///     write_string(channel),
+///     write_string(channel_name),
 ///     write_integer(sender_id),
 /// ])
 /// .done()
@@ -180,7 +180,7 @@ pub fn write_string(string: &str) -> PacketData {
 /// PacketBuilder::new()
 ///     .add(write_string(sender))
 ///     .add(write_string(content))
-///     .add(write_string(channel))
+///     .add(write_string(channel_name))
 ///     .add(write_integer(sender_id))
 ///     .done()
 /// ```
@@ -189,11 +189,16 @@ pub fn write_string(string: &str) -> PacketData {
 /// ```
 /// now impl
 /// ```
-pub fn write_message(sender: &str, sender_id: i32, content: &str, channel: &str) -> PacketData {
+pub fn write_message(
+    sender: &str,
+    sender_id: i32,
+    content: &str,
+    channel_name: &str,
+) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(30);
     data.extend(write_string(sender));
     data.extend(write_string(content));
-    data.extend(write_string(channel));
+    data.extend(write_string(channel_name));
     data.extend(write_integer(sender_id));
     data
 }
@@ -202,6 +207,15 @@ pub fn write_message(sender: &str, sender_id: i32, content: &str, channel: &str)
 /// Write integer packet
 pub fn write_integer<I: Integer>(integer: I) -> PacketData {
     integer.to_bytes()
+}
+
+#[inline(always)]
+pub fn write_channel(name: &str, title: &str, player_count: i16) -> PacketData {
+    let mut data: PacketData = Vec::with_capacity(30);
+    data.extend(write_string(name));
+    data.extend(write_string(title));
+    data.extend(write_integer(player_count));
+    data
 }
 
 #[inline(always)]
