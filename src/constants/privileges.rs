@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 pub enum Privileges {
     Normal      = 1 << 0,
     Verified    = 1 << 1, // has logged in to the server in-game.
@@ -27,7 +26,7 @@ pub enum Privileges {
 
 impl Privileges {
     pub fn enough(self, privileges: i32) -> bool {
-        (privileges & self as i32) != 0
+        (privileges & self as i32) > 0
     }
 
     pub fn not_enough(self, privileges: i32) -> bool {

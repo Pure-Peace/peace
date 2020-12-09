@@ -20,7 +20,7 @@ actix_log_format = '%s - %{r}a "%r" %b %T'
 # Logger will not record logs of these endpoints
 # For example,
 # i don't want logger to print logs about endpoint "/favicon.ico", so i fill it in
-exclude_endpoints = ["/favicon.ico"]
+exclude_endpoints = ["/favicon.ico", "/bancho"]
 
 
 # Logger mode is env_logger config
