@@ -57,9 +57,9 @@ COMMENT ON SCHEMA user_records IS 'user''s records';
 
 CREATE FUNCTION public.update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-	NEW.update_time = CURRENT_TIMESTAMP;
-	RETURN NEW;
+    AS $$BEGIN
+	NEW.update_time = CURRENT_TIMESTAMP;
+	RETURN NEW;
 END$$;
 
 
@@ -69,9 +69,9 @@ END$$;
 
 CREATE FUNCTION "user".decrease_friend_count() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		UPDATE "user"."statistic" SET "friends_count" = "friends_count" - 1 WHERE "id" = OLD.user_id;
-	RETURN OLD;
+    AS $$BEGIN
+		UPDATE "user"."statistic" SET "friends_count" = "friends_count" - 1 WHERE "id" = OLD.user_id;
+	RETURN OLD;
 END$$;
 
 
@@ -81,9 +81,9 @@ END$$;
 
 CREATE FUNCTION "user".decrease_note_count() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		UPDATE "user"."statistic" SET "notes_count" = "notes_count" - 1 WHERE "id" = OLD.user_id;
-	RETURN OLD;
+    AS $$BEGIN
+		UPDATE "user"."statistic" SET "notes_count" = "notes_count" - 1 WHERE "id" = OLD.user_id;
+	RETURN OLD;
 END$$;
 
 
@@ -93,9 +93,9 @@ END$$;
 
 CREATE FUNCTION "user".increase_friend_count() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		UPDATE "user"."statistic" SET "friends_count" = "friends_count" + 1 WHERE "id" = NEW.user_id;
-	RETURN NEW;
+    AS $$BEGIN
+		UPDATE "user"."statistic" SET "friends_count" = "friends_count" + 1 WHERE "id" = NEW.user_id;
+	RETURN NEW;
 END$$;
 
 
@@ -105,9 +105,9 @@ END$$;
 
 CREATE FUNCTION "user".increase_note_count() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		UPDATE "user"."statistic" SET "notes_count" = "notes_count" + 1 WHERE "id" = NEW.user_id;
-	RETURN NEW;
+    AS $$BEGIN
+		UPDATE "user"."statistic" SET "notes_count" = "notes_count" + 1 WHERE "id" = NEW.user_id;
+	RETURN NEW;
 END$$;
 
 
@@ -117,9 +117,9 @@ END$$;
 
 CREATE FUNCTION "user".insert_related_on_base_insert() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-	INSERT INTO "user"."statistic" ("id") VALUES (NEW.id);
-	RETURN NEW;
+    AS $$BEGIN
+	INSERT INTO "user"."statistic" ("id") VALUES (NEW.id);
+	RETURN NEW;
 END$$;
 
 
@@ -129,21 +129,21 @@ END$$;
 
 CREATE FUNCTION "user".safe_user_info() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		NEW.name = REPLACE(BTRIM(NEW.name), '_', ' ');
-		NEW.email = LOWER(NEW.email);
-		NEW.country = UPPER(NEW.country);
-		NEW.password = LOWER(NEW.password);
-		NEW.name_safe = REPLACE(LOWER(NEW.name), ' ', '_');
-		
-		--only for user base info update
-		IF (TG_OP = 'UPDATE') THEN
-			--if renamed, insert into rename_records
-			IF OLD.name <> NEW.name THEN
-				INSERT INTO "user_records"."rename" ("user_id", "new_name", "old_name") VALUES (NEW.id, NEW.name, OLD.name);
-			END IF;
-		END IF;
-	RETURN NEW;
+    AS $$BEGIN
+		NEW.name = REPLACE(BTRIM(NEW.name), '_', ' ');
+		NEW.email = LOWER(NEW.email);
+		NEW.country = UPPER(NEW.country);
+		NEW.password = LOWER(NEW.password);
+		NEW.name_safe = REPLACE(LOWER(NEW.name), ' ', '_');
+		
+		--only for user base info update
+		IF (TG_OP = 'UPDATE') THEN
+			--if renamed, insert into rename_records
+			IF OLD.name <> NEW.name THEN
+				INSERT INTO "user_records"."rename" ("user_id", "new_name", "old_name") VALUES (NEW.id, NEW.name, OLD.name);
+			END IF;
+		END IF;
+	RETURN NEW;
 END$$;
 
 
@@ -153,12 +153,12 @@ END$$;
 
 CREATE FUNCTION user_records.auto_online_duration() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-	IF (NEW.create_time IS NOT NULL) AND (NEW.logout_time IS NOT NULL) THEN
-		NEW.online_duration = NEW.logout_time - NEW.create_time;
-		UPDATE "user"."statistic" SET "online_duration" = "online_duration" + NEW.online_duration WHERE "id" = NEW.user_id;
-	END IF;
-	RETURN NEW;
+    AS $$BEGIN
+	IF (NEW.create_time IS NOT NULL) AND (NEW.logout_time IS NOT NULL) THEN
+		NEW.online_duration = NEW.logout_time - NEW.create_time;
+		UPDATE "user"."statistic" SET "online_duration" = "online_duration" + NEW.online_duration WHERE "id" = NEW.user_id;
+	END IF;
+	RETURN NEW;
 END$$;
 
 
@@ -168,9 +168,9 @@ END$$;
 
 CREATE FUNCTION user_records.increase_login_count() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		UPDATE "user"."statistic" SET "login_count" = "login_count" + 1 WHERE "id" = NEW.user_id;
-	RETURN NEW;
+    AS $$BEGIN
+		UPDATE "user"."statistic" SET "login_count" = "login_count" + 1 WHERE "id" = NEW.user_id;
+	RETURN NEW;
 END$$;
 
 
@@ -180,15 +180,107 @@ END$$;
 
 CREATE FUNCTION user_records.increase_rename_count() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$BEGIN
-		UPDATE "user"."statistic" SET "rename_count" = "rename_count" + 1 WHERE "id" = NEW.user_id;
-	RETURN NEW;
+    AS $$BEGIN
+		UPDATE "user"."statistic" SET "rename_count" = "rename_count" + 1 WHERE "id" = NEW.user_id;
+	RETURN NEW;
 END$$;
 
 
 SET default_tablespace = '';
 
 SET default_with_oids = false;
+
+--
+-- Name: channels; Type: TABLE; Schema: bancho; Owner: -
+--
+
+CREATE TABLE bancho.channels (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    title character varying(255) NOT NULL,
+    read_priv integer DEFAULT 1 NOT NULL,
+    write_priv integer DEFAULT 2 NOT NULL,
+    auto_join boolean DEFAULT false NOT NULL,
+    create_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: COLUMN channels.id; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.id IS 'unique channel id';
+
+
+--
+-- Name: COLUMN channels.name; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.name IS 'channel name';
+
+
+--
+-- Name: COLUMN channels.title; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.title IS 'channel title (topic)';
+
+
+--
+-- Name: COLUMN channels.read_priv; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.read_priv IS 'privileges';
+
+
+--
+-- Name: COLUMN channels.write_priv; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.write_priv IS 'privileges';
+
+
+--
+-- Name: COLUMN channels.auto_join; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.auto_join IS 'auto join channel when login';
+
+
+--
+-- Name: COLUMN channels.create_time; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.create_time IS 'create time';
+
+
+--
+-- Name: COLUMN channels.update_time; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON COLUMN bancho.channels.update_time IS 'update time';
+
+
+--
+-- Name: channels_id_seq; Type: SEQUENCE; Schema: bancho; Owner: -
+--
+
+CREATE SEQUENCE bancho.channels_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: channels_id_seq; Type: SEQUENCE OWNED BY; Schema: bancho; Owner: -
+--
+
+ALTER SEQUENCE bancho.channels_id_seq OWNED BY bancho.channels.id;
+
 
 --
 -- Name: address; Type: TABLE; Schema: user; Owner: -
@@ -785,6 +877,13 @@ ALTER SEQUENCE user_records.rename_records_id_seq OWNED BY user_records.rename.i
 
 
 --
+-- Name: channels id; Type: DEFAULT; Schema: bancho; Owner: -
+--
+
+ALTER TABLE ONLY bancho.channels ALTER COLUMN id SET DEFAULT nextval('bancho.channels_id_seq'::regclass);
+
+
+--
 -- Name: address id; Type: DEFAULT; Schema: user; Owner: -
 --
 
@@ -820,6 +919,15 @@ ALTER TABLE ONLY user_records.rename ALTER COLUMN id SET DEFAULT nextval('user_r
 
 
 --
+-- Data for Name: channels; Type: TABLE DATA; Schema: bancho; Owner: -
+--
+
+INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (1, '#osu', 'General discussion.', 1, 2, true, '2020-12-09 04:21:05.471552+08', '2020-12-09 04:21:14.652774+08');
+INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 2, true, '2020-12-09 04:21:35.551317+08', '2020-12-09 04:21:35.551317+08');
+INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (4, '#lobby', 'Multiplayer lobby discussion room.', 1, 2, true, '2020-12-09 04:21:46.339821+08', '2020-12-09 04:21:46.339821+08');
+
+
+--
 -- Data for Name: address; Type: TABLE DATA; Schema: user; Owner: -
 --
 
@@ -830,8 +938,8 @@ INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_h
 -- Data for Name: base; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1002, 'ChinoChan', 'chinochan', '931ffe4c39bc9fdc875cf8f691bf1f57', 'o@kafuu.pro', 1, 'JP', '2020-12-03 03:26:20.714544+08', '2020-12-03 03:26:33.372338+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1001, 'PurePeace', 'purepeace', '931ffe4c39bc9fdc875cf8f691bf1f57', '940857703@qq.com', 3, 'CN', '2020-12-03 03:25:18.923027+08', '2020-12-03 03:25:24.45596+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1002, 'ChinoChan', 'chinochan', '931ffe4c39bc9fdc875cf8f691bf1f57', 'o@kafuu.pro', 3, 'JP', '2020-12-03 03:26:20.714544+08', '2020-12-09 17:26:18.954985+08');
 
 
 --
@@ -853,15 +961,14 @@ INSERT INTO "user".notes (id, user_id, note, type, added_by, create_time, update
 -- Data for Name: statistic; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1002, '00:00:00', 0, 2, 1, 0, '2020-12-03 03:34:03.340539+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1001, '00:00:56.086611', 1, 0, 1, 1, '2020-12-03 03:36:22.181665+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1002, '00:01:21.273819', 1, 2, 1, 0, '2020-12-09 17:27:40.270451+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1001, '00:41:45.873491', 127960, 0, 1, 1, '2020-12-09 18:06:43.845739+08');
 
 
 --
 -- Data for Name: login; Type: TABLE DATA; Schema: user_records; Owner: -
 --
 
-INSERT INTO user_records.login (id, user_id, address_id, ip, version, similarity, create_time, logout_time, online_duration) VALUES (1, 1001, 1, '127.0.0.1', 'b20201126', 101, '2020-12-03 03:34:35.283456+08', '2020-12-03 03:34:53.978993+08', '00:00:18.695537');
 
 
 --
@@ -870,6 +977,13 @@ INSERT INTO user_records.login (id, user_id, address_id, ip, version, similarity
 
 INSERT INTO user_records.rename (id, user_id, new_name, old_name, create_time) VALUES (1, 1002, 'Waifu', 'Chino', '2020-12-03 03:26:26+08');
 INSERT INTO user_records.rename (id, user_id, new_name, old_name, create_time) VALUES (2, 1002, 'ChinoChan', 'Waifu', '2020-12-03 03:26:33+08');
+
+
+--
+-- Name: channels_id_seq; Type: SEQUENCE SET; Schema: bancho; Owner: -
+--
+
+SELECT pg_catalog.setval('bancho.channels_id_seq', 4, true);
 
 
 --
@@ -905,6 +1019,29 @@ SELECT pg_catalog.setval('user_records.login_records_id_seq', 1, true);
 --
 
 SELECT pg_catalog.setval('user_records.rename_records_id_seq', 2, true);
+
+
+--
+-- Name: channels channel.name; Type: CONSTRAINT; Schema: bancho; Owner: -
+--
+
+ALTER TABLE ONLY bancho.channels
+    ADD CONSTRAINT "channel.name" UNIQUE (name);
+
+
+--
+-- Name: CONSTRAINT "channel.name" ON channels; Type: COMMENT; Schema: bancho; Owner: -
+--
+
+COMMENT ON CONSTRAINT "channel.name" ON bancho.channels IS 'channel name should be unique';
+
+
+--
+-- Name: channels channels_pkey; Type: CONSTRAINT; Schema: bancho; Owner: -
+--
+
+ALTER TABLE ONLY bancho.channels
+    ADD CONSTRAINT channels_pkey PRIMARY KEY (id);
 
 
 --
@@ -1028,6 +1165,13 @@ CREATE UNIQUE INDEX "User.name" ON "user".base USING btree (name, name_safe);
 --
 
 CREATE INDEX user_address ON "user".address USING btree (user_id);
+
+
+--
+-- Name: channels auto_update_time; Type: TRIGGER; Schema: bancho; Owner: -
+--
+
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON bancho.channels FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 
 
 --
