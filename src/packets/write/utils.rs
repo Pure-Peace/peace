@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use crate::types::PacketData;
+use crate::constants::id;
 
 pub struct PacketBuilder {
     content: PacketData,
@@ -17,7 +18,7 @@ impl PacketBuilder {
     /// Initial a packet with id
     ///
     /// !Note: Packet length is not included,
-    pub fn with(packet_id: u8) -> Self {
+    pub fn with(packet_id: id) -> Self {
         PacketBuilder {
             content: new(packet_id),
         }
@@ -126,15 +127,15 @@ pub fn empty() -> PacketData {
 ///
 /// so I think it is sufficient to insert the packet_id in the first position
 ///
-pub fn new(packet_id: u8) -> PacketData {
-    vec![packet_id, 0, 0, 0, 0, 0, 0]
+pub fn new(packet_id: id) -> PacketData {
+    vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
 
 #[inline(always)]
 /// Simple packaging for output(new(packet_id))
 ///
 /// !Note: Packet length is included
-pub fn simple_pack(packet_id: u8) -> PacketData {
+pub fn simple_pack(packet_id: id) -> PacketData {
     output(new(packet_id))
 }
 
