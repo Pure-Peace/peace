@@ -1,4 +1,4 @@
-use crate::{packets, utils};
+use crate::{packets::{self, PacketReader}, utils};
 
 use super::depends::*;
 
@@ -70,8 +70,8 @@ pub async fn handler(
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
                 .body(
-                    resp.add(packets::notification("Invalid token!!"))
-                        .add(packets::bancho_restart(0))
+                    resp.add(packets::login_reply(LoginFailed::ServerError))
+                        .add(packets::notification("Please login again!"))
                         .write_out(),
                 )
         }
@@ -79,22 +79,18 @@ pub async fn handler(
     // Drop the lock first
     drop(player_sessions_r);
 
-    // Read & parse client packets
-    let client_packets = packets::PacketReader::parse(body).await;
-    if client_packets.len() > 0 {
-        // Make handler data
-        let handler_data = HandlerData {
-            player_sessions: &player_sessions,
-            database: &database,
-            channel_list: &channel_list,
-            token: &token,
-            player_data,
-        };
+    let handler_data = HandlerData {
+        player_sessions: &player_sessions,
+        database: &database,
+        channel_list: &channel_list,
+        token: &token,
+        player_data,
+    };
 
-        // Handle each client packet
-        for client_packet in client_packets {
-            client_packet.handle(&handler_data).await;
-        }
+    // Read & handle client packets
+    let mut reader = PacketReader::from_bytes(body);
+    while let Some((packet_id, payload)) = reader.next() {
+        packet_id.handle(&handler_data, payload).await;
     }
 
     // Push player's packets to the response
