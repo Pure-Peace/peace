@@ -53,7 +53,7 @@ pub async fn login(
     // Parse login data end ----------
     let osu_version = client_info.osu_version.clone();
     let username_safe = username.to_lowercase().replace(" ", "_");
-    info!(
+    debug!(
         "login data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
     );
@@ -86,7 +86,7 @@ pub async fn login(
     let select_base_duration = select_base_start.elapsed();
     let user_id = player_base.id;
     let username = player_base.name.clone();
-    info!(
+    debug!(
         "success to get player base info {}({}); time spent: {:.2?}; ",
         username, user_id, select_base_duration
     );
@@ -144,7 +144,7 @@ pub async fn login(
         }
     };
     let select_addresses_duration = select_addresses_start.elapsed();
-    info!(
+    debug!(
         "success to get player addresses info {}({}); time spent: {:.2?}; address count: {}",
         username,
         user_id,

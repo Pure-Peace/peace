@@ -75,6 +75,9 @@ pub async fn start_server(
     let excludes_endpoint_log: Vec<String> = cfg
         .get("logger.exclude_endpoints")
         .unwrap_or(vec!["/favicon.ico".to_string()]);
+    let excludes_endpoint_log_regex: Vec<String> = cfg
+        .get("logger.exclude_endpoints_regex")
+        .unwrap_or(vec![]);
     let recycle_check_interval = cfg
         .get_int("bancho.session.recycle_check_interval")
         .unwrap_or(45) as u64;
@@ -136,6 +139,9 @@ pub async fn start_server(
         let make_logger = |mut logger: Logger| {
             for i in excludes_endpoint_log.iter() {
                 logger = logger.exclude(i as &str);
+            }
+            for i in excludes_endpoint_log_regex.iter() {
+                logger = logger.exclude_regex(i as &str);
             }
             logger
         };

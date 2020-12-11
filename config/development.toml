@@ -21,7 +21,7 @@ actix_log_format = '%s - %{r}a "%r" %b %T'
 # For example,
 # i don't want logger to print logs about endpoint "/favicon.ico", so i fill it in
 exclude_endpoints = ["/favicon.ico", "/bancho"]
-
+exclude_endpoints_regex = []
 
 # Logger mode is env_logger config
 # Support filter: "trace,mio::sys=info"
