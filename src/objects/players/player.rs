@@ -145,13 +145,14 @@ impl Player {
                 self.friends = friends;
             }
             Err(err) => error!(
-                "error when update_friends_from_database; user: {}({}); err: {:?}",
+                "Error when update_friends_from_database; user: {}({}); err: {:?}",
                 self.name, self.id, err
             ),
         };
     }
 
-    pub async fn update_login_record(&mut self, database: &Data<Database>) {
+    /// Create new login record
+    pub async fn create_login_record(&mut self, database: &Data<Database>) {
         self.login_record_id = match database
             .pg
             .query_first(
@@ -175,7 +176,7 @@ impl Player {
             Ok(row) => row.get("id"),
             Err(err) => {
                 error!(
-                    "failed to insert user {}({})'s login record, error: {:?}",
+                    "Failed to insert user {}({})'s login record, error: {:?}",
                     self.name, self.id, err
                 );
                 -1
@@ -183,10 +184,46 @@ impl Player {
         };
     }
 
+    /// If user has login record id, record logout time
+    pub async fn update_logout_time(&mut self, database: &Database) {
+        if self.login_record_id > 0 {
+            match database
+                .pg
+                .execute(
+                    r#"UPDATE "user_records"."login" 
+                        SET "logout_time" = now() 
+                        WHERE "id" = $1;"#,
+                    &[&self.login_record_id],
+                )
+                .await
+            {
+                Ok(_count) => {
+                    self.login_record_id = -1;
+                }
+                Err(err) => {
+                    error!(
+                        "Failed to update user {}({})'s logout time, error: {:?}",
+                        self.name, self.id, err
+                    );
+                }
+            };
+        }
+    }
+
     #[inline(always)]
     /// Enqueue a packet into queue, returns the length of queue
-    pub async fn enqueue(&self, packet_data: PacketData) -> Result<usize, ()> {
-        self.queue.lock().await.queue(packet_data)
+    pub async fn enqueue(&self, packet_data: PacketData) -> usize {
+        self.queue
+            .lock()
+            .await
+            .queue(packet_data)
+            .unwrap_or_else(|_| {
+                error!(
+                    "Could not enqueue packet to player: {}({})",
+                    self.name, self.id
+                );
+                0
+            })
     }
 
     #[inline(always)]

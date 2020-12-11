@@ -25,6 +25,9 @@ impl id {
         match self {
             id::OSU_PING => {},
             id::OSU_UNKNOWN_PACKET => {},
+            id::OSU_LOGOUT => {
+                player_sessions.write().await.logout(token).await;
+            },
             _ => {
                 warn!(
                     "Unhandled packet: {:?}; user: {}({});",
@@ -34,3 +37,4 @@ impl id {
         };
     }
 }
+

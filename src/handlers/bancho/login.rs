@@ -291,7 +291,7 @@ pub async fn login(
     player.update_friends_from_database(database).await;
 
     // Add login record
-    player.update_login_record(database).await;
+    player.create_login_record(database).await;
 
     // TODO: update player's location (ip geo)
 
@@ -358,16 +358,7 @@ pub async fn login(
 
     // Send new user to online users, and add online users to this new user
     for online_player in player_sessions.map.read().await.values() {
-        online_player
-            .enqueue(user_data_packet.clone())
-            .await
-            .unwrap_or_else(|_| {
-                error!(
-                    "could not enqueue packet to player {}({})",
-                    online_player.name, online_player.id
-                );
-                0
-            });
+        online_player.enqueue(user_data_packet.clone()).await;
 
         // Add online players to this new player
         resp.add_ref(packets::user_data(&online_player));

@@ -5,7 +5,8 @@ use uuid::Uuid;
 
 use crate::{
     database::Database,
-    types::{PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId},
+    packets,
+    types::{PacketData, PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId},
 };
 
 use super::{Player, PlayerData};
@@ -33,12 +34,12 @@ impl PlayerSessions {
     /// Create new token, and login a player into PlayerSessions
     pub async fn login(&self, player: Player) -> TokenString {
         let token = Uuid::new_v4().to_string();
-        self.login_with_token(player, token).await
+        self.handle_login(player, token).await
     }
 
     #[inline(always)]
     /// Login a player into PlayerSessions with a token
-    pub async fn login_with_token(&self, player: Player, token: TokenString) -> TokenString {
+    pub async fn handle_login(&self, player: Player, token: TokenString) -> TokenString {
         let player_id = player.id;
         // Get locks
         let (mut map, mut id_session_map) =
@@ -51,31 +52,33 @@ impl PlayerSessions {
 
     /// Logout a player from the PlayerSessions
     pub async fn logout(&self, token: &TokenString) -> Option<(TokenString, Player)> {
+        let logout_start = std::time::Instant::now();
         // Get locks
         let (mut map, mut id_session_map) =
             (self.map.write().await, self.id_session_map.write().await);
         // Logout
         match map.remove_entry(token) {
-            Some((token_string, player)) => {
-                drop(map);
+            Some((token_string, mut player)) => {
+                // Remove and drop locks
                 id_session_map.remove(&player.id);
+                drop(map);
                 drop(id_session_map);
-                // If user has login record id, record logout time
-                if player.login_record_id > 0 {
-                    self.database
-                        .pg
-                        .execute(
-                            r#"UPDATE "user_records"."login" 
-                                    SET "logout_time" = now() 
-                                    WHERE "id" = $1;"#,
-                            &[&player.login_record_id],
-                        )
-                        .await
-                        .unwrap_or_else(|err| {
-                            error!(
-                                "failed to update user {}({})'s logout_time, error: {:?}",
-                                player.name, player.id, err
-                            );
+
+                // Enqueue logout packet to all players
+                self.enqueue_all(&packets::user_logout(player.id)).await;
+                player.update_logout_time(&self.database).await;
+
+                let logout_end = logout_start.elapsed();
+                info!(
+                    "user {}({}) has logouted; time spent: {:.2?}",
+                    player.name, player.id, logout_end
+                );
+                Some((token_string, player))
+            }
+            None => None,
+        }
+    }
+
     #[inline(always)]
     pub async fn enqueue_all(&self, packet_data: &PacketData) {
         for player in self.map.read().await.values() {

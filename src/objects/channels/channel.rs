@@ -60,15 +60,7 @@ impl Channel {
             .filter(|player| players.contains(&player.id))
         {
             // Send them message
-            match player.enqueue(packet_data.clone()).await {
-                Ok(_) => {}
-                Err(_) => {
-                    error!(
-                        "could not enqueue packet to player {}({})!",
-                        sender.name, sender.id
-                    );
-                }
-            };
+            player.enqueue(packet_data.clone()).await;
         }
     }
 
