@@ -14,7 +14,7 @@ mod depends {
         database::Database,
         handlers::bancho,
         objects::{Player, PlayerData, PlayerSessions},
-        packets::{HandlerData, PacketBuilder},
+        packets::PacketBuilder,
         types::ChannelList,
     };
 }

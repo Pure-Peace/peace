@@ -1,4 +1,7 @@
-use crate::{packets::{self, PacketReader}, utils};
+use crate::{
+    packets::{self, PacketReader},
+    utils,
+};
 
 use super::depends::*;
 
@@ -79,18 +82,20 @@ pub async fn handler(
     // Drop the lock first
     drop(player_sessions_r);
 
-    let handler_data = HandlerData {
-        player_sessions: &player_sessions,
-        database: &database,
-        channel_list: &channel_list,
-        token: &token,
-        player_data,
-    };
-
     // Read & handle client packets
     let mut reader = PacketReader::from_bytes(body);
     while let Some((packet_id, payload)) = reader.next() {
-        packet_id.handle(&handler_data, payload).await;
+        packet_id
+            .handle(
+                &request_ip,
+                &token,
+                &player_data,
+                &player_sessions,
+                &database,
+                &channel_list,
+                payload,
+            )
+            .await;
     }
 
     // Push player's packets to the response
@@ -110,7 +115,7 @@ pub async fn handler(
     drop(player_sessions_r);
 
     let bancho_end = bancho_start.elapsed();
-    info!("bancho handle end, time spend: {:?}", bancho_end);
+    debug!("bancho handle end, time spend: {:?}", bancho_end);
 
     HttpResponse::Ok()
         .content_type("text/html; charset=UTF-8")
