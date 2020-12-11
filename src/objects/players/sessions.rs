@@ -76,11 +76,48 @@ impl PlayerSessions {
                                 "failed to update user {}({})'s logout_time, error: {:?}",
                                 player.name, player.id, err
                             );
-                            0
-                        });
-                }
-                Some((token_string, player))
-            }
+    #[inline(always)]
+    pub async fn enqueue_all(&self, packet_data: &PacketData) {
+        for player in self.map.read().await.values() {
+            player.enqueue(packet_data.clone()).await;
+        }
+    }
+
+    #[inline(always)]
+    pub async fn enqueue_by_token(&self, token: &TokenString, packet_data: PacketData) -> bool {
+        if let Some(player) = self.map.read().await.get(token) {
+            player.enqueue(packet_data).await;
+            return true;
+        }
+        false
+    }
+
+    #[inline(always)]
+    pub async fn enqueue_by_id(&self, user_id: &UserId, packet_data: PacketData) -> bool {
+        let token = match self.id_session_map.read().await.get(user_id) {
+            Some(token) => token.clone(),
+            None => return false,
+        };
+
+        if let Some(player) = self.map.read().await.get(&token) {
+            player.enqueue(packet_data).await;
+            return true;
+        }
+        false
+    }
+
+    #[inline(always)]
+    pub async fn get_token_by_id(&self, user_id: &UserId) -> Option<String> {
+        match self.id_session_map.read().await.get(user_id) {
+            Some(token) => Some(token.clone()),
+            None => None,
+        }
+    }
+
+    #[inline(always)]
+    pub async fn get_id_by_token(&self, token: &TokenString) -> Option<i32> {
+        match self.map.read().await.get(token) {
+            Some(player) => Some(player.id.clone()),
             None => None,
         }
     }
