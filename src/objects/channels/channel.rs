@@ -81,9 +81,9 @@ impl Channel {
     }
 
     /// Send message to every player in channel
-    pub async fn broadcast(&self, sender: &Player, msg: String) {
+    pub async fn broadcast(&self, sender: &String, sender_id: i32, msg: &String, include_sender: bool) {
         let player_sessions = self.player_sessions.read().await;
-        let packet_data = packets::send_message(&sender.name, sender.id, &msg, &self.name);
+        let packet_data = packets::send_message(sender, sender_id, msg, &self.name).await;
         // For every players in channel
         let players = self.players.read().await;
         for player in player_sessions
@@ -91,7 +91,12 @@ impl Channel {
             .read()
             .await
             .values()
-            .filter(|player| players.contains(&player.id))
+            .filter(|player| {
+                if !include_sender && (player.id == sender_id) {
+                    return false;
+                }
+                players.contains(&player.id)
+            })
         {
             // Send them message
             player.enqueue(packet_data.clone()).await;
