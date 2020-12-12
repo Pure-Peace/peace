@@ -10,8 +10,7 @@ use crate::{
     constants::id,
     database::Database,
     objects::{Player, PlayerData, PlayerSessions},
-    packets,
-    types::ChannelList,
+    types::{ChannelList, PacketData},
 };
 
 pub struct HandlerData<'a> {
@@ -22,13 +21,32 @@ pub struct HandlerData<'a> {
     pub player_data: PlayerData,
 }
 
-#[derive(Debug)]
-pub struct ClientPacket {}
+pub trait ReadInteger<T> {
+    fn from_le_bytes(data: &[u8]) -> T;
+    fn from_be_bytes(data: &[u8]) -> T;
+}
 
-impl ClientPacket {
-    pub async fn handle<'a>(&self, handler_data: &HandlerData<'a>) {
-        println!("{:?} {:?}", self, handler_data.player_data);
+macro_rules! impl_read_integer {
+    ($($t:ty),+) => {
+        $(impl ReadInteger<$t> for $t {
+            fn from_le_bytes(data: &[u8]) -> $t {
+                <$t>::from_le_bytes(data.try_into().unwrap())
+            }
+            fn from_be_bytes(data: &[u8]) -> $t {
+                <$t>::from_be_bytes(data.try_into().unwrap())
+            }
+        })+
     }
+}
+
+impl_read_integer!(i8, u8, i16, u16, i32, u32, i64, u64);
+
+#[derive(Debug)]
+pub struct Message {
+    pub sender: String,
+    pub content: String,
+    pub target: String,
+    pub sender_id: i32,
 }
 
 pub struct PayloadReader<'a> {
@@ -42,8 +60,25 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
+    pub async fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Integer {
+        let data_length = std::mem::size_of::<Integer>();
+        let data = &self.payload[self.index..self.index + data_length];
+        self.index += data_length;
+        Integer::from_le_bytes(data)
+    }
+
     #[inline(always)]
-    pub fn read_string(&mut self) -> String {
+    pub async fn read_message(&mut self) -> Message {
+        Message {
+            sender: self.read_string().await,
+            content: self.read_string().await,
+            target: self.read_string().await,
+            sender_id: self.read_integer().await,
+        }
+    }
+
+    #[inline(always)]
+    pub async fn read_string(&mut self) -> String {
         if self.payload[self.index] != 11 {
             return String::new();
         }
@@ -107,7 +142,7 @@ impl PacketReader {
 
     #[inline(always)]
     /// Read packet header: (type, length)
-    pub fn next(&mut self) -> Option<(id, Option<&[u8]>)> {
+    pub async fn next(&mut self) -> Option<(id, Option<&[u8]>)> {
         if (self.buf.len() - self.index) < 7 {
             self.finish = true;
             return None;
@@ -144,7 +179,7 @@ impl PacketReader {
 
     #[inline(always)]
     /// Read packet header: (type, length)
-    pub fn read_header(body: Vec<u8>) -> Option<(id, u32)> {
+    pub async fn read_header(body: Vec<u8>) -> Option<(id, u32)> {
         if body.len() < 7 {
             return None;
         }
