@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::str;
 
 use actix_web::web::{Bytes, Data};
 use async_std::sync::RwLock;
@@ -30,6 +31,36 @@ impl ClientPacket {
     }
 }
 
+pub struct PayloadReader<'a> {
+    pub payload: &'a [u8],
+    pub index: usize,
+}
+
+impl<'a> PayloadReader<'a> {
+    pub fn new(payload: &'a [u8]) -> Self {
+        PayloadReader { payload, index: 0 }
+    }
+
+    #[inline(always)]
+    pub fn read_string(&mut self) -> &str {
+        if self.payload[self.index] != 11 {
+            return "";
+        }
+        self.index += 1;
+        let data_length = self.read_uleb128() as usize;
+        let data = &self.payload[self.index..self.index + data_length];
+
+        str::from_utf8(data).unwrap_or("")
+    }
+
+    #[inline(always)]
+    pub fn read_uleb128(&mut self) -> u32 {
+        let (val, length) = read_uleb128(&self.payload[self.index..]);
+        self.index += length;
+        val
+    }
+}
+
 pub struct PacketReader {
     pub buf: Vec<u8>,
     pub index: usize,
@@ -41,18 +72,12 @@ pub struct PacketReader {
 }
 
 impl PacketReader {
+    #[inline(always)]
     pub fn from_bytes(body: Bytes) -> Self {
-        PacketReader {
-            buf: body.to_vec(),
-            index: 0,
-            current_packet: id::OSU_UNKNOWN_PACKET,
-            payload_length: 0,
-            finish: false,
-            payload_count: 0,
-            packet_count: 0,
-        }
+        PacketReader::from_vec(body.to_vec())
     }
 
+    #[inline(always)]
     pub fn from_vec(body: Vec<u8>) -> Self {
         PacketReader {
             buf: body,
@@ -65,13 +90,7 @@ impl PacketReader {
         }
     }
 
-    pub fn payload(&self) -> Option<Vec<u8>> {
-        match self.payload_length {
-            0 => None,
-            _ => Some(self.buf[self.index..self.index + self.payload_length].to_vec()),
-        }
-    }
-
+    #[inline(always)]
     // Reset the packet reader
     pub fn reset(&mut self) {
         self.finish = false;
@@ -130,5 +149,20 @@ impl PacketReader {
             id::from_u8(header[0]).unwrap_or(id::OSU_UNKNOWN_PACKET),
             u32::from_le_bytes(header[3..=6].try_into().unwrap()),
         ))
+    }
+}
+
+#[inline(always)]
+pub fn read_uleb128(slice: &[u8]) -> (u32, usize) {
+    let (mut val, mut shift, mut index) = (0, 0, 0);
+    loop {
+        let byte = slice[index];
+        index += 1;
+        if (byte & 0x80) == 0 {
+            val |= (byte as u32) << shift;
+            return (val, index);
+        }
+        val |= ((byte & 0x7f) as u32) << shift;
+        shift += 7;
     }
 }
