@@ -7,7 +7,7 @@ use crate::{
     constants::id,
     database::Database,
     objects::{PlayerData, PlayerSessions},
-    packets::HandlerData,
+    packets::{HandlerData, PayloadReader},
     types::ChannelList,
 };
 
@@ -22,19 +22,38 @@ impl id {
         channel_list: &Data<RwLock<ChannelList>>,
         payload: Option<&[u8]>,
     ) {
-        match self {
-            id::OSU_PING => {},
-            id::OSU_UNKNOWN_PACKET => {},
-            id::OSU_LOGOUT => {
-                player_sessions.write().await.logout(token).await;
-            },
-            _ => {
-                warn!(
-                    "Unhandled packet: {:?}; user: {}({});",
-                    self, player_data.name, player_data.id
-                );
+        match payload {
+            None => {
+                match self {
+                    id::OSU_PING => {}
+                    id::OSU_LOGOUT => {
+                        player_sessions
+                            .write()
+                            .await
+                            .logout(token, Some(channel_list))
+                            .await;
+                    }
+                    _ => {
+                        warn!(
+                            "Unhandled packet (Non-payload): {:?}; user: {}({});",
+                            self, player_data.name, player_data.id
+                        );
+                    }
+                };
             }
-        };
+            Some(payload) => {
+                let payload = PayloadReader::new(payload);
+                match self {
+                    id::OSU_SEND_PUBLIC_MESSAGE => {}
+                    id::OSU_SEND_PRIVATE_MESSAGE => {}
+                    _ => {
+                        warn!(
+                            "Unhandled packet: {:?}; user: {}({});",
+                            self, player_data.name, player_data.id
+                        );
+                    }
+                };
+            }
+        }
     }
 }
-

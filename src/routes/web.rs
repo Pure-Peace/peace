@@ -89,7 +89,7 @@ pub struct BanchoConnect {
 /// ```
 #[derive(Debug, Deserialize)]
 pub struct OsuSession {
-    u: String,
+    u: Option<String>,
     h: String,
     action: String,
 }

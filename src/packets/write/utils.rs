@@ -154,7 +154,7 @@ pub fn write_string(string: &str) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(byte_length + 3);
     if byte_length > 0 {
         data.push(11); // 0x0b, means not empty
-        data.extend(uleb128(byte_length as u32));
+        data.extend(write_uleb128(byte_length as u32));
         data.extend(string.as_bytes());
     } else {
         data.push(0); // 0x00, means empty
@@ -231,7 +231,7 @@ pub fn write_int_list<I: Integer>(integer_list: &Vec<I>) -> PacketData {
 
 #[inline(always)]
 /// Unsigned to uleb128
-fn uleb128(mut unsigned: u32) -> PacketData {
+pub fn write_uleb128(mut unsigned: u32) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(2);
     while unsigned >= 0x80 {
         data.push(((unsigned & 0x7f) | 0x80) as u8);
