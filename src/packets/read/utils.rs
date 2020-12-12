@@ -42,15 +42,19 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    pub fn read_string(&mut self) -> &str {
+    #[inline(always)]
+    pub fn read_string(&mut self) -> String {
         if self.payload[self.index] != 11 {
-            return "";
+            return String::new();
         }
         self.index += 1;
         let data_length = self.read_uleb128() as usize;
-        let data = &self.payload[self.index..self.index + data_length];
 
-        str::from_utf8(data).unwrap_or("")
+        let cur = self.index;
+        self.index += data_length;
+        let data = &self.payload[cur..self.index];
+
+        str::from_utf8(data).unwrap_or("").to_string()
     }
 
     #[inline(always)]
