@@ -44,9 +44,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("login_reply packet", |b| {
         b.iter(|| packets::login_reply(constants::LoginFailed::InvalidCredentials))
     });
-    c.bench_function("send massage packet", |b| {
+    /* c.bench_function("send massage packet", |b| {
         b.iter(|| packets::send_message("PurePeace", 1001, "hello", "osu"))
-    });
+    }); */
     c.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             packets::PacketBuilder::new()
@@ -62,19 +62,6 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .add(packets::silence_end(0))
                 .add(packets::channel_info_end())
                 .write_out()
-        })
-    });
-    c.bench_function("login mutiple packet test2", |b| {
-        b.iter(|| {
-            packets::PacketBuilder::from_multiple(&mut [
-                packets::login_reply(constants::LoginSuccess::Verified(1009)),
-                packets::protocol_version(19),
-                packets::notification("Welcome to Peace!"),
-                packets::main_menu_icon("https://i.kafuu.pro/welcome.png", "https://www.baidu.com"),
-                packets::silence_end(0),
-                packets::channel_info_end(),
-            ])
-            .write_out()
         })
     });
 }

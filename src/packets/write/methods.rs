@@ -17,9 +17,14 @@ pub fn login_reply(reply: impl LoginReply) -> PacketData {
 }
 
 /// #7: BANCHO_SEND_MESSAGE
-pub fn send_message(sender: &str, sender_id: i32, content: &str, channel_name: &str) -> PacketData {
+pub async fn send_message(
+    sender: &str,
+    sender_id: i32,
+    content: &str,
+    channel_name: &str,
+) -> PacketData {
     PacketBuilder::with(id::BANCHO_SEND_MESSAGE)
-        .add(write_message(sender, sender_id, content, channel_name))
+        .add(write_message(sender, sender_id, content, channel_name).await)
         .pack()
 }
 
@@ -40,7 +45,7 @@ pub fn change_username(username_old: &str, username_new: &str) -> PacketData {
 
 /// #11: BANCHO_USER_STATS
 /// TODO
-pub fn user_stats(player: &Player) -> PacketData {
+pub async fn user_stats(player: &Player) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_STATS)
         .add_multiple(&mut [
             write_integer(player.id),
@@ -57,6 +62,7 @@ pub fn user_stats(player: &Player) -> PacketData {
             write_integer(1i32),      // rank
             write_integer(10000i16),  // pp
         ])
+        .await
         .pack()
 }
 
@@ -225,9 +231,9 @@ pub fn bancho_privileges(privileges: i32) -> PacketData {
 }
 
 /// #72: BANCHO_FRIENDS_LIST
-pub fn friends_list(friends: &Vec<i32>) -> PacketData {
+pub async fn friends_list(friends: &Vec<i32>) -> PacketData {
     PacketBuilder::with(id::BANCHO_FRIENDS_LIST)
-        .add(write_int_list(friends))
+        .add(write_int_list(friends).await)
         .pack()
 }
 
@@ -257,10 +263,10 @@ pub fn match_player_skipped(slot_id: i32) -> PacketData {
 }
 
 /// #83: BANCHO_USER_PRESENCE
-/// 
+///
 /// including player stats and presence
 /// TODO
-pub fn user_presence(player: &Player) -> PacketData {
+pub async fn user_presence(player: &Player) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
             write_integer(player.id),
@@ -275,6 +281,7 @@ pub fn user_presence(player: &Player) -> PacketData {
             write_integer(player.location.1),
             write_integer(player.stats.rank),
         ])
+        .await
         .pack()
 }
 
@@ -325,9 +332,9 @@ pub fn user_presence_single(user_id: i32) -> PacketData {
 
 /// #96: BANCHO_USER_PRESENCE_BUNDLE
 /// UNUSED
-pub fn user_presence_bundle(player_id_list: &Vec<i32>) -> PacketData {
+pub async fn user_presence_bundle(player_id_list: &Vec<i32>) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE_BUNDLE)
-        .add(write_int_list(player_id_list))
+        .add(write_int_list(player_id_list).await)
         .pack()
 }
 
@@ -384,6 +391,8 @@ pub fn switch_tournament_server(ip: &str) -> PacketData {
 
 #[inline(always)]
 /// #83 + #11: USER_DATA_PACKETDATA
-pub fn user_data(player: &Player) -> PacketData {
-    PacketBuilder::from_multiple(&mut [user_presence(&player), user_stats(&player)]).write_out()
+pub async fn user_data(player: &Player) -> PacketData {
+    PacketBuilder::from_multiple(&mut [user_presence(&player).await, user_stats(&player).await])
+        .await
+        .write_out()
 }

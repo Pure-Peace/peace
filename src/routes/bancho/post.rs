@@ -84,7 +84,7 @@ pub async fn handler(
 
     // Read & handle client packets
     let mut reader = PacketReader::from_bytes(body);
-    while let Some((packet_id, payload)) = reader.next() {
+    while let Some((packet_id, payload)) = reader.next().await {
         packet_id
             .handle(
                 &request_ip,

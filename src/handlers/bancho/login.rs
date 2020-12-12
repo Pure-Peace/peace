@@ -298,7 +298,7 @@ pub async fn login(
     // TODO: update player's stats
 
     // User data packet, including player stats and presence
-    let user_data_packet = packets::user_data(&player);
+    let user_data_packet = packets::user_data(&player).await;
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
@@ -307,8 +307,8 @@ pub async fn login(
         packets::bancho_privileges(player.bancho_privileges),
         user_data_packet.clone(),
         packets::silence_end(0),
-        packets::friends_list(&player.friends),
-    ]);
+        packets::friends_list(&player.friends).await,
+    ]).await;
 
     // TODO: get login notification from cache (init by database)
     resp.add_ref(packets::notification("Welcome to Peace!"));
@@ -364,7 +364,7 @@ pub async fn login(
         online_player.enqueue(user_data_packet.clone()).await;
 
         // Add online players to this new player
-        resp.add_ref(packets::user_data(&online_player));
+        resp.add_ref(packets::user_data(&online_player).await);
     }
 
     // Login player to sessions

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use crate::types::PacketData;
 use crate::constants::id;
+use crate::types::PacketData;
 
 pub struct PacketBuilder {
     content: PacketData,
@@ -31,7 +31,7 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub fn from_multiple(packets: &mut [PacketData]) -> PacketBuilder {
+    pub async fn from_multiple(packets: &mut [PacketData]) -> PacketBuilder {
         let mut packet = empty();
         for i in packets.iter_mut() {
             packet.append(i)
@@ -40,14 +40,14 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub fn add_multiple_ref(&mut self, packets: &mut [PacketData]) {
+    pub async fn add_multiple_ref(&mut self, packets: &mut [PacketData]) {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
     }
 
     #[inline(always)]
-    pub fn add_multiple(mut self, packets: &mut [PacketData]) -> PacketBuilder {
+    pub async fn add_multiple(mut self, packets: &mut [PacketData]) -> PacketBuilder {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
@@ -148,8 +148,24 @@ pub fn output(mut packet: PacketData) -> PacketData {
     packet
 }
 
+#[inline(always)]
 /// Write string packet
 pub fn write_string(string: &str) -> PacketData {
+    let byte_length = string.len();
+    let mut data: PacketData = Vec::with_capacity(byte_length + 3);
+    if byte_length > 0 {
+        data.push(11); // 0x0b, means not empty
+        data.extend(write_uleb128(byte_length as u32));
+        data.extend(string.as_bytes());
+    } else {
+        data.push(0); // 0x00, means empty
+    }
+    data
+}
+
+#[inline(always)]
+/// Write string packet async
+pub async fn write_string_async(string: &str) -> PacketData {
     let byte_length = string.len();
     let mut data: PacketData = Vec::with_capacity(byte_length + 3);
     if byte_length > 0 {
@@ -190,7 +206,7 @@ pub fn write_string(string: &str) -> PacketData {
 /// ```
 /// now impl
 /// ```
-pub fn write_message(
+pub async fn write_message(
     sender: &str,
     sender_id: i32,
     content: &str,
@@ -198,7 +214,7 @@ pub fn write_message(
 ) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(30);
     data.extend(write_string(sender));
-    data.extend(write_string(content));
+    data.extend(write_string_async(content).await);
     data.extend(write_string(channel_name));
     data.extend(write_integer(sender_id));
     data
@@ -221,7 +237,7 @@ pub fn write_channel(name: &str, title: &str, player_count: i16) -> PacketData {
 
 #[inline(always)]
 /// Write int list packet
-pub fn write_int_list<I: Integer>(integer_list: &Vec<I>) -> PacketData {
+pub async fn write_int_list<I: Integer>(integer_list: &Vec<I>) -> PacketData {
     let mut ret = Vec::from((integer_list.len() as u16).to_le_bytes());
     for int in integer_list {
         ret.extend(int.to_bytes());
