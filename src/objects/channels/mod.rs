@@ -3,4 +3,4 @@ mod channel;
 mod list;
 
 pub use channel::Channel;
-pub use list::ChannelList;
+pub use list::ChannelListBuilder;

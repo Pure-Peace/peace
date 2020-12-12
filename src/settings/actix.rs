@@ -13,7 +13,7 @@ use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
 use std::collections::HashMap;
 
-use crate::objects::{ChannelList, PlayerSessions};
+use crate::objects::{ChannelListBuilder, PlayerSessions};
 
 use crate::handlers::session_recycle_handler;
 
@@ -75,9 +75,8 @@ pub async fn start_server(
     let excludes_endpoint_log: Vec<String> = cfg
         .get("logger.exclude_endpoints")
         .unwrap_or(vec!["/favicon.ico".to_string()]);
-    let excludes_endpoint_log_regex: Vec<String> = cfg
-        .get("logger.exclude_endpoints_regex")
-        .unwrap_or(vec![]);
+    let excludes_endpoint_log_regex: Vec<String> =
+        cfg.get("logger.exclude_endpoints_regex").unwrap_or(vec![]);
     let recycle_check_interval = cfg
         .get_int("bancho.session.recycle_check_interval")
         .unwrap_or(45) as u64;
@@ -120,15 +119,21 @@ pub async fn start_server(
 
     // Channel list
     let channel_list = Data::new(RwLock::new(
-        ChannelList::new(&database, player_sessions.clone()).await,
+        ChannelListBuilder::new(&database, player_sessions.clone()).await,
     ));
+    let channel_list_cloned = channel_list.clone();
 
     // Start auto recycle task,
     // it will auto logout deactive players each interval
     async_std::task::spawn(async move {
         loop {
             async_std::task::sleep(recycle_check_duration).await;
-            session_recycle_handler(&player_sessions_cloned, session_timeout).await;
+            session_recycle_handler(
+                &player_sessions_cloned,
+                &channel_list_cloned,
+                session_timeout,
+            )
+            .await;
         }
     });
 

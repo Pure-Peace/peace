@@ -1,5 +1,8 @@
+use std::{fmt, sync::Weak};
+
 use actix_web::web::Data;
 use async_std::sync::RwLock;
+use chrono::{DateTime, Local};
 use hashbrown::HashSet;
 
 use crate::{objects::PlayerSessions, packets};
@@ -16,7 +19,34 @@ pub struct Channel {
     pub auto_join: bool,
     pub auto_close: bool,
     pub players: RwLock<HashSet<i32>>,
+    pub player_count: i16,
+    pub join_count: u32,
+    pub leave_count: u32,
+    pub create_time: DateTime<Local>,
     player_sessions: Data<RwLock<PlayerSessions>>,
+}
+
+impl fmt::Debug for Channel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "\nChannel: {{ name: {}, title: {}, read_priv: {}, write_priv: {}, auto_join: {}, auto_close: {}, players: {:?}, player_count: {}, join_count: {}, leave_count: {}, create_time: {:?} }}", 
+        self.name, 
+        self.title, 
+        self.read_priv, 
+        self.write_priv, 
+        self.auto_join, 
+        self.auto_close, 
+        self.players, 
+        self.player_count,
+        self.join_count,
+        self.leave_count,
+        self.create_time)
+    }
+}
+
+impl PartialEq for Channel {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
 }
 
 impl Channel {
@@ -33,7 +63,11 @@ impl Channel {
             auto_join: base.auto_join,
             auto_close: false,
             players: RwLock::new(HashSet::new()),
+            player_count: 0,
+            join_count: 0,
+            leave_count: 0,
             player_sessions,
+            create_time: Local::now()
         }
     }
 
@@ -65,10 +99,11 @@ impl Channel {
     }
 
     /// Add a player to this channel
-    pub async fn join(&mut self, player: &Player) -> bool {
-        let mut players = self.players.write().await;
-        if !players.contains(&player.id) {
-            players.insert(player.id);
+    pub async fn join(&mut self, player: &mut Player) -> bool {
+        if self.players.write().await.insert(player.id) {
+            player.channels.insert(self.name.to_string());
+            self.player_count += 1;
+            self.join_count += 1;
             debug!(
                 "Player {}({}) has joined channel {}!",
                 player.name, player.id, self.name
@@ -84,9 +119,11 @@ impl Channel {
     }
 
     /// Remove a player from this channel
-    pub async fn leave(&mut self, player: &Player) -> bool {
-        let mut players = self.players.write().await;
-        if players.remove(&player.id) {
+    pub async fn leave(&mut self, player: &mut Player) -> bool {
+        if self.players.write().await.remove(&player.id) {
+            player.channels.remove(&self.name);
+            self.player_count -= 1;
+            self.leave_count += 1;
             debug!(
                 "Player {}({}) has been removed from channel {}!",
                 player.name, player.id, self.name

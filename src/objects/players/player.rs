@@ -1,8 +1,11 @@
 #![allow(dead_code)]
+use std::sync::{Arc, Weak};
+
 use super::PlayerBase;
 
 use crate::{
     constants::ClientInfo,
+    objects::Channel,
     types::{Location, PacketData},
 };
 use crate::{
@@ -11,8 +14,9 @@ use crate::{
 };
 
 use actix_web::web::Data;
-use async_std::sync::Mutex;
+use async_std::sync::{Mutex, RwLock};
 use chrono::prelude::{DateTime, Local};
+use hashbrown::{HashMap, HashSet};
 use queue::Queue;
 
 #[derive(Debug)]
@@ -58,6 +62,7 @@ pub struct Player {
     pub location: Location,
     pub stats: Stats,
     pub queue: Mutex<Queue<PacketData>>,
+    pub channels: HashSet<String>,
     pub login_time: DateTime<Local>,
     pub login_record_id: i32,
     pub last_active_time: DateTime<Local>,
@@ -94,6 +99,7 @@ impl Player {
             location: (0.0, 0.0),
             stats: Stats { rank: 1 },
             queue: Mutex::new(Queue::new()),
+            channels: HashSet::new(),
             login_time: now_time,
             login_record_id: -1,
             last_active_time: now_time,

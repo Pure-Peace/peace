@@ -1,12 +1,13 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 
-use crate::objects::PlayerSessions;
+use crate::{objects::PlayerSessions, types::ChannelList};
 
 /// Auto PlayerSession recycle
 #[inline(always)]
 pub async fn session_recycle_handler(
     player_sessions: &Data<RwLock<PlayerSessions>>,
+    channel_list: &Data<RwLock<ChannelList>>,
     session_timeout: i64,
 ) {
     // Get deactive user token list
@@ -27,7 +28,12 @@ pub async fn session_recycle_handler(
 
     // Logout each deactive sessions
     for token in deactive_list {
-        match player_sessions.write().await.logout(&token).await {
+        match player_sessions
+            .write()
+            .await
+            .logout(&token, Some(channel_list))
+            .await
+        {
             Some((_token, player)) => {
                 recycled_sessions_count += 1;
                 warn!(

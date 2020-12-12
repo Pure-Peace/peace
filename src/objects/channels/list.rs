@@ -4,23 +4,23 @@ use hashbrown::HashMap;
 
 use colored::Colorize;
 
-use crate::{database::Database, objects::PlayerSessions, types::ChannelList as ChannelListType};
+use crate::{database::Database, objects::PlayerSessions, types::ChannelList};
 
 use super::{base::ChannelBase, channel, Channel};
 
-pub struct ChannelList {}
+pub struct ChannelListBuilder {}
 
-impl ChannelList {
+impl ChannelListBuilder {
     /// Initial channels list from database
     pub async fn new(
         database: &Database,
         player_sessions: Data<RwLock<PlayerSessions>>,
-    ) -> ChannelListType {
+    ) -> ChannelList {
         info!(
             "{}",
             "Initializing default chat channels...".bold().bright_blue()
         );
-        let mut channels: ChannelListType = HashMap::new();
+        let mut channels: ChannelList = HashMap::new();
         // Get channels from database
         match database.pg.query(r#"SELECT "name", "title", "read_priv", "write_priv", "auto_join" FROM "bancho"."channels";"#, &[]).await {
             Ok(rows) => {

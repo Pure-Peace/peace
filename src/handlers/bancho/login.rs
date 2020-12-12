@@ -319,6 +319,23 @@ pub async fn login(
         "https://www.baidu.com",
     ));
 
+    // Lock the PlayerSessions before we handle it
+    let mut player_sessions = player_sessions.write().await;
+
+    // Check is the user_id already login,
+    // if true, logout old session
+    if player_sessions.user_is_logined(user_id).await {
+        // TODO: send notification to old session first
+        // Logout old session
+        player_sessions
+            .logout_with_id(user_id, Some(&channel_list))
+            .await;
+        // Send notification to current session
+        resp.add_ref(packets::notification(
+            "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
+        ));
+    }
+
     // Join player into channel
     resp.add_ref(packets::channel_info_end());
     for channel in channel_list.write().await.values_mut() {
@@ -327,8 +344,9 @@ pub async fn login(
             continue;
         }
 
-        // Try to join player into channel
-        if channel.auto_join && channel.join(&player).await {
+        // Join player into channel
+        if channel.auto_join {
+            channel.join(&mut player).await;
             // Send channel join to client
             resp.add_ref(packets::channel_join(&channel.name));
         }
@@ -337,22 +355,7 @@ pub async fn login(
         resp.add_ref(packets::channel_info(
             &channel.name,
             &channel.title,
-            channel.players.read().await.len() as i16,
-        ));
-    }
-
-    // Lock the PlayerSessions before we handle it
-    let player_sessions = player_sessions.write().await;
-
-    // Check is the user_id already login,
-    // if true, logout old session
-    if player_sessions.user_is_logined(user_id).await {
-        // TODO: send notification to old session first
-        // Logout old session
-        player_sessions.logout_with_id(user_id).await;
-        // Send notification to current session
-        resp.add_ref(packets::notification(
-            "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
+            channel.player_count,
         ));
     }
 

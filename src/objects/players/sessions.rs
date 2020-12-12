@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
 use uuid::Uuid;
@@ -6,7 +7,10 @@ use uuid::Uuid;
 use crate::{
     database::Database,
     packets,
-    types::{PacketData, PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId},
+    types::{
+        ChannelList, PacketData, PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString,
+        UserId,
+    },
 };
 
 use super::{Player, PlayerData};
@@ -14,6 +18,7 @@ use super::{Player, PlayerData};
 pub struct PlayerSessions {
     pub map: PlayerSessionMap,
     pub id_session_map: PlayerIdSessionMap,
+    pub player_count: u32,
     database: Database,
 }
 
@@ -26,20 +31,21 @@ impl PlayerSessions {
             map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
             /// Key: Player.id, Value: token
             id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            player_count: 0,
             database,
         }
     }
 
     #[inline(always)]
     /// Create new token, and login a player into PlayerSessions
-    pub async fn login(&self, player: Player) -> TokenString {
+    pub async fn login(&mut self, player: Player) -> TokenString {
         let token = Uuid::new_v4().to_string();
         self.handle_login(player, token).await
     }
 
     #[inline(always)]
     /// Login a player into PlayerSessions with a token
-    pub async fn handle_login(&self, player: Player, token: TokenString) -> TokenString {
+    pub async fn handle_login(&mut self, player: Player, token: TokenString) -> TokenString {
         let player_id = player.id;
         // Get locks
         let (mut map, mut id_session_map) =
@@ -47,11 +53,16 @@ impl PlayerSessions {
         // Insert into
         map.insert(token.clone(), player);
         id_session_map.insert(player_id, token.clone());
+        self.player_count += 1;
         token
     }
 
     /// Logout a player from the PlayerSessions
-    pub async fn logout(&self, token: &TokenString) -> Option<(TokenString, Player)> {
+    pub async fn logout(
+        &mut self,
+        token: &TokenString,
+        channel_list: Option<&Data<RwLock<ChannelList>>>,
+    ) -> Option<(TokenString, Player)> {
         let logout_start = std::time::Instant::now();
         // Get locks
         let (mut map, mut id_session_map) =
@@ -63,9 +74,20 @@ impl PlayerSessions {
                 id_session_map.remove(&player.id);
                 drop(map);
                 drop(id_session_map);
+                self.player_count -= 1;
 
                 // Enqueue logout packet to all players
                 self.enqueue_all(&packets::user_logout(player.id)).await;
+                match channel_list {
+                    Some(channel_list) => {
+                        for channel in channel_list.write().await.values_mut() {
+                            if player.channels.contains(&channel.name) {
+                                channel.leave(&mut player).await;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
                 player.update_logout_time(&self.database).await;
 
                 let logout_end = logout_start.elapsed();
@@ -136,12 +158,16 @@ impl PlayerSessions {
     ///     None => None,
     /// }
     /// ```
-    pub async fn logout_with_id(&self, user_id: UserId) -> Option<(TokenString, Player)> {
+    pub async fn logout_with_id(
+        &mut self,
+        user_id: UserId,
+        channel_list: Option<&Data<RwLock<ChannelList>>>,
+    ) -> Option<(TokenString, Player)> {
         let token = match self.id_session_map.read().await.get(&user_id) {
             Some(token) => token.to_string(),
             None => return None,
         };
-        self.logout(&token).await
+        self.logout(&token, channel_list).await
     }
 
     #[inline(always)]

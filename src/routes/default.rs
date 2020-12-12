@@ -1,5 +1,5 @@
-use crate::database::Database;
 use crate::objects::PlayerSessions;
+use crate::{database::Database, types::ChannelList};
 
 use actix_web::web::{Data, Path};
 use actix_web::{get, HttpResponse, Responder};
@@ -143,29 +143,44 @@ pub async fn pleyer_sessions_all(player_sessions: Data<RwLock<PlayerSessions>>) 
     HttpResponse::Ok().body(player_sessions.read().await.map_to_string().await)
 }
 
+/// GET "/pleyer_channels_all"
+#[get("/pleyer_channels_all")]
+pub async fn player_channels_all(channel_list: Data<RwLock<ChannelList>>) -> impl Responder {
+    HttpResponse::Ok().body(format!("{:?}", channel_list.read().await.values()))
+}
+
 /// GET "/pleyer_sessions_kick"
 #[get("/pleyer_sessions_kick/{token}")]
 pub async fn pleyer_sessions_kick(
     token: Path<String>,
-    player_sessions: Data<RwLock<PlayerSessions>>,
-) -> impl Responder {
-    HttpResponse::Ok().body(match player_sessions.write().await.logout(&token.0).await {
-        Some((token, player)) => format!("{}\n{:?}", token, player),
-        None => "non this player".to_string(),
-    })
-}
-
-/// GET "/pleyer_sessions_kick_uid"
-#[get("/pleyer_sessions_kick_uid/{user_id}")]
-pub async fn pleyer_sessions_kick_uid(
-    user_id: Path<i32>,
+    channel_list: Data<RwLock<ChannelList>>,
     player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     HttpResponse::Ok().body(
         match player_sessions
             .write()
             .await
-            .logout_with_id(user_id.0)
+            .logout(&token.0, Some(&channel_list))
+            .await
+        {
+            Some((token, player)) => format!("{}\n{:?}", token, player),
+            None => "non this player".to_string(),
+        },
+    )
+}
+
+/// GET "/pleyer_sessions_kick_uid"
+#[get("/pleyer_sessions_kick_uid/{user_id}")]
+pub async fn pleyer_sessions_kick_uid(
+    user_id: Path<i32>,
+    channel_list: Data<RwLock<ChannelList>>,
+    player_sessions: Data<RwLock<PlayerSessions>>,
+) -> impl Responder {
+    HttpResponse::Ok().body(
+        match player_sessions
+            .write()
+            .await
+            .logout_with_id(user_id.0, Some(&channel_list))
             .await
         {
             Some((token, player)) => format!("{}\n{:?}", token, player),
