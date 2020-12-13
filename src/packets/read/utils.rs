@@ -141,17 +141,18 @@ impl PacketReader {
     }
 
     #[inline(always)]
-    /// Read packet header: (type, length)
+    /// Read the osu!client packet: (packet id, payload)
     pub async fn next(&mut self) -> Option<(id, Option<&[u8]>)> {
         if (self.buf.len() - self.index) < 7 {
             self.finish = true;
             return None;
         }
-        // Slice header data [u8; 7]
+        // Slice packet header data [u8; 7],
+        // including packet id, payload length
         let header = &self.buf[self.index..self.index + 7];
         self.index += 7;
 
-        // Get packet id and length
+        // Get packet id and payload length
         let packet_id = id::from_u8(header[0]).unwrap_or_else(|| {
             warn!("PacketReader: unknown packet id({})", header[0]);
             id::OSU_UNKNOWN_PACKET
@@ -173,7 +174,6 @@ impl PacketReader {
             }
         };
 
-        // Convert packet id to enum and return
         Some((packet_id, payload))
     }
 

@@ -29,7 +29,7 @@ impl id {
         let player_name = &player_data.name;
 
         match payload {
-            // Payload not exisits handlers
+            // Payload not exists handlers
             None => {
                 match self {
                     id::OSU_PING => {}
@@ -41,7 +41,7 @@ impl id {
                     }
                 };
             }
-            // Payload exisits handlers
+            // Payload exists handlers
             Some(payload) => {
                 let mut payload = PayloadReader::new(payload);
                 match self {
@@ -69,7 +69,7 @@ impl id {
                     }
                     id::OSU_SEND_PRIVATE_MESSAGE => {}
                     id::OSU_LOGOUT => {
-                        // Has payload: integer / len = 4
+                        // Has payload: integer (len = 4)
                         player_sessions
                             .write()
                             .await
