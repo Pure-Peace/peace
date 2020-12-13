@@ -1,5 +1,5 @@
-use crate::database::Database;
 use crate::routes;
+use crate::{database::Database, renders::BanchoGet};
 
 use actix_cors::Cors;
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use crate::objects::{ChannelListBuilder, PlayerSessions};
 
 use crate::handlers::session_recycle_handler;
+
+use super::model::Settings;
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -58,6 +60,7 @@ pub async fn stopped(server: Server, start_time: Instant) -> std::io::Result<()>
 /// Run actix
 pub async fn start_server(
     cfg: Config,
+    settings: Settings,
     database: Database,
     player_sessions: RwLock<PlayerSessions>,
 ) -> std::io::Result<()> {
@@ -112,6 +115,12 @@ pub async fn start_server(
         .registry
         .register(Box::new(counter.clone()))
         .unwrap();
+
+    // Html renders
+    let bancho_get_render = BanchoGet {
+        server_name: settings.server.name.to_string(),
+        server_front: settings.server.front.to_string(),
+    };
 
     // Player sessions
     let player_sessions = Data::new(player_sessions);
@@ -169,6 +178,7 @@ pub async fn start_server(
             .app_data(channel_list.clone())
             .data(counter.clone())
             .data(database.clone())
+            .data(bancho_get_render.clone())
             .configure(routes::init)
     })
     .keep_alive(90)

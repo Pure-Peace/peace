@@ -37,7 +37,7 @@ impl Settings {
         dotenv().ok();
         // Current env
         // Default to 'development' env
-        // Args > .env
+        // Args > .env file
         let env = match env::args().nth(1) {
             None => env::var("RUN_MODE").unwrap_or_else(|_| "development".into()),
             Some(any) => any,

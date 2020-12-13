@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="icon" type="image/ico">
+  <title>{{ server_name }} | Welcome~</title>
+</head>
+
+<body>
+  <div class="tips-box">
+    When you see this page, it means you have switched to
+    <a style="font-weight: bold;" href="{{ server_front }}">{{ server_name }}</a>.
+  </div>
+  <div class="outer-circle">
+    <div class="inner-circle">
+      <a href="{{ server_front }}">{{ server_name }}</a>
+    </div>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span style="box-shadow: 0 2px 30px #303030d7;"></span>
+  </div>
+</body>
+
+
+<style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background-color: rgb(37, 32, 29);
+  }
+
+  * {
+    box-sizing: content-box;
+  }
+
+  .tips-box {
+    font-weight: lighter;
+    font-size: 12px;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    color: rgb(224, 222, 222);
+    padding: 12px;
+    background-color: rgb(46, 40, 37);
+    border-radius: 8px;
+  }
+
+  a {
+    text-decoration: none;
+    color: rgba(250, 250, 250, 0.95);
+    animation: test 2s linear infinite;
+    transition: .4s ease;
+  }
+
+  a:hover {
+    color: rgba(250, 250, 250, 0.8) !important;
+  }
+
+  .outer-circle {
+    position: relative;
+    height: 200px;
+    width: 200px;
+    background: linear-gradient(#14ffe9, #ffeb3b, #ff00e0);
+    border-radius: 50%;
+    animation: rotate 1.5s linear infinite;
+  }
+
+  .outer-circle span {
+    position: absolute;
+    height: 200px;
+    width: 200px;
+    background: linear-gradient(#14ffe9, #ffeb3b, #ff00e0);
+    border-radius: 50%;
+  }
+
+  span:nth-child(1) {
+    filter: blur(5px);
+  }
+
+  span:nth-child(2) {
+    filter: blur(10px);
+  }
+
+  span:nth-child(3) {
+    filter: blur(25px);
+  }
+
+  span:nth-child(4) {
+    filter: blur(150px);
+  }
+
+  .inner-circle {
+    height: 180px;
+    width: 180px;
+    position: absolute;
+    background: rgba(31, 31, 31, 0.65);
+    top: 10px;
+    left: 10px;
+    border-radius: 50%;
+    z-index: 9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    font-weight: bolder;
+    font-style: italic;
+    text-shadow: 0 1px 10px #000000b9;
+  }
+
+
+  @keyframes test {
+    0% {
+      color: rgba(250, 250, 250, 0.85) !important;
+    }
+
+    50% {
+      color: rgba(250, 250, 250, .98) !important;
+    }
+
+    100% {
+      color: rgba(250, 250, 250, 0.85) !important;
+    }
+  }
+
+  @keyframes rotate {
+    0% {
+      filter: hue-rotate(0deg);
+    }
+
+    100% {
+      filter: hue-rotate(360deg);
+    }
+  }
+</style>
+
+</html>

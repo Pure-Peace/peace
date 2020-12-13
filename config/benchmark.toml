@@ -71,5 +71,5 @@ namespace = "peace"
 # Means you can access: http://host:port<endpoint>
 endpoint = "/metrics"
 
-# If true, logger will not log endpoints
+# If true, logger will not log prometheus endpoint
 exclude_endpoint_log = true

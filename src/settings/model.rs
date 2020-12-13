@@ -20,6 +20,8 @@ pub struct Hello {
 
 #[derive(Debug, Deserialize)]
 pub struct Server {
+    pub name: String,
+    pub front: String,
     pub host: String,
     pub port: String,
     pub token: String,

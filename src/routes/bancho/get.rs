@@ -1,11 +1,14 @@
 use super::depends::*;
 
-pub async fn handler(req: HttpRequest, body: Bytes, counter: Data<IntCounterVec>) -> HttpResponse {
+use crate::renders::BanchoGet;
+use askama::Template;
+
+pub async fn handler(counter: Data<IntCounterVec>, render: Data<BanchoGet>) -> HttpResponse {
     counter
         .with_label_values(&["/bancho", "get", "start"])
         .inc();
-    //println!("GET Body {:?}", &body);
-    //println!("REQ {:?}\n--------------", req);
-    //let contents = "Hello bancho!";
-    HttpResponse::Ok().body("666")
+
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body(render.render().unwrap())
 }

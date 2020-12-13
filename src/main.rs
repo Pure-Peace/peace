@@ -17,6 +17,7 @@ mod database;
 mod handlers;
 mod objects;
 mod packets;
+mod renders;
 mod routes;
 mod settings;
 mod types;
@@ -41,5 +42,5 @@ async fn main() -> std::io::Result<()> {
     let player_sessions = RwLock::new(PlayerSessions::new(100, database.clone()));
 
     // Start actix server
-    settings::actix::start_server(cfg, database, player_sessions).await
+    settings::actix::start_server(cfg, settings, database, player_sessions).await
 }
