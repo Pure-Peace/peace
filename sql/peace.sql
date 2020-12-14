@@ -283,6 +283,90 @@ ALTER SEQUENCE bancho.channels_id_seq OWNED BY bancho.channels.id;
 
 
 --
+-- Name: db_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.db_versions (
+    version character varying(15) DEFAULT '0.1.0'::character varying NOT NULL,
+    author character varying(255) DEFAULT 'PurePeace'::character varying NOT NULL,
+    sql text,
+    release_note text,
+    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: COLUMN db_versions.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.db_versions.version IS 'peace database version';
+
+
+--
+-- Name: COLUMN db_versions.author; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.db_versions.author IS 'version publisher';
+
+
+--
+-- Name: COLUMN db_versions.sql; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.db_versions.sql IS 'database initial sql';
+
+
+--
+-- Name: COLUMN db_versions.release_note; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.db_versions.release_note IS 'version release note';
+
+
+--
+-- Name: versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.versions (
+    version character varying(15) DEFAULT '0.1.0'::character varying NOT NULL,
+    author character varying(255) DEFAULT 'PurePeace'::character varying NOT NULL,
+    db_version character varying(15) DEFAULT '0.1.0'::character varying NOT NULL,
+    release_note text,
+    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: COLUMN versions.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.versions.version IS 'peace version';
+
+
+--
+-- Name: COLUMN versions.author; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.versions.author IS 'version publisher';
+
+
+--
+-- Name: COLUMN versions.db_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.versions.db_version IS 'peace ''s database version';
+
+
+--
+-- Name: COLUMN versions.release_note; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.versions.release_note IS 'version release note';
+
+
+--
 -- Name: address; Type: TABLE; Schema: user; Owner: -
 --
 
@@ -928,10 +1012,26 @@ INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, 
 
 
 --
+-- Data for Name: db_versions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', NULL, 'initial', '2020-12-15 01:15:37.586205+08', '2020-12-15 01:15:52.635208+08');
+
+
+--
+-- Data for Name: versions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', '0.1.0', 'initial (wip)', '2020-12-15 01:16:37.785543+08', '2020-12-15 01:16:37.785543+08');
+
+
+--
 -- Data for Name: address; Type: TABLE DATA; Schema: user; Owner: -
 --
 
 INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (1, 1001, 8, 'a', 'b', 'c', 'd', 'e', '2020-12-03 03:34:35.28239+08');
+INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (2, 1001, 8, 'd0b4e25c049a134d838eaf3b641e402e', '00FFC601A03C.00FFCEF12AF6.005056C00001.005056C00008.00FF98E3FA8A..D050998B4438.', 'b37b1dd3d2a97e232b9e4a8c4e97ebf9', '2d76890a39e9cdd3670c5962978c26b8', '9f354210b8dd0147827119dc5212e605', '2020-12-09 20:39:45.952421+08');
+INSERT INTO "user".address (id, user_id, time_offset, path, adapters, adapters_hash, uninstall_id, disk_id, create_time) VALUES (3, 1002, 8, 'ec6d23bf86578fbb81dc39ff364163fc', '000C29B81C19..', '9bf3bc4e46526ba124e6a4ddef56e5f5', '7b78d0d945530de2462f43d030e8f223', '9f044ac51c858a0c5e28d833ba53ef6a', '2020-12-09 23:19:14.499852+08');
 
 
 --
@@ -961,8 +1061,8 @@ INSERT INTO "user".notes (id, user_id, note, type, added_by, create_time, update
 -- Data for Name: statistic; Type: TABLE DATA; Schema: user; Owner: -
 --
 
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1002, '00:01:21.273819', 1, 2, 1, 0, '2020-12-09 17:27:40.270451+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1001, '00:41:45.873491', 127960, 0, 1, 1, '2020-12-09 18:06:43.845739+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1002, '00:22:23.234231', 34, 2, 1, 0, '2020-12-13 05:26:49.971486+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1001, '09:05:17.679442', 1677439, 0, 1, 1, '2020-12-14 01:06:53.754342+08');
 
 
 --
@@ -990,7 +1090,7 @@ SELECT pg_catalog.setval('bancho.channels_id_seq', 4, true);
 -- Name: address_id_seq; Type: SEQUENCE SET; Schema: user; Owner: -
 --
 
-SELECT pg_catalog.setval('"user".address_id_seq', 1, true);
+SELECT pg_catalog.setval('"user".address_id_seq', 3, true);
 
 
 --
@@ -1042,6 +1142,22 @@ COMMENT ON CONSTRAINT "channel.name" ON bancho.channels IS 'channel name should 
 
 ALTER TABLE ONLY bancho.channels
     ADD CONSTRAINT channels_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: versions config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.versions
+    ADD CONSTRAINT config_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: db_versions versions_copy1_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.db_versions
+    ADD CONSTRAINT versions_copy1_pkey PRIMARY KEY (version);
 
 
 --
@@ -1172,6 +1288,20 @@ CREATE INDEX user_address ON "user".address USING btree (user_id);
 --
 
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON bancho.channels FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+
+
+--
+-- Name: db_versions auto_update_time; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.db_versions FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+
+
+--
+-- Name: versions auto_update_time; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.versions FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 
 
 --
@@ -1340,6 +1470,14 @@ CREATE TRIGGER increase_rename_count BEFORE INSERT ON user_records.rename FOR EA
 --
 
 COMMENT ON TRIGGER increase_rename_count ON user_records.rename IS 'update user statistic';
+
+
+--
+-- Name: versions db_version; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.versions
+    ADD CONSTRAINT db_version FOREIGN KEY (db_version) REFERENCES public.db_versions(version) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --
