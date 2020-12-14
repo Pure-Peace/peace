@@ -12,9 +12,15 @@
 - **Prometheus** + **Grafana**: server monitoring and visualization (performance)
 - **Sentry**: server monitoring (errors)
 - **WebSocket** support (used to push user results, etc.?)
+- **Web templates** support... (html will be compiled into the binary file)
 
 ### Schedules WIP...
 - ...
+
+
+### Database design (WIP...)
+![db](http://miya.ink/dd.png)
+
 
 ### Why not python or javascript?
 
@@ -174,9 +180,6 @@ cargo run development
 ```
 ./Peace prodction
 ```
-
-### Database design (WIP...)
-![db](http://miya.ink/dd.png)
 
 
 ## MIT
