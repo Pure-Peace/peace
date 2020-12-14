@@ -5,16 +5,27 @@
 
 [![Rust](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
 
+### XXX:
+- **Rust 1.48** (stable)
+- **PostgreSQL 11+**, with special database design...(maybe..)
+- **Redis**
+- **Prometheus** + **Grafana**: server monitoring and visualization (performance)
+- **Sentry**: server monitoring (errors)
+- **WebSocket** support (used to push user results, etc.?)
 
+### Schedules WIP...
+- ...
 
 ### Why not python or javascript?
 
 - Because I want to try out a high-performance, efficient compiled language. 
-- If you want a bancho written in python, please use gulag, it's good.
+- If you want a bancho written in python, please use [gulag](https://github.com/cmyui/gulag), it's good.
 
 ### Why not C++?
 
 - Because Rust is the best choice for near C++ performance, but more modern.
+- [Benchmark: Rust **vs** C, C++, Go](https://benchmarksgame-team.pages.debian.net/benchmarksgame/fastest/rust.html)
+- [Benchmark: Web Framework](https://www.techempower.com/benchmarks/#section=data-r19&hw=ph&test=composite)
 
 ### Reasons to choose Rust:
 
@@ -49,6 +60,8 @@
     Clear and complete language documentation
 
 ### Reference Links:
+- https://benchmarksgame-team.pages.debian.net/benchmarksgame/fastest/rust.html
+  
 - https://medium.com/paritytech/why-rust-846fd3320d3f
 
 - https://logdna.com/blog/coding-for-performance-why-we-chose-rust/
@@ -59,16 +72,17 @@
 
 - https://www.rust-lang.org/
 
-### but you can still star :p
+### But you can still star :p
 
-Recommended development tool: **Visual Studio Code**
+Recommended development tools: **Visual Studio Code** or **CLion**
 
-![vscode](http://miya.ink/news.png)
+![vscode](http://miya.ink/55.png)
+![clion](http://miya.ink/44.png)
 Soo good
 
 ![Chino](http://miya.ink/22.png)
 
-**With plugins:**
+**Vscode plugins:**
 
 ```
 Rust
@@ -85,29 +99,84 @@ Git History
 Git Graph
 ```
 
+### Dev on windows
+
+![dev](http://miya.ink/dev.png)
+
+Add hosts:
+```hosts
+127.0.0.1 osu.ppy.sh
+127.0.0.1 c.ppy.sh
+127.0.0.1 c1.ppy.sh
+127.0.0.1 c2.ppy.sh
+127.0.0.1 c3.ppy.sh
+127.0.0.1 c4.ppy.sh
+127.0.0.1 c5.ppy.sh
+127.0.0.1 c6.ppy.sh
+127.0.0.1 ce.ppy.sh
+127.0.0.1 a.ppy.sh
+127.0.0.1 i.ppy.sh
+```
+Start **Nginx**: http://nginx.org/download/nginx-1.18.0.zip
+
+- With nginx configuration file and ssl certificate.
+- Need to install certificate to "Trusted Certification Authority" first.
+
+Install **PostgreSQL** and initialize **Peace** database:
+```
+cd sql
+```
+```
+./init_database.bat
+```
+
+Finally, Run **Peace**:
+
+
 ## Run
 
 **Debug**
+
+- The compilation speed is faster, but the binary file size is larger. And the performance is much lower than release compilation and cannot be used for performance testing.
 ```
 cargo run
 ```
 
 **Release**
+
+- Longer compilation time, but best performance, suitable for deployment.
+- You can edit **Cargo.toml** to enable **lto**, which will increase compilation time, but with better performance and smaller files
 ```
 cargo run --release
 ```
 
+```
+cargo build --release
+```
+
+The compiled binary can be moved to any directory containing **config** and run, this means you can compile on the PC, and then send binary files to the server for deployment.
+
 **Run with environment**
+
+- Run **Peace** with the specified configuration file:
+- The configuration file must be located in the config directory (`environment`.toml)
+- Default: development
+```
+cargo run <environment(.toml)>
+```
+**Examples:**
 ```
 cargo run prodction
 ```
-or
 ```
 cargo run development
 ```
-or
 ```
 ./Peace prodction
 ```
+
+### Database design (WIP...)
+![db](http://miya.ink/dd.png)
+
 
 ## MIT
