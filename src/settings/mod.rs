@@ -5,19 +5,8 @@ pub mod model;
 use colored::Colorize;
 use config::{Config, ConfigError, /* Environment, */ File};
 use dotenv::dotenv;
-use std::env;
 use model::{Logger, Settings};
-
-pub const BANNER: &str = r#"
-
-   .-.                            
-   (_) )-.                         
-      /   \   .-. .-.  .-.    .-.  
-     /     )./.-'(  | (     ./.-'_ 
-  .-/  `--' (__.' `-'-'`---'(__.'  
- (_/                               
-
-"#;
+use std::env;
 
 impl Settings {
     pub fn new() -> Result<(Config, Settings), ConfigError> {
