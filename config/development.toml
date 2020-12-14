@@ -4,6 +4,9 @@
 
 # If true, will check the database connection pools on created
 check_pools_on_created = true
+
+check_db_version_on_created = true
+
 debug = false
 
 # Logger config

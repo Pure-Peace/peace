@@ -1,5 +1,6 @@
 pub mod connectors;
 
+use crate::constants::{DB_VERSION, PEACE_VERSION};
 use crate::settings::model::Settings;
 use colored::Colorize;
 
@@ -16,10 +17,74 @@ pub struct Database {
 
 impl Database {
     pub async fn new(settings: &Settings) -> Self {
-        println!("> {}", "Initializing database...".bright_purple());
+        println!(
+            "> {}",
+            "Initializing database connections...".bright_purple()
+        );
         let pg = Postgres::new(settings).await;
         let redis = Redis::new(settings).await;
-        println!("> {}", "Database initialization success!\n".bold().bright_purple());
-        Database { pg, redis }
+        println!(
+            "> {}",
+            "Database connection initialization successfully!\n"
+                .bold()
+                .bright_purple()
+        );
+        let database = Database { pg, redis };
+        if settings.check_db_version_on_created {
+            database.check_version().await;
+        }
+
+        database
+    }
+
+    pub async fn check_version(&self) {
+        println!(
+            "> {}",
+            "Checking Database version...".bright_purple()
+        );
+        match self
+            .pg
+            .query_first(
+                r#"SELECT * FROM "public"."versions" WHERE "version" = $1;"#,
+                &[&PEACE_VERSION],
+            )
+            .await
+        {
+            Ok(row) => {
+                let db_version: &str = row.get("db_version");
+                if db_version != DB_VERSION {
+                    println!(
+                        "> {}",
+                        format!("Inconsistent database versions, there may be updates or lags?")
+                            .bold()
+                            .yellow()
+                    );
+                }
+                println!(
+                    "> {}",
+                    format!(
+                        "Peace version: {}; Target db version: {}; Current db version: {}",
+                        PEACE_VERSION, db_version, DB_VERSION
+                    )
+                    .bold()
+                    .yellow()
+                );
+                println!(
+                    "> {}",
+                    "Database initialization success!\n".bold().bright_purple()
+                );
+            }
+            Err(err) => {
+                println!(
+                    "> {}",
+                    format!(
+                        "Failed to check database version! Error: {}; Peace version: {}; Current db version: {}\n",
+                        err, PEACE_VERSION, DB_VERSION
+                    )
+                    .yellow()
+                    .red()
+                );
+            }
+        };
     }
 }

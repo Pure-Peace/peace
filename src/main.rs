@@ -23,14 +23,15 @@ mod settings;
 mod types;
 mod utils;
 
+use constants::PEACE_BANNER;
 use database::Database;
 use objects::PlayerSessions;
-use settings::{model::Settings, BANNER};
+use settings::model::Settings;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Print banner
-    println!("{}", BANNER.green());
+    println!("{}", PEACE_BANNER.green());
 
     // Create Peace's settings
     let (cfg, settings) = Settings::new().unwrap();
