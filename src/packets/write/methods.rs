@@ -9,6 +9,7 @@ use std::str::FromStr;
 
 use super::utils::*;
 
+#[inline(always)]
 /// #5: BANCHO_USER_LOGIN_REPLY
 pub fn login_reply(reply: impl LoginReply) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_LOGIN_REPLY)
@@ -16,24 +17,21 @@ pub fn login_reply(reply: impl LoginReply) -> PacketData {
         .pack()
 }
 
+#[inline(always)]
 /// #7: BANCHO_SEND_MESSAGE
-pub async fn send_message(
-    sender: &str,
-    sender_id: i32,
-    content: &str,
-    channel_name: &str,
-) -> PacketData {
+pub async fn send_message(sender: &str, sender_id: i32, content: &str, target: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_SEND_MESSAGE)
-        .add(write_message(sender, sender_id, content, channel_name).await)
+        .add(write_message(sender, sender_id, content, target).await)
         .pack()
 }
 
+#[inline(always)]
 /// #8: BANCHO_PONG
 pub fn pong() -> PacketData {
     simple_pack(id::BANCHO_PONG)
 }
 
-/// #9: BANCHO_SEND_MESSAGE
+/// #9: BANCHO_HANDLE_IRC_CHANGE_USERNAME
 pub fn change_username(username_old: &str, username_new: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_HANDLE_IRC_CHANGE_USERNAME)
         .add(write_string(&format!(
@@ -66,6 +64,7 @@ pub async fn user_stats(player: &Player) -> PacketData {
         .pack()
 }
 
+#[inline(always)]
 /// #12: BANCHO_USER_LOGOUT
 pub fn user_logout(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_LOGOUT)
@@ -109,6 +108,7 @@ pub fn get_attention() -> PacketData {
     simple_pack(id::BANCHO_GET_ATTENTION)
 }
 
+#[inline(always)]
 /// #24: BANCHO_NOTIFICATION
 pub fn notification(msg: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_NOTIFICATION)
@@ -341,14 +341,14 @@ pub async fn user_presence_bundle(player_id_list: &Vec<i32>) -> PacketData {
 /// #100: BANCHO_USER_DM_BLOCKED
 pub fn user_dm_blocked(target: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_DM_BLOCKED)
-        .add(write_string(target))
+        .add(write_message_sync("", 0, "", target))
         .pack()
 }
 
 /// #101: BANCHO_TARGET_IS_SILENCED
 pub fn target_silenced(target: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_TARGET_IS_SILENCED)
-        .add(write_string(target))
+        .add(write_message_sync("", 0, "", target))
         .pack()
 }
 

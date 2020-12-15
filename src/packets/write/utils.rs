@@ -210,12 +210,22 @@ pub async fn write_message(
     sender: &str,
     sender_id: i32,
     content: &str,
-    channel_name: &str,
+    target: &str,
 ) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(30);
     data.extend(write_string(sender));
     data.extend(write_string_async(content).await);
-    data.extend(write_string(channel_name));
+    data.extend(write_string(target));
+    data.extend(write_integer(sender_id));
+    data
+}
+
+#[inline(always)]
+pub fn write_message_sync(sender: &str, sender_id: i32, content: &str, target: &str) -> PacketData {
+    let mut data: PacketData = Vec::with_capacity(30);
+    data.extend(write_string(sender));
+    data.extend(write_string(content));
+    data.extend(write_string(target));
     data.extend(write_integer(sender_id));
     data
 }

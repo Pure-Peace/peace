@@ -12,12 +12,16 @@ extern crate serde;
 mod constants;
 #[path = "../src/database/mod.rs"]
 mod database;
+#[path = "../src/events/mod.rs"]
+mod events;
 #[path = "../src/handlers/mod.rs"]
 mod handlers;
 #[path = "../src/objects/mod.rs"]
 mod objects;
 #[path = "../src/packets/mod.rs"]
 mod packets;
+#[path = "../src/renders/mod.rs"]
+mod renders;
 #[path = "../src/routes/mod.rs"]
 mod routes;
 #[path = "../src/settings/mod.rs"]
