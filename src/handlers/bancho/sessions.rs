@@ -5,7 +5,7 @@ use crate::{objects::PlayerSessions, types::ChannelList};
 
 /// Auto PlayerSession recycle
 #[inline(always)]
-pub async fn session_recycle_handler(
+pub async fn recycle_handler(
     player_sessions: &Data<RwLock<PlayerSessions>>,
     channel_list: &Data<RwLock<ChannelList>>,
     session_timeout: i64,

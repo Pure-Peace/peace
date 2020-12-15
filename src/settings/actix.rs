@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use crate::objects::{ChannelListBuilder, PlayerSessions};
 
-use crate::handlers::session_recycle_handler;
+use crate::handlers::bancho;
 
 use super::model::Settings;
 
@@ -127,9 +127,7 @@ pub async fn start_server(
     let player_sessions_cloned = player_sessions.clone();
 
     // Channel list
-    let channel_list = Data::new(RwLock::new(
-        ChannelListBuilder::new(&database, player_sessions.clone()).await,
-    ));
+    let channel_list = Data::new(RwLock::new(ChannelListBuilder::new(&database).await));
     let channel_list_cloned = channel_list.clone();
 
     // Start auto recycle task,
@@ -137,7 +135,7 @@ pub async fn start_server(
     async_std::task::spawn(async move {
         loop {
             async_std::task::sleep(recycle_check_duration).await;
-            session_recycle_handler(
+            bancho::sessions::recycle_handler(
                 &player_sessions_cloned,
                 &channel_list_cloned,
                 session_timeout,
