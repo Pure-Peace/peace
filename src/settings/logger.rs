@@ -15,6 +15,7 @@ impl Logger {
                     .unwrap_or("info".to_string()),
             );
 
-        env_logger::init_from_env(env);
+        //env_logger::init_from_env(env);
+        env_logger::Builder::from_env(env).format_timestamp_millis().init();
     }
 }
