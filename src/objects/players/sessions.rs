@@ -148,6 +148,31 @@ impl PlayerSessions {
     }
 
     #[inline(always)]
+    pub async fn get_id_by_name(&self, name: &str) -> Option<i32> {
+        match self
+            .map
+            .read()
+            .await
+            .values()
+            .find(|player| player.name == name)
+        {
+            Some(player) => Some(player.id.clone()),
+            None => None,
+        }
+    }
+
+    #[inline(always)]
+    /// Token is exists or not
+    pub async fn token_is_exists(&self, token: &TokenString) -> bool {
+        self.map.read().await.contains_key(token)
+    }
+
+    #[inline(always)]
+    pub async fn id_is_exists(&self, id: &UserId) -> bool {
+        self.id_session_map.read().await.contains_key(&id)
+    }
+
+    #[inline(always)]
     /// Logout a player from the PlayerSessions with user id
     ///
     /// Think, why not use the following code?
@@ -200,12 +225,6 @@ impl PlayerSessions {
     /// For debug, get PlayerSessions.id_session_map to string
     pub async fn id_map_to_string(&self) -> String {
         format!("{:?}", self.id_session_map.read().await)
-    }
-
-    #[inline(always)]
-    /// Token is exists or not
-    pub async fn token_is_exists(&self, token: TokenString) -> bool {
-        self.map.read().await.contains_key(&token)
     }
 
     #[inline(always)]

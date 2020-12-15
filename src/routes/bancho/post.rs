@@ -86,7 +86,7 @@ pub async fn handler(
     let mut reader = PacketReader::from_bytes(body);
     while let Some((packet_id, payload)) = reader.next().await {
         packet_id
-            .handle(
+            .read_handle(
                 &request_ip,
                 &token,
                 &player_data,

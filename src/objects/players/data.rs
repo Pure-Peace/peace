@@ -6,7 +6,9 @@ use super::Player;
 pub struct PlayerData {
     pub id: i32,
     pub name: String,
+    pub friends: Vec<i32>,
     pub privileges: i32,
+    pub bancho_privileges: i32,
     pub country: String,
     pub osu_version: String,
     pub utc_offset: u8,
@@ -19,7 +21,9 @@ impl PlayerData {
         PlayerData {
             id: player.id,
             name: player.name.clone(),
+            friends: player.friends.clone(),
             privileges: player.privileges,
+            bancho_privileges: player.bancho_privileges,
             country: player.country.clone(),
             osu_version: player.osu_version.clone(),
             utc_offset: player.utc_offset,

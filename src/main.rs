@@ -6,6 +6,7 @@ extern crate serde;
 
 #[macro_use]
 extern crate log;
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -14,6 +15,7 @@ use colored::Colorize;
 
 mod constants;
 mod database;
+mod events;
 mod handlers;
 mod objects;
 mod packets;
