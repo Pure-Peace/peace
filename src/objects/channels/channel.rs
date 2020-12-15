@@ -11,6 +11,7 @@ use crate::objects::Player;
 
 use super::base::ChannelBase;
 
+#[derive(Debug)]
 pub struct Channel {
     pub name: String,
     pub title: String,
@@ -23,24 +24,6 @@ pub struct Channel {
     pub join_count: u32,
     pub leave_count: u32,
     pub create_time: DateTime<Local>,
-    player_sessions: Data<RwLock<PlayerSessions>>,
-}
-
-impl fmt::Debug for Channel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\nChannel: {{ name: {}, title: {}, read_priv: {}, write_priv: {}, auto_join: {}, auto_close: {}, players: {:?}, player_count: {}, join_count: {}, leave_count: {}, create_time: {:?} }}", 
-        self.name, 
-        self.title, 
-        self.read_priv, 
-        self.write_priv, 
-        self.auto_join, 
-        self.auto_close, 
-        self.players, 
-        self.player_count,
-        self.join_count,
-        self.leave_count,
-        self.create_time)
-    }
 }
 
 impl PartialEq for Channel {
@@ -51,10 +34,7 @@ impl PartialEq for Channel {
 
 impl Channel {
     /// Create channel from base object (from database)
-    pub async fn from_base(
-        base: &ChannelBase,
-        player_sessions: Data<RwLock<PlayerSessions>>,
-    ) -> Self {
+    pub async fn from_base(base: &ChannelBase) -> Self {
         Channel {
             name: base.name.to_string(),
             title: base.title.to_string(),
@@ -66,8 +46,7 @@ impl Channel {
             player_count: 0,
             join_count: 0,
             leave_count: 0,
-            player_sessions,
-            create_time: Local::now()
+            create_time: Local::now(),
         }
     }
 
@@ -81,23 +60,24 @@ impl Channel {
     }
 
     /// Send message to every player in channel
-    pub async fn broadcast(&self, sender: &String, sender_id: i32, msg: &String, include_sender: bool) {
-        let player_sessions = self.player_sessions.read().await;
+    pub async fn broadcast(
+        &self,
+        player_sessions: &Data<RwLock<PlayerSessions>>,
+        sender: &String,
+        sender_id: i32,
+        msg: &String,
+        include_sender: bool,
+    ) {
+        let player_sessions = player_sessions.read().await;
         let packet_data = packets::send_message(sender, sender_id, msg, &self.name).await;
         // For every players in channel
         let players = self.players.read().await;
-        for player in player_sessions
-            .map
-            .read()
-            .await
-            .values()
-            .filter(|player| {
-                if !include_sender && (player.id == sender_id) {
-                    return false;
-                }
-                players.contains(&player.id)
-            })
-        {
+        for player in player_sessions.map.read().await.values().filter(|player| {
+            if !include_sender && (player.id == sender_id) {
+                return false;
+            }
+            players.contains(&player.id)
+        }) {
             // Send them message
             player.enqueue(packet_data.clone()).await;
         }
