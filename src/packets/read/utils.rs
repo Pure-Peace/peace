@@ -24,16 +24,23 @@ pub struct HandlerData<'a> {
 pub trait ReadInteger<T> {
     fn from_le_bytes(data: &[u8]) -> T;
     fn from_be_bytes(data: &[u8]) -> T;
+    fn as_usize(self) -> usize;
 }
 
 macro_rules! impl_read_integer {
     ($($t:ty),+) => {
         $(impl ReadInteger<$t> for $t {
+            #[inline(always)]
             fn from_le_bytes(data: &[u8]) -> $t {
                 <$t>::from_le_bytes(data.try_into().unwrap())
             }
+            #[inline(always)]
             fn from_be_bytes(data: &[u8]) -> $t {
                 <$t>::from_be_bytes(data.try_into().unwrap())
+            }
+            #[inline(always)]
+            fn as_usize(self) -> usize {
+                self as usize
             }
         })+
     }
@@ -60,11 +67,28 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
+    fn read(&mut self, length: usize) -> &[u8] {
+        let data = &self.payload[self.index..self.index + length];
+        self.index += length;
+        data
+    }
+
+    #[inline(always)]
     pub async fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Integer {
-        let data_length = std::mem::size_of::<Integer>();
-        let data = &self.payload[self.index..self.index + data_length];
-        self.index += data_length;
+        let data = self.read(std::mem::size_of::<Integer>());
         Integer::from_le_bytes(data)
+    }
+
+    #[inline(always)]
+    pub async fn read_i32_list<IntLength: ReadInteger<IntLength>>(&mut self) -> Vec<i32> {
+        let length_data = self.read(std::mem::size_of::<IntLength>());
+        let int_count = IntLength::from_le_bytes(length_data).as_usize();
+
+        let mut data: Vec<i32> = Vec::with_capacity(int_count);
+        for _ in 0..int_count {
+            data.push(i32::from_le_bytes(self.read(4).try_into().unwrap()));
+        }
+        data
     }
 
     #[inline(always)]

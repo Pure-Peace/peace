@@ -75,3 +75,10 @@ fn test_login() {
         ]
     )
 }
+
+#[actix_rt::test]
+async fn test_write_i32_list() {
+    //let list = utils::write_int_list(&vec![1001, 1002, 1003]).await;
+    let list = user_presence_bundle(&vec![1001, 1002, 1003]).await;
+    println!("{:?}", list);
+}
