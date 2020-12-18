@@ -115,7 +115,10 @@ pub async fn handler(
     drop(player_sessions_r);
 
     let bancho_end = bancho_start.elapsed();
-    debug!("bancho handle end, time spend: {:?}", bancho_end);
+    debug!(
+        "bancho handle end, time spend: {:?}; last packet: <{:?}>; packet count: {:?}; payload size: {}", 
+        bancho_end, reader.current_packet, reader.packet_count, reader.payload_length
+    );
 
     HttpResponse::Ok()
         .content_type("text/html; charset=UTF-8")
