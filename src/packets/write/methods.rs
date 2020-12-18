@@ -42,23 +42,43 @@ pub fn change_username(username_old: &str, username_new: &str) -> PacketData {
 }
 
 /// #11: BANCHO_USER_STATS
-/// TODO
-pub async fn user_stats(player: &Player) -> PacketData {
+pub async fn user_stats(p: &Player) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_STATS)
         .add_multiple(&mut [
-            write_integer(player.id),
-            write_integer(0u8),       // action
-            write_string("haha"),     // info test
-            write_string(""),         // map md5
-            write_integer(0i32),      // mods
-            write_integer(0u8),       // mode.as_vanilla
-            write_integer(0i32),      // map id
-            write_integer(0i64),      // recent score
-            write_integer(0.1f32),    // acc
-            write_integer(10i32),     // plays
-            write_integer(100000i64), // total score
-            write_integer(1i32),      // rank
-            write_integer(10000i16),  // pp
+            write_num(p.id),
+            write_num(p.status.action as u8),
+            write_string(&p.status.info),
+            write_string(&p.status.playing_beatmap_md5),
+            write_num(p.status.play_mods as i32),
+            write_num(p.status.game_mode.val()),
+            write_num(p.status.playing_beatmap_id),
+            write_num(p.stats.ranked_score),
+            write_num(p.stats.accuracy),
+            write_num(p.stats.playcount),
+            write_num(p.stats.total_score),
+            write_num(p.stats.rank),
+            write_num(p.stats.performance_v2),
+        ])
+        .await
+        .pack()
+}
+
+pub async fn user_stats_from_data(p: &PlayerData) -> PacketData {
+    PacketBuilder::with(id::BANCHO_USER_STATS)
+        .add_multiple(&mut [
+            write_num(p.id),
+            write_num(p.status.action as u8),
+            write_string(&p.status.info),
+            write_string(&p.status.playing_beatmap_md5),
+            write_num(p.status.play_mods as i32),
+            write_num(p.status.game_mode.val()),
+            write_num(p.status.playing_beatmap_id),
+            write_num(p.stats.ranked_score),
+            write_num(p.stats.accuracy),
+            write_num(p.stats.playcount),
+            write_num(p.stats.total_score),
+            write_num(p.stats.rank),
+            write_num(p.stats.performance_v2),
         ])
         .await
         .pack()

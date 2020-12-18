@@ -4,7 +4,7 @@ use std::sync::{Arc, Weak};
 use super::PlayerBase;
 
 use crate::{
-    constants::ClientInfo,
+    constants::{Action, ClientInfo, GameMode, PlayMods, PresenceFilter},
     objects::Channel,
     types::{Location, PacketData},
 };
@@ -19,29 +19,60 @@ use chrono::prelude::{DateTime, Local};
 use hashbrown::{HashMap, HashSet};
 use queue::Queue;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stats {
     pub rank: i32,
+    pub performance_v1: i16,
+    pub performance_v2: i16,
+    pub accuracy: f32,
+    pub total_score: i64,
+    pub ranked_score: i64,
+    pub playcount: i32,
+    pub playtime: i64,
+    pub max_combo: i32,
+    pub update_time: DateTime<Local>,
 }
 
-#[repr(u8)]
-#[derive(Debug)]
-pub enum Action {
-    Idle,
-    Afk,
-    Playing,
-    Editing,
-    Modding,
-    Multiplayer,
-    Watching,
-    Unknown,
-    Testing,
-    Submitting,
-    Paused,
-    Lobby,
-    Multiplaying,
-    OsuDirect,
-    None,
+impl Stats {
+    pub fn new() -> Self {
+        Stats {
+            rank: 100000,
+            performance_v1: 0,
+            performance_v2: 0,
+            accuracy: 0.0,
+            total_score: 0,
+            ranked_score: 0,
+            playcount: 0,
+            playtime: 0,
+            max_combo: 0,
+            update_time: Local::now(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Status {
+    pub action: Action,
+    pub info: String,
+    pub playing_beatmap_id: i32,
+    pub playing_beatmap_md5: String,
+    pub play_mods: PlayMods,
+    pub game_mode: GameMode,
+    pub update_time: DateTime<Local>,
+}
+
+impl Status {
+    pub fn new() -> Self {
+        Status {
+            action: Action::Idle,
+            info: String::new(),
+            playing_beatmap_id: 0,
+            playing_beatmap_md5: String::new(),
+            play_mods: PlayMods::NoMod,
+            game_mode: GameMode::Std,
+            update_time: Local::now(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -56,11 +87,13 @@ pub struct Player {
     pub address_id: i32,
     pub address_similarity: i32,
     pub only_friend_pm_allowed: bool,
+    pub presence_filter: PresenceFilter,
     pub display_city: bool,
     pub osu_version: String,
     pub utc_offset: u8,
     pub location: Location,
     pub stats: Stats,
+    pub status: Status,
     pub queue: Mutex<Queue<PacketData>>,
     pub channels: HashSet<String>,
     pub login_time: DateTime<Local>,
@@ -93,11 +126,13 @@ impl Player {
             address_id,
             address_similarity,
             only_friend_pm_allowed: client_info.only_friend_pm_allowed,
+            presence_filter: PresenceFilter::None,
             display_city: client_info.display_city,
             osu_version: client_info.osu_version,
             utc_offset: client_info.utc_offset as u8,
             location: (0.0, 0.0),
-            stats: Stats { rank: 1 },
+            stats: Stats::new(),
+            status: Status::new(),
             queue: Mutex::new(Queue::new()),
             channels: HashSet::new(),
             login_time: now_time,
