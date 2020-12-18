@@ -1,8 +1,4 @@
-use crate::{
-    constants::{id, LoginReply},
-    objects::Player,
-    types::PacketData,
-};
+use crate::{constants::{id, LoginReply}, objects::{Player, PlayerData}, types::PacketData};
 
 use celes::Country;
 use std::str::FromStr;
@@ -13,7 +9,7 @@ use super::utils::*;
 /// #5: BANCHO_USER_LOGIN_REPLY
 pub fn login_reply(reply: impl LoginReply) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_LOGIN_REPLY)
-        .add(write_integer(reply.val()))
+        .add(write_num(reply.val()))
         .pack()
 }
 
@@ -88,22 +84,22 @@ pub async fn user_stats_from_data(p: &PlayerData) -> PacketData {
 /// #12: BANCHO_USER_LOGOUT
 pub fn user_logout(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_LOGOUT)
-        .add(write_integer(user_id))
-        .add(write_integer::<u8>(0))
+        .add(write_num(user_id))
+        .add(write_num::<u8>(0))
         .pack()
 }
 
 /// #13: BANCHO_SPECTATOR_JOINED
 pub fn spectator_joined(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SPECTATOR_JOINED)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
 /// #14: BANCHO_SPECTATOR_LEFT
 pub fn spectator_left(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SPECTATOR_LEFT)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
@@ -119,7 +115,7 @@ pub fn version_update() -> PacketData {
 /// #22: BANCHO_SPECTATOR_CANT_SPECTATE
 pub fn spectator_cant_spectate(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SPECTATOR_CANT_SPECTATE)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
@@ -147,7 +143,7 @@ pub fn new_match() {}
 /// #28: BANCHO_DISBAND_MATCH
 pub fn disband_match(match_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_DISBAND_MATCH)
-        .add(write_integer(match_id))
+        .add(write_num(match_id))
         .pack()
 }
 
@@ -168,14 +164,14 @@ pub fn match_join_fail() -> PacketData {
 /// #42: BANCHO_FELLOW_SPECTATOR_JOINED
 pub fn fellow_spectator_joined(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_FELLOW_SPECTATOR_JOINED)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
 /// #43: BANCHO_FELLOW_SPECTATOR_LEFT
 pub fn fellow_spectator_left(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_FELLOW_SPECTATOR_LEFT)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
@@ -200,7 +196,7 @@ pub fn match_all_player_loaded() -> PacketData {
 /// #57: BANCHO_MATCH_PLAYER_FAILED
 pub fn match_player_failed(slot_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_MATCH_PLAYER_FAILED)
-        .add(write_integer(slot_id))
+        .add(write_num(slot_id))
         .pack()
 }
 
@@ -236,8 +232,11 @@ pub fn channel_kick(channel_name: &str) -> PacketData {
 }
 
 /// #67: BANCHO_CHANNEL_AUTO_JOIN
-/// TODO
-pub fn channel_auto_join() {}
+pub fn channel_auto_join(name: &str, title: &str, player_count: i16) -> PacketData {
+    PacketBuilder::with(id::BANCHO_CHANNEL_AUTO_JOIN)
+        .add(write_channel(name, title, player_count))
+        .pack()
+}
 
 /// #69: BANCHO_BEATMAP_INFO_REPLY
 /// UNUSED
@@ -246,7 +245,7 @@ pub fn beatmap_info_reply() {}
 /// #71: BANCHO_PRIVILEGES
 pub fn bancho_privileges(privileges: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_PRIVILEGES)
-        .add(write_integer(privileges))
+        .add(write_num(privileges))
         .pack()
 }
 
@@ -260,7 +259,7 @@ pub async fn friends_list(friends: &Vec<i32>) -> PacketData {
 /// #75: BANCHO_PROTOCOL_VERSION
 pub fn protocol_version(version: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_PROTOCOL_VERSION)
-        .add(write_integer(version))
+        .add(write_num(version))
         .pack()
 }
 
@@ -278,28 +277,46 @@ pub fn monitor() {}
 /// #81: BANCHO_MATCH_PLAYER_SKIPPED
 pub fn match_player_skipped(slot_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_MATCH_PLAYER_SKIPPED)
-        .add(write_integer(slot_id))
+        .add(write_num(slot_id))
         .pack()
 }
 
 /// #83: BANCHO_USER_PRESENCE
 ///
 /// including player stats and presence
-/// TODO
-pub async fn user_presence(player: &Player) -> PacketData {
+pub async fn user_presence(p: &Player) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
-            write_integer(player.id),
-            write_string(&player.name),
-            write_integer(player.utc_offset + 24),
-            write_integer(match Country::from_str(&player.country) {
+            write_num(p.id),
+            write_string(&p.name),
+            write_num(p.utc_offset + 24),
+            write_num(match Country::from_str(&p.country) {
                 Ok(country) => country.value as u8,
                 Err(_) => 0,
             }),
-            write_integer((player.bancho_privileges | 0) as u8),
-            write_integer(player.location.0),
-            write_integer(player.location.1),
-            write_integer(player.stats.rank),
+            write_num((p.bancho_privileges | 0) as u8),
+            write_num(p.location.0),
+            write_num(p.location.1),
+            write_num(p.stats.rank),
+        ])
+        .await
+        .pack()
+}
+
+pub async fn user_presence_from_data(p: &PlayerData) -> PacketData {
+    PacketBuilder::with(id::BANCHO_USER_PRESENCE)
+        .add_multiple(&mut [
+            write_num(p.id),
+            write_string(&p.name),
+            write_num(p.utc_offset + 24),
+            write_num(match Country::from_str(&p.country) {
+                Ok(country) => country.value as u8,
+                Err(_) => 0,
+            }),
+            write_num((p.bancho_privileges | 0) as u8),
+            write_num(p.location.0),
+            write_num(p.location.1),
+            write_num(p.stats.rank),
         ])
         .await
         .pack()
@@ -308,7 +325,7 @@ pub async fn user_presence(player: &Player) -> PacketData {
 /// #86: BANCHO_RESTART
 pub fn bancho_restart(millis: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_RESTART)
-        .add(write_integer(millis))
+        .add(write_num(millis))
         .pack()
 }
 
@@ -331,14 +348,14 @@ pub fn match_change_password(password: &str) -> PacketData {
 /// #92: BANCHO_SILENCE_END
 pub fn silence_end(duration: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SILENCE_END)
-        .add(write_integer(duration))
+        .add(write_num(duration))
         .pack()
 }
 
 /// #94: BANCHO_USER_SILENCED
 pub fn user_silenced(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_SILENCED)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
@@ -346,7 +363,7 @@ pub fn user_silenced(user_id: i32) -> PacketData {
 /// UNUSED
 pub fn user_presence_single(user_id: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE_SINGLE)
-        .add(write_integer(user_id))
+        .add(write_num(user_id))
         .pack()
 }
 
@@ -380,7 +397,7 @@ pub fn version_update_forced() -> PacketData {
 /// #103: BANCHO_SWITCH_SERVER
 pub fn switch_server(time: i32) -> PacketData {
     PacketBuilder::with(id::BANCHO_SWITCH_SERVER)
-        .add(write_integer(time))
+        .add(write_num(time))
         .pack()
 }
 
@@ -411,8 +428,8 @@ pub fn switch_tournament_server(ip: &str) -> PacketData {
 
 #[inline(always)]
 /// #83 + #11: USER_DATA_PACKETDATA
-pub async fn user_data(player: &Player) -> PacketData {
-    PacketBuilder::from_multiple(&mut [user_presence(&player).await, user_stats(&player).await])
+pub async fn user_data(p: &Player) -> PacketData {
+    PacketBuilder::from_multiple(&mut [user_presence(&p).await, user_stats(&p).await])
         .await
         .write_out()
 }

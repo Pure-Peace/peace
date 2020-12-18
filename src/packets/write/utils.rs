@@ -83,13 +83,13 @@ impl PacketBuilder {
     }
 }
 
-pub trait Integer {
+pub trait Number {
     fn to_bytes(&self) -> PacketData;
 }
 
-macro_rules! impl_integer {
+macro_rules! impl_number {
     ($($t:ty),+) => {
-        $(impl Integer for $t {
+        $(impl Number for $t {
             #[inline(always)]
             fn to_bytes(&self) -> PacketData {
                 Vec::from(self.to_le_bytes())
@@ -98,7 +98,7 @@ macro_rules! impl_integer {
     }
 }
 
-impl_integer!(u8, i16, i32, i64, f32);
+impl_number!(u8, i16, i32, i64, f32);
 
 #[inline(always)]
 /// Create a empty packets
@@ -187,7 +187,7 @@ pub async fn write_string_async(string: &str) -> PacketData {
 ///     write_string(sender),
 ///     write_string(content),
 ///     write_string(channel_name),
-///     write_integer(sender_id),
+///     write_num(sender_id),
 /// ])
 /// .done()
 /// ```
@@ -198,7 +198,7 @@ pub async fn write_string_async(string: &str) -> PacketData {
 ///     .add(write_string(sender))
 ///     .add(write_string(content))
 ///     .add(write_string(channel_name))
-///     .add(write_integer(sender_id))
+///     .add(write_num(sender_id))
 ///     .done()
 /// ```
 ///
@@ -216,7 +216,7 @@ pub async fn write_message(
     data.extend(write_string(sender));
     data.extend(write_string_async(content).await);
     data.extend(write_string(target));
-    data.extend(write_integer(sender_id));
+    data.extend(write_num(sender_id));
     data
 }
 
@@ -226,14 +226,14 @@ pub fn write_message_sync(sender: &str, sender_id: i32, content: &str, target: &
     data.extend(write_string(sender));
     data.extend(write_string(content));
     data.extend(write_string(target));
-    data.extend(write_integer(sender_id));
+    data.extend(write_num(sender_id));
     data
 }
 
 #[inline(always)]
 /// Write integer packet
-pub fn write_integer<I: Integer>(integer: I) -> PacketData {
-    integer.to_bytes()
+pub fn write_num<N: Number>(num: N) -> PacketData {
+    num.to_bytes()
 }
 
 #[inline(always)]
@@ -241,13 +241,13 @@ pub fn write_channel(name: &str, title: &str, player_count: i16) -> PacketData {
     let mut data: PacketData = Vec::with_capacity(30);
     data.extend(write_string(name));
     data.extend(write_string(title));
-    data.extend(write_integer(player_count));
+    data.extend(write_num(player_count));
     data
 }
 
 #[inline(always)]
 /// Write int list packet
-pub async fn write_int_list<I: Integer>(integer_list: &Vec<I>) -> PacketData {
+pub async fn write_int_list<N: Number>(integer_list: &Vec<N>) -> PacketData {
     let mut ret = Vec::from((integer_list.len() as u16).to_le_bytes());
     for int in integer_list {
         ret.extend(int.to_bytes());
