@@ -61,9 +61,9 @@ pub enum id {
         https://github.com/cmyui/gulag/blob/master/packets.py
     */
     /// Bancho packet ids
-    OSU_CHANGE_ACTION                   = 0,
+    OSU_USER_CHANGE_ACTION              = 0,
     OSU_SEND_PUBLIC_MESSAGE             = 1,
-    OSU_LOGOUT                          = 2,
+    OSU_USER_LOGOUT                     = 2,
     OSU_REQUEST_STATUS_UPDATE           = 3,
     OSU_PING                            = 4,
     BANCHO_USER_LOGIN_REPLY             = 5,
@@ -138,7 +138,7 @@ pub enum id {
     BANCHO_MAIN_MENU_ICON               = 76,
     OSU_MATCH_CHANGE_TEAM               = 77,
     OSU_CHANNEL_PART                    = 78,
-    OSU_RECEIVE_UPDATES                 = 79,
+    OSU_USER_RECEIVE_UPDATES            = 79,
     BANCHO_MONITOR                      = 80,
     BANCHO_MATCH_PLAYER_SKIPPED         = 81,
     OSU_SET_AWAY_MESSAGE                = 82,

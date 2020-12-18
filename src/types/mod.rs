@@ -12,7 +12,6 @@ pub type TokenString = String;
 pub type UserId = i32;
 pub type PacketData = Vec<u8>;
 
-pub type PlayerHandler = fn(player: &mut Player);
 pub type PlayerSessionMap = RwLock<HashMap<TokenString, Player>>;
 pub type PlayerSessionMapData = HashMap<TokenString, Player>;
 pub type PlayerIdSessionMap = RwLock<HashMap<UserId, TokenString>>;

@@ -2,15 +2,13 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
+use std::future::Future;
 use uuid::Uuid;
 
 use crate::{
     database::Database,
     packets,
-    types::{
-        ChannelList, PacketData, PlayerHandler, PlayerIdSessionMap, PlayerSessionMap, TokenString,
-        UserId,
-    },
+    types::{ChannelList, PacketData, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId},
 };
 
 use super::{Player, PlayerData};
@@ -229,8 +227,8 @@ impl PlayerSessions {
 
     #[inline(always)]
     /// Get a player data (readonly)
-    pub async fn get_player_data(&self, token: TokenString) -> Option<PlayerData> {
-        match self.map.read().await.get(&token) {
+    pub async fn get_player_data(&self, token: &TokenString) -> Option<PlayerData> {
+        match self.map.read().await.get(token) {
             Some(player) => Some(PlayerData::from(player)),
             None => None,
         }
@@ -238,17 +236,31 @@ impl PlayerSessions {
 
     #[inline(always)]
     /// Handle a player, then return player data
-    pub async fn handle_player(
-        &self,
-        token: TokenString,
-        handler: PlayerHandler,
-    ) -> Option<PlayerData> {
-        match self.map.write().await.get_mut(&token) {
+    pub async fn handle_player_get<F>(&self, token: &TokenString, handler: F) -> Option<PlayerData>
+    where
+        F: FnOnce(&mut Player),
+    {
+        match self.map.write().await.get_mut(token) {
             Some(player) => {
                 handler(player);
                 Some(PlayerData::from(player))
             }
             None => None,
+        }
+    }
+
+    #[inline(always)]
+    /// Handle a player
+    pub async fn handle_player<F>(&self, token: &TokenString, handler: F) -> Result<(), ()>
+    where
+        F: FnOnce(&mut Player) -> Option<()>,
+    {
+        match self.map.write().await.get_mut(token) {
+            Some(player) => match handler(player) {
+                Some(()) => Ok(()),
+                None => Err(()),
+            },
+            None => Err(()),
         }
     }
 }

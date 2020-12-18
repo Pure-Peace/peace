@@ -1,8 +1,9 @@
+pub mod users;
 pub mod messages;
 
 mod depends {
     pub use crate::{
-        constants::Privileges,
+        constants::{Action, GameMode, PlayMods, Privileges},
         database::Database,
         objects::{PlayerData, PlayerSessions},
         packets::{PacketBuilder, PayloadReader},

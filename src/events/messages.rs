@@ -7,7 +7,7 @@ pub async fn public(
     payload: &[u8],
     channel_list: &Data<RwLock<ChannelList>>,
     player_sessions: &Data<RwLock<PlayerSessions>>,
-    player: &PlayerData,
+    player_data: &PlayerData,
 ) {
     // TODO: check player is slienced?
 
@@ -25,8 +25,8 @@ pub async fn public(
             channel
                 .broadcast(
                     &player_sessions,
-                    &player.name,
-                    player.id,
+                    &player_data.name,
+                    player_data.id,
                     &message.content,
                     false,
                 )
@@ -37,13 +37,13 @@ pub async fn public(
 
             info!(
                 "{}({}) <pub> @ {}: {}",
-                &player.name, player.id, message.target, message.content
+                &player_data.name, player_data.id, message.target, message.content
             );
         }
         None => {
             warn!(
                 "Player {}({}) try send message to non-existent channel: {}",
-                &player.name, player.id, message.target
+                &player_data.name, player_data.id, message.target
             );
         }
     }
