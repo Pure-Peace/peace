@@ -52,18 +52,16 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 }
 
 /// GET "/test_async_lock"
-/* #[get("/test_async_lock")]
-pub async fn test_async_lock(testdata: Data<TestType>) -> impl Responder {
+#[get("/test_async_lock")]
+pub async fn test_async_lock(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
     let start = Instant::now();
-    let mut guard = testdata.write().await;
-    *guard += 1;
-    // Test io handle (sleep 1s)
-    // async_std::task::sleep(std::time::Duration::from_secs(1)).await;
+    let player_sessions = player_sessions.read().await;
+    let map = player_sessions.map.read().await;
     let end = start.elapsed();
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
-        .body(&format!("{:?}\n{:.2?}", *guard, end))
-} */
+        .body(&format!("{:.2?}", end))
+}
 
 /// GET "/test_player_read"
 #[get("/test_player_read/{token}")]
@@ -72,7 +70,7 @@ pub async fn test_player_read(
     player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
-    let player_info = match player_sessions.read().await.get_player_data(token.0).await {
+    let player_info = match player_sessions.read().await.get_player_data(&token.0).await {
         Some(player_data) => format!("{:?}", player_data),
         None => "non this player".to_string(),
     };
@@ -131,7 +129,7 @@ pub async fn test_player_money_reduce_special(
     let player_info = player_sessions
         .write()
         .await
-        .handle_player(token.0, |player| {} /* (*player).money -= 1 */)
+        .handle_player_get(&token.0, |player| {} /* (*player).money -= 1 */)
         .await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))

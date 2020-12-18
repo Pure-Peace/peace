@@ -29,6 +29,7 @@ fn init_default(cfg: &mut ServiceConfig) {
     cfg.service(test_pg);
     cfg.service(test_redis);
     cfg.service(test_player_read);
+    cfg.service(test_async_lock);
     cfg.service(test_player_money_add);
     cfg.service(test_player_money_reduce);
     cfg.service(test_player_money_reduce_special);
