@@ -1,0 +1,1 @@
+pg_dump -O --column-inserts -U postgres peace | sed -e '/^--/d' > peace.sql
