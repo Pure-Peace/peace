@@ -97,7 +97,7 @@ pub struct Player {
     pub queue: Mutex<Queue<PacketData>>,
     pub channels: HashSet<String>,
     pub login_time: DateTime<Local>,
-    pub login_record_id: i32,
+    pub login_record_id: i64,
     pub last_active_time: DateTime<Local>,
 }
 

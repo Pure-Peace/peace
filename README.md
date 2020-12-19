@@ -19,7 +19,7 @@
 
 
 ### Database design (WIP...)
-![db](http://miya.ink/dd.png)
+![db](http://miya.ink/db_013.png)
 
 
 ### Why not python or javascript?

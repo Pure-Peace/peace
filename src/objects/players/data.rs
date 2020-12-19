@@ -27,7 +27,7 @@ pub struct PlayerData {
     pub status: Status,
     pub channels: Vec<String>,
     pub login_time: DateTime<Local>,
-    pub login_record_id: i32,
+    pub login_record_id: i64,
     pub last_active_time: DateTime<Local>,
     pub data_create_time: DateTime<Local>,
 }
