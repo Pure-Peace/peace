@@ -141,6 +141,26 @@ impl Player {
         }
     }
 
+    #[inline(always)]
+    pub fn update_status(
+        &mut self,
+        action: Action,
+        info: String,
+        playing_beatmap_md5: String,
+        playing_beatmap_id: i32,
+        play_mods: PlayMods,
+        game_mode: GameMode,
+    ) -> Option<()> {
+        self.status.action = action;
+        self.status.info = info;
+        self.status.playing_beatmap_md5 = playing_beatmap_md5;
+        self.status.playing_beatmap_id = playing_beatmap_id;
+        self.status.play_mods = play_mods;
+        self.status.game_mode = game_mode;
+        self.status.update_time = Local::now();
+        Some(())
+    }
+
     pub fn bancho_privileges(privileges: i32) -> i32 {
         let mut bancho_priv = 0;
 

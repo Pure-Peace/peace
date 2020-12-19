@@ -236,16 +236,20 @@ impl PlayerSessions {
 
     #[inline(always)]
     /// Handle a player, then return player data
-    pub async fn handle_player_get<F>(&self, token: &TokenString, handler: F) -> Option<PlayerData>
+    pub async fn handle_player_get<F>(
+        &self,
+        token: &TokenString,
+        handler: F,
+    ) -> Result<PlayerData, ()>
     where
-        F: FnOnce(&mut Player),
+        F: FnOnce(&mut Player) -> Option<()>,
     {
         match self.map.write().await.get_mut(token) {
-            Some(player) => {
-                handler(player);
-                Some(PlayerData::from(player))
-            }
-            None => None,
+            Some(player) => match handler(player) {
+                Some(()) => Ok(PlayerData::from(player)),
+                None => Err(()),
+            },
+            None => Err(()),
         }
     }
 

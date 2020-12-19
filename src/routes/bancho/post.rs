@@ -73,10 +73,10 @@ pub async fn handler(
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
                 .body(
-                    resp.add(packets::login_reply(LoginFailed::ServerError))
-                        .add(packets::notification("Please login again!"))
+                    resp.add(packets::notification("lol"))
+                        .add(packets::bancho_restart(0))
                         .write_out(),
-                )
+                );
         }
     };
     // Drop the lock first

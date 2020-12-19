@@ -75,21 +75,26 @@ pub async fn change_action(
         "{} {} {} {} {} {}",
         action, info, playing_beatmap_md5, play_mods, game_mode, playing_beatmap_id
     );
+
+    let player_sessions = player_sessions.read().await;
     match player_sessions
-        .write()
-        .await
-        .handle_player(token, move |p| {
-            p.status.action = Action::from_u8(action)?;
-            p.status.info = info;
-            p.status.playing_beatmap_md5 = playing_beatmap_md5;
-            p.status.play_mods = PlayMods::from_u32(play_mods)?;
-            p.status.game_mode = GameMode::from_u8(game_mode)?;
-            p.status.playing_beatmap_id = playing_beatmap_id;
-            Some(())
+        .handle_player_get(token, move |p| {
+            p.update_status(
+                Action::from_u8(action)?,
+                info,
+                playing_beatmap_md5,
+                playing_beatmap_id,
+                PlayMods::from_u32(play_mods)?,
+                GameMode::from_u8(game_mode)?,
+            )
         })
         .await
     {
-        Ok(()) => {}
+        Ok(player_data) => {
+            player_sessions
+                .enqueue_all(&packets::user_stats_from_data(&player_data).await)
+                .await
+        }
         Err(()) => {
             error!("Failed to update player's status! <OSU_CHANGE_ACTION>")
         }

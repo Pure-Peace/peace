@@ -129,7 +129,7 @@ pub async fn test_player_money_reduce_special(
     let player_info = player_sessions
         .write()
         .await
-        .handle_player_get(&token.0, |player| {} /* (*player).money -= 1 */)
+        .handle_player_get(&token.0, |player| { Some(()) } /* (*player).money -= 1 */)
         .await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
