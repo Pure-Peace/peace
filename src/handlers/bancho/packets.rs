@@ -55,8 +55,7 @@ impl id {
             Some(payload) => {
                 match self {
                     id::OSU_SEND_PUBLIC_MESSAGE => {
-                        events::messages::public(&payload, &channel_list, &p_sessions, &p_data)
-                            .await
+                        events::messages::public(&payload, &channel_list, &p_sessions, &p_data).await
                     }
                     id::OSU_SEND_PRIVATE_MESSAGE => {
                         events::messages::private(&payload, &token, &p_sessions, &p_data).await
@@ -69,6 +68,12 @@ impl id {
                     }
                     id::OSU_USER_RECEIVE_UPDATES => {
                         events::users::receive_updates(&payload, &token, &p_sessions).await
+                    }
+                    id::OSU_USER_FRIEND_ADD => {
+                        events::users::add_friend(&payload, &database, &p_data, &token, &p_sessions).await
+                    }
+                    id::OSU_USER_FRIEND_REMOVE => {
+                        events::users::remove_friend(&payload, &database, &p_data, &token, &p_sessions).await
                     }
                     id::OSU_USER_LOGOUT => {
                         // Has payload(i32) but unused

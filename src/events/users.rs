@@ -100,3 +100,121 @@ pub async fn change_action(
         }
     };
 }
+
+#[inline(always)]
+pub async fn add_friend(
+    payload: &[u8],
+    database: &Database,
+    player_data: &PlayerData,
+    token: &String,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+) {
+    let target = PayloadReader::new(&payload).read_integer::<i32>().await;
+
+    if !player_sessions.read().await.id_is_exists(&target).await {
+        info!(
+            "Player {}({}) tries to add a offline {} to friends.",
+            player_data.name, player_data.id, target
+        );
+        return;
+    };
+
+    let result = player_sessions
+        .write()
+        .await
+        .handle_player(&token, |p| {
+            if p.friends.contains(&target) {
+                return None;
+            }
+            p.friends.push(target);
+            Some(())
+        })
+        .await;
+
+    if !result.is_ok() {
+        info!(
+            "Player {}({}) already added {} to friends.",
+            player_data.name, player_data.id, target
+        );
+        return;
+    };
+
+    if let Err(err) = database
+        .pg
+        .execute(
+            r#"INSERT INTO "user"."friends" VALUES ($1, $2);"#,
+            &[&player_data.id, &target],
+        )
+        .await
+    {
+        error!(
+            "Failed to add friend {} for player {}({}), error: {:?}",
+            target, player_data.name, player_data.id, err
+        );
+        return;
+    }
+
+    info!(
+        "Player {}({}) added {} to friends.",
+        player_data.name, player_data.id, target
+    );
+}
+
+#[inline(always)]
+pub async fn remove_friend(
+    payload: &[u8],
+    database: &Database,
+    player_data: &PlayerData,
+    token: &String,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+) {
+    let target = PayloadReader::new(&payload).read_integer::<i32>().await;
+
+    if !player_sessions.read().await.id_is_exists(&target).await {
+        info!(
+            "Player {}({}) tries to remove a offline {} from friends.",
+            player_data.name, player_data.id, target
+        );
+        return;
+    };
+
+    let result = player_sessions
+        .write()
+        .await
+        .handle_player(&token, |p| {
+            if let Ok(idx) = p.friends.binary_search(&target) {
+                p.friends.remove(idx);
+                return Some(());
+            }
+            None
+        })
+        .await;
+
+    if !result.is_ok() {
+        info!(
+            "Player {}({}) already removed {} from friends.",
+            player_data.name, player_data.id, target
+        );
+        return;
+    };
+
+    if let Err(err) = database
+        .pg
+        .execute(
+            r#"DELETE FROM "user"."friends" WHERE "user_id" = $1 AND "friend_id" = $2;"#,
+            &[&player_data.id, &target],
+        )
+        .await
+    {
+        error!(
+            "Failed to remove friend {} from player {}({}), error: {:?}",
+            target, player_data.name, player_data.id, err
+        );
+        return;
+    }
+
+    info!(
+        "Player {}({}) removed {} from friends.",
+        player_data.name, player_data.id, target
+    );
+}
