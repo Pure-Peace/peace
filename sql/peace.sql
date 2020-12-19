@@ -727,148 +727,6 @@ ALTER SEQUENCE game_scores.mania_id_seq OWNED BY game_scores.mania.id;
 
 
 --
--- Name: mania_rx; Type: TABLE; Schema: game_scores; Owner: -
---
-
-CREATE TABLE game_scores.mania_rx (
-    id bigint NOT NULL,
-    user_id integer NOT NULL,
-    map_md5 character varying(32) NOT NULL,
-    score integer NOT NULL,
-    performance_v1 real NOT NULL,
-    performance_v2 real NOT NULL,
-    accuracy real NOT NULL,
-    combo integer NOT NULL,
-    mods integer NOT NULL,
-    n300 integer NOT NULL,
-    n100 integer NOT NULL,
-    n50 integer NOT NULL,
-    miss integer NOT NULL,
-    geiki integer NOT NULL,
-    katu integer NOT NULL,
-    playtime integer NOT NULL,
-    perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
-    confidence smallint DEFAULT 100 NOT NULL,
-    verified boolean DEFAULT false NOT NULL,
-    checked boolean DEFAULT false NOT NULL,
-    check_time timestamp(6) with time zone,
-    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
---
--- Name: COLUMN mania_rx.id; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.id IS 'score''s unique id';
-
-
---
--- Name: COLUMN mania_rx.user_id; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.user_id IS 'user''s unique id';
-
-
---
--- Name: COLUMN mania_rx.map_md5; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.map_md5 IS 'beatmap''s md5';
-
-
---
--- Name: COLUMN mania_rx.performance_v1; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.performance_v1 IS 'ppv1';
-
-
---
--- Name: COLUMN mania_rx.performance_v2; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.performance_v2 IS 'ppv2';
-
-
---
--- Name: COLUMN mania_rx.mods; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.mods IS 'play mods';
-
-
---
--- Name: COLUMN mania_rx.playtime; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.playtime IS 'play time (seconds)';
-
-
---
--- Name: COLUMN mania_rx.perfect; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.perfect IS 'this score is full combo or not';
-
-
---
--- Name: COLUMN mania_rx.client_version; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.client_version IS 'the client version used to submit this score';
-
-
---
--- Name: COLUMN mania_rx.confidence; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.confidence IS 'credibility of score';
-
-
---
--- Name: COLUMN mania_rx.check_time; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.check_time IS 'last check time';
-
-
---
--- Name: COLUMN mania_rx.create_time; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.create_time IS 'submission time';
-
-
---
--- Name: COLUMN mania_rx.update_time; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON COLUMN game_scores.mania_rx.update_time IS 'last update time';
-
-
---
--- Name: mania_rx_id_seq; Type: SEQUENCE; Schema: game_scores; Owner: -
---
-
-CREATE SEQUENCE game_scores.mania_rx_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: mania_rx_id_seq; Type: SEQUENCE OWNED BY; Schema: game_scores; Owner: -
---
-
-ALTER SEQUENCE game_scores.mania_rx_id_seq OWNED BY game_scores.mania_rx.id;
-
-
---
 -- Name: std; Type: TABLE; Schema: game_scores; Owner: -
 --
 
@@ -2425,13 +2283,6 @@ ALTER TABLE ONLY game_scores.mania ALTER COLUMN id SET DEFAULT nextval('game_sco
 
 
 --
--- Name: mania_rx id; Type: DEFAULT; Schema: game_scores; Owner: -
---
-
-ALTER TABLE ONLY game_scores.mania_rx ALTER COLUMN id SET DEFAULT nextval('game_scores.mania_rx_id_seq'::regclass);
-
-
---
 -- Name: std id; Type: DEFAULT; Schema: game_scores; Owner: -
 --
 
@@ -2524,12 +2375,6 @@ INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, 
 
 --
 -- Data for Name: mania; Type: TABLE DATA; Schema: game_scores; Owner: -
---
-
-
-
---
--- Data for Name: mania_rx; Type: TABLE DATA; Schema: game_scores; Owner: -
 --
 
 
@@ -2687,13 +2532,6 @@ SELECT pg_catalog.setval('game_scores.mania_id_seq', 1, false);
 
 
 --
--- Name: mania_rx_id_seq; Type: SEQUENCE SET; Schema: game_scores; Owner: -
---
-
-SELECT pg_catalog.setval('game_scores.mania_rx_id_seq', 1, false);
-
-
---
 -- Name: std_ap_id_seq; Type: SEQUENCE SET; Schema: game_scores; Owner: -
 --
 
@@ -2792,14 +2630,6 @@ ALTER TABLE ONLY bancho.channels
 
 ALTER TABLE ONLY game_scores.catch_rx
     ADD CONSTRAINT catch_copy1_pkey PRIMARY KEY (id);
-
-
---
--- Name: mania_rx mania_copy1_pkey; Type: CONSTRAINT; Schema: game_scores; Owner: -
---
-
-ALTER TABLE ONLY game_scores.mania_rx
-    ADD CONSTRAINT mania_copy1_pkey PRIMARY KEY (id);
 
 
 --
@@ -3076,20 +2906,6 @@ CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.mania FOR EACH ROW 
 --
 
 COMMENT ON TRIGGER auto_update_time ON game_scores.mania IS 'auto update time';
-
-
---
--- Name: mania_rx auto_update_time; Type: TRIGGER; Schema: game_scores; Owner: -
---
-
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.mania_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
-
-
---
--- Name: TRIGGER auto_update_time ON mania_rx; Type: COMMENT; Schema: game_scores; Owner: -
---
-
-COMMENT ON TRIGGER auto_update_time ON game_scores.mania_rx IS 'auto update time';
 
 
 --
