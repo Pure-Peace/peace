@@ -6,7 +6,7 @@
 [![Rust](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
 
 #### If you want to see the performance comparison of different bancho servers：
-- [Bancho benchmarks vs](https://github.com/pure-peace/peace/bancho_benchmark.md)
+- [Bancho benchmarks vs](https://github.com/Pure-Peace/Peace/blob/main/bancho_benchmark.md)
 
 ### XXX:
 - **Rust 1.48** (stable)
