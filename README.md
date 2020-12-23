@@ -25,16 +25,6 @@
 ![db](http://miya.ink/db_013.png)
 
 
-### Avatar Server?
-- Use **nginx** (good performance; simple configuration)
-- *This is different from many bancho implementations, why?*
-- The effect is the same, you can access `1000.jpg` (or png, gif, jpg) via `a.ppy.sh/1000`
-- **nginx is the most suitable software as a static resource server**
-
-Use nginx to separate the avatar resources from the bancho server (separating static and dynamic resources) for optimal processing performance.
-
-
-
 ### Why not python or javascript?
 
 - Because I want to try out a high-performance, efficient compiled language. 
@@ -118,6 +108,15 @@ Git History
 Git Graph
 ```
 
+### Avatar Server?
+- Use **nginx** (good performance; simple configuration)
+- *This is different from many bancho implementations, why?*
+- The effect is the same, you can access `1000.jpg` (or png, gif, jpg) via `a.ppy.sh/1000`
+- **nginx is the most suitable software as a static resource server**
+
+Use nginx to separate the avatar resources from the bancho server (separating static and dynamic resources) for optimal processing performance.
+
+
 ### Dev on windows
 
 ![dev](http://miya.ink/dev.png)
@@ -138,7 +137,7 @@ Add hosts:
 ```
 Start **Nginx**: http://nginx.org/download/nginx-1.18.0.zip
 
-- With nginx configuration file and ssl certificate.
+- With [nginx configuration file and ssl certificate](https://github.com/Pure-Peace/Peace/blob/main/nginx/readme.md).
 - Need to install certificate to "Trusted Certification Authority" first.
 
 Install **PostgreSQL** and initialize **Peace** database:
