@@ -2,155 +2,20 @@
 #![allow(unused_imports)]
 
 use actix_web::web::{Bytes, Data, Form, Query};
-use actix_web::{get, post, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, post, HttpRequest, HttpResponse};
 use prometheus::IntCounterVec;
-use serde::Deserialize;
 
 use crate::utils;
 use actix_multipart::Multipart;
-use std::borrow::BorrowMut;
 
-/// Query Data
-///
-/// GET /web/lastfm.php
-///
-/// ```
-/// Lastfm {
-///     b: String = beatmap ban,
-///     action: String,
-///     us: String = username,
-///     ha: String = password hash,
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct Lastfm {
-    b: String,
-    action: String,
-    us: String,
-    ha: String,
-}
-
-/// Query Data
-///
-/// GET /web/check-updates.php
-///
-/// ```
-/// CheckUpdates {
-///     action: String = [check, path, error],
-///     stream: String = [cuttingedge, stable40, beta40, stable],
-///     time: String = timeStamp,
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct CheckUpdates {
-    action: String,
-    stream: String,
-    time: String,
-}
-
-/// Query Data
-///
-/// GET /web/bancho_connect.php
-///
-/// ```
-/// BanchoConnect {
-///     v: String = osu version,
-///     u: String = username,
-///     h: String = password hash,
-///     fx: String = donet env,
-///     ch: String = hardware hashes,
-///     retry: i32 = retries,
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct BanchoConnect {
-    v: String,
-    u: String,
-    h: String,
-    fx: String,
-    ch: String,
-    retry: i32,
-}
-
-/// Multipart Form-data
-///
-/// POST /web/osu-session.php
-///
-/// ```
-/// OsuSession {
-///     u: String = username,
-///     h: String = password hash,
-///     action: String = [check, submit],
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct OsuSession {
-    u: Option<String>,
-    h: String,
-    action: String,
-}
-
-/// Multipart Form-data
-///
-/// POST /web/osu-error.php
-///
-/// ```
-/// OsuError {
-///     u: String = username,
-///     p: String = password hash,
-///     i: i32,
-///     osumode: String = [Menu],
-///     gamemode: String = [Osu, Taiko, Mania, Catch],
-///     gametime: u32,
-///     audiotime: u32,
-///     culture: String = [zh-CN],
-///     beatmap_id: u32,
-///     beatmap_checksum: String,
-///     exception: String = [System.Exception],
-///     feedback: String = [update error],
-///     stacktrace: String,
-///     soft: String = [True, False],
-///     beatmap_count: u32,
-///     compatibility: u32,
-///     version: String = osu version,
-///     exehash: String,
-///     config: String = osu config(ini),
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct OsuError {
-    u: String,
-    p: String,
-    i: i32,
-    osumode: String,
-    gamemode: String,
-    gametime: u32,
-    audiotime: u32,
-    culture: String,
-    beatmap_id: u32,
-    beatmap_checksum: String,
-    exception: String,
-    feedback: String,
-    stacktrace: String,
-    soft: String,
-    beatmap_count: u32,
-    compatibility: u32,
-    version: String,
-    exehash: String,
-    config: String,
-}
+use super::data::*;
 
 #[get("/lastfm.php")]
 pub async fn lastfm(
     req: HttpRequest,
     Query(query): Query<Lastfm>,
     counter: Data<IntCounterVec>,
-) -> impl Responder {
+) -> HttpResponse {
     let success = || {
         counter
             .with_label_values(&["/lastfm.php", "get", "success"])
@@ -172,7 +37,7 @@ pub async fn check_updates(
     req: HttpRequest,
     Query(query): Query<CheckUpdates>,
     counter: Data<IntCounterVec>,
-) -> impl Responder {
+) -> HttpResponse {
     let success = || {
         counter
             .with_label_values(&["/check-updates.php", "get", "success"])
@@ -187,16 +52,21 @@ pub async fn check_updates(
 #[post("/osu-session.php")]
 pub async fn osu_session(
     req: HttpRequest,
-    mut form_data: Multipart,
+    form_data: Multipart,
     counter: Data<IntCounterVec>,
-) -> impl Responder {
+) -> HttpResponse {
     let success = || {
         counter
             .with_label_values(&["/osu-session.php", "post", "success"])
             .inc();
         HttpResponse::Ok().body(Bytes::from(""))
     };
-    let data: OsuSession = utils::get_form_data(form_data.borrow_mut()).await;
+    let data: OsuSession = match utils::get_form_data(form_data).await {
+        Ok(data) => data,
+        Err(_) => {
+            return HttpResponse::Ok().body(Bytes::from(""));
+        }
+    };
     debug!("{:?}", data);
 
     success()
@@ -205,16 +75,21 @@ pub async fn osu_session(
 #[post("/osu-error.php")]
 pub async fn osu_error(
     req: HttpRequest,
-    mut form_data: Multipart,
+    form_data: Multipart,
     counter: Data<IntCounterVec>,
-) -> impl Responder {
+) -> HttpResponse {
     let success = || {
         counter
             .with_label_values(&["/osu-error.php", "post", "success"])
             .inc();
         HttpResponse::Ok().body(Bytes::from("-3"))
     };
-    let data: OsuError = utils::get_form_data(form_data.borrow_mut()).await;
+    let data: OsuError = match utils::get_form_data(form_data).await {
+        Ok(data) => data,
+        Err(_) => {
+            return HttpResponse::Ok().body(Bytes::from(""));
+        }
+    };
     //println!("{:?}", data);
 
     success()
@@ -225,7 +100,7 @@ pub async fn bancho_connect(
     req: HttpRequest,
     Query(query): Query<BanchoConnect>,
     counter: Data<IntCounterVec>,
-) -> impl Responder {
+) -> HttpResponse {
     let success = || {
         counter
             .with_label_values(&["/bancho_connect.php", "get", "success"])
