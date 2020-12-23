@@ -1,0 +1,33 @@
+[req]
+default_bits = 2048
+default_keyfile = key.pem
+encrypt_key = no
+default_md = sha256
+x509_extensions = v3_req
+prompt = no
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+countryName = CN
+localityName = China
+organizationName = osu_dev
+commonName = *.ppy.sh
+emailAddress = osu_dev@local.com
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.0 = osu.ppy.sh
+DNS.1 = c.ppy.sh
+DNS.2 = a.ppy.sh
+DNS.3 = ppy.sh
+DNS.4 = ce.ppy.sh
+DNS.5 = c1.ppy.sh
+DNS.6 = c2.ppy.sh
+DNS.7 = c3.ppy.sh
+DNS.8 = c4.ppy.sh
+DNS.9 = c5.ppy.sh
+DNS.10 = c6.ppy.sh
+DNS.11 = s.ppy.sh
+DNS.12 = i.ppy.sh
