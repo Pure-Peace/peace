@@ -63,12 +63,8 @@ pub async fn handler(
 
     // Get player
     let player_sessions_r = player_sessions.read().await;
-    let player_data = match player_sessions_r.map.write().await.get_mut(&token) {
-        Some(player) => {
-            // Update player's active time
-            player.update_active();
-            PlayerData::from(player)
-        }
+    let player_data = match player_sessions_r.map.read().await.get(&token) {
+        Some(player) => PlayerData::from(player),
         None => {
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
@@ -102,12 +98,12 @@ pub async fn handler(
     let player_sessions_r = player_sessions.read().await;
     match player_sessions_r.map.write().await.get_mut(&token) {
         Some(player) => {
+            // Update player's active time
+            player.update_active();
             // Dequeue player's packet into resp
             while let Some(packet_data) = player.dequeue().await {
                 resp.add_ref(packet_data);
             }
-            // Update player's active time
-            player.update_active();
         }
         // Player has been logout
         None => {}
