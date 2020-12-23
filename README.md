@@ -25,6 +25,16 @@
 ![db](http://miya.ink/db_013.png)
 
 
+### Avatar Server?
+- Use **nginx** (good performance; simple configuration)
+- *This is different from many bancho implementations, why?*
+- The effect is the same, you can access `1000.jpg` (or png, gif, jpg) via `a.ppy.sh/1000`
+- **nginx is the most suitable software as a static resource server**
+
+Use nginx to separate the avatar resources from the bancho server (separating static and dynamic resources) for optimal processing performance.
+
+
+
 ### Why not python or javascript?
 
 - Because I want to try out a high-performance, efficient compiled language. 
@@ -184,5 +194,8 @@ cargo run development
 ./Peace prodction
 ```
 
+## Nginx and SSL certificate configuration
+
+- Read [nginx/readme.md](https://github.com/Pure-Peace/Peace/blob/main/nginx/readme.md)
 
 ## MIT

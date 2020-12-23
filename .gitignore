@@ -14,3 +14,10 @@ Cargo.lock
 
 # configs
 /.idea/
+
+# nginx
+**/nginx/*
+!**/nginx/cert
+!**/nginx/*.conf
+!**/nginx/*.md
+!**/nginx/*.bat
