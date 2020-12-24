@@ -21,3 +21,7 @@ Cargo.lock
 !**/nginx/*.conf
 !**/nginx/*.md
 !**/nginx/*.bat
+
+# avatar
+**/.data/avatars/*
+!**/.data/avatars/default.*

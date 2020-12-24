@@ -1,1 +1,1 @@
-nginx -s stop
+nginx -p "./nginx" -s stop

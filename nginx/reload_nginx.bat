@@ -1,1 +1,1 @@
-nginx -s reload
+nginx -p "./nginx" -s reload
