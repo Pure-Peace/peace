@@ -7,7 +7,7 @@ use log::warn;
 use num_traits::FromPrimitive;
 
 use crate::{
-    constants::{id, Action, GameMode, PlayMods},
+    constants::{id, Action, GameMode, PlayMod},
     database::Database,
     events,
     objects::{PlayerData, PlayerSessions},
@@ -64,7 +64,7 @@ impl id {
                         events::users::stats_request(&payload, &p_sessions, &p_data).await
                     }
                     id::OSU_USER_CHANGE_ACTION => {
-                        events::users::change_action(&payload, &token, &p_sessions).await
+                        events::users::change_action(&payload, &token, &p_sessions, &p_data).await
                     }
                     id::OSU_USER_RECEIVE_UPDATES => {
                         events::users::receive_updates(&payload, &token, &p_sessions).await

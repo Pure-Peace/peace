@@ -3,7 +3,7 @@ pub mod messages;
 
 mod depends {
     pub use crate::{
-        constants::{Action, GameMode, PlayMods, Privileges},
+        constants::{Action, GameMode, PlayMod, Privileges},
         database::Database,
         objects::{PlayerData, PlayerSessions},
         packets::{PacketBuilder, PayloadReader},

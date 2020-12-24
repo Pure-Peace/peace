@@ -98,7 +98,7 @@ macro_rules! impl_number {
     }
 }
 
-impl_number!(u8, i16, i32, i64, f32);
+impl_number!(u8, i16, i32, u32, i64, f32);
 
 #[inline(always)]
 /// Create a empty packets

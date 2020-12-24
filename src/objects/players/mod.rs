@@ -7,5 +7,6 @@ mod sessions;
 pub use address::PlayerAddress;
 pub use base::PlayerBase;
 pub use data::PlayerData;
+pub use player::PlayMods;
 pub use player::Player;
 pub use sessions::PlayerSessions;

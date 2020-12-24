@@ -4,7 +4,7 @@ use std::sync::{Arc, Weak};
 use super::PlayerBase;
 
 use crate::{
-    constants::{Action, ClientInfo, GameMode, PlayMods, PresenceFilter},
+    constants::{Action, ClientInfo, GameMode, PlayMod, PresenceFilter},
     objects::Channel,
     types::{Location, PacketData},
 };
@@ -17,7 +17,46 @@ use actix_web::web::Data;
 use async_std::sync::{Mutex, RwLock};
 use chrono::prelude::{DateTime, Local};
 use hashbrown::{HashMap, HashSet};
+use num_traits::FromPrimitive;
 use queue::Queue;
+use strum::IntoEnumIterator;
+
+#[derive(Debug, Clone)]
+pub struct PlayMods {
+    pub value: u32,
+    pub list: Vec<PlayMod>,
+}
+
+impl PlayMods {
+    #[inline(always)]
+    pub fn new(playmod: PlayMod) -> Self {
+        PlayMods {
+            value: playmod as u32,
+            list: vec![playmod],
+        }
+    }
+
+    #[inline(always)]
+    pub fn update(&mut self, play_mods_value: u32) {
+        self.value = play_mods_value;
+        self.list = self.mods();
+    }
+
+    #[inline(always)]
+    pub fn get_mods(value: u32) -> Vec<PlayMod> {
+        match PlayMod::from_u32(value) {
+            Some(play_mod) => vec![play_mod],
+            None => PlayMod::iter()
+                .filter(|play_mod| play_mod.contains(value))
+                .collect(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn mods(&self) -> Vec<PlayMod> {
+        PlayMods::get_mods(self.value)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Stats {
@@ -68,7 +107,7 @@ impl Status {
             info: String::new(),
             playing_beatmap_id: 0,
             playing_beatmap_md5: String::new(),
-            play_mods: PlayMods::NoMod,
+            play_mods: PlayMods::new(PlayMod::NoMod),
             game_mode: GameMode::Std,
             update_time: Local::now(),
         }
@@ -148,14 +187,14 @@ impl Player {
         info: String,
         playing_beatmap_md5: String,
         playing_beatmap_id: i32,
-        play_mods: PlayMods,
+        play_mods_value: u32,
         game_mode: GameMode,
     ) -> Option<()> {
         self.status.action = action;
         self.status.info = info;
         self.status.playing_beatmap_md5 = playing_beatmap_md5;
         self.status.playing_beatmap_id = playing_beatmap_id;
-        self.status.play_mods = play_mods;
+        self.status.play_mods.update(play_mods_value);
         self.status.game_mode = game_mode;
         self.status.update_time = Local::now();
         Some(())

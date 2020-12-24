@@ -82,3 +82,11 @@ async fn test_write_i32_list() {
     let list = user_presence_bundle(&vec![1001, 1002, 1003]).await;
     println!("{:?}", list);
 }
+
+#[test]
+fn test_write_u32_i32() {
+    let int_u32 = utils::write_num(536870912 as u32);
+    let int_i32 = utils::write_num(536870912);
+
+    println!("{:?} {:?}", int_u32, int_i32);
+}

@@ -1,6 +1,6 @@
 use super::depends::*;
 
-use crate::{constants::PresenceFilter, packets};
+use crate::{constants::PresenceFilter, objects::PlayMods, packets};
 use num_traits::FromPrimitive;
 
 #[inline(always)]
@@ -55,14 +55,14 @@ pub async fn stats_request(
 }
 
 #[inline(always)]
-// TODO: fix play_mods (mutiple mods support)
 pub async fn change_action(
     payload: &[u8],
     token: &String,
     player_sessions: &Data<RwLock<PlayerSessions>>,
+    player_data: &PlayerData,
 ) {
     let mut reader = PayloadReader::new(&payload);
-    let (action, info, playing_beatmap_md5, play_mods, game_mode, playing_beatmap_id) = (
+    let (action, info, playing_beatmap_md5, play_mods_value, game_mode, playing_beatmap_id) = (
         reader.read_integer::<u8>().await,
         reader.read_string().await,
         reader.read_string().await,
@@ -71,21 +71,49 @@ pub async fn change_action(
         reader.read_integer::<i32>().await,
     );
 
-    println!(
-        "{} {} {} {} {} {}",
-        action, info, playing_beatmap_md5, play_mods, game_mode, playing_beatmap_id
+    let action = match Action::from_u8(action) {
+        Some(action) => action,
+        None => {
+            error!(
+                "Failed to parse player {}({})'s action({})! <OSU_CHANGE_ACTION>",
+                player_data.name, player_data.id, action
+            );
+            return;
+        }
+    };
+    let game_mode = match GameMode::from_u8(game_mode) {
+        Some(action) => action,
+        None => {
+            error!(
+                "Failed to parse player {}({})'s game mode({})! <OSU_CHANGE_ACTION>",
+                player_data.name, player_data.id, game_mode
+            );
+            return;
+        }
+    };
+
+    debug!(
+        "Player {}({}) changing action: <a: {:?} i: {} b: {} pm: {:?} gm: {:?} bid: {}>",
+        player_data.name,
+        player_data.id,
+        action,
+        info,
+        playing_beatmap_md5,
+        PlayMods::get_mods(play_mods_value),
+        game_mode,
+        playing_beatmap_id
     );
 
     let player_sessions = player_sessions.read().await;
     match player_sessions
         .handle_player_get(token, move |p| {
             p.update_status(
-                Action::from_u8(action)?,
+                action,
                 info,
                 playing_beatmap_md5,
                 playing_beatmap_id,
-                PlayMods::from_u32(play_mods)?,
-                GameMode::from_u8(game_mode)?,
+                play_mods_value,
+                game_mode,
             )
         })
         .await
@@ -96,7 +124,10 @@ pub async fn change_action(
                 .await
         }
         Err(()) => {
-            error!("Failed to update player's status! <OSU_CHANGE_ACTION>")
+            error!(
+                "Failed to update player {}({})'s status! <OSU_CHANGE_ACTION>",
+                player_data.name, player_data.id,
+            )
         }
     };
 }

@@ -35,7 +35,9 @@ regex = "1.4.2"
 serde = { version = "1.0.118", features = ["derive"] }
 serde_derive = "1.0.118"
 serde_postgres = "0.2.0"
-serde_qs = "0.8.1"
+serde_qs = "0.8.2"
+strum = "0.20"
+strum_macros = "0.20"
 tokio-postgres = "0.5.5"
 uuid = { version = "0.8.1", features = ["v4"] }
 

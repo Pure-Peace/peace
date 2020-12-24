@@ -20,15 +20,16 @@ pub enum Privileges {
     Admin       = 1 << 13, // able to manage users (level 2).
     Dangerous   = 1 << 14, // able to manage full server state.
 
-    Donator = 1 << 4 | 1 << 5,
-    Staff = 1 << 12 | 1 << 13 | 1 << 14
+    Donator     = 1 << 4  | 1 << 5,
+    Staff       = 1 << 12 | 1 << 13 | 1 << 14
 }
 
 impl Privileges {
+    #[inline(always)]
     pub fn enough(self, privileges: i32) -> bool {
         (privileges & self as i32) > 0
     }
-
+    #[inline(always)]
     pub fn not_enough(self, privileges: i32) -> bool {
         (privileges & self as i32) == 0
     }
