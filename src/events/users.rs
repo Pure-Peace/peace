@@ -111,6 +111,11 @@ pub async fn add_friend(
 ) {
     let target = PayloadReader::new(&payload).read_integer::<i32>().await;
 
+    // -1 is BanchoBot, not exists
+    if target == -1 {
+        return;
+    }
+
     if !player_sessions.read().await.id_is_exists(&target).await {
         info!(
             "Player {}({}) tries to add a offline {} to friends.",
@@ -169,6 +174,11 @@ pub async fn remove_friend(
     player_sessions: &Data<RwLock<PlayerSessions>>,
 ) {
     let target = PayloadReader::new(&payload).read_integer::<i32>().await;
+
+    // -1 is BanchoBot, not exists
+    if target == -1 {
+        return;
+    }
 
     if !player_sessions.read().await.id_is_exists(&target).await {
         info!(

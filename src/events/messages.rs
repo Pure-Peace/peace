@@ -61,6 +61,11 @@ pub async fn private(
     let mut payload = PayloadReader::new(payload);
     let message = payload.read_message().await;
 
+    // BanchoBot? current not exists
+    if message.target == "BanchoBot" {
+        return;
+    }
+
     let player_sessions = player_sessions.read().await;
     let map = player_sessions.map.read().await;
 
