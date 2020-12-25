@@ -120,16 +120,14 @@ pub enum GameMode {
 
     Std_rx    = 4,
     Taiko_rx  = 5,
-    Mania_rx  = 6,
+    Catch_rx  = 6,
+    // Mania_rx  = 7, but not exists
 
-    Std_ap    = 7,
+    Std_ap    = 8,
 }
 
 impl GameMode {
     pub fn val(self) -> u8 {
-        match self {
-            GameMode::Std_ap => GameMode::Std as u8,
-            _ => (self as u8) % 4,
-        }
+        (self as u8) % 4
     }
 }

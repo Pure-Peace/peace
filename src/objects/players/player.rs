@@ -86,6 +86,7 @@ impl Player {
         Some(())
     }
 
+    #[inline(always)]
     pub fn bancho_privileges(privileges: i32) -> i32 {
         let mut bancho_priv = 0;
 

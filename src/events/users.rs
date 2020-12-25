@@ -55,14 +55,16 @@ pub async fn stats_request(
 }
 
 #[inline(always)]
+/// Update player's status
 pub async fn change_action(
     payload: &[u8],
     token: &String,
     player_sessions: &Data<RwLock<PlayerSessions>>,
     player_data: &PlayerData,
 ) {
+    // Read the packet
     let mut reader = PayloadReader::new(&payload);
-    let (action, info, playing_beatmap_md5, play_mods_value, game_mode, playing_beatmap_id) = (
+    let (action, info, playing_beatmap_md5, play_mods_value, mut game_mode, playing_beatmap_id) = (
         reader.read_integer::<u8>().await,
         reader.read_string().await,
         reader.read_string().await,
@@ -81,6 +83,17 @@ pub async fn change_action(
             return;
         }
     };
+
+    let play_mod_list = PlayMods::get_mods(play_mods_value);
+
+    // More detailed game mod
+    if play_mod_list.contains(&PlayMod::Relax) {
+        game_mode += 4;
+    }
+    if play_mod_list.contains(&PlayMod::AutoPilot) {
+        game_mode += 8;
+    }
+
     let game_mode = match GameMode::from_u8(game_mode) {
         Some(action) => action,
         None => {
@@ -99,11 +112,12 @@ pub async fn change_action(
         action,
         info,
         playing_beatmap_md5,
-        PlayMods::get_mods(play_mods_value),
+        play_mod_list,
         game_mode,
         playing_beatmap_id
     );
 
+    // Update player's status and send it to all players.
     let player_sessions = player_sessions.read().await;
     match player_sessions
         .handle_player_get(token, move |p| {
