@@ -179,6 +179,7 @@ pub async fn start_server(
             .data(bancho_get_render.clone())
             .configure(routes::init)
     })
+    .shutdown_timeout(2)
     .keep_alive(90)
     .bind(&addr)
     .unwrap()

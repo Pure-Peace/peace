@@ -81,6 +81,7 @@ impl PlayerSessions {
                         for channel in channel_list.write().await.values_mut() {
                             if player.channels.contains(&channel.name) {
                                 channel.leave(&mut player).await;
+                                channel.update_channel_for_users(&self).await;
                             }
                         }
                     }

@@ -4,6 +4,7 @@ use crate::{constants::PresenceFilter, objects::PlayMods, packets};
 use num_traits::FromPrimitive;
 
 #[inline(always)]
+/// Player logout from server
 pub async fn user_logout(
     token: &String,
     player_sessions: &Data<RwLock<PlayerSessions>>,
@@ -17,6 +18,7 @@ pub async fn user_logout(
 }
 
 #[inline(always)]
+/// Update player's presence_filter
 pub async fn receive_updates(
     payload: &[u8],
     token: &String,
@@ -40,6 +42,7 @@ pub async fn receive_updates(
 }
 
 #[inline(always)]
+/// Send the player stats by requests
 pub async fn stats_request(
     payload: &[u8],
     player_sessions: &Data<RwLock<PlayerSessions>>,
@@ -147,6 +150,7 @@ pub async fn change_action(
 }
 
 #[inline(always)]
+/// Add a player to friends
 pub async fn add_friend(
     payload: &[u8],
     database: &Database,
@@ -161,6 +165,7 @@ pub async fn add_friend(
         return;
     }
 
+    // Add a offline player is not allowed
     if !player_sessions.read().await.id_is_exists(&target).await {
         info!(
             "Player {}({}) tries to add a offline {} to friends.",
@@ -169,6 +174,7 @@ pub async fn add_friend(
         return;
     };
 
+    // Add friend in server
     let result = player_sessions
         .write()
         .await
@@ -189,6 +195,7 @@ pub async fn add_friend(
         return;
     };
 
+    // Add friend in database
     if let Err(err) = database
         .pg
         .execute(
@@ -211,6 +218,7 @@ pub async fn add_friend(
 }
 
 #[inline(always)]
+/// Remove a player from friends
 pub async fn remove_friend(
     payload: &[u8],
     database: &Database,
@@ -225,6 +233,7 @@ pub async fn remove_friend(
         return;
     }
 
+    // Remove a offline player is not allowed
     if !player_sessions.read().await.id_is_exists(&target).await {
         info!(
             "Player {}({}) tries to remove a offline {} from friends.",
@@ -233,6 +242,7 @@ pub async fn remove_friend(
         return;
     };
 
+    // Remove friend in server
     let result = player_sessions
         .write()
         .await
@@ -253,6 +263,7 @@ pub async fn remove_friend(
         return;
     };
 
+    // Remove friend from database
     if let Err(err) = database
         .pg
         .execute(
@@ -272,4 +283,109 @@ pub async fn remove_friend(
         "Player {}({}) removed {} from friends.",
         player_data.name, player_data.id, target
     );
+}
+
+#[inline(always)]
+/// Player toggle block-non-friend-dms with a value
+pub async fn toggle_block_non_friend_dms(
+    payload: &[u8],
+    token: &String,
+    player_data: &PlayerData,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+) {
+    let value = PayloadReader::new(&payload).read_integer::<i32>().await;
+    match player_sessions
+        .read()
+        .await
+        .handle_player(&token, |p| {
+            p.only_friend_pm_allowed = value == 1;
+            Some(())
+        })
+        .await
+    {
+        Ok(()) => {
+            debug!(
+                "Player {}({}) toggled block-non-friend-dms with value {}",
+                player_data.name, player_data.id, value
+            );
+        }
+        Err(()) => {
+            error!(
+                "Player {}({}) failed to toggle block-non-friend-dms with value {}",
+                player_data.name, player_data.id, value
+            );
+        }
+    }
+}
+
+#[inline(always)]
+/// Player leave from a channel
+pub async fn channel_part(
+    payload: &[u8],
+    token: &String,
+    player_data: &PlayerData,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+    channel_list: &Data<RwLock<ChannelList>>,
+) {
+    let channel_name = PayloadReader::new(&payload).read_string().await;
+
+    match channel_list.write().await.get_mut(&channel_name) {
+        Some(channel) => {
+            let player_sessions = player_sessions.read().await;
+
+            {
+                let mut map = player_sessions.map.write().await;
+                let player = map.get_mut(token);
+                if player.is_none() {
+                    return;
+                }
+                channel.leave(player.unwrap()).await;
+                drop(map);
+            }
+
+            channel.update_channel_for_users(&player_sessions).await;
+        }
+        None => {
+            error!(
+                "Player {}({}) try to part from a non-exists channel {}!",
+                player_data.name, player_data.id, channel_name
+            );
+        }
+    };
+}
+
+#[inline(always)]
+/// Player join to a channel
+pub async fn channel_join(
+    payload: &[u8],
+    token: &String,
+    player_data: &PlayerData,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+    channel_list: &Data<RwLock<ChannelList>>,
+) {
+    let channel_name = PayloadReader::new(&payload).read_string().await;
+
+    match channel_list.write().await.get_mut(&channel_name) {
+        Some(channel) => {
+            let player_sessions = player_sessions.read().await;
+
+            {
+                let mut map = player_sessions.map.write().await;
+                let player = map.get_mut(token);
+                if player.is_none() {
+                    return;
+                }
+                channel.join(player.unwrap()).await;
+                drop(map);
+            }
+
+            channel.update_channel_for_users(&player_sessions).await;
+        }
+        None => {
+            error!(
+                "Player {}({}) try join to a non-exists channel {}!",
+                player_data.name, player_data.id, channel_name
+            );
+        }
+    };
 }

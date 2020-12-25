@@ -308,7 +308,8 @@ pub async fn login(
         user_data_packet.clone(),
         packets::silence_end(0),
         packets::friends_list(&player.friends).await,
-    ]).await;
+    ])
+    .await;
 
     // TODO: get login notification from cache (init by database)
     resp.add_ref(packets::notification("Welcome to Peace!"));
@@ -347,16 +348,12 @@ pub async fn login(
         // Join player into channel
         if channel.auto_join {
             channel.join(&mut player).await;
-            // Send channel join to client
+            channel.update_channel_for_users(&player_sessions).await;
             resp.add_ref(packets::channel_join(&channel.name));
         }
 
         // Send channel info to client
-        resp.add_ref(packets::channel_info(
-            &channel.name,
-            &channel.title,
-            channel.player_count,
-        ));
+        resp.add_ref(channel.channel_info_packet().await);
     }
 
     // Send new user to online users, and add online users to this new user

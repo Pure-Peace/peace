@@ -75,6 +75,15 @@ impl id {
                     id::OSU_USER_FRIEND_REMOVE => {
                         events::users::remove_friend(&payload, &database, &p_data, &token, &p_sessions).await
                     }
+                    id::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS => {
+                        events::users::toggle_block_non_friend_dms(&payload, &token, &p_data, &p_sessions).await
+                    }
+                    id::OSU_USER_CHANNEL_PART => {
+                        events::users::channel_part(&payload, &token, &p_data, &p_sessions, &channel_list).await
+                    }
+                    id::OSU_USER_CHANNEL_JOIN => {
+                        events::users::channel_join(&payload, &token, &p_data, &p_sessions, &channel_list).await
+                    }
                     id::OSU_USER_LOGOUT => {
                         // Has payload(i32) but unused
                         events::users::user_logout(&token, &p_sessions, &channel_list).await
