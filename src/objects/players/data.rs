@@ -2,8 +2,8 @@ use crate::{constants::PresenceFilter, types::Location};
 use chrono::{DateTime, Local};
 
 use super::{
-    player::{Stats, Status},
     Player,
+    {stats::Stats, status::Status},
 };
 
 #[derive(Debug)]
