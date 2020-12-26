@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct PlayerBase {
     pub id: i32,
     pub name: String,
+    pub password: String,
     pub privileges: i32,
     pub country: String,
 }

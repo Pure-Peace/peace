@@ -2,7 +2,7 @@
 print('reading and handle...')
 with open('peace.sql', 'r', encoding='utf-8') as sql_r:
     content_list = [
-        row for row in sql_r.readlines() if not(row.startswith('--'))
+        row for row in sql_r.readlines() if row != '\n' and not row.startswith('--')
     ]
 
 print('writing out...')

@@ -1,4 +1,4 @@
-use crate::routes;
+use crate::{routes, types::{ChannelList, PasswordCache}};
 use crate::{database::Database, renders::BanchoGet};
 
 use actix_cors::Cors;
@@ -11,10 +11,10 @@ use colored::Colorize;
 
 use actix_web_prom::PrometheusMetrics;
 use prometheus::{opts, IntCounterVec};
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 use crate::objects::{ChannelListBuilder, PlayerSessions};
-
+use crate::types::{Password, Argon2CryptedCipher};
 use crate::handlers::bancho;
 
 use super::model::Settings;
@@ -102,7 +102,7 @@ pub async fn start_server(
     }
 
     // Labels
-    let mut labels = HashMap::new();
+    let mut labels = std::collections::HashMap::new();
     labels.insert("job".to_string(), prom_namespace.to_string());
 
     // Counter
@@ -127,8 +127,11 @@ pub async fn start_server(
     let player_sessions_cloned = player_sessions.clone();
 
     // Channel list
-    let channel_list = Data::new(RwLock::new(ChannelListBuilder::new(&database).await));
-    let channel_list_cloned = channel_list.clone();
+    let channel_list: Data<RwLock<ChannelList>> = Data::new(RwLock::new(ChannelListBuilder::new(&database).await));
+    let channel_list_cloned: Data<RwLock<ChannelList>> = channel_list.clone();
+
+    // Password cache
+    let password_cache: Data<RwLock<PasswordCache>> = Data::new(RwLock::new(HashMap::new()));
 
     // Start auto recycle task,
     // it will auto logout deactive players each interval
@@ -174,6 +177,7 @@ pub async fn start_server(
             )
             .app_data(player_sessions.clone())
             .app_data(channel_list.clone())
+            .app_data(password_cache.clone())
             .data(counter.clone())
             .data(database.clone())
             .data(bancho_get_render.clone())

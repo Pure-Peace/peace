@@ -24,3 +24,6 @@ pub type Password = String;
 pub type Latitude = f32;
 pub type Longitude = f32;
 pub type Location = (Latitude, Longitude);
+
+pub type Argon2CryptedCipher = String;
+pub type PasswordCache = HashMap<Password, Argon2CryptedCipher>;

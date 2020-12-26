@@ -11,6 +11,7 @@ pub async fn handler(
     player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
     channel_list: Data<RwLock<ChannelList>>,
+    password_cache: Data<RwLock<PasswordCache>>,
     counter: Data<IntCounterVec>,
 ) -> HttpResponse {
     // Prom counter
@@ -44,6 +45,7 @@ pub async fn handler(
             database,
             player_sessions,
             channel_list,
+            password_cache,
             counter,
         )
         .await;

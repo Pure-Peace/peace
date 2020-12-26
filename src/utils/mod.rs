@@ -5,12 +5,12 @@ use actix_multipart::{Field, Multipart};
 use actix_web::web::Bytes;
 use actix_web::HttpRequest;
 
+use argon2::verify_encoded;
 use futures::StreamExt;
-
-use std::collections::HashMap;
 
 use serde_qs;
 
+#[inline(always)]
 /// Get deserialized multipart/form-data
 pub async fn get_form_data<T: serde::de::DeserializeOwned>(
     mut payload: Multipart,
@@ -29,6 +29,7 @@ pub async fn get_form_data<T: serde::de::DeserializeOwned>(
     serde_qs::from_str(&query)
 }
 
+#[inline(always)]
 /// Get real ip from request
 pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
     match req.connection_info().realip_remote_addr() {
@@ -37,6 +38,7 @@ pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
     }
 }
 
+#[inline(always)]
 /// Get osu version from headers
 pub async fn get_osuver(req: &HttpRequest) -> String {
     match req.headers().get("osu-version") {
@@ -45,10 +47,23 @@ pub async fn get_osuver(req: &HttpRequest) -> String {
     }
 }
 
+#[inline(always)]
 /// Get osu token from headers
 pub async fn get_token(req: &HttpRequest) -> String {
     match req.headers().get("osu-token") {
         Some(version) => version.to_str().unwrap_or("unknown").to_string(),
         None => "unknown".to_string(),
     }
+}
+
+#[inline(always)]
+/// Argon2 verify
+pub async fn argon2_verify(password_crypted: &str, password: &str) -> bool {
+    verify_encoded(password_crypted, password.as_bytes()).unwrap_or_else(|err| {
+        error!(
+            "failed to verify argon2: {:?}; crypted: {}, password: {}",
+            err, password_crypted, password
+        );
+        false
+    })
 }

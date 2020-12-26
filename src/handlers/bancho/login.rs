@@ -5,17 +5,18 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
+use crate::types::{ChannelList, PacketData, PasswordCache};
 use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
     packets::PacketBuilder,
+    utils::argon2_verify,
 };
-use crate::{types::ChannelList, types::PacketData};
 
 use super::parser;
 use constants::{LoginFailed, Privileges};
-
 use prometheus::IntCounterVec;
+use std::time::Instant;
 
 #[inline(always)]
 /// Bancho login handler
@@ -27,9 +28,10 @@ pub async fn login(
     database: &Data<Database>,
     player_sessions: &Data<RwLock<PlayerSessions>>,
     channel_list: &Data<RwLock<ChannelList>>,
+    password_cache: &Data<RwLock<PasswordCache>>,
     counter: &Data<IntCounterVec>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
-    let login_start = std::time::Instant::now();
+    let login_start = Instant::now();
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
@@ -37,8 +39,8 @@ pub async fn login(
     let mut resp = PacketBuilder::new();
 
     // Parse login data start ----------
-    let parse_start = std::time::Instant::now();
-    let (username, password, client_info, client_hashes) =
+    let parse_start = Instant::now();
+    let (username, password_hash, client_info, client_hashes) =
         match parser::parse_login_data(body).await {
             Ok(login_data) => login_data,
             Err(err_integer) => {
@@ -59,27 +61,33 @@ pub async fn login(
     );
 
     // Select user base info from database ----------
-    let select_base_start = std::time::Instant::now();
-    let mut player_base: PlayerBase = match database
+    let select_base_start = Instant::now();
+    // Select from database
+    let from_base_row = match database
         .pg
         .query_first(
             r#"SELECT 
-                    "id", "name", "privileges", "country" 
+                    "id", "name", "privileges", "country", "password"
                     FROM "user"."base" WHERE 
-                    "name_safe" = $1 and "password" = $2;"#,
-            &[&username_safe, &password],
+                    "name_safe" = $1;"#,
+            &[&username_safe],
         )
         .await
     {
-        Ok(row) => serde_postgres::from_row(&row).unwrap_or_else(|err| {
+        Ok(from_base_row) => from_base_row,
+        Err(_) => {
+            warn!("{} login failed, account not exists", username);
+            return Err(("invalid_credentials", None));
+        }
+    };
+    // Try deserialize player base object
+    let mut player_base = match serde_postgres::from_row::<PlayerBase>(&from_base_row) {
+        Ok(player_base) => player_base,
+        Err(err) => {
             error!(
                 "could not deserialize player base: {}; err: {:?}",
                 username, err
             );
-            panic!();
-        }),
-        Err(_) => {
-            warn!("{} login failed, invalid credentials", username);
             return Err(("invalid_credentials", None));
         }
     };
@@ -90,6 +98,50 @@ pub async fn login(
         "success to get player base info {}({}); time spent: {:.2?}; ",
         username, user_id, select_base_duration
     );
+
+    // Try read password crypted from cache
+    let password_crypted = { password_cache.read().await.get(&password_hash).cloned() };
+
+    // Checking password
+    match password_crypted {
+        // Cache hitted (μs level)
+        Some(password_crypted) => {
+            debug!(
+                "password cache hitted: {}({})",
+                player_base.name, player_base.id
+            );
+            if password_crypted != player_base.password {
+                warn!("{} login failed, invalid password (cached)", username);
+                return Err(("invalid_credentials", None));
+            }
+        }
+        None => {
+            // Cache not hitted, do argon2 verify (ms level)
+            let argon2_verify_start = Instant::now();
+            let verify_result = argon2_verify(&player_base.password, &password_hash).await;
+            let argon2_verify_end = argon2_verify_start.elapsed();
+            debug!(
+                "Argon2 verify success, time spent: {:.2?};",
+                argon2_verify_end
+            );
+
+            // Invalid password
+            if !verify_result {
+                warn!("{} login failed, invalid password (non-cached)", username);
+                return Err(("invalid_credentials", None));
+            }
+
+            // If password is correct, cache it
+            password_cache
+                .write()
+                .await
+                .insert(password_hash, player_base.password.clone());
+            debug!(
+                "new password cache added: {}({})",
+                player_base.name, player_base.id
+            );
+        }
+    };
 
     // Check user's privileges
     if Privileges::Normal.not_enough(player_base.privileges) {
@@ -107,7 +159,7 @@ pub async fn login(
     }
 
     // Check user's hardware addresses
-    let select_addresses_start = std::time::Instant::now();
+    let select_addresses_start = Instant::now();
     let player_addresses: Vec<PlayerAddress> = match database
         .pg
         .query(
@@ -156,7 +208,7 @@ pub async fn login(
     let (address_id, similarity) = match player_addresses.len() {
         // If not any addresses matched, create it
         0 => {
-            let insert_address_start = std::time::Instant::now();
+            let insert_address_start = Instant::now();
             let address_id: i32 = match database
                 .pg
                 .query_first(
