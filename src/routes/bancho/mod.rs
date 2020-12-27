@@ -15,6 +15,6 @@ mod depends {
         handlers::bancho,
         objects::{Player, PlayerData, PlayerSessions},
         packets::PacketBuilder,
-        types::{ChannelList, PasswordCache},
+        types::{ChannelList, Argon2Cache},
     };
 }

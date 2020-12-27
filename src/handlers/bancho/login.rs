@@ -5,7 +5,7 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
-use crate::types::{ChannelList, PacketData, PasswordCache};
+use crate::types::{ChannelList, PacketData, Argon2Cache};
 use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
@@ -28,7 +28,7 @@ pub async fn login(
     database: &Data<Database>,
     player_sessions: &Data<RwLock<PlayerSessions>>,
     channel_list: &Data<RwLock<ChannelList>>,
-    password_cache: &Data<RwLock<PasswordCache>>,
+    argon2_cache: &Data<RwLock<Argon2Cache>>,
     counter: &Data<IntCounterVec>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
     let login_start = Instant::now();
@@ -99,18 +99,18 @@ pub async fn login(
         username, user_id, select_base_duration
     );
 
-    // Try read password crypted from cache
-    let password_crypted = { password_cache.read().await.get(&password_hash).cloned() };
+    // Try read password hash from argon2 cache
+    let cached_password_hash = { argon2_cache.read().await.get(&player_base.password).cloned() };
 
     // Checking password
-    match password_crypted {
+    match cached_password_hash {
         // Cache hitted (μs level)
-        Some(password_crypted) => {
+        Some(cached_password_hash) => {
             debug!(
                 "password cache hitted: {}({})",
                 player_base.name, player_base.id
             );
-            if password_crypted != player_base.password {
+            if cached_password_hash != password_hash {
                 warn!("{} login failed, invalid password (cached)", username);
                 return Err(("invalid_credentials", None));
             }
@@ -118,7 +118,9 @@ pub async fn login(
         None => {
             // Cache not hitted, do argon2 verify (ms level)
             let argon2_verify_start = Instant::now();
+
             let verify_result = argon2_verify(&player_base.password, &password_hash).await;
+
             let argon2_verify_end = argon2_verify_start.elapsed();
             debug!(
                 "Argon2 verify success, time spent: {:.2?};",
@@ -132,10 +134,11 @@ pub async fn login(
             }
 
             // If password is correct, cache it
-            password_cache
+            // key = argon2 cipher, key = password hash
+            argon2_cache
                 .write()
                 .await
-                .insert(password_hash, player_base.password.clone());
+                .insert(player_base.password.clone(), password_hash);
             debug!(
                 "new password cache added: {}({})",
                 player_base.name, player_base.id

@@ -16,7 +16,7 @@ pub async fn handler(
     database: Data<Database>,
     player_sessions: Data<RwLock<PlayerSessions>>,
     channel_list: Data<RwLock<ChannelList>>,
-    password_cache: Data<RwLock<PasswordCache>>,
+    argon2_cache: Data<RwLock<Argon2Cache>>,
     counter: Data<IntCounterVec>,
 ) -> HttpResponse {
     let failed_key = format!("{}-bancho_login_failed", &request_ip);
@@ -48,7 +48,7 @@ pub async fn handler(
         &database,
         &player_sessions,
         &channel_list,
-        &password_cache,
+        &argon2_cache,
         &counter,
     )
     .await

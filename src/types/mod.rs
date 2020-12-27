@@ -26,4 +26,5 @@ pub type Longitude = f32;
 pub type Location = (Latitude, Longitude);
 
 pub type Argon2CryptedCipher = String;
-pub type PasswordCache = HashMap<Password, Argon2CryptedCipher>;
+/// Argon2 cache: key = argon2 cipher, value = password hash
+pub type Argon2Cache = HashMap<Argon2CryptedCipher, Password>;

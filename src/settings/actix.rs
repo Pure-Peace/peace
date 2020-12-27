@@ -1,4 +1,4 @@
-use crate::{routes, types::{ChannelList, PasswordCache}};
+use crate::{routes, types::{ChannelList, Argon2Cache}};
 use crate::{database::Database, renders::BanchoGet};
 
 use actix_cors::Cors;
@@ -131,7 +131,7 @@ pub async fn start_server(
     let channel_list_cloned: Data<RwLock<ChannelList>> = channel_list.clone();
 
     // Password cache
-    let password_cache: Data<RwLock<PasswordCache>> = Data::new(RwLock::new(HashMap::new()));
+    let argon2_cache: Data<RwLock<Argon2Cache>> = Data::new(RwLock::new(HashMap::new()));
 
     // Start auto recycle task,
     // it will auto logout deactive players each interval
@@ -177,7 +177,7 @@ pub async fn start_server(
             )
             .app_data(player_sessions.clone())
             .app_data(channel_list.clone())
-            .app_data(password_cache.clone())
+            .app_data(argon2_cache.clone())
             .data(counter.clone())
             .data(database.clone())
             .data(bancho_get_render.clone())
