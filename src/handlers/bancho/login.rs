@@ -5,7 +5,7 @@ use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
 
-use crate::types::{ChannelList, PacketData, Argon2Cache};
+use crate::types::{Argon2Cache, ChannelList, PacketData};
 use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
@@ -17,6 +17,9 @@ use super::parser;
 use constants::{LoginFailed, Privileges};
 use prometheus::IntCounterVec;
 use std::time::Instant;
+
+use maxminddb::{geoip2::City, Reader};
+use memmap::Mmap;
 
 #[inline(always)]
 /// Bancho login handler
@@ -30,6 +33,7 @@ pub async fn login(
     channel_list: &Data<RwLock<ChannelList>>,
     argon2_cache: &Data<RwLock<Argon2Cache>>,
     counter: &Data<IntCounterVec>,
+    geo_db: &Data<Option<Reader<Mmap>>>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
     let login_start = Instant::now();
     counter
@@ -100,7 +104,13 @@ pub async fn login(
     );
 
     // Try read password hash from argon2 cache
-    let cached_password_hash = { argon2_cache.read().await.get(&player_base.password).cloned() };
+    let cached_password_hash = {
+        argon2_cache
+            .read()
+            .await
+            .get(&player_base.password)
+            .cloned()
+    };
 
     // Checking password
     match cached_password_hash {
@@ -348,7 +358,30 @@ pub async fn login(
     // Add login record
     player.create_login_record(database).await;
 
-    // TODO: update player's location (ip geo)
+    // update player's location (ip geo)
+    if let Some(reader) = geo_db.get_ref() {
+        match reader.lookup::<City>(request_ip.parse().unwrap()) {
+            Ok(geo_data) => match geo_data
+                .location
+                .as_ref()
+                .and_then(|lo| Some((lo.latitude.unwrap_or(0.0), lo.longitude.unwrap_or(0.0))))
+            {
+                Some((la, lo)) => player.location = (la as f32, lo as f32),
+                None => {
+                    warn!(
+                        "Failed to lookup player {}({})'s ip address location info: {}",
+                        player.name, player.id, request_ip
+                    );
+                }
+            },
+            Err(err) => {
+                warn!(
+                    "Failed to lookup player {}({})'s ip address: {}",
+                    player.name, player.id, request_ip
+                );
+            }
+        }
+    };
 
     // TODO: update player's stats
 
