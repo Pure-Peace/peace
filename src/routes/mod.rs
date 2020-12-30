@@ -7,25 +7,43 @@ use actix_web::{
     web::{get, post, scope, ServiceConfig},
 };
 
+use crate::settings::model::Settings;
+
 pub mod api;
 pub mod bancho;
+pub mod debug;
 pub mod default;
+pub mod geoip;
 pub mod web;
 
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes
-pub fn init(cfg: &mut ServiceConfig) {
+pub fn init(cfg: &mut ServiceConfig, settings: Settings) {
     init_default(cfg);
     cfg.service(init_bancho());
     cfg.service(init_web());
     cfg.service(init_api_v1());
     cfg.service(init_api_v2());
+
+    if settings.geoip.web_api {
+        cfg.service(init_geoip());
+    };
+
+    // !warning: only debug!
+    if settings.debug == true {
+        init_debug(cfg)
+    }
 }
 
-/// Routes for default
-fn init_default(cfg: &mut ServiceConfig) {
-    use default::*;
-    cfg.service(index);
+// Init geoip api
+fn init_geoip() -> impl HttpServiceFactory {
+    use geoip::*;
+    let path = "/geoip";
+    scope(path).service(index).service(geo_ip)
+}
+
+fn init_debug(cfg: &mut ServiceConfig) {
+    use debug::*;
     cfg.service(test_pg);
     cfg.service(test_redis);
     cfg.service(test_player_read);
@@ -37,6 +55,13 @@ fn init_default(cfg: &mut ServiceConfig) {
     cfg.service(player_channels_all);
     cfg.service(pleyer_sessions_kick);
     cfg.service(pleyer_sessions_kick_uid);
+    cfg.service(test_geo_ip);
+}
+
+/// Routes for default
+fn init_default(cfg: &mut ServiceConfig) {
+    use default::*;
+    cfg.service(index);
 }
 
 /// Routes for bancho

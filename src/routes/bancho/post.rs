@@ -13,6 +13,7 @@ pub async fn handler(
     channel_list: Data<RwLock<ChannelList>>,
     argon2_cache: Data<RwLock<Argon2Cache>>,
     counter: Data<IntCounterVec>,
+    geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
     // Prom counter
     counter
@@ -47,6 +48,7 @@ pub async fn handler(
             channel_list,
             argon2_cache,
             counter,
+            geo_db,
         )
         .await;
     }
