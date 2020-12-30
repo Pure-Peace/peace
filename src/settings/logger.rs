@@ -1,6 +1,7 @@
 use config::Config;
 
 use super::model::Logger;
+use log::LevelFilter;
 
 impl Logger {
     /// Init logger
@@ -16,6 +17,10 @@ impl Logger {
             );
 
         //env_logger::init_from_env(env);
-        env_logger::Builder::from_env(env).format_timestamp_millis().init();
+        env_logger::Builder::from_env(env)
+            // Disabled maxminddb debug log (so many wtf)
+            .filter_module("maxminddb::decoder", LevelFilter::Warn)
+            .format_timestamp_millis()
+            .init();
     }
 }

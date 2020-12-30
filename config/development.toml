@@ -7,7 +7,10 @@ check_pools_on_created = true
 
 check_db_version_on_created = true
 
-debug = false
+# !!warn: If debug is enabled, 
+# the part of the route used for testing will be loaded. 
+# Please do not expose it in the production environment
+debug = true
 
 # Logger config
 [logger]
@@ -35,6 +38,14 @@ info = "info"
 error = "error"
 warn = "warn"
 
+# Geoip service config
+# If enabled, we can get the player's geolocation info
+# You need to download the .mmdb file from maxmind and specify the path here
+[geoip]
+enabled = true
+mmdb_path = "geoip/GeoLite2-City.mmdb"
+# If enabled, peace will load a route for querying geo-ip information for other applications to call.
+web_api = true
 
 # Docs for postgres config: 
 # https://docs.rs/deadpool-postgres/0.5.6/deadpool_postgres/config/struct.Config.html

@@ -16,6 +16,7 @@
 - **Sentry**: server monitoring (errors)
 - **WebSocket** support (used to push user results, etc.?)
 - **Web templates** support... (html will be compiled into the binary file)
+- **Geo-ip** Local geo-ip service (or api), fast and available for your other applications!
 
 ### Schedules WIP...
 - ...
@@ -147,6 +148,44 @@ cd sql
 ```
 ./init_database.bat
 ```
+
+
+## Geo-ip
+
+After installing this module, turn it on in the **.toml** configuration file to get the player's geolocation information. Also peace provides geo-ip api to allow your other applications to use this service as well.
+
+[>> Go to Readme and setup!](https://github.com/Pure-Peace/Peace/blob/main/geoip/readme.md)
+
+### Example:
+
+Access:
+http://127.0.0.1:8080/geoip/219.76.152.150
+
+Request 1ms, Result:
+
+```json
+{
+    "ip_address": "219.76.152.150",
+    "latitude": 22.3833,
+    "longitude": 114.2,
+    "continent_code": "AS",
+    "continent_name": "Asia",
+    "country_code": "HK",
+    "country_name": "Hong Kong",
+    "region_code": "NST",
+    "region_name": "Sha Tin",
+    "city_name": "Sha Tin Wai",
+    "timezone": "Asia/Hong_Kong",
+
+    "message": null,
+    "status_code": 1
+}
+```
+
+
+
+
+---
 
 Finally, Run **Peace**:
 

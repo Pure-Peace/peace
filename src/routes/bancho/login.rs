@@ -18,6 +18,7 @@ pub async fn handler(
     channel_list: Data<RwLock<ChannelList>>,
     argon2_cache: Data<RwLock<Argon2Cache>>,
     counter: Data<IntCounterVec>,
+    geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
     let failed_key = format!("{}-bancho_login_failed", &request_ip);
     let failed_count = database.redis.get(&failed_key).await.unwrap_or(0);
@@ -50,6 +51,7 @@ pub async fn handler(
         &channel_list,
         &argon2_cache,
         &counter,
+        &geo_db,
     )
     .await
     {

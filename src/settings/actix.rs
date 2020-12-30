@@ -1,5 +1,8 @@
-use crate::{routes, types::{ChannelList, Argon2Cache}};
 use crate::{database::Database, renders::BanchoGet};
+use crate::{
+    routes,
+    types::{Argon2Cache, ChannelList},
+};
 
 use actix_cors::Cors;
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
@@ -10,12 +13,14 @@ use std::time::Instant;
 use colored::Colorize;
 
 use actix_web_prom::PrometheusMetrics;
-use prometheus::{opts, IntCounterVec};
 use hashbrown::HashMap;
+use maxminddb;
+use memmap::Mmap;
+use prometheus::{opts, IntCounterVec};
 
-use crate::objects::{ChannelListBuilder, PlayerSessions};
-use crate::types::{Password, Argon2CryptedCipher};
 use crate::handlers::bancho;
+use crate::objects::{ChannelListBuilder, PlayerSessions};
+use crate::types::{Argon2CryptedCipher, Password};
 
 use super::model::Settings;
 
@@ -122,12 +127,26 @@ pub async fn start_server(
         server_front: settings.server.front.to_string(),
     };
 
+    // Geo mmdb
+    let geo_db = match settings.geoip.enabled {
+        true => match maxminddb::Reader::open_mmap(&settings.geoip.mmdb_path) {
+            Ok(reader) => Some(reader),
+            Err(err) => {
+                error!("Failed to start up geo-ip database reader: {:?}", err);
+                None
+            }
+        },
+        false => None,
+    };
+    let geo_db_data = Data::new(geo_db);
+
     // Player sessions
     let player_sessions = Data::new(player_sessions);
     let player_sessions_cloned = player_sessions.clone();
 
     // Channel list
-    let channel_list: Data<RwLock<ChannelList>> = Data::new(RwLock::new(ChannelListBuilder::new(&database).await));
+    let channel_list: Data<RwLock<ChannelList>> =
+        Data::new(RwLock::new(ChannelListBuilder::new(&database).await));
     let channel_list_cloned: Data<RwLock<ChannelList>> = channel_list.clone();
 
     // Password cache
@@ -150,6 +169,7 @@ pub async fn start_server(
     // Run server
     info!("{}", "Starting http service...".bold().bright_blue());
     let server = HttpServer::new(move || {
+        let settings_cloned = settings.clone();
         // Logger
         let make_logger = |mut logger: Logger| {
             for i in excludes_endpoint_log.iter() {
@@ -178,10 +198,11 @@ pub async fn start_server(
             .app_data(player_sessions.clone())
             .app_data(channel_list.clone())
             .app_data(argon2_cache.clone())
+            .app_data(geo_db_data.clone())
             .data(counter.clone())
             .data(database.clone())
             .data(bancho_get_render.clone())
-            .configure(routes::init)
+            .configure(move |service_cfg| routes::init(service_cfg, settings_cloned))
     })
     .shutdown_timeout(2)
     .keep_alive(90)

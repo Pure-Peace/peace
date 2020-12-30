@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub postgres: deadpool_postgres::Config,
     pub redis: deadpool_redis::Config,
@@ -10,16 +10,17 @@ pub struct Settings {
     pub env: String,
     pub debug: bool,
     pub server: Server,
+    pub geoip: Geoip,
     pub logger: Logger,
     hello: Hello,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Hello {
     world: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Server {
     pub name: String,
     pub front: String,
@@ -29,7 +30,7 @@ pub struct Server {
     pub secret: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct LoggerMode {
     debug: String,
     error: String,
@@ -37,7 +38,7 @@ pub struct LoggerMode {
     info: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Logger {
     pub level: String,
     pub mode: LoggerMode,
@@ -45,7 +46,14 @@ pub struct Logger {
     pub exclude_endpoints: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct Geoip {
+    pub enabled: bool,
+    pub mmdb_path: String,
+    pub web_api: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Prometheus {
     pub namespace: String,
     pub endpoint: String,

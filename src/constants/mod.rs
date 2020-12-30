@@ -2,6 +2,7 @@
 mod client_data;
 mod packets;
 mod peace;
+mod geoip;
 mod privileges;
 
 use enum_primitive_derive::Primitive;
@@ -10,6 +11,7 @@ use strum_macros::EnumIter;
 pub use client_data::*;
 pub use packets::*;
 pub use peace::*;
+pub use geoip::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]

@@ -8,6 +8,8 @@ mod depends {
     pub use actix_web::{HttpRequest, HttpResponse, Responder};
     pub use async_std::sync::RwLock;
     pub use prometheus::IntCounterVec;
+    pub use maxminddb::Reader;
+    pub use memmap::Mmap;
 
     pub use crate::{
         constants::LoginFailed,
