@@ -90,11 +90,15 @@ pub async fn change_action(
 
     let play_mod_list = PlayMods::get_mods(play_mods_value);
 
-    // More detailed game mod
-    if play_mod_list.contains(&PlayMod::Relax) {
+    // !More detailed game mod but:
+    //
+    // 1. Mania have not relax
+    // 2. only std have autopilot
+    // 3. relax and autopilot cannot coexist
+    //
+    if game_mode != 3 && play_mod_list.contains(&PlayMod::Relax) {
         game_mode += 4;
-    }
-    if play_mod_list.contains(&PlayMod::AutoPilot) {
+    } else if game_mode == 0 && play_mod_list.contains(&PlayMod::AutoPilot) {
         game_mode += 8;
     }
 
@@ -102,8 +106,8 @@ pub async fn change_action(
         Some(action) => action,
         None => {
             error!(
-                "Failed to parse player {}({})'s game mode({})! <OSU_CHANGE_ACTION>",
-                player_data.name, player_data.id, game_mode
+                "Failed to parse player {}({})'s game mode({})! <OSU_CHANGE_ACTION>; play_mod_list: {:?}",
+                player_data.name, player_data.id, game_mode, play_mod_list
             );
             return;
         }
