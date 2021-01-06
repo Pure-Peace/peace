@@ -100,7 +100,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 CREATE TABLE bancho.channels (
     id integer NOT NULL,
-    name character varying(255) NOT NULL,
+    name character varying(64) NOT NULL,
     title character varying(255) NOT NULL,
     read_priv integer DEFAULT 1 NOT NULL,
     write_priv integer DEFAULT 2 NOT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE game_scores.catch (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE game_scores.catch_rx (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -234,7 +234,7 @@ CREATE TABLE game_scores.mania (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -280,7 +280,7 @@ CREATE TABLE game_scores.std (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -319,7 +319,7 @@ CREATE TABLE game_scores.std_ap (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -372,7 +372,7 @@ CREATE TABLE game_scores.std_rx (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -400,6 +400,65 @@ CREATE SEQUENCE game_scores.std_rx_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE game_scores.std_rx_id_seq OWNED BY game_scores.std_rx.id;
+CREATE TABLE game_scores.std_scv2 (
+    id bigint NOT NULL,
+    user_id integer NOT NULL,
+    map_md5 character varying(32) NOT NULL,
+    score integer NOT NULL,
+    performance_v1 real NOT NULL,
+    performance_v2 real NOT NULL,
+    accuracy real NOT NULL,
+    combo integer NOT NULL,
+    mods integer NOT NULL,
+    n300 integer NOT NULL,
+    n100 integer NOT NULL,
+    n50 integer NOT NULL,
+    miss integer NOT NULL,
+    geiki integer NOT NULL,
+    katu integer NOT NULL,
+    playtime integer NOT NULL,
+    perfect boolean DEFAULT false NOT NULL,
+    client_version character varying(64) NOT NULL,
+    confidence smallint DEFAULT 100 NOT NULL,
+    verified boolean DEFAULT false NOT NULL,
+    checked boolean DEFAULT false NOT NULL,
+    check_time timestamp(6) with time zone,
+    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+COMMENT ON COLUMN game_scores.std_scv2.id IS 'score''s unique id';
+COMMENT ON COLUMN game_scores.std_scv2.user_id IS 'user''s unique id';
+COMMENT ON COLUMN game_scores.std_scv2.map_md5 IS 'beatmap''s md5';
+COMMENT ON COLUMN game_scores.std_scv2.performance_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.std_scv2.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.std_scv2.mods IS 'play mods';
+COMMENT ON COLUMN game_scores.std_scv2.playtime IS 'play time (seconds)';
+COMMENT ON COLUMN game_scores.std_scv2.perfect IS 'this score is full combo or not';
+COMMENT ON COLUMN game_scores.std_scv2.client_version IS 'the client version used to submit this score';
+COMMENT ON COLUMN game_scores.std_scv2.confidence IS 'credibility of score';
+COMMENT ON COLUMN game_scores.std_scv2.check_time IS 'last check time';
+COMMENT ON COLUMN game_scores.std_scv2.create_time IS 'submission time';
+COMMENT ON COLUMN game_scores.std_scv2.update_time IS 'score''s unique id
+user''s unique id
+beatmap''s md5
+ppv1
+ppv2
+play mods
+play time (seconds)
+this score is full combo or not
+the client version used to submit this score
+credibility of score
+last check time
+submission time
+last update time
+last update time';
+CREATE SEQUENCE game_scores.std_scv2_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE game_scores.std_scv2_id_seq OWNED BY game_scores.std_scv2.id;
 CREATE TABLE game_scores.taiko (
     id bigint NOT NULL,
     user_id integer NOT NULL,
@@ -418,7 +477,7 @@ CREATE TABLE game_scores.taiko (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -464,7 +523,7 @@ CREATE TABLE game_scores.taiko_rx (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
-    client_version character varying(255) NOT NULL,
+    client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
@@ -508,8 +567,8 @@ CREATE TABLE game_stats.catch (
     total_hits_rx integer DEFAULT 0 NOT NULL,
     accuracy real DEFAULT 0.0 NOT NULL,
     accuracy_rx real DEFAULT 0.0 NOT NULL,
-    maxcombo integer DEFAULT 0 NOT NULL,
-    maxcombo_rx integer DEFAULT 0 NOT NULL,
+    max_combo integer DEFAULT 0 NOT NULL,
+    max_combo_rx integer DEFAULT 0 NOT NULL,
     playtime bigint DEFAULT 0 NOT NULL,
     playtime_rx bigint DEFAULT 0 NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -525,7 +584,7 @@ CREATE TABLE game_stats.mania (
     playcount integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
     accuracy real DEFAULT 0.0 NOT NULL,
-    maxcombo integer DEFAULT 0 NOT NULL,
+    max_combo integer DEFAULT 0 NOT NULL,
     playtime bigint DEFAULT 0 NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -539,30 +598,38 @@ CREATE TABLE game_stats.std (
     ranked_score_rx bigint DEFAULT 0 NOT NULL,
     total_score_ap bigint DEFAULT 0 NOT NULL,
     ranked_score_ap bigint DEFAULT 0 NOT NULL,
+    total_score_scv2 bigint DEFAULT 0 NOT NULL,
+    ranked_score_scv2 bigint DEFAULT 0 NOT NULL,
     performance_v1 smallint DEFAULT 0 NOT NULL,
     performance_v2 smallint DEFAULT 0 NOT NULL,
     performance_v1_rx smallint DEFAULT 0 NOT NULL,
     performance_v2_rx smallint DEFAULT 0 NOT NULL,
     performance_v1_ap smallint DEFAULT 0 NOT NULL,
     performance_v2_ap smallint DEFAULT 0 NOT NULL,
+    performance_v2_scv2 smallint DEFAULT 0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     playcount_ap integer DEFAULT 0 NOT NULL,
+    playcount_scv2 integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
     total_hits_rx integer DEFAULT 0 NOT NULL,
     total_hits_ap integer DEFAULT 0 NOT NULL,
+    total_hits_scv2 integer DEFAULT 0 NOT NULL,
     accuracy real DEFAULT 0.0 NOT NULL,
     accuracy_rx real DEFAULT 0.0 NOT NULL,
     accuracy_ap real DEFAULT 0.0 NOT NULL,
-    maxcombo integer DEFAULT 0 NOT NULL,
-    maxcombo_rx integer DEFAULT 0 NOT NULL,
-    maxcombo_ap integer DEFAULT 0 NOT NULL,
+    accuracy_scv2 real DEFAULT 0.0 NOT NULL,
+    max_combo integer DEFAULT 0 NOT NULL,
+    max_combo_rx integer DEFAULT 0 NOT NULL,
+    max_combo_ap integer DEFAULT 0 NOT NULL,
+    max_combo_scv2 integer DEFAULT 0 NOT NULL,
     playtime bigint DEFAULT 0 NOT NULL,
     playtime_rx bigint DEFAULT 0 NOT NULL,
     playtime_ap bigint DEFAULT 0 NOT NULL,
-    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    playtime_scv2 bigint DEFAULT 0 NOT NULL,
+    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
-COMMENT ON TABLE game_stats.std IS 'Standard (including vanilla, relax, autopilot)';
+COMMENT ON TABLE game_stats.std IS 'Standard (including vanilla, relax, autopilot, score v2)';
 COMMENT ON COLUMN game_stats.std.id IS 'user''s unique id';
 CREATE TABLE game_stats.taiko (
     id integer NOT NULL,
@@ -580,8 +647,8 @@ CREATE TABLE game_stats.taiko (
     total_hits_rx integer DEFAULT 0 NOT NULL,
     accuracy real DEFAULT 0.0 NOT NULL,
     accuracy_rx real DEFAULT 0.0 NOT NULL,
-    maxcombo integer DEFAULT 0 NOT NULL,
-    maxcombo_rx integer DEFAULT 0 NOT NULL,
+    max_combo integer DEFAULT 0 NOT NULL,
+    max_combo_rx integer DEFAULT 0 NOT NULL,
     playtime bigint DEFAULT 0 NOT NULL,
     playtime_rx bigint DEFAULT 0 NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -590,7 +657,7 @@ COMMENT ON TABLE game_stats.taiko IS 'Taiko (including vanilla, relax)';
 COMMENT ON COLUMN game_stats.taiko.id IS 'user''s unique id';
 CREATE TABLE public.db_versions (
     version character varying(15) DEFAULT '0.1.0'::character varying NOT NULL,
-    author character varying(255) DEFAULT 'PurePeace'::character varying NOT NULL,
+    author character varying(64) DEFAULT 'PurePeace'::character varying NOT NULL,
     sql text,
     release_note text,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -602,7 +669,7 @@ COMMENT ON COLUMN public.db_versions.sql IS 'database initial sql';
 COMMENT ON COLUMN public.db_versions.release_note IS 'version release note';
 CREATE TABLE public.versions (
     version character varying(15) DEFAULT '0.1.0'::character varying NOT NULL,
-    author character varying(255) DEFAULT 'PurePeace'::character varying NOT NULL,
+    author character varying(64) DEFAULT 'PurePeace'::character varying NOT NULL,
     db_version character varying(15) DEFAULT '0.1.0'::character varying NOT NULL,
     release_note text,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -643,12 +710,12 @@ CREATE SEQUENCE "user".address_id_seq
 ALTER SEQUENCE "user".address_id_seq OWNED BY "user".address.id;
 CREATE TABLE "user".base (
     id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    name_safe character varying(255) NOT NULL,
+    name character varying(64) NOT NULL,
+    name_safe character varying(64) NOT NULL,
     password character varying(255) NOT NULL,
     email character varying(255) NOT NULL,
     privileges integer DEFAULT 1 NOT NULL,
-    country character varying(255) DEFAULT 'UN'::character varying NOT NULL,
+    country character varying(16) DEFAULT 'UN'::character varying NOT NULL,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -672,7 +739,7 @@ ALTER SEQUENCE "user".base_id_seq OWNED BY "user".base.id;
 CREATE TABLE "user".friends (
     user_id integer NOT NULL,
     friend_id integer NOT NULL,
-    remark character varying(255),
+    remark character varying(64),
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 COMMENT ON TABLE "user".friends IS 'User’s friends';
@@ -704,6 +771,15 @@ CREATE SEQUENCE "user".notes_id_seq
     MAXVALUE 2147483647
     CACHE 1;
 ALTER SEQUENCE "user".notes_id_seq OWNED BY "user".notes.id;
+CREATE TABLE "user".settings (
+    id integer NOT NULL,
+    default_game_mode smallint,
+    default_language character varying(16),
+    offline_message boolean DEFAULT true NOT NULL,
+    in_game_translate boolean DEFAULT false NOT NULL,
+    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+COMMENT ON COLUMN "user".settings.id IS 'user''s unique id';
 CREATE TABLE "user".statistic (
     id integer NOT NULL,
     online_duration interval DEFAULT '00:00:00'::interval NOT NULL,
@@ -721,12 +797,45 @@ COMMENT ON COLUMN "user".statistic.rename_count IS 'user''s total rename count';
 COMMENT ON COLUMN "user".statistic.friends_count IS 'user''s total friend count';
 COMMENT ON COLUMN "user".statistic.notes_count IS 'user''s total note count';
 COMMENT ON COLUMN "user".statistic.update_time IS 'update time';
+CREATE TABLE "user".status (
+    id integer NOT NULL,
+    discord_verifyed boolean DEFAULT false NOT NULL,
+    qq_verifyed boolean DEFAULT false NOT NULL,
+    official_verifyed boolean DEFAULT false NOT NULL,
+    osu_verifyed boolean NOT NULL,
+    mail_verifyed boolean DEFAULT false NOT NULL,
+    bot boolean DEFAULT false NOT NULL,
+    cheat boolean DEFAULT false NOT NULL,
+    multiaccount boolean DEFAULT false NOT NULL,
+    donor boolean DEFAULT false NOT NULL,
+    slienced boolean DEFAULT false NOT NULL,
+    restricted boolean DEFAULT false NOT NULL,
+    banned boolean DEFAULT false NOT NULL,
+    donor_start timestamp(6) with time zone,
+    silence_start timestamp(6) with time zone,
+    restrict_start timestamp(6) with time zone,
+    ban_start timestamp(6) with time zone,
+    donor_end timestamp(6) with time zone,
+    silence_end timestamp(6) with time zone,
+    restrict_end timestamp(6) with time zone,
+    ban_end timestamp(6) with time zone,
+    last_login_time timestamp(6) with time zone,
+    discord_verifyed_time timestamp(6) with time zone,
+    qq_verifyed_time timestamp(0) with time zone,
+    official_verifyed_time timestamp(0) with time zone,
+    osu_verifyed_time timestamp(0) with time zone,
+    mail_verifyed_time timestamp(0) with time zone,
+    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+COMMENT ON TABLE "user".status IS 'User''s status info';
+COMMENT ON COLUMN "user".status.id IS 'user_id, int 32, unique';
+COMMENT ON COLUMN "user".status.bot IS 'is bot';
 CREATE TABLE user_records.login (
     id bigint NOT NULL,
     user_id integer NOT NULL,
     address_id integer NOT NULL,
-    ip character varying(255) NOT NULL,
-    version character varying(255) NOT NULL,
+    ip character varying(128) NOT NULL,
+    version character varying(64) NOT NULL,
     similarity integer DEFAULT 101 NOT NULL,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     logout_time timestamp with time zone,
@@ -752,8 +861,8 @@ ALTER SEQUENCE user_records.login_records_id_seq OWNED BY user_records.login.id;
 CREATE TABLE user_records.rename (
     id bigint NOT NULL,
     user_id integer NOT NULL,
-    new_name character varying(255) NOT NULL,
-    old_name character varying(255) NOT NULL,
+    new_name character varying(64) NOT NULL,
+    old_name character varying(64) NOT NULL,
     create_time timestamp(0) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 COMMENT ON TABLE user_records.rename IS 'Automatically record the user''s rename record (do not add manually)';
@@ -776,6 +885,7 @@ ALTER TABLE ONLY game_scores.mania ALTER COLUMN id SET DEFAULT nextval('game_sco
 ALTER TABLE ONLY game_scores.std ALTER COLUMN id SET DEFAULT nextval('game_scores.std_id_seq'::regclass);
 ALTER TABLE ONLY game_scores.std_ap ALTER COLUMN id SET DEFAULT nextval('game_scores.std_ap_id_seq'::regclass);
 ALTER TABLE ONLY game_scores.std_rx ALTER COLUMN id SET DEFAULT nextval('game_scores.std_rx_id_seq'::regclass);
+ALTER TABLE ONLY game_scores.std_scv2 ALTER COLUMN id SET DEFAULT nextval('game_scores.std_scv2_id_seq'::regclass);
 ALTER TABLE ONLY game_scores.taiko ALTER COLUMN id SET DEFAULT nextval('game_scores.taiko_id_seq'::regclass);
 ALTER TABLE ONLY game_scores.taiko_rx ALTER COLUMN id SET DEFAULT nextval('game_scores.taiko_rx_id_seq'::regclass);
 ALTER TABLE ONLY "user".address ALTER COLUMN id SET DEFAULT nextval('"user".address_id_seq'::regclass);
@@ -784,24 +894,31 @@ ALTER TABLE ONLY "user".notes ALTER COLUMN id SET DEFAULT nextval('"user".notes_
 ALTER TABLE ONLY user_records.login ALTER COLUMN id SET DEFAULT nextval('user_records.login_records_id_seq'::regclass);
 ALTER TABLE ONLY user_records.rename ALTER COLUMN id SET DEFAULT nextval('user_records.rename_records_id_seq'::regclass);
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (1, '#osu', 'General discussion.', 1, 2, true, '2020-12-09 04:21:05.471552+08', '2020-12-09 04:21:14.652774+08');
-INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 2, true, '2020-12-09 04:21:35.551317+08', '2020-12-09 04:21:35.551317+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (4, '#lobby', 'Multiplayer lobby discussion room.', 1, 2, true, '2020-12-09 04:21:46.339821+08', '2020-12-09 04:21:46.339821+08');
-INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, maxcombo, maxcombo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:39.815269+08');
-INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, maxcombo, maxcombo_rx, playtime, playtime_rx, update_time) VALUES (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:42.56606+08');
-INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, maxcombo, playtime, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:39.815269+08');
-INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, maxcombo, playtime, update_time) VALUES (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:42.56606+08');
-INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, playcount, playcount_rx, playcount_ap, total_hits, total_hits_rx, total_hits_ap, accuracy, accuracy_rx, accuracy_ap, maxcombo, maxcombo_rx, maxcombo_ap, playtime, playtime_rx, playtime_ap, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:39.815269+08');
-INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, playcount, playcount_rx, playcount_ap, total_hits, total_hits_rx, total_hits_ap, accuracy, accuracy_rx, accuracy_ap, maxcombo, maxcombo_rx, maxcombo_ap, playtime, playtime_rx, playtime_ap, update_time) VALUES (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:42.56606+08');
-INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, maxcombo, maxcombo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:39.815269+08');
-INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, maxcombo, maxcombo_rx, playtime, playtime_rx, update_time) VALUES (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2020-12-20 01:12:42.56606+08');
+INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 4, true, '2020-12-09 04:21:35.551317+08', '2021-01-04 21:29:59.518299+08');
+INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
+INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:20.41087+08');
+INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
+INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
+INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:20.41087+08');
+INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-06 23:44:27.833964+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-06 23:44:33.225096+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (5, 400000, 400000, 0, 0, 0, 0, 0, 0, 0, 134, 0, 0, 0, 0, 0, 1, 0, 0, 0, 114514, 0, 0, 0, 0.98210001, 0, 0, 0, 1211, 0, 0, 0, 100, 0, 0, 0, '2021-01-06 23:45:43.917792+08');
+INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
+INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:20.41087+08');
+INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', NULL, 'initial', '2020-12-15 01:15:37.586205+08', '2020-12-20 01:13:47.84393+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.3', 'PurePeace', NULL, 'add game_scores, game_stats, modify some column', '2020-12-15 01:15:37.586205+08', '2020-12-15 01:15:52.635208+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.4', 'PurePeace', NULL, 'now, score v2 be as a standalone model', '2021-01-04 21:31:45.010709+08', '2021-01-04 21:31:45.010709+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', '0.1.0', 'initial (wip)', '2020-12-15 01:16:37.785543+08', '2020-12-20 01:16:34.355013+08');
-INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.3', 'add tables', '2020-12-15 01:16:37.785543+08', '2020-12-20 01:16:34.355013+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (2, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 1, 'JP', '2020-12-19 21:35:54.465545+08', '2020-12-20 01:12:42.56606+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 3, 'CN', '2020-12-19 21:35:32.810099+08', '2020-12-20 01:18:58.947387+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (2, '00:00:00', 0, 0, 0, 0, '2020-12-20 01:12:42.56606+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1, '00:00:00', 0, 0, 0, 0, '2020-12-20 01:23:57.20465+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
+INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1, '00:00:00', 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:00:00', 0, 0, 0, 0, '2021-01-07 00:54:31.214452+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:00:00', 0, 0, 0, 0, '2021-01-07 00:54:32.203337+08');
 SELECT pg_catalog.setval('bancho.channels_id_seq', 4, true);
 SELECT pg_catalog.setval('game_scores.catch_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.catch_rx_id_seq', 1, true);
@@ -809,10 +926,11 @@ SELECT pg_catalog.setval('game_scores.mania_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.std_ap_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.std_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.std_rx_id_seq', 1, true);
+SELECT pg_catalog.setval('game_scores.std_scv2_id_seq', 1, false);
 SELECT pg_catalog.setval('game_scores.taiko_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.taiko_rx_id_seq', 1, true);
 SELECT pg_catalog.setval('"user".address_id_seq', 1, true);
-SELECT pg_catalog.setval('"user".base_id_seq', 100, true);
+SELECT pg_catalog.setval('"user".base_id_seq', 50, true);
 SELECT pg_catalog.setval('"user".notes_id_seq', 1, true);
 SELECT pg_catalog.setval('user_records.login_records_id_seq', 1, true);
 SELECT pg_catalog.setval('user_records.rename_records_id_seq', 1, true);
@@ -833,6 +951,8 @@ ALTER TABLE ONLY game_scores.std_rx
     ADD CONSTRAINT std_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.std
     ADD CONSTRAINT std_scores_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY game_scores.std_scv2
+    ADD CONSTRAINT std_scv2_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.taiko_rx
     ADD CONSTRAINT taiko_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.taiko
@@ -842,7 +962,7 @@ ALTER TABLE ONLY game_stats.catch
 ALTER TABLE ONLY game_stats.mania
     ADD CONSTRAINT mania_stats_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_stats.std
-    ADD CONSTRAINT std_stats_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT std_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_stats.taiko
     ADD CONSTRAINT taiko_stats_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.db_versions
@@ -866,8 +986,12 @@ ALTER TABLE ONLY "user".base
     ADD CONSTRAINT base_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY "user".friends
     ADD CONSTRAINT friends_pkey PRIMARY KEY (user_id, friend_id);
+ALTER TABLE ONLY "user".status
+    ADD CONSTRAINT info_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY "user".notes
     ADD CONSTRAINT notes_pkey PRIMARY KEY (id, user_id);
+ALTER TABLE ONLY "user".settings
+    ADD CONSTRAINT settings_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY "user".statistic
     ADD CONSTRAINT statistic_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY user_records.login
@@ -889,6 +1013,8 @@ CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_ap FOR EACH ROW
 COMMENT ON TRIGGER auto_update_time ON game_scores.std_ap IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.std_rx IS 'auto update time';
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_scv2 FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+COMMENT ON TRIGGER auto_update_time ON game_scores.std_scv2 IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.taiko IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
@@ -907,6 +1033,8 @@ CREATE TRIGGER auto_insert_related AFTER INSERT ON "user".base FOR EACH ROW EXEC
 COMMENT ON TRIGGER auto_insert_related ON "user".base IS 'auto insert into related table';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".statistic FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON "user".statistic IS 'auto update the timestamp';
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".status FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+COMMENT ON TRIGGER auto_update_time ON "user".status IS 'auto update time';
 CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON "user".base FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 COMMENT ON TRIGGER auto_update_timestamp ON "user".base IS 'auto update the update_time after update user info';
 CREATE TRIGGER decrease_friend_count AFTER DELETE ON "user".friends FOR EACH ROW EXECUTE PROCEDURE "user".decrease_friend_count();
@@ -921,6 +1049,7 @@ CREATE TRIGGER safe_user_info BEFORE INSERT OR UPDATE ON "user".base FOR EACH RO
 COMMENT ON TRIGGER safe_user_info ON "user".base IS 'auto make the user info safety';
 CREATE TRIGGER update_time_auto BEFORE UPDATE ON "user".notes FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 COMMENT ON TRIGGER update_time_auto ON "user".notes IS 'auto update the update_time after update note info';
+CREATE TRIGGER "user.id" BEFORE UPDATE ON "user".settings FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 CREATE TRIGGER auto_login_duration BEFORE UPDATE ON user_records.login FOR EACH ROW EXECUTE PROCEDURE user_records.auto_online_duration();
 COMMENT ON TRIGGER auto_login_duration ON user_records.login IS 'auto update the online duration';
 CREATE TRIGGER increase_login_count BEFORE INSERT ON user_records.login FOR EACH ROW EXECUTE PROCEDURE user_records.increase_login_count();
@@ -931,9 +1060,9 @@ ALTER TABLE ONLY game_stats.catch
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_stats.mania
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE ONLY game_stats.std
-    ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_stats.taiko
+    ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_stats.std
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT db_version FOREIGN KEY (db_version) REFERENCES public.db_versions(version) ON UPDATE CASCADE ON DELETE RESTRICT;
@@ -952,6 +1081,12 @@ ALTER TABLE ONLY "user".notes
 ALTER TABLE ONLY "user".friends
     ADD CONSTRAINT "User.id (friend)" FOREIGN KEY (friend_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id (friend)" ON "user".friends IS 'user_id (friend)';
+ALTER TABLE ONLY "user".status
+    ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+COMMENT ON CONSTRAINT "user.id" ON "user".status IS 'user''s unique id';
+ALTER TABLE ONLY "user".settings
+    ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+COMMENT ON CONSTRAINT "user.id" ON "user".settings IS 'user''s unique id';
 ALTER TABLE ONLY user_records.rename
     ADD CONSTRAINT "User.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id" ON user_records.rename IS 'user''s unique id';
