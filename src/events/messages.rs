@@ -132,7 +132,7 @@ pub async fn private(
         // Find None
         _ => {
             warn!(
-                "Player {}({}) try send message to non-existent player: {}",
+                "Player {}({}) try send message to non-existent (or offline) player: {}",
                 &player_data.name, player_data.id, message.target
             );
         }

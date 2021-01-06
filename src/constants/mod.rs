@@ -1,17 +1,17 @@
 #![allow(non_camel_case_types)]
 mod client_data;
+mod geoip;
 mod packets;
 mod peace;
-mod geoip;
 mod privileges;
 
 use enum_primitive_derive::Primitive;
 use strum_macros::EnumIter;
 
 pub use client_data::*;
+pub use geoip::*;
 pub use packets::*;
 pub use peace::*;
-pub use geoip::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
@@ -26,20 +26,20 @@ pub enum PresenceFilter {
 #[repr(u8)]
 pub enum Action {
     // A class to represent the client's current state
-    Idle = 0,
-    Afk = 1,
-    Playing = 2,
-    Editing = 3,
-    Modding = 4,
-    Multiplayer = 5,
-    Watching = 6,
-    Unknown = 7,
-    Testing = 8,
-    Submitting = 9,
-    Paused = 10,
-    Lobby = 11,
-    Multiplaying = 12,
-    Direct = 13,
+    Idle          = 0,
+    Afk           = 1,
+    Playing       = 2,
+    Editing       = 3,
+    Modding       = 4,
+    Multiplayer   = 5,
+    Watching      = 6,
+    Unknown       = 7,
+    Testing       = 8,
+    Submitting    = 9,
+    Paused        = 10,
+    Lobby         = 11,
+    Multiplaying  = 12,
+    Direct        = 13,
 }
 
 impl Action {
@@ -124,12 +124,63 @@ pub enum GameMode {
     Taiko_rx  = 5,
     Catch_rx  = 6,
     // Mania_rx  = 7, but not exists
-
     Std_ap    = 8,
 }
 
 impl GameMode {
+    #[inline(always)]
     pub fn val(self) -> u8 {
         (self as u8) % 4
+    }
+
+    #[inline(always)]
+    pub fn is_rx(self) -> bool {
+        let self_value = self as u8;
+        self_value > 3 && self_value < 8
+    }
+
+    #[inline(always)]
+    pub fn is_ap(self) -> bool {
+        (self as u8) == 8
+    }
+
+    #[inline(always)]
+    pub fn is_vn(self) -> bool {
+        (self as u8) < 4
+    }
+
+    #[inline(always)]
+    pub fn full_name(&self) -> String {
+        format!("{:?}", self).to_lowercase()
+    }
+
+    #[inline(always)]
+    pub fn mode_name(&self) -> String {
+        self.full_name().split('_').collect::<Vec<&str>>()[0].to_string()
+    }
+
+    #[inline(always)]
+    pub fn play_mod_name(self) -> String {
+        match self as u8 {
+            value if value == 8 => String::from("ap"),
+            value if value > 3 && value < 8 => String::from("rx"),
+            _ => String::new(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn play_mod_name_table(self) -> String {
+        match self.play_mod_name() {
+            mut n if n != String::new() => {
+                n.insert(0, '_');
+                n
+            }
+            n => n,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_table_names(self) -> (String, String) {
+        (self.play_mod_name_table(), self.mode_name())
     }
 }
