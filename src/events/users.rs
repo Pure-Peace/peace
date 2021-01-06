@@ -126,37 +126,41 @@ pub async fn change_action(
     );
 
     // Should update stats and rank or not
+    //
+    // Why am I using player_data instead of player for this?
+    // Because I want to reduce the length of time the lock is used (calculate rank from database will consume some time)
+    //
     let update_stats = game_mode != player_data.status.game_mode;
-    let stats = match update_stats {
+    let (stats, should_update_cache) = match update_stats {
         true => {
             // Switch to new game mod stats!
-            player_data
-                .get_stats_from_database(game_mode, database)
-                .await
+            player_data.get_stats_update(game_mode, database).await
         }
-        false => None,
+        false => (None, false),
     };
 
     // Update player's status and send it to all players.
+    // Get lock first.
     let player_sessions = player_sessions.read().await;
 
     match player_sessions
         .handle_player_get(token, move |p| {
-            let result = p.update_status(
+            if update_stats && stats.is_some() {
+                // Update cache if we should
+                if should_update_cache {
+                    p.stats_cache.insert(game_mode, stats.clone().unwrap());
+                }
+                // Update stats
+                p.stats = stats.unwrap();
+            };
+            p.update_status(
                 action,
                 info,
                 playing_beatmap_md5,
                 playing_beatmap_id,
                 play_mods_value,
                 game_mode,
-            );
-
-            // Update stats
-            if result.is_some() && update_stats && stats.is_some() {
-                p.stats = stats.unwrap();
-            };
-
-            result
+            )
         })
         .await
     {

@@ -112,7 +112,7 @@ impl PlayMod {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive, Hash)]
 #[repr(u8)]
 pub enum GameMode {
     Std       = 0,

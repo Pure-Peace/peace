@@ -353,10 +353,10 @@ pub async fn login(
     .await;
 
     // Update some player info
-    player.update_friends_from_database(database).await;
+    player.update_friends(database).await;
 
     // Update player's stats
-    player.update_stats_from_database(database).await;
+    player.update_stats(database).await;
 
     // Add login record
     player.create_login_record(database).await;

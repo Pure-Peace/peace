@@ -18,6 +18,7 @@ pub struct Player {
     pub utc_offset: u8,
     pub location: Location,
     pub stats: Stats,
+    pub stats_cache: HashMap<GameMode, Stats>,
     pub status: Status,
     pub queue: Mutex<Queue<PacketData>>,
     pub channels: HashSet<String>,
@@ -57,6 +58,7 @@ impl Player {
             utc_offset: client_info.utc_offset as u8,
             location: (0.0, 0.0),
             stats: Stats::new(),
+            stats_cache: HashMap::new(),
             status: Status::new(),
             queue: Mutex::new(Queue::new()),
             channels: HashSet::new(),
@@ -117,7 +119,7 @@ impl Player {
         self.last_active_time = Local::now();
     }
 
-    pub async fn update_friends_from_database(&mut self, database: &Data<Database>) {
+    pub async fn update_friends(&mut self, database: &Data<Database>) {
         match database
             .pg
             .query(
@@ -132,7 +134,7 @@ impl Player {
                 self.friends = friends;
             }
             Err(err) => error!(
-                "Error when update_friends_from_database; user: {}({}); err: {:?}",
+                "Error when update_friends; user: {}({}); err: {:?}",
                 self.name, self.id, err
             ),
         };
@@ -198,9 +200,44 @@ impl Player {
     }
 
     #[inline(always)]
-    pub async fn update_stats_from_database(&mut self, database: &Database) {
-        if let Some(stats) = self.get_stats_from_database(database).await {
-            self.stats = stats;
+    pub async fn update_stats(&mut self, database: &Database) {
+        match self.stats_cache.get(&self.status.game_mode) {
+            Some(stats) => {
+                // Cache expired, update from database
+                if Local::now().timestamp() > stats.update_time.timestamp() + 120 {
+                    debug!(
+                        "Player {}({}) stats cache expired! will get new... game mode: {:?}",
+                        self.name, self.id, self.status.game_mode
+                    );
+
+                    if let Some(stats) = self.get_stats_from_database(database).await {
+                        self.stats_cache
+                            .insert(self.status.game_mode, stats.clone());
+                        self.stats = stats;
+                        return;
+                    }
+                }
+
+                debug!(
+                    "Player {}({}) stats cache hitted! game mode: {:?}",
+                    self.name, self.id, self.status.game_mode
+                );
+                // Not expired, return cache
+                self.stats = stats.clone();
+            }
+            // Non-cache, get from database then cache it
+            None => {
+                debug!(
+                    "Player {}({}) stats cache not hitted! will get new... game mode: {:?}",
+                    self.name, self.id, self.status.game_mode
+                );
+
+                if let Some(stats) = self.get_stats_from_database(database).await {
+                    self.stats_cache
+                        .insert(self.status.game_mode, stats.clone());
+                    self.stats = stats;
+                }
+            }
         }
     }
 
@@ -229,7 +266,7 @@ impl Player {
             Ok(row) => row,
             Err(err) => {
                 error!(
-                    "Failed to init player {}({})'s play stats from database, error: {:?}",
+                    "Failed to get player {}({})'s play stats from database, error: {:?}",
                     self.name, self.id, err
                 );
                 return None;

@@ -1,5 +1,9 @@
-use crate::{constants::{GameMode, PresenceFilter}, types::Location};
+use crate::{
+    constants::{GameMode, PresenceFilter},
+    types::Location,
+};
 use chrono::{DateTime, Local};
+use hashbrown::HashMap;
 
 use super::{
     depends::Database,
@@ -25,6 +29,7 @@ pub struct PlayerData {
     pub utc_offset: u8,
     pub location: Location,
     pub stats: Stats,
+    pub stats_cache: HashMap<GameMode, Stats>,
     pub status: Status,
     pub channels: Vec<String>,
     pub login_time: DateTime<Local>,
@@ -52,6 +57,7 @@ impl PlayerData {
             utc_offset: p.utc_offset,
             location: p.location,
             stats: p.stats.clone(),
+            stats_cache: p.stats_cache.clone(),
             status: p.status.clone(),
             channels: p.channels.iter().map(|s| s.to_string()).collect(),
             login_time: p.login_time,
@@ -60,6 +66,48 @@ impl PlayerData {
             data_create_time: Local::now(),
         }
     }
+
+    /// Returns: Stats, should update cache flag
+    #[inline(always)]
+    pub async fn get_stats_update(
+        &self,
+        game_mode: GameMode,
+        database: &Database,
+    ) -> (Option<Stats>, bool) {
+        match self.stats_cache.get(&game_mode) {
+            Some(stats) => {
+                // Cache expired, get from database
+                if Local::now().timestamp() > stats.update_time.timestamp() + 120 {
+                    debug!(
+                        "Player {}({}) stats cache expired (player-data)! will get new... game mode: {:?}",
+                        self.name, self.id, game_mode
+                    );
+                    return (
+                        self.get_stats_from_database(game_mode, database).await,
+                        true,
+                    );
+                };
+
+                debug!(
+                    "Player {}({}) stats cache hitted (player-data)! game mode: {:?}",
+                    self.name, self.id, game_mode
+                );
+                // Not expired, return cache
+                return (Some(stats.clone()), false);
+            }
+            None => {
+                debug!(
+                    "Player {}({}) stats cache not hitted (player-data)! will get new... game mode: {:?}",
+                    self.name, self.id, game_mode
+                );
+                (
+                    self.get_stats_from_database(game_mode, database).await,
+                    true,
+                )
+            }
+        }
+    }
+
     #[inline(always)]
     pub async fn get_stats_from_database(
         &self,
