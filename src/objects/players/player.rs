@@ -198,6 +198,69 @@ impl Player {
     }
 
     #[inline(always)]
+    pub async fn update_stats_from_database(&mut self, database: &Database) {
+        if let Some(stats) = self.get_stats_from_database(database).await {
+            self.stats = stats;
+        }
+    }
+
+    #[inline(always)]
+    pub async fn get_stats_from_database(&self, database: &Database) -> Option<Stats> {
+        // Build query string
+        let (play_mod_name, mode_name) = self.status.game_mode.get_table_names();
+        let sql = format!(
+            r#"SELECT 
+                "performance_v1{0}" as "performance_v1",
+                "performance_v2{0}" as "performance_v2",
+                "accuracy{0}" as "accuracy",
+                "total_score{0}" as "total_score",
+                "ranked_score{0}" as "ranked_score",
+                "playcount{0}" as "playcount",
+                "playtime{0}" as "playtime",
+                "max_combo{0}" as "max_combo"
+            FROM 
+                "game_stats"."{1}" 
+            WHERE "id" = $1;"#,
+            play_mod_name, mode_name
+        );
+
+        // Query from database
+        let row = match database.pg.query_first(&sql, &[&self.id]).await {
+            Ok(row) => row,
+            Err(err) => {
+                error!(
+                    "Failed to init player {}({})'s play stats from database, error: {:?}",
+                    self.name, self.id, err
+                );
+                return None;
+            }
+        };
+
+        // Query result into struct
+        match serde_postgres::from_row::<Stats>(&row) {
+            Ok(mut stats) => {
+                debug!(
+                    "Success to get player {}({})'s play stats: {:?}",
+                    self.name, self.id, stats
+                );
+                // Calculate rank
+                stats
+                    .recalculate_rank(&play_mod_name, &mode_name, database)
+                    .await;
+                // Done
+                return Some(stats);
+            }
+            Err(err) => {
+                error!(
+                    "Failed to deserialize player {}({})'s play stats from database, error: {:?}",
+                    self.name, self.id, err
+                );
+                return None;
+            }
+        };
+    }
+
+    #[inline(always)]
     /// Enqueue a packet into queue, returns the length of queue
     pub async fn enqueue(&self, packet_data: PacketData) -> usize {
         self.queue

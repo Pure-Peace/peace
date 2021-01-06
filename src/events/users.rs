@@ -61,6 +61,7 @@ pub async fn stats_request(
 /// Update player's status
 pub async fn change_action(
     payload: &[u8],
+    database: &Database,
     token: &String,
     player_sessions: &Data<RwLock<PlayerSessions>>,
     player_data: &PlayerData,
@@ -120,18 +121,38 @@ pub async fn change_action(
         playing_beatmap_id
     );
 
+    // Should update stats and rank or not
+    let update_stats = game_mode != player_data.status.game_mode;
+    let stats = match update_stats {
+        true => {
+            // Switch to new game mod stats!
+            player_data
+                .get_stats_from_database(game_mode, database)
+                .await
+        }
+        false => None,
+    };
+
     // Update player's status and send it to all players.
     let player_sessions = player_sessions.read().await;
+
     match player_sessions
         .handle_player_get(token, move |p| {
-            p.update_status(
+            let result = p.update_status(
                 action,
                 info,
                 playing_beatmap_md5,
                 playing_beatmap_id,
                 play_mods_value,
                 game_mode,
-            )
+            );
+
+            // Update stats
+            if result.is_some() && update_stats && stats.is_some() {
+                p.stats = stats.unwrap();
+            };
+
+            result
         })
         .await
     {

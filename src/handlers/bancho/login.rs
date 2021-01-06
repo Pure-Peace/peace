@@ -355,18 +355,22 @@ pub async fn login(
     // Update some player info
     player.update_friends_from_database(database).await;
 
+    // Update player's stats
+    player.update_stats_from_database(database).await;
+
     // Add login record
     player.create_login_record(database).await;
 
     // update player's location (ip geo)
     if let Some(reader) = geo_db.get_ref() {
         match reader.lookup::<City>(request_ip.parse().unwrap()) {
-            Ok(geo_data) => match geo_data
-                .location
-                .as_ref()
-                .and_then(|lo| Some((lo.latitude.unwrap_or(0.0), lo.longitude.unwrap_or(0.0))))
-            {
-                Some((la, lo)) => player.location = (la as f32, lo as f32),
+            Ok(geo_data) => match geo_data.location.as_ref().and_then(|location| {
+                Some((
+                    location.latitude.unwrap_or(0.0),
+                    location.longitude.unwrap_or(0.0),
+                ))
+            }) {
+                Some((lati, longi)) => player.location = (lati as f32, longi as f32),
                 None => {
                     warn!(
                         "Failed to lookup player {}({})'s ip address location info: {}",
@@ -382,8 +386,6 @@ pub async fn login(
             }
         }
     };
-
-    // TODO: update player's stats
 
     // User data packet, including player stats and presence
     let user_data_packet = packets::user_data(&player).await;

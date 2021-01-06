@@ -1,7 +1,8 @@
-use crate::{constants::PresenceFilter, types::Location};
+use crate::{constants::{GameMode, PresenceFilter}, types::Location};
 use chrono::{DateTime, Local};
 
 use super::{
+    depends::Database,
     Player,
     {stats::Stats, status::Status},
 };
@@ -58,5 +59,64 @@ impl PlayerData {
             last_active_time: p.last_active_time,
             data_create_time: Local::now(),
         }
+    }
+    #[inline(always)]
+    pub async fn get_stats_from_database(
+        &self,
+        game_mode: GameMode,
+        database: &Database,
+    ) -> Option<Stats> {
+        // Build query string
+        let (play_mod_name, mode_name) = game_mode.get_table_names();
+        let sql = format!(
+            r#"SELECT 
+                "performance_v1{0}" as "performance_v1",
+                "performance_v2{0}" as "performance_v2",
+                "accuracy{0}" as "accuracy",
+                "total_score{0}" as "total_score",
+                "ranked_score{0}" as "ranked_score",
+                "playcount{0}" as "playcount",
+                "playtime{0}" as "playtime",
+                "max_combo{0}" as "max_combo"
+            FROM 
+                "game_stats"."{1}" 
+            WHERE "id" = $1;"#,
+            play_mod_name, mode_name
+        );
+
+        // Query from database
+        let row = match database.pg.query_first(&sql, &[&self.id]).await {
+            Ok(row) => row,
+            Err(err) => {
+                error!(
+                    "Failed to init player {}({})'s play stats from database, error: {:?}",
+                    self.name, self.id, err
+                );
+                return None;
+            }
+        };
+
+        // Query result into struct
+        match serde_postgres::from_row::<Stats>(&row) {
+            Ok(mut stats) => {
+                debug!(
+                    "Success to get player {}({})'s play stats: {:?}",
+                    self.name, self.id, stats
+                );
+                // Calculate rank
+                stats
+                    .recalculate_rank(&play_mod_name, &mode_name, database)
+                    .await;
+                // Done
+                return Some(stats);
+            }
+            Err(err) => {
+                error!(
+                    "Failed to deserialize player {}({})'s play stats from database, error: {:?}",
+                    self.name, self.id, err
+                );
+                return None;
+            }
+        };
     }
 }

@@ -25,6 +25,8 @@ mod depends {
     pub use hashbrown::{HashMap, HashSet};
     pub use num_traits::FromPrimitive;
     pub use queue::Queue;
+    pub use serde::Deserialize;
+    pub use std::time::Instant;
     pub use strum::IntoEnumIterator;
 }
 
