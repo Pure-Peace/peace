@@ -44,6 +44,6 @@ async fn main() -> std::io::Result<()> {
     // Create PlayerSession for this server
     let player_sessions = RwLock::new(PlayerSessions::new(100, database.clone()));
 
-    // Start actix server
-    settings::actix::start_server(cfg, settings, database, player_sessions).await
+    // Start peace server
+    settings::peace::start_server(cfg, settings, database, player_sessions).await
 }

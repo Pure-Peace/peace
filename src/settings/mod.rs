@@ -1,4 +1,4 @@
-pub mod actix;
+pub mod peace;
 pub mod logger;
 pub mod model;
 
