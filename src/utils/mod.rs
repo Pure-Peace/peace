@@ -41,7 +41,10 @@ pub async fn get_form_data<T: serde::de::DeserializeOwned>(
 /// Get real ip from request
 pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
     match req.connection_info().realip_remote_addr() {
-        Some(ip) => Ok(ip.to_string()),
+        Some(ip) => Ok(match ip.find(':') {
+            Some(idx) => ip[0..idx].to_string(),
+            None => ip.to_string(),
+        }),
         None => Err(()),
     }
 }
@@ -158,17 +161,29 @@ pub async fn geo_ip_info(
                         Ok(json) => Ok(json),
                         Err(err) => {
                             warn!("Failed to parse ip address: {}", ip_address);
-                            return Err(GeoError::new(ip_address, Some("can not parse your ip address")));
+                            return Err(GeoError::new(
+                                ip_address,
+                                Some("can not parse your ip address"),
+                            ));
                         }
                     }
                 }
 
                 Err(err) => {
-                    warn!("Failed to get ip location info: {}; err: {:?}", ip_address, err);
-                    return Err(GeoError::new(ip_address, Some("can not get your ip location info")));
+                    warn!(
+                        "Failed to get ip location info: {}; err: {:?}",
+                        ip_address, err
+                    );
+                    return Err(GeoError::new(
+                        ip_address,
+                        Some("can not get your ip location info"),
+                    ));
                 }
             }
         }
-        None => Err(GeoError::new(ip_address, Some("Geo-ip service is not enabled"))),
+        None => Err(GeoError::new(
+            ip_address,
+            Some("Geo-ip service is not enabled"),
+        )),
     }
 }

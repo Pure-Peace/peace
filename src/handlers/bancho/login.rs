@@ -4,6 +4,7 @@
 use actix_web::web::{Bytes, Data};
 use actix_web::{http::HeaderMap, HttpRequest};
 use async_std::sync::RwLock;
+use std::net::{IpAddr, Ipv4Addr};
 
 use crate::types::{Argon2Cache, ChannelList, PacketData};
 use crate::{constants, database::Database, packets};
@@ -20,6 +21,10 @@ use std::time::Instant;
 
 use maxminddb::{geoip2::City, Reader};
 use memmap::Mmap;
+
+lazy_static::lazy_static! {
+    static ref DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+}
 
 #[inline(always)]
 /// Bancho login handler
@@ -363,7 +368,7 @@ pub async fn login(
 
     // update player's location (ip geo)
     if let Some(reader) = geo_db.get_ref() {
-        match reader.lookup::<City>(request_ip.parse().unwrap()) {
+        match reader.lookup::<City>(request_ip.parse().unwrap_or(*DEFAULT_IP)) {
             Ok(geo_data) => match geo_data.location.as_ref().and_then(|location| {
                 Some((
                     location.latitude.unwrap_or(0.0),

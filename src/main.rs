@@ -7,9 +7,6 @@ extern crate serde;
 #[macro_use]
 extern crate log;
 
-#[macro_use]
-extern crate lazy_static;
-
 use async_std::sync::RwLock;
 use colored::Colorize;
 
