@@ -13,12 +13,16 @@ use crate::{
     types::{ChannelList, PacketData},
 };
 
-pub struct HandlerData<'a> {
+pub struct HandlerContext<'a> {
+    pub request_ip: &'a String,
+    pub token: &'a String,
+    pub id: i32,
+    pub name: &'a String,
+    pub data: &'a PlayerData,
     pub player_sessions: &'a Data<RwLock<PlayerSessions>>,
     pub database: &'a Data<Database>,
     pub channel_list: &'a Data<RwLock<ChannelList>>,
-    pub token: &'a String,
-    pub player_data: PlayerData,
+    pub payload: &'a [u8],
 }
 
 pub trait ReadInteger<T> {

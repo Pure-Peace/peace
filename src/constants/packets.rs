@@ -3,8 +3,6 @@
 
 use enum_primitive_derive::Primitive;
 
-use crate::packets::HandlerData;
-
 pub trait LoginReply {
     fn val(self) -> i32;
 }

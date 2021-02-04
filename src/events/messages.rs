@@ -3,19 +3,14 @@ use crate::packets;
 use super::depends::*;
 
 #[inline(always)]
-pub async fn public(
-    payload: &[u8],
-    channel_list: &Data<RwLock<ChannelList>>,
-    player_sessions: &Data<RwLock<PlayerSessions>>,
-    player_data: &PlayerData,
-) {
+pub async fn public<'a>(ctx: &HandlerContext<'a>) {
     // TODO: check player is slienced?
 
-    let mut payload = PayloadReader::new(payload);
+    let mut payload = PayloadReader::new(ctx.payload);
     let message = payload.read_message().await;
 
     // Check channel
-    let channel_list = channel_list.read().await;
+    let channel_list = ctx.channel_list.read().await;
     match channel_list.get(&message.target) {
         Some(channel) => {
             // TODO: check player's priv?
@@ -24,9 +19,9 @@ pub async fn public(
             // Send message done
             channel
                 .broadcast(
-                    &player_sessions,
-                    &player_data.name,
-                    player_data.id,
+                    ctx.player_sessions,
+                    ctx.name,
+                    ctx.id,
                     &message.content,
                     false,
                 )
@@ -37,28 +32,23 @@ pub async fn public(
 
             info!(
                 "{}({}) <pub> @ {}: {}",
-                &player_data.name, player_data.id, message.target, message.content
+                ctx.name, ctx.id, message.target, message.content
             );
         }
         None => {
             warn!(
                 "Player {}({}) try send message to non-existent channel: {}",
-                &player_data.name, player_data.id, message.target
+                ctx.name, ctx.id, message.target
             );
         }
     }
 }
 
 #[inline(always)]
-pub async fn private(
-    payload: &[u8],
-    token: &String,
-    player_sessions: &Data<RwLock<PlayerSessions>>,
-    player_data: &PlayerData,
-) {
+pub async fn private<'a>(ctx: &HandlerContext<'a>) {
     // TODO: check player is slienced?
 
-    let mut payload = PayloadReader::new(payload);
+    let mut payload = PayloadReader::new(ctx.payload);
     let message = payload.read_message().await;
 
     // BanchoBot? current not exists
@@ -66,19 +56,19 @@ pub async fn private(
         return;
     }
 
-    let player_sessions = player_sessions.read().await;
+    let player_sessions = ctx.player_sessions.read().await;
     let map = player_sessions.map.read().await;
 
     // Find target player
     match map.values().find(|target| target.name == message.target) {
         Some(target) => {
             // Active player (sender)
-            let player = match map.get(token) {
+            let player = match map.get(ctx.token) {
                 Some(player) => player,
                 None => {
                     warn!(
                         "Failed to send private messages, player {}({}) has logout!",
-                        player_data.name, player_data.id
+                        ctx.name, ctx.id
                     );
                     return;
                 }
@@ -126,14 +116,14 @@ pub async fn private(
 
             info!(
                 "{}({}) <pvt> @ {}: {}",
-                &player_data.name, player_data.id, message.target, message.content
+                ctx.name, ctx.id, message.target, message.content
             );
         }
         // Find None
         _ => {
             warn!(
                 "Player {}({}) try send message to non-existent (or offline) player: {}",
-                &player_data.name, player_data.id, message.target
+                ctx.name, ctx.id, message.target
             );
         }
     }

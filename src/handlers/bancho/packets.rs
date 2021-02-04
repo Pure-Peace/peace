@@ -11,25 +11,25 @@ use crate::{
     database::Database,
     events,
     objects::{PlayerData, PlayerSessions},
-    packets::{self, HandlerData, PayloadReader},
+    packets::{self, HandlerContext, PayloadReader},
     types::ChannelList,
 };
 
 impl id {
     /// osu!Bancho packet read handle
-    pub async fn read_handle(
+    pub async fn read_handle<'a>(
         &self,
-        request_ip: &String,
-        token: &String,
-        p_data: &PlayerData,
-        p_sessions: &Data<RwLock<PlayerSessions>>,
-        database: &Data<Database>,
-        channel_list: &Data<RwLock<ChannelList>>,
-        payload: Option<&[u8]>,
+        request_ip: &'a String,
+        token: &'a String,
+        data: &'a PlayerData,
+        player_sessions: &'a Data<RwLock<PlayerSessions>>,
+        database: &'a Data<Database>,
+        channel_list: &'a Data<RwLock<ChannelList>>,
+        payload: Option<&'a [u8]>,
     ) {
         // Data shorthand
-        let player_id = p_data.id;
-        let player_name = &p_data.name;
+        let player_id = data.id;
+        let player_name = &data.name;
 
         match payload {
             // Payload not exists handlers
@@ -37,8 +37,8 @@ impl id {
                 match self {
                     id::OSU_PING => {}
                     id::OSU_REQUEST_STATUS_UPDATE => {
-                        let p_sessions = p_sessions.read().await;
-                        let map = p_sessions.map.read().await;
+                        let player_sessions = player_sessions.read().await;
+                        let map = player_sessions.map.read().await;
                         if let Some(player) = map.get(token) {
                             player.enqueue(packets::user_stats(&player).await).await;
                         }
@@ -53,40 +53,33 @@ impl id {
             }
             // Payload exists handlers
             Some(payload) => {
+                let ctx = HandlerContext {
+                    request_ip,
+                    token,
+                    id: player_id,
+                    name: player_name,
+                    data,
+                    player_sessions,
+                    database,
+                    channel_list,
+                    payload,
+                };
                 match self {
-                    id::OSU_SEND_PUBLIC_MESSAGE => {
-                        events::messages::public(&payload, &channel_list, &p_sessions, &p_data).await
-                    }
-                    id::OSU_SEND_PRIVATE_MESSAGE => {
-                        events::messages::private(&payload, &token, &p_sessions, &p_data).await
-                    }
-                    id::OSU_USER_STATS_REQUEST => {
-                        events::users::stats_request(&payload, &p_sessions, &p_data).await
-                    }
-                    id::OSU_USER_CHANGE_ACTION => {
-                        events::users::change_action(&payload, &database, &token, &p_sessions, &p_data).await
-                    }
-                    id::OSU_USER_RECEIVE_UPDATES => {
-                        events::users::receive_updates(&payload, &token, &p_sessions).await
-                    }
-                    id::OSU_USER_FRIEND_ADD => {
-                        events::users::add_friend(&payload, &database, &p_data, &token, &p_sessions).await
-                    }
-                    id::OSU_USER_FRIEND_REMOVE => {
-                        events::users::remove_friend(&payload, &database, &p_data, &token, &p_sessions).await
-                    }
+                    id::OSU_SEND_PUBLIC_MESSAGE => events::messages::public(&ctx).await,
+                    id::OSU_SEND_PRIVATE_MESSAGE => events::messages::private(&ctx).await,
+                    id::OSU_USER_STATS_REQUEST => events::users::stats_request(&ctx).await,
+                    id::OSU_USER_CHANGE_ACTION => events::users::change_action(&ctx).await,
+                    id::OSU_USER_RECEIVE_UPDATES => events::users::receive_updates(&ctx).await,
+                    id::OSU_USER_FRIEND_ADD => events::users::add_friend(&ctx).await,
+                    id::OSU_USER_FRIEND_REMOVE => events::users::remove_friend(&ctx).await,
                     id::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS => {
-                        events::users::toggle_block_non_friend_dms(&payload, &token, &p_data, &p_sessions).await
+                        events::users::toggle_block_non_friend_dms(&ctx).await
                     }
-                    id::OSU_USER_CHANNEL_PART => {
-                        events::users::channel_part(&payload, &token, &p_data, &p_sessions, &channel_list).await
-                    }
-                    id::OSU_USER_CHANNEL_JOIN => {
-                        events::users::channel_join(&payload, &token, &p_data, &p_sessions, &channel_list).await
-                    }
+                    id::OSU_USER_CHANNEL_PART => events::users::channel_part(&ctx).await,
+                    id::OSU_USER_CHANNEL_JOIN => events::users::channel_join(&ctx).await,
                     id::OSU_USER_LOGOUT => {
                         // Has payload(i32) but unused
-                        events::users::user_logout(&token, &p_sessions, &channel_list).await
+                        events::users::user_logout(&ctx).await
                     }
                     _ => {
                         warn!(
