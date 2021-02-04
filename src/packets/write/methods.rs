@@ -1,4 +1,8 @@
-use crate::{constants::{id, LoginReply}, objects::{Player, PlayerData}, types::PacketData};
+use crate::{
+    constants::{id, LoginReply},
+    objects::{Player, PlayerData},
+    types::PacketData,
+};
 
 use celes::Country;
 use std::str::FromStr;
