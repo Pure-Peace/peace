@@ -1,4 +1,4 @@
-# Peace
+# Peace (WIP)
 
 ## osu! server written in Rust.
 #### Fully asynchronous, high concurrency, high performance, and high security.
@@ -152,7 +152,7 @@ cd sql
 
 ## Geo-ip
 
-After installing this module, turn it on in the **.toml** configuration file to get the player's geolocation information. Also peace provides geo-ip api to allow your other applications to use this service as well.
+After installing this module, turn it on in the **.toml** configuration file to get the user's geolocation information. Also peace provides geo-ip api to allow your other applications to use this service as well.
 
 [>> Go to Readme and setup!](https://github.com/Pure-Peace/Peace/blob/main/geoip/readme.md)
 
