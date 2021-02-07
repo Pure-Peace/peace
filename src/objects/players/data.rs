@@ -1,7 +1,6 @@
-use crate::{
-    constants::{GameMode, PresenceFilter},
-    types::Location,
-};
+use std::convert::TryInto;
+
+use crate::{constants::{GameMode, PresenceFilter}, types::{Location, TokenString}};
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 
@@ -34,6 +33,7 @@ pub struct PlayerData {
     pub channels: Vec<String>,
     pub login_time: DateTime<Local>,
     pub login_record_id: i64,
+    pub token: TokenString,
     pub last_active_time: DateTime<Local>,
     pub data_create_time: DateTime<Local>,
 }
@@ -62,6 +62,7 @@ impl PlayerData {
             channels: p.channels.iter().map(|s| s.to_string()).collect(),
             login_time: p.login_time,
             login_record_id: p.login_record_id,
+            token: p.token.clone(),
             last_active_time: p.last_active_time,
             data_create_time: Local::now(),
         }

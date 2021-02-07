@@ -9,16 +9,16 @@ use crate::objects::{Channel, Player};
 
 pub type TestType = RwLock<i32>;
 pub type TokenString = String;
-pub type UserId = i32;
 pub type PacketData = Vec<u8>;
 
-pub type PlayerSessionMap = RwLock<HashMap<TokenString, Player>>;
-pub type PlayerSessionMapData = HashMap<TokenString, Player>;
-pub type PlayerIdSessionMap = RwLock<HashMap<UserId, TokenString>>;
+pub type PlayerSessionMap = RwLock<HashMap<TokenString, Arc<RwLock<Player>>>>;
+pub type PlayerIdSessionMap = RwLock<HashMap<UserId, Arc<RwLock<Player>>>>;
+pub type PlayerNameSessionMap = RwLock<HashMap<Username, Arc<RwLock<Player>>>>;
 
 pub type ChannelName = String;
 pub type ChannelList = HashMap<ChannelName, Channel>;
 
+pub type UserId = i32;
 pub type Username = String;
 pub type Password = String;
 pub type Latitude = f32;
@@ -26,5 +26,4 @@ pub type Longitude = f32;
 pub type Location = (Latitude, Longitude);
 
 pub type Argon2CryptedCipher = String;
-/// Argon2 cache: key = argon2 cipher, value = password hash
 pub type Argon2Cache = HashMap<Argon2CryptedCipher, Password>;

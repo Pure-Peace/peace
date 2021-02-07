@@ -72,12 +72,14 @@ impl Channel {
         let packet_data = packets::send_message(sender, sender_id, msg, &self.name).await;
         // For every players in channel
         let players = self.players.read().await;
-        for player in player_sessions.map.read().await.values().filter(|player| {
+        for player in player_sessions.token_map.read().await.values() {
+            let player = player.read().await;
             if !include_sender && (player.id == sender_id) {
-                return false;
+                return;
             }
-            players.contains(&player.id)
-        }) {
+            if !players.contains(&player.id) {
+                return;
+            }
             // Send them message
             player.enqueue(packet_data.clone()).await;
         }

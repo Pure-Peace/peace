@@ -12,7 +12,7 @@ mod depends {
     pub use crate::{
         constants::{Action, ClientInfo, GameMode, PlayMod, PresenceFilter},
         objects::Channel,
-        types::{Location, PacketData},
+        types::{Location, PacketData, TokenString},
     };
     pub use crate::{
         constants::{BanchoPrivileges, Privileges},
@@ -28,6 +28,7 @@ mod depends {
     pub use serde::Deserialize;
     pub use std::time::Instant;
     pub use strum::IntoEnumIterator;
+    pub use uuid::Uuid;
 }
 
 pub use address::PlayerAddress;

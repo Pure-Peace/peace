@@ -24,6 +24,7 @@ pub struct Player {
     pub channels: HashSet<String>,
     pub login_time: DateTime<Local>,
     pub login_record_id: i64,
+    pub token: TokenString,
     pub last_active_time: DateTime<Local>,
 }
 
@@ -64,6 +65,7 @@ impl Player {
             channels: HashSet::new(),
             login_time: now_time,
             login_record_id: -1,
+            token: Uuid::new_v4().to_string(),
             last_active_time: now_time,
         }
     }
