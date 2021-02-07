@@ -47,7 +47,7 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 pub async fn test_async_lock(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
     let start = Instant::now();
     let player_sessions = player_sessions.read().await;
-    let map = player_sessions.map.read().await;
+    let map = player_sessions.token_map.read().await;
     let end = start.elapsed();
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
@@ -77,7 +77,7 @@ pub async fn test_player_money_add(
 ) -> impl Responder {
     let start = Instant::now();
     let player_sessions = player_sessions.write().await;
-    let mut map = player_sessions.map.write().await;
+    let mut map = player_sessions.token_map.write().await;
     let player_info = match map.get_mut(&token.0) {
         Some(player) => {
             // (*player).money += 1;
@@ -98,7 +98,7 @@ pub async fn test_player_money_reduce(
 ) -> impl Responder {
     let start = Instant::now();
     let player_sessions = player_sessions.write().await;
-    let mut map = player_sessions.map.write().await;
+    let mut map = player_sessions.token_map.write().await;
     let player_info = match map.get_mut(&token.0) {
         Some(player) => {
             // (*player).money -= 1;
@@ -132,6 +132,25 @@ pub async fn pleyer_sessions_all(player_sessions: Data<RwLock<PlayerSessions>>) 
     HttpResponse::Ok().body(player_sessions.read().await.map_to_string().await)
 }
 
+/// GET "/pleyer_maps_info"
+#[get("/pleyer_maps_info")]
+pub async fn pleyer_maps_info(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
+    let start = Instant::now();
+    let maps = player_sessions.read().await;
+    let (token_map, id_session_map, name_session_map) = (
+        maps.token_map.read().await,
+        maps.id_session_map.read().await,
+        maps.name_session_map.read().await,
+    );
+    HttpResponse::Ok().body(format!(
+        "token_map: {}, id_session_map: {}, name_session_map: {}; time: {:.2?}",
+        token_map.len(),
+        id_session_map.len(),
+        name_session_map.len(),
+        start.elapsed()
+    ))
+}
+
 /// GET "/pleyer_channels_all"
 #[get("/pleyer_channels_all")]
 pub async fn player_channels_all(channel_list: Data<RwLock<ChannelList>>) -> impl Responder {
@@ -152,7 +171,7 @@ pub async fn pleyer_sessions_kick(
             .logout(&token.0, Some(&channel_list))
             .await
         {
-            Some((token, player)) => format!("{}\n{:?}", token, player),
+            Some(player) => format!("{}\n{:?}", token.0, player),
             None => "non this player".to_string(),
         },
     )
@@ -172,7 +191,7 @@ pub async fn pleyer_sessions_kick_uid(
             .logout_with_id(user_id.0, Some(&channel_list))
             .await
         {
-            Some((token, player)) => format!("{}\n{:?}", token, player),
+            Some(player) => format!("{:?}", player),
             None => "non this player".to_string(),
         },
     )
