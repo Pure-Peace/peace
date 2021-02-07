@@ -57,14 +57,16 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
     }
 
     let player_sessions = ctx.player_sessions.read().await;
-    let map = player_sessions.map.read().await;
+    let token_map = player_sessions.token_map.read().await;
+    let name_session_map = player_sessions.name_session_map.read().await;
 
     // Find target player
-    match map.values().find(|target| target.name == message.target) {
+    match name_session_map.get(&message.target) {
         Some(target) => {
             // Active player (sender)
-            let player = match map.get(ctx.token) {
-                Some(player) => player,
+            let target = target.read().await;
+            let player = match token_map.get(ctx.token) {
+                Some(player) => player.read().await,
                 None => {
                     warn!(
                         "Failed to send private messages, player {}({}) has logout!",
@@ -109,10 +111,6 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
                     .await,
                 )
                 .await;
-
-            // Drop locks
-            drop(map);
-            drop(player_sessions);
 
             info!(
                 "{}({}) <pvt> @ {}: {}",

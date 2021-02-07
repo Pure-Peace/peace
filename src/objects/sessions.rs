@@ -2,21 +2,31 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
-use std::future::Future;
+use std::{
+    future::Future,
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
+};
 use uuid::Uuid;
 
 use crate::{
     database::Database,
     packets,
-    types::{ChannelList, PacketData, PlayerIdSessionMap, PlayerSessionMap, TokenString, UserId},
+    types::{
+        ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap, PlayerSessionMap,
+        TokenString, UserId,
+    },
 };
 
 use super::{Player, PlayerData};
 
 pub struct PlayerSessions {
-    pub map: PlayerSessionMap,
+    pub token_map: PlayerSessionMap,
     pub id_session_map: PlayerIdSessionMap,
-    pub player_count: u32,
+    pub name_session_map: PlayerNameSessionMap,
+    pub player_count: AtomicU32,
     database: Database,
 }
 
@@ -25,54 +35,73 @@ impl PlayerSessions {
     /// Automatically expand when capacity is exceeded
     pub fn new(capacity: usize, database: Database) -> Self {
         PlayerSessions {
-            /// Key: token, Value: Player
-            map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
-            /// Key: Player.id, Value: token
+            /// Key: token, Value: Arc<RwLock<Player>>
+            token_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            /// Key: Player.id, Value: Arc<RwLock<Player>>
             id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
-            player_count: 0,
+            /// Key: Player.name Value: Arc<RwLock<Player>>
+            name_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            player_count: AtomicU32::new(0),
             database,
         }
     }
 
     #[inline(always)]
-    /// Create new token, and login a player into PlayerSessions
-    pub async fn login(&mut self, player: Player) -> TokenString {
-        let token = Uuid::new_v4().to_string();
-        self.handle_login(player, token).await
-    }
-
-    #[inline(always)]
-    /// Login a player into PlayerSessions with a token
-    pub async fn handle_login(&mut self, player: Player, token: TokenString) -> TokenString {
+    /// Login a player into PlayerSessions
+    pub async fn login(&self, player: Player) -> TokenString {
+        let token = player.token.clone();
+        let player_name = player.name.clone();
         let player_id = player.id;
-        // Get locks
-        let (mut map, mut id_session_map) =
-            (self.map.write().await, self.id_session_map.write().await);
-        // Insert into
-        map.insert(token.clone(), player);
-        id_session_map.insert(player_id, token.clone());
-        self.player_count += 1;
+
+        {
+            let arc_player = Arc::new(RwLock::new(player));
+
+            // Get locks
+            let (mut token_map, mut id_session_map, mut name_session_map) = (
+                self.token_map.write().await,
+                self.id_session_map.write().await,
+                self.name_session_map.write().await,
+            );
+            // Insert into
+            token_map.insert(token.clone(), arc_player.clone());
+            id_session_map.insert(player_id, arc_player.clone());
+            name_session_map.insert(player_name, arc_player.clone());
+        }
+        self.player_count.fetch_add(1, Ordering::SeqCst);
         token
     }
 
     /// Logout a player from the PlayerSessions
     pub async fn logout(
-        &mut self,
+        &self,
         token: &TokenString,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
-    ) -> Option<(TokenString, Player)> {
+    ) -> Option<Player> {
         let logout_start = std::time::Instant::now();
         // Get locks
-        let (mut map, mut id_session_map) =
-            (self.map.write().await, self.id_session_map.write().await);
-        // Logout
-        match map.remove_entry(token) {
-            Some((token_string, mut player)) => {
+        let (mut token_map, mut id_session_map, mut name_session_map) = (
+            self.token_map.write().await,
+            self.id_session_map.write().await,
+            self.name_session_map.write().await,
+        );
+        // Try Logout
+        match token_map.remove(token) {
+            Some(arc_player) => {
                 // Remove and drop locks
-                id_session_map.remove(&player.id);
-                drop(map);
-                drop(id_session_map);
-                self.player_count -= 1;
+                {
+                    let (player_id, player_name) = {
+                        let player = arc_player.read().await;
+                        (player.id, player.name.clone())
+                    };
+                    id_session_map.remove(&player_id);
+                    name_session_map.remove(&player_name);
+                    drop(token_map);
+                    drop(id_session_map);
+                    drop(name_session_map);
+                }
+
+                let mut player = Arc::try_unwrap(arc_player).unwrap().into_inner();
+                self.player_count.fetch_sub(1, Ordering::SeqCst);
 
                 // Enqueue logout packet to all players
                 self.enqueue_all(&packets::user_logout(player.id)).await;
@@ -94,7 +123,8 @@ impl PlayerSessions {
                     "user {}({}) has logouted; time spent: {:.2?}",
                     player.name, player.id, logout_end
                 );
-                Some((token_string, player))
+
+                Some(player)
             }
             None => None,
         }
@@ -102,15 +132,15 @@ impl PlayerSessions {
 
     #[inline(always)]
     pub async fn enqueue_all(&self, packet_data: &PacketData) {
-        for player in self.map.read().await.values() {
-            player.enqueue(packet_data.clone()).await;
+        for player in self.token_map.read().await.values() {
+            player.write().await.enqueue(packet_data.clone()).await;
         }
     }
 
     #[inline(always)]
     pub async fn enqueue_by_token(&self, token: &TokenString, packet_data: PacketData) -> bool {
-        if let Some(player) = self.map.read().await.get(token) {
-            player.enqueue(packet_data).await;
+        if let Some(player) = self.token_map.read().await.get(token) {
+            player.write().await.enqueue(packet_data).await;
             return true;
         }
         false
@@ -118,13 +148,8 @@ impl PlayerSessions {
 
     #[inline(always)]
     pub async fn enqueue_by_id(&self, user_id: &UserId, packet_data: PacketData) -> bool {
-        let token = match self.id_session_map.read().await.get(user_id) {
-            Some(token) => token.clone(),
-            None => return false,
-        };
-
-        if let Some(player) = self.map.read().await.get(&token) {
-            player.enqueue(packet_data).await;
+        if let Some(player) = self.id_session_map.read().await.get(user_id) {
+            player.write().await.enqueue(packet_data).await;
             return true;
         }
         false
@@ -133,29 +158,23 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn get_token_by_id(&self, user_id: &UserId) -> Option<String> {
         match self.id_session_map.read().await.get(user_id) {
-            Some(token) => Some(token.clone()),
+            Some(player) => Some(player.read().await.token.clone()),
             None => None,
         }
     }
 
     #[inline(always)]
     pub async fn get_id_by_token(&self, token: &TokenString) -> Option<i32> {
-        match self.map.read().await.get(token) {
-            Some(player) => Some(player.id.clone()),
+        match self.token_map.read().await.get(token) {
+            Some(player) => Some(player.read().await.id.clone()),
             None => None,
         }
     }
 
     #[inline(always)]
     pub async fn get_id_by_name(&self, name: &str) -> Option<i32> {
-        match self
-            .map
-            .read()
-            .await
-            .values()
-            .find(|player| player.name == name)
-        {
-            Some(player) => Some(player.id.clone()),
+        match self.name_session_map.read().await.get(name) {
+            Some(player) => Some(player.read().await.id.clone()),
             None => None,
         }
     }
@@ -163,7 +182,7 @@ impl PlayerSessions {
     #[inline(always)]
     /// Token is exists or not
     pub async fn token_is_exists(&self, token: &TokenString) -> bool {
-        self.map.read().await.contains_key(token)
+        self.token_map.read().await.contains_key(token)
     }
 
     #[inline(always)]
@@ -183,12 +202,12 @@ impl PlayerSessions {
     /// }
     /// ```
     pub async fn logout_with_id(
-        &mut self,
+        &self,
         user_id: UserId,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
-    ) -> Option<(TokenString, Player)> {
+    ) -> Option<Player> {
         let token = match self.id_session_map.read().await.get(&user_id) {
-            Some(token) => token.to_string(),
+            Some(player) => player.read().await.token.to_string(),
             None => return None,
         };
         self.logout(&token, channel_list).await
@@ -197,15 +216,14 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn deactive_token_list(&self, session_timeout: i64) -> Vec<TokenString> {
         let now_timestamp = Local::now().timestamp();
-        self.map
-            .read()
-            .await
-            .iter()
-            .filter(|(_, player)| {
-                now_timestamp - player.last_active_time.timestamp() > session_timeout
-            })
-            .map(|(token, _)| token.to_string())
-            .collect()
+
+        let mut vec = vec![];
+        for (token, player) in self.token_map.read().await.iter() {
+            if now_timestamp - player.read().await.last_active_time.timestamp() > session_timeout {
+                vec.push(token.clone())
+            }
+        }
+        vec
     }
 
     #[inline(always)]
@@ -217,7 +235,7 @@ impl PlayerSessions {
     #[inline(always)]
     /// For debug, get PlayerSessions.map to string
     pub async fn map_to_string(&self) -> String {
-        format!("{:?}", self.map.read().await)
+        format!("{:?}", self.token_map.read().await)
     }
 
     #[inline(always)]
@@ -229,8 +247,8 @@ impl PlayerSessions {
     #[inline(always)]
     /// Get a player data (readonly)
     pub async fn get_player_data(&self, token: &TokenString) -> Option<PlayerData> {
-        match self.map.read().await.get(token) {
-            Some(player) => Some(PlayerData::from(player)),
+        match self.token_map.read().await.get(token) {
+            Some(player) => Some(PlayerData::from(&*player.read().await)),
             None => None,
         }
     }
@@ -245,11 +263,14 @@ impl PlayerSessions {
     where
         F: FnOnce(&mut Player) -> Option<()>,
     {
-        match self.map.write().await.get_mut(token) {
-            Some(player) => match handler(player) {
-                Some(()) => Ok(PlayerData::from(player)),
-                None => Err(()),
-            },
+        match self.token_map.write().await.get_mut(token) {
+            Some(player) => {
+                let mut player = player.write().await;
+                match handler(&mut *player) {
+                    Some(()) => Ok(PlayerData::from(&mut *player)),
+                    None => Err(()),
+                }
+            }
             None => Err(()),
         }
     }
@@ -260,11 +281,14 @@ impl PlayerSessions {
     where
         F: FnOnce(&mut Player) -> Option<()>,
     {
-        match self.map.write().await.get_mut(token) {
-            Some(player) => match handler(player) {
-                Some(()) => Ok(()),
-                None => Err(()),
-            },
+        match self.token_map.write().await.get_mut(token) {
+            Some(player) => {
+                let mut player = player.write().await;
+                match handler(&mut *player) {
+                    Some(()) => Ok(()),
+                    None => Err(()),
+                }
+            }
             None => Err(()),
         }
     }

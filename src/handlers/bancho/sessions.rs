@@ -34,7 +34,7 @@ pub async fn recycle_handler(
             .logout(&token, Some(channel_list))
             .await
         {
-            Some((_token, player)) => {
+            Some(player) => {
                 recycled_sessions_count += 1;
                 warn!(
                     "deactive user {}({}) has been recycled.",

@@ -416,7 +416,7 @@ pub async fn login(
     ));
 
     // Lock the PlayerSessions before we handle it
-    let mut player_sessions = player_sessions.write().await;
+    let player_sessions = player_sessions.write().await;
 
     // Check is the user_id already login,
     // if true, logout old session
@@ -452,9 +452,10 @@ pub async fn login(
     }
 
     // Send new user to online users, and add online users to this new user
-    for online_player in player_sessions.map.read().await.values() {
-        online_player.enqueue(user_data_packet.clone()).await;
+    for online_player in player_sessions.token_map.read().await.values() {
+        let online_player = online_player.write().await;
 
+        online_player.enqueue(user_data_packet.clone()).await;
         // Add online players to this new player
         resp.add_ref(packets::user_data(&online_player).await);
     }
