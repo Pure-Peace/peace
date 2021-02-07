@@ -10,7 +10,7 @@ check_db_version_on_created = true
 # !!warn: If debug is enabled, 
 # the part of the route used for testing will be loaded. 
 # Please do not expose it in the production environment
-debug = false
+debug = true
 
 # Logger config
 [logger]

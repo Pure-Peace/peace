@@ -22,6 +22,8 @@ pub struct Player {
     pub status: Status,
     pub queue: Mutex<Queue<PacketData>>,
     pub channels: HashSet<String>,
+    pub spectators: HashSet<i32>,
+    pub spectating: Option<i32>,
     pub login_time: DateTime<Local>,
     pub login_record_id: i64,
     pub token: TokenString,
@@ -63,6 +65,8 @@ impl Player {
             status: Status::new(),
             queue: Mutex::new(Queue::new()),
             channels: HashSet::new(),
+            spectators: HashSet::new(),
+            spectating: None,
             login_time: now_time,
             login_record_id: -1,
             token: Uuid::new_v4().to_string(),
@@ -298,6 +302,7 @@ impl Player {
             }
         };
     }
+    
 
     #[inline(always)]
     /// Enqueue a packet into queue, returns the length of queue

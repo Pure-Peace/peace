@@ -1,5 +1,6 @@
 pub mod messages;
 pub mod users;
+pub mod spectates;
 
 mod depends {
     pub use crate::{

@@ -164,18 +164,29 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
 #[inline(always)]
 /// Add a player to friends
 pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
-    let target = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
+    let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
+    handle_add_friend(target_id, ctx).await;
+}
 
+#[inline(always)]
+/// Add a player to friends
+pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) {
     // -1 is BanchoBot, not exists
-    if target == -1 {
+    if target_id == -1 {
         return;
     }
 
-    // Add a offline player is not allowed
-    if !ctx.player_sessions.read().await.id_is_exists(&target).await {
-        info!(
-            "Player {}({}) tries to add a offline {} to friends.",
-            ctx.name, ctx.id, target
+    // Add an offline player is not allowed
+    if !ctx
+        .player_sessions
+        .read()
+        .await
+        .id_is_exists(&target_id)
+        .await
+    {
+        warn!(
+            "Player {}({}) tries to add an offline user {} to friends.",
+            ctx.name, ctx.id, target_id
         );
         return;
     };
@@ -186,10 +197,10 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
         .write()
         .await
         .handle_player(ctx.token, |p| {
-            if p.friends.contains(&target) {
+            if p.friends.contains(&target_id) {
                 return None;
             }
-            p.friends.push(target);
+            p.friends.push(target_id);
             Some(())
         })
         .await;
@@ -197,7 +208,7 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
     if !result.is_ok() {
         info!(
             "Player {}({}) already added {} to friends.",
-            ctx.name, ctx.id, target
+            ctx.name, ctx.id, target_id
         );
         return;
     };
@@ -208,20 +219,20 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
         .pg
         .execute(
             r#"INSERT INTO "user"."friends" VALUES ($1, $2);"#,
-            &[&ctx.id, &target],
+            &[&ctx.id, &target_id],
         )
         .await
     {
         error!(
             "Failed to add friend {} for player {}({}), error: {:?}",
-            target, ctx.name, ctx.id, err
+            target_id, ctx.name, ctx.id, err
         );
         return;
     }
 
     info!(
         "Player {}({}) added {} to friends.",
-        ctx.name, ctx.id, target
+        ctx.name, ctx.id, target_id
     );
 }
 
@@ -229,7 +240,12 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
 /// Remove a player from friends
 pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) {
     let target = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
+    handle_remove_friend(target, ctx).await;
+}
 
+#[inline(always)]
+/// Remove a player from friends
+pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) {
     // -1 is BanchoBot, not exists
     if target == -1 {
         return;
@@ -322,18 +338,27 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) {
 /// Player leave from a channel
 pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
+    handle_channel_part(&channel_name, ctx, None).await;
+}
 
-    match ctx.channel_list.write().await.get_mut(&channel_name) {
+#[inline(always)]
+/// Player leave from a channel
+pub async fn handle_channel_part<'a>(
+    channel_name: &String,
+    ctx: &HandlerContext<'a>,
+    token: Option<&String>,
+) {
+    match ctx.channel_list.write().await.get_mut(channel_name) {
         Some(channel) => {
             let player_sessions = ctx.player_sessions.read().await;
 
             {
-                let mut map = player_sessions.map.write().await;
-                let player = map.get_mut(ctx.token);
+                let mut map = player_sessions.token_map.write().await;
+                let player = map.get_mut(token.unwrap_or(ctx.token));
                 if player.is_none() {
                     return;
                 }
-                channel.leave(player.unwrap()).await;
+                channel.leave(&mut *player.unwrap().write().await).await;
                 drop(map);
             }
 
@@ -352,18 +377,27 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
+    handle_channel_join(&channel_name, ctx, None).await;
+}
 
-    match ctx.channel_list.write().await.get_mut(&channel_name) {
+#[inline(always)]
+/// Player join to a channel
+pub async fn handle_channel_join<'a>(
+    channel_name: &String,
+    ctx: &HandlerContext<'a>,
+    token: Option<&String>,
+) {
+    match ctx.channel_list.write().await.get_mut(channel_name) {
         Some(channel) => {
             let player_sessions = ctx.player_sessions.read().await;
 
             {
-                let mut map = player_sessions.map.write().await;
-                let player = map.get_mut(ctx.token);
+                let mut map = player_sessions.token_map.write().await;
+                let player = map.get_mut(token.unwrap_or(ctx.token));
                 if player.is_none() {
                     return;
                 }
-                channel.join(player.unwrap()).await;
+                channel.join(&mut *player.unwrap().write().await).await;
                 drop(map);
             }
 

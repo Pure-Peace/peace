@@ -34,15 +34,30 @@ impl id {
         match payload {
             // Payload not exists handlers
             None => {
+                let ctx = HandlerContext {
+                    request_ip,
+                    token,
+                    id: player_id,
+                    name: player_name,
+                    data,
+                    player_sessions,
+                    database,
+                    channel_list,
+                    payload: &[],
+                };
                 match self {
                     id::OSU_PING => {}
                     id::OSU_REQUEST_STATUS_UPDATE => {
                         let player_sessions = player_sessions.read().await;
-                        let map = player_sessions.map.read().await;
+                        let map = player_sessions.token_map.read().await;
                         if let Some(player) = map.get(token) {
+                            let player = player.write().await;
+
                             player.enqueue(packets::user_stats(&player).await).await;
                         }
                     }
+                    id::OSU_SPECTATE_STOP => events::spectates::spectate_stop(&ctx).await,
+                    id::OSU_SPECTATE_CANT => events::spectates::spectate_cant(&ctx).await,
                     _ => {
                         warn!(
                             "Unhandled packet (Non-payload): {:?}; user: {}({});",
@@ -65,8 +80,10 @@ impl id {
                     payload,
                 };
                 match self {
+                    // Messages ---------
                     id::OSU_SEND_PUBLIC_MESSAGE => events::messages::public(&ctx).await,
                     id::OSU_SEND_PRIVATE_MESSAGE => events::messages::private(&ctx).await,
+                    // Users ---------
                     id::OSU_USER_STATS_REQUEST => events::users::stats_request(&ctx).await,
                     id::OSU_USER_CHANGE_ACTION => events::users::change_action(&ctx).await,
                     id::OSU_USER_RECEIVE_UPDATES => events::users::receive_updates(&ctx).await,
@@ -77,10 +94,11 @@ impl id {
                     }
                     id::OSU_USER_CHANNEL_PART => events::users::channel_part(&ctx).await,
                     id::OSU_USER_CHANNEL_JOIN => events::users::channel_join(&ctx).await,
-                    id::OSU_USER_LOGOUT => {
-                        // Has payload(i32) but unused
-                        events::users::user_logout(&ctx).await
-                    }
+                    id::OSU_USER_LOGOUT => events::users::user_logout(&ctx).await,
+                    // TODO: Spectates ---------
+                    id::OSU_SPECTATE_START => events::spectates::spectate_start(&ctx).await,
+                    id::OSU_SPECTATE_FRAMES => events::spectates::spectate_frames(&ctx).await,
+                    // TODO: Matches ---------
                     _ => {
                         warn!(
                             "Unhandled packet: {:?}; user: {}({}); payload: {:?}",

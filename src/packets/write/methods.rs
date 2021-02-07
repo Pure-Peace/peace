@@ -108,8 +108,11 @@ pub fn spectator_left(user_id: i32) -> PacketData {
 }
 
 /// #15: BANCHO_SPECTATE_FRAMES
-/// TODO
-pub fn spectator_frames() {}
+pub fn spectator_frames(data: PacketData) -> PacketData {
+    PacketBuilder::with(id::BANCHO_SPECTATE_FRAMES)
+        .add(data)
+        .pack()
+}
 
 /// #19: BANCHO_MATCH_JOIN_FAIL
 pub fn version_update() -> PacketData {
@@ -183,7 +186,7 @@ pub fn fellow_spectator_left(user_id: i32) -> PacketData {
 /// TODO
 pub fn match_start() {}
 
-/// #48: BANCHO_MATCH_START
+/// #48: BANCHO_MATCH_SCORE_UPDATE
 /// TODO
 pub fn match_score_update() {}
 
