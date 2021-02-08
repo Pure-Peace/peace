@@ -417,41 +417,34 @@ pub async fn login(
     let player_id = player.id;
     let player_priv = player.privileges;
 
-    let token = {
-        // Lock the PlayerSessions before we handle it
-        let mut player_sessions = player_sessions.write().await;
+    // Lock the PlayerSessions before we handle it
+    let mut player_sessions = player_sessions.write().await;
 
-        // Check is the user_id already login,
-        // if true, logout old session
-        if player_sessions.user_is_logined(user_id).await {
-            // TODO: send notification to old session first
-            // Logout old session
-            player_sessions
-                .logout_with_id(user_id, Some(&channel_list))
-                .await;
-            // Send notification to current session
-            resp.add_ref(packets::notification(
+    // Check is the user_id already login,
+    // if true, logout old session
+    if player_sessions.user_is_logined(user_id).await {
+        // TODO: send notification to old session first
+        // Logout old session
+        player_sessions
+            .logout_with_id(user_id, Some(&channel_list))
+            .await;
+        // Send notification to current session
+        resp.add_ref(packets::notification(
             "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
         ));
-        }
+    }
 
-        // Login player to sessions
-        let token = player_sessions.login(player).await;
+    // Login player to sessions
+    let token = player_sessions.login(player).await;
 
-        // Send new user to online users, and add online users to this new user
-        for online_player in player_sessions.token_map.read().await.values() {
-            let online_player = online_player.read().await;
+    // Send new user to online users, and add online users to this new user
+    for online_player in player_sessions.token_map.read().await.values() {
+        let online_player = online_player.read().await;
 
-            online_player.enqueue(user_data_packet.clone()).await;
-            // Add online players to this new player
-            resp.add_ref(packets::user_data(&online_player).await);
-        }
-
-        // Release lock
-        drop(player_sessions);
-
-        token
-    };
+        online_player.enqueue(user_data_packet.clone()).await;
+        // Add online players to this new player
+        resp.add_ref(packets::user_data(&online_player).await);
+    }
 
     // Join player into channel
     resp.add_ref(packets::channel_info_end());
@@ -463,13 +456,16 @@ pub async fn login(
 
         // Join player into channel
         if channel.auto_join {
-            channel.join(player_id).await;
+            channel.join(player_id, Some(&*player_sessions)).await;
             resp.add_ref(packets::channel_join(&channel.name));
         }
 
         // Send channel info to client
         resp.add_ref(channel.channel_info_packet());
     }
+
+    // Release lock
+    drop(player_sessions);
 
     let login_end = login_start.elapsed();
     info!(

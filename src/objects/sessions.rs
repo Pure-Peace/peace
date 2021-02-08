@@ -79,7 +79,7 @@ impl PlayerSessions {
 
     /// Logout a player from the PlayerSessions
     pub async fn logout(
-        &mut self,
+        &self,
         token: &TokenString,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
     ) -> Option<Player> {
@@ -94,36 +94,43 @@ impl PlayerSessions {
         match token_map.remove(token) {
             Some(arc_player) => {
                 // Remove and drop locks
-                {
-                    let (player_id, player_name) = {
+                let (player_id, player_channels) = {
+                    let (player_id, player_name, player_channels) = {
                         let player = arc_player.read().await;
-                        (player.id, player.name.clone())
+                        (player.id, player.name.clone(), player.channels.clone())
                     };
+
                     id_session_map.remove(&player_id);
                     name_session_map.remove(&player_name);
+
                     drop(token_map);
                     drop(id_session_map);
                     drop(name_session_map);
-                }
 
-                let mut player = Arc::try_unwrap(arc_player).unwrap().into_inner();
+                    (player_id, player_channels)
+                };
                 self.player_count.fetch_sub(1, Ordering::SeqCst);
 
                 // Enqueue logout packet to all players
-                self.enqueue_all(&packets::user_logout(player.id)).await;
-                match channel_list {
-                    Some(channel_list) => {
-                        for channel in channel_list.read().await.values() {
-                            if player.channels.contains(&channel.name) {
-                                channel.leave(player.id).await;
-                                channel.update_channel_for_users().await;
-                            }
+                self.enqueue_all(&packets::user_logout(player_id)).await;
+
+                if channel_list.is_some() {
+                    for channel in channel_list.unwrap().read().await.values() {
+                        if player_channels.contains(&channel.name) {
+                            channel.leave(player_id, Some(self)).await;
                         }
                     }
-                    _ => {}
                 }
-                player.update_logout_time(&self.database).await;
 
+                let mut player = match Arc::try_unwrap(arc_player) {
+                    Ok(player) => player.into_inner(),
+                    Err(arc_player) => {
+                        arc_player.write().await.update_logout_time(&self.database).await;
+                        return None
+                    }
+                };
+                
+                player.update_logout_time(&self.database).await;
                 let logout_end = logout_start.elapsed();
                 info!(
                     "user {}({}) has logouted; time spent: {:.2?}",

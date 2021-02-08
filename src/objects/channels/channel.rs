@@ -151,59 +151,53 @@ impl Channel {
     }
 
     #[inline(always)]
-    pub async fn update_channel_for_users(&self) {
+    pub async fn update_channel_for_users(&self, player_sessions: Option<&PlayerSessions>) {
         let packet_data = self.channel_info_packet();
         if self.auto_close {
             // Temporary channel: for in channel players
             for player in self.id_session_map.read().await.values() {
                 player.read().await.enqueue(packet_data.clone()).await;
             }
-        } else {
+        } else if player_sessions.is_some() {
             // Permanent channel: for all players
-            self.player_sessions
-                .read()
-                .await
-                .enqueue_all(&packet_data)
-                .await;
+            player_sessions.unwrap().enqueue_all(&packet_data).await;
         }
     }
 
     #[inline(always)]
     /// Add a player to this channel
-    pub async fn join(&self, player_id: i32) -> bool {
-        let player_sessions = self.player_sessions.read().await;
-        let id_session_map = player_sessions.id_session_map.read().await;
-        match id_session_map.get(&player_id) {
-            Some(player) => self.handle_join(player).await,
-            None => {
-                debug!(
-                    "Failed to join Channel ({}), Player ({}) not exists!",
-                    self.name, player_id
-                );
-                return false;
+    pub async fn join(&self, player_id: i32, player_sessions: Option<&PlayerSessions>) -> bool {
+        let result = if player_sessions.is_none() {
+            let player_sessions = self.player_sessions.read().await;
+            let id_session_map = player_sessions.id_session_map.read().await;
+            match id_session_map.get(&player_id) {
+                Some(player) => self.handle_join(player, Some(&*player_sessions)).await,
+                None => false,
             }
-        }
+        } else {
+            let id_session_map = player_sessions.unwrap().id_session_map.read().await;
+            match id_session_map.get(&player_id) {
+                Some(player) => self.handle_join(player, player_sessions).await,
+                None => false,
+            }
+        };
+
+        if !result {
+            debug!(
+                "Failed to join Channel ({}), Player ({}) not exists!",
+                self.name, player_id
+            );
+        };
+
+        result
     }
 
     #[inline(always)]
-    /// Add a player to this channel
-    pub async fn join_with_token(&self, token: &String) -> bool {
-        let player_sessions = self.player_sessions.read().await;
-        let token_map = player_sessions.token_map.read().await;
-        match token_map.get(token) {
-            Some(player) => self.handle_join(player).await,
-            None => {
-                debug!(
-                    "Failed to join Channel ({}), Player ({}) not exists!",
-                    self.name, token
-                );
-                return false;
-            }
-        }
-    }
-
-    #[inline(always)]
-    pub async fn handle_join(&self, player: &Arc<RwLock<Player>>) -> bool {
+    pub async fn handle_join(
+        &self,
+        player: &Arc<RwLock<Player>>,
+        player_sessions: Option<&PlayerSessions>,
+    ) -> bool {
         let (player_name, player_id) = {
             let player_cloned = player.clone();
             let mut player = player.write().await;
@@ -230,7 +224,7 @@ impl Channel {
         };
 
         // Update channel info for users
-        self.update_channel_for_users().await;
+        self.update_channel_for_users(player_sessions).await;
 
         debug!(
             "Player {}({}) has joined channel {}!",
@@ -241,7 +235,7 @@ impl Channel {
 
     #[inline(always)]
     /// Remove a player from this channel
-    pub async fn leave(&self, player_id: i32) -> bool {
+    pub async fn leave(&self, player_id: i32, player_sessions: Option<&PlayerSessions>) -> bool {
         if !self.id_session_map.read().await.contains_key(&player_id) {
             debug!("Player ({}) is not in channel {}!", player_id, self.name);
             return false;
@@ -269,7 +263,7 @@ impl Channel {
         };
 
         // Update channel info for users
-        self.update_channel_for_users().await;
+        self.update_channel_for_users(player_sessions).await;
 
         debug!(
             "Player {}({}) has been removed from channel {}!",

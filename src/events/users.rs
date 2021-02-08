@@ -362,7 +362,7 @@ pub async fn handle_channel_join<'a>(
 
     match ctx.channel_list.read().await.get(channel_name) {
         Some(channel) => {
-            channel.join(player_id).await;
+            channel.join(player_id, None).await;
         }
         None => {
             error!(
@@ -387,7 +387,7 @@ pub async fn handle_channel_part<'a>(
 
     match ctx.channel_list.read().await.get(channel_name) {
         Some(channel) => {
-            channel.leave(player_id).await;
+            channel.leave(player_id, None).await;
         }
         None => {
             error!(
