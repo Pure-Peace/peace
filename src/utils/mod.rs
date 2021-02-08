@@ -1,13 +1,9 @@
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-
 use std::{
     collections::HashMap,
     net::{Ipv4Addr, Ipv6Addr},
 };
 
 use actix_multipart::{Field, Multipart};
-use actix_web::web::Bytes;
 use actix_web::HttpRequest;
 
 use argon2::verify_encoded;
@@ -159,7 +155,7 @@ pub async fn geo_ip_info(
 
                     match json_data {
                         Ok(json) => Ok(json),
-                        Err(err) => {
+                        Err(_err) => {
                             warn!("Failed to parse ip address: {}", ip_address);
                             return Err(GeoError::new(
                                 ip_address,

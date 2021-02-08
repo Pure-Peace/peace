@@ -4,13 +4,13 @@ use std::str;
 use actix_web::web::{Bytes, Data};
 use async_std::sync::RwLock;
 
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 
 use crate::{
     constants::id,
     database::Database,
-    objects::{Player, PlayerData, PlayerSessions},
-    types::{ChannelList, PacketData},
+    objects::{PlayerData, PlayerSessions},
+    types::ChannelList,
 };
 
 pub struct HandlerContext<'a> {

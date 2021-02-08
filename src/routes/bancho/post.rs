@@ -100,7 +100,7 @@ pub async fn handler(
 
     // Push player's packets to the response
     let player_sessions_r = player_sessions.read().await;
-    match player_sessions_r.token_map.write().await.get(&token) {
+    match player_sessions_r.token_map.read().await.get(&token) {
         Some(player) => {
             let mut player = player.write().await;
             // Update player's active time

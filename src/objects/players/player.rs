@@ -30,6 +30,15 @@ pub struct Player {
     pub last_active_time: DateTime<Local>,
 }
 
+impl Drop for Player {
+    fn drop(&mut self) {
+        debug!(
+            "Player {}({}) object dropped! token: {}",
+            self.name, self.id, self.token
+        );
+    }
+}
+
 impl Player {
     pub fn to_string(&self) -> String {
         format!("{:?}", self)
@@ -302,7 +311,6 @@ impl Player {
             }
         };
     }
-    
 
     #[inline(always)]
     /// Enqueue a packet into queue, returns the length of queue

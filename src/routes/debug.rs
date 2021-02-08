@@ -4,16 +4,10 @@ use crate::{objects::PlayerSessions, utils};
 use actix_web::web::{Data, Path, Query};
 use actix_web::{get, HttpResponse, Responder};
 use async_std::sync::RwLock;
-use log::warn;
-use maxminddb::{geoip2::City, MaxMindDBError, Reader};
+use maxminddb::Reader;
 use memmap::Mmap;
-use serde_qs;
 
-use std::{
-    collections::HashMap,
-    net::{Ipv4Addr, Ipv6Addr},
-    time::Instant,
-};
+use std::{collections::HashMap, time::Instant};
 
 /// GET "/test_pg"
 #[get("/test_pg")]
@@ -47,7 +41,7 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 pub async fn test_async_lock(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
     let start = Instant::now();
     let player_sessions = player_sessions.read().await;
-    let map = player_sessions.token_map.read().await;
+    let _map = player_sessions.token_map.read().await;
     let end = start.elapsed();
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
@@ -76,9 +70,9 @@ pub async fn test_player_money_add(
     player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
-    let player_sessions = player_sessions.write().await;
-    let mut map = player_sessions.token_map.write().await;
-    let player_info = match map.get_mut(&token.0) {
+    let player_sessions = player_sessions.read().await;
+    let map = player_sessions.token_map.read().await;
+    let player_info = match map.get(&token.0) {
         Some(player) => {
             // (*player).money += 1;
             //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
@@ -97,9 +91,9 @@ pub async fn test_player_money_reduce(
     player_sessions: Data<RwLock<PlayerSessions>>,
 ) -> impl Responder {
     let start = Instant::now();
-    let player_sessions = player_sessions.write().await;
-    let mut map = player_sessions.token_map.write().await;
-    let player_info = match map.get_mut(&token.0) {
+    let player_sessions = player_sessions.read().await;
+    let map = player_sessions.token_map.read().await;
+    let player_info = match map.get(&token.0) {
         Some(player) => {
             // (*player).money -= 1;
             format!("{:?}", *player)
@@ -118,9 +112,9 @@ pub async fn test_player_money_reduce_special(
 ) -> impl Responder {
     let start = Instant::now();
     let player_info = player_sessions
-        .write()
+        .read()
         .await
-        .handle_player_get(&token.0, |player| Some(()) /* (*player).money -= 1 */)
+        .handle_player_get(&token.0, |_player| Some(()) /* (*player).money -= 1 */)
         .await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))

@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 use std::sync::Arc;
 
-use actix_web::web::Data;
 use async_std::sync::RwLock;
 use hashbrown::HashMap;
 

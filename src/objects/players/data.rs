@@ -1,6 +1,7 @@
-use std::convert::TryInto;
-
-use crate::{constants::{GameMode, PresenceFilter}, types::{Location, TokenString}};
+use crate::{
+    constants::{GameMode, PresenceFilter},
+    types::{Location, TokenString},
+};
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 

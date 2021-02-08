@@ -1,17 +1,12 @@
-#![allow(unused_variables)]
-
 use actix_web::web::Data;
 use async_std::sync::RwLock;
-use log::warn;
-
-use num_traits::FromPrimitive;
 
 use crate::{
-    constants::{id, Action, GameMode, PlayMod},
+    constants::id,
     database::Database,
     events,
     objects::{PlayerData, PlayerSessions},
-    packets::{self, HandlerContext, PayloadReader},
+    packets::{self, HandlerContext},
     types::ChannelList,
 };
 
@@ -51,7 +46,7 @@ impl id {
                         let player_sessions = player_sessions.read().await;
                         let map = player_sessions.token_map.read().await;
                         if let Some(player) = map.get(token) {
-                            let player = player.write().await;
+                            let player = player.read().await;
 
                             player.enqueue(packets::user_stats(&player).await).await;
                         }

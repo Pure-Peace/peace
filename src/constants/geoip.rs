@@ -1,5 +1,4 @@
 use serde::Serialize;
-use serde_qs;
 
 #[derive(Serialize, Debug)]
 pub struct GeoData<'a> {
