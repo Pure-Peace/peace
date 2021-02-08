@@ -19,7 +19,6 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
             // Send message done
             channel
                 .broadcast(
-                    ctx.player_sessions,
                     ctx.name,
                     ctx.id,
                     &message.content,

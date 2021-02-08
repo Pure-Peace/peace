@@ -1,4 +1,5 @@
-use actix_web::web::Data;
+use std::sync::Arc;
+
 use async_std::sync::RwLock;
 use hashbrown::HashMap;
 
@@ -6,13 +7,16 @@ use colored::Colorize;
 
 use crate::{database::Database, objects::PlayerSessions, types::ChannelList};
 
-use super::{base::ChannelBase, channel, Channel};
+use super::{base::ChannelBase, Channel};
 
 pub struct ChannelListBuilder {}
 
 impl ChannelListBuilder {
     /// Initial channels list from database
-    pub async fn new(database: &Database) -> ChannelList {
+    pub async fn new(
+        database: &Database,
+        player_sessions: Arc<RwLock<PlayerSessions>>,
+    ) -> ChannelList {
         info!(
             "{}",
             "Initializing default chat channels...".bold().bright_blue()
@@ -23,7 +27,7 @@ impl ChannelListBuilder {
             Ok(rows) => {
                 let channel_bases: Vec<ChannelBase> = serde_postgres::from_rows(&rows).unwrap();
                 for base in channel_bases {
-                    channels.insert(base.name.clone(), Channel::from_base(&base).await);
+                    channels.insert(base.name.clone(), Channel::from_base(&base, player_sessions.clone()).await);
                 }
                 info!("{}", format!("Channels successfully loaded: {:?};", channels.keys()).bold().green());
                 channels

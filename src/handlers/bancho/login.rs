@@ -1,8 +1,7 @@
 #![allow(unused_variables)]
-#![allow(unused_imports)]
 
 use actix_web::web::{Bytes, Data};
-use actix_web::{http::HeaderMap, HttpRequest};
+use actix_web::HttpRequest;
 use async_std::sync::RwLock;
 use std::net::{IpAddr, Ipv4Addr};
 
@@ -52,7 +51,7 @@ pub async fn login(
     let (username, password_hash, client_info, client_hashes) =
         match parser::parse_login_data(body).await {
             Ok(login_data) => login_data,
-            Err(err_integer) => {
+            Err(_err_integer) => {
                 error!(
                     "Failed: parse_login_data; request_ip: {}; osu_version: {}",
                     request_ip, osu_version
@@ -383,7 +382,7 @@ pub async fn login(
                     );
                 }
             },
-            Err(err) => {
+            Err(_err) => {
                 warn!(
                     "Failed to lookup player {}({})'s ip address: {}",
                     player.name, player.id, request_ip
@@ -415,53 +414,62 @@ pub async fn login(
         "https://www.baidu.com",
     ));
 
-    // Lock the PlayerSessions before we handle it
-    let player_sessions = player_sessions.write().await;
+    let player_id = player.id;
+    let player_priv = player.privileges;
 
-    // Check is the user_id already login,
-    // if true, logout old session
-    if player_sessions.user_is_logined(user_id).await {
-        // TODO: send notification to old session first
-        // Logout old session
-        player_sessions
-            .logout_with_id(user_id, Some(&channel_list))
-            .await;
-        // Send notification to current session
-        resp.add_ref(packets::notification(
+    let token = {
+        // Lock the PlayerSessions before we handle it
+        let mut player_sessions = player_sessions.write().await;
+
+        // Check is the user_id already login,
+        // if true, logout old session
+        if player_sessions.user_is_logined(user_id).await {
+            // TODO: send notification to old session first
+            // Logout old session
+            player_sessions
+                .logout_with_id(user_id, Some(&channel_list))
+                .await;
+            // Send notification to current session
+            resp.add_ref(packets::notification(
             "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
         ));
-    }
+        }
+
+        // Login player to sessions
+        let token = player_sessions.login(player).await;
+
+        // Send new user to online users, and add online users to this new user
+        for online_player in player_sessions.token_map.read().await.values() {
+            let online_player = online_player.read().await;
+
+            online_player.enqueue(user_data_packet.clone()).await;
+            // Add online players to this new player
+            resp.add_ref(packets::user_data(&online_player).await);
+        }
+
+        // Release lock
+        drop(player_sessions);
+
+        token
+    };
 
     // Join player into channel
     resp.add_ref(packets::channel_info_end());
-    for channel in channel_list.write().await.values_mut() {
+    for channel in channel_list.read().await.values() {
         // Have not privileges to join the channel
-        if (player.privileges & channel.read_priv) <= 0 {
+        if (player_priv & channel.read_priv) <= 0 {
             continue;
         }
 
         // Join player into channel
         if channel.auto_join {
-            channel.join(&mut player).await;
-            channel.update_channel_for_users(&player_sessions).await;
+            channel.join(player_id).await;
             resp.add_ref(packets::channel_join(&channel.name));
         }
 
         // Send channel info to client
-        resp.add_ref(channel.channel_info_packet().await);
+        resp.add_ref(channel.channel_info_packet());
     }
-
-    // Send new user to online users, and add online users to this new user
-    for online_player in player_sessions.token_map.read().await.values() {
-        let online_player = online_player.write().await;
-
-        online_player.enqueue(user_data_packet.clone()).await;
-        // Add online players to this new player
-        resp.add_ref(packets::user_data(&online_player).await);
-    }
-
-    // Login player to sessions
-    let token = player_sessions.login(player).await;
 
     let login_end = login_start.elapsed();
     info!(

@@ -15,12 +15,10 @@ use colored::Colorize;
 use actix_web_prom::PrometheusMetrics;
 use hashbrown::HashMap;
 use maxminddb;
-use memmap::Mmap;
 use prometheus::{opts, IntCounterVec};
 
 use crate::handlers::bancho;
 use crate::objects::{ChannelListBuilder, PlayerSessions};
-use crate::types::{Argon2CryptedCipher, Password};
 
 use super::model::Settings;
 
@@ -145,8 +143,9 @@ pub async fn start_server(
     let player_sessions_cloned = player_sessions.clone();
 
     // Channel list
-    let channel_list: Data<RwLock<ChannelList>> =
-        Data::new(RwLock::new(ChannelListBuilder::new(&database).await));
+    let channel_list: Data<RwLock<ChannelList>> = Data::new(RwLock::new(
+        ChannelListBuilder::new(&database, player_sessions.clone().into_inner()).await,
+    ));
     let channel_list_cloned: Data<RwLock<ChannelList>> = channel_list.clone();
 
     // Password cache

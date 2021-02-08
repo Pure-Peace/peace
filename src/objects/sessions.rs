@@ -3,13 +3,12 @@ use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
 use std::{
-    future::Future,
+    fmt,
     sync::{
         atomic::{AtomicU32, Ordering},
         Arc,
     },
 };
-use uuid::Uuid;
 
 use crate::{
     database::Database,
@@ -30,6 +29,13 @@ pub struct PlayerSessions {
     database: Database,
 }
 
+impl fmt::Debug for PlayerSessions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PlayerSessions")
+            .field("player_count", &self.player_count)
+            .finish()
+    }
+}
 impl PlayerSessions {
     /// Create new PlayerSessions with a default capacity
     /// Automatically expand when capacity is exceeded
@@ -48,7 +54,7 @@ impl PlayerSessions {
 
     #[inline(always)]
     /// Login a player into PlayerSessions
-    pub async fn login(&self, player: Player) -> TokenString {
+    pub async fn login(&mut self, player: Player) -> TokenString {
         let token = player.token.clone();
         let player_name = player.name.clone();
         let player_id = player.id;
@@ -73,7 +79,7 @@ impl PlayerSessions {
 
     /// Logout a player from the PlayerSessions
     pub async fn logout(
-        &self,
+        &mut self,
         token: &TokenString,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
     ) -> Option<Player> {
@@ -107,10 +113,10 @@ impl PlayerSessions {
                 self.enqueue_all(&packets::user_logout(player.id)).await;
                 match channel_list {
                     Some(channel_list) => {
-                        for channel in channel_list.write().await.values_mut() {
+                        for channel in channel_list.read().await.values() {
                             if player.channels.contains(&channel.name) {
-                                channel.leave(&mut player).await;
-                                channel.update_channel_for_users(&self).await;
+                                channel.leave(player.id).await;
+                                channel.update_channel_for_users().await;
                             }
                         }
                     }
@@ -133,14 +139,14 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn enqueue_all(&self, packet_data: &PacketData) {
         for player in self.token_map.read().await.values() {
-            player.write().await.enqueue(packet_data.clone()).await;
+            player.read().await.enqueue(packet_data.clone()).await;
         }
     }
 
     #[inline(always)]
     pub async fn enqueue_by_token(&self, token: &TokenString, packet_data: PacketData) -> bool {
         if let Some(player) = self.token_map.read().await.get(token) {
-            player.write().await.enqueue(packet_data).await;
+            player.read().await.enqueue(packet_data).await;
             return true;
         }
         false
@@ -149,7 +155,7 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn enqueue_by_id(&self, user_id: &UserId, packet_data: PacketData) -> bool {
         if let Some(player) = self.id_session_map.read().await.get(user_id) {
-            player.write().await.enqueue(packet_data).await;
+            player.read().await.enqueue(packet_data).await;
             return true;
         }
         false
@@ -202,7 +208,7 @@ impl PlayerSessions {
     /// }
     /// ```
     pub async fn logout_with_id(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
     ) -> Option<Player> {
@@ -235,7 +241,13 @@ impl PlayerSessions {
     #[inline(always)]
     /// For debug, get PlayerSessions.map to string
     pub async fn map_to_string(&self) -> String {
-        format!("{:?}", self.token_map.read().await)
+        let token = format!("{:?}", self.token_map.read().await);
+        let id = format!("{:?}", self.id_session_map.read().await);
+        let name = format!("{:?}", self.name_session_map.read().await);
+        format!(
+            "token map: {}\n\nid map: {}\n\nname map: {}",
+            token, id, name
+        )
     }
 
     #[inline(always)]
@@ -263,7 +275,7 @@ impl PlayerSessions {
     where
         F: FnOnce(&mut Player) -> Option<()>,
     {
-        match self.token_map.write().await.get_mut(token) {
+        match self.token_map.read().await.get(token) {
             Some(player) => {
                 let mut player = player.write().await;
                 match handler(&mut *player) {
@@ -281,7 +293,7 @@ impl PlayerSessions {
     where
         F: FnOnce(&mut Player) -> Option<()>,
     {
-        match self.token_map.write().await.get_mut(token) {
+        match self.token_map.read().await.get(token) {
             Some(player) => {
                 let mut player = player.write().await;
                 match handler(&mut *player) {

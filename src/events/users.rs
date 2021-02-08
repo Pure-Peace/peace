@@ -19,7 +19,7 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) {
     let filter_val = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
     match ctx
         .player_sessions
-        .write()
+        .read()
         .await
         .handle_player(ctx.token, move |p| {
             p.presence_filter = PresenceFilter::from_i32(filter_val)?;
@@ -194,7 +194,7 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) {
     // Add friend in server
     let result = ctx
         .player_sessions
-        .write()
+        .read()
         .await
         .handle_player(ctx.token, |p| {
             if p.friends.contains(&target_id) {
@@ -263,7 +263,7 @@ pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) {
     // Remove friend in server
     let result = ctx
         .player_sessions
-        .write()
+        .read()
         .await
         .handle_player(ctx.token, |p| {
             if let Ok(idx) = p.friends.binary_search(&target) {
@@ -335,45 +335,6 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
-/// Player leave from a channel
-pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
-    let channel_name = PayloadReader::new(ctx.payload).read_string().await;
-    handle_channel_part(&channel_name, ctx, None).await;
-}
-
-#[inline(always)]
-/// Player leave from a channel
-pub async fn handle_channel_part<'a>(
-    channel_name: &String,
-    ctx: &HandlerContext<'a>,
-    token: Option<&String>,
-) {
-    match ctx.channel_list.write().await.get_mut(channel_name) {
-        Some(channel) => {
-            let player_sessions = ctx.player_sessions.read().await;
-
-            {
-                let mut map = player_sessions.token_map.write().await;
-                let player = map.get_mut(token.unwrap_or(ctx.token));
-                if player.is_none() {
-                    return;
-                }
-                channel.leave(&mut *player.unwrap().write().await).await;
-                drop(map);
-            }
-
-            channel.update_channel_for_users(&player_sessions).await;
-        }
-        None => {
-            error!(
-                "Player {}({}) try to part from a non-exists channel {}!",
-                ctx.name, ctx.id, channel_name
-            );
-        }
-    };
-}
-
-#[inline(always)]
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
@@ -381,32 +342,57 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// Player leave from a channel
+pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
+    let channel_name = PayloadReader::new(ctx.payload).read_string().await;
+    handle_channel_part(&channel_name, ctx, None).await;
+}
+
+#[inline(always)]
 /// Player join to a channel
 pub async fn handle_channel_join<'a>(
     channel_name: &String,
     ctx: &HandlerContext<'a>,
-    token: Option<&String>,
+    player_id: Option<i32>,
 ) {
-    match ctx.channel_list.write().await.get_mut(channel_name) {
+    let player_id = match player_id {
+        Some(player_id) => player_id,
+        None => ctx.id,
+    };
+
+    match ctx.channel_list.read().await.get(channel_name) {
         Some(channel) => {
-            let player_sessions = ctx.player_sessions.read().await;
-
-            {
-                let mut map = player_sessions.token_map.write().await;
-                let player = map.get_mut(token.unwrap_or(ctx.token));
-                if player.is_none() {
-                    return;
-                }
-                channel.join(&mut *player.unwrap().write().await).await;
-                drop(map);
-            }
-
-            channel.update_channel_for_users(&player_sessions).await;
+            channel.join(player_id).await;
         }
         None => {
             error!(
                 "Player {}({}) try join to a non-exists channel {}!",
-                ctx.name, ctx.id, channel_name
+                ctx.name, player_id, channel_name
+            );
+        }
+    };
+}
+
+#[inline(always)]
+/// Player leave from a channel
+pub async fn handle_channel_part<'a>(
+    channel_name: &String,
+    ctx: &HandlerContext<'a>,
+    player_id: Option<i32>,
+) {
+    let player_id = match player_id {
+        Some(player_id) => player_id,
+        None => ctx.id,
+    };
+
+    match ctx.channel_list.read().await.get(channel_name) {
+        Some(channel) => {
+            channel.leave(player_id).await;
+        }
+        None => {
+            error!(
+                "Player {}({}) try to part from a non-exists channel {}!",
+                ctx.name, player_id, channel_name
             );
         }
     };
