@@ -123,7 +123,7 @@ pub async fn osu_register(
     }
 
     // Check password
-    if (form_data.password.len() < 8) || !(form_data.password.len() > 32) {
+    if (form_data.password.len() < 8) || (form_data.password.len() > 32) {
         password_errors.push("Password must be 8-32 characters.")
     }
 
