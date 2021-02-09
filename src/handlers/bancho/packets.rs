@@ -51,8 +51,8 @@ impl id {
                             database,
                             channel_list,
                             payload: &[],
-                        })
-                        .await
+                    id::OSU_USER_REQUEST_STATUS_UPDATE => {
+                        events::users::request_status_update(&build_ctx()).await
                     }
                     id::OSU_SPECTATE_CANT => {
                         events::spectates::spectate_cant(&HandlerContext {

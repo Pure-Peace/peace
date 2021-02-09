@@ -35,6 +35,19 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #3: OSU_USER_REQUEST_STATUS_UPDATE (non-payload)
+/// 
+/// Update self's status for self
+pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) {
+    let player_sessions = ctx.player_sessions.read().await;
+    let token_map = player_sessions.token_map.read().await;
+
+    if let Some(player) = token_map.get(ctx.token) {
+        let player = player.read().await;
+        player.enqueue(packets::user_stats(&player).await).await;
+    }
+}
+
 #[inline(always)]
 /// #85: OSU_USER_STATS_REQUEST
 /// 
