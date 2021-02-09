@@ -219,12 +219,14 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
 
 #[inline(always)]
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
+    let data = packets::spectator_frames(ctx.payload.to_vec());
+
     let player_sessions = ctx.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
     // Send the spectate frames to our ctx's spectators
     for id in &ctx.data.spectators {
         if let Some(player) = id_session_map.get(id) {
-            player.read().await.enqueue(ctx.payload.to_vec()).await;
+            player.read().await.enqueue(data.clone()).await;
         }
     }
 }
