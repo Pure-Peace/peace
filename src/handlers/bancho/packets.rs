@@ -105,6 +105,7 @@ impl id {
                     id::OSU_USER_CHANNEL_PART => events::users::channel_part(&ctx).await,
                     id::OSU_USER_CHANNEL_JOIN => events::users::channel_join(&ctx).await,
                     id::OSU_USER_LOGOUT => events::users::user_logout(&ctx).await,
+                    id::OSU_USER_SET_AWAY_MESSAGE => events::users::set_away_message(&ctx).await,
                     // Spectates ---------
                     id::OSU_SPECTATE_START => events::spectates::spectate_start(&ctx).await,
                     id::OSU_SPECTATE_FRAMES => {

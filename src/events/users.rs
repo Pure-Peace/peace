@@ -367,3 +367,15 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
         }
     };
 }
+
+#[inline(always)]
+/// #82: OSU_USER_SET_AWAY_MESSAGE
+/// 
+pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) {
+    let message = PayloadReader::new(ctx.payload).read_message().await;
+    let player_sessions = ctx.player_sessions.read().await;
+    let mut id_session_map = player_sessions.id_session_map.write().await;
+    if let Some(player) = id_session_map.get_mut(&ctx.id) {
+        player.write().await.away_message = message.content;
+    };
+}
