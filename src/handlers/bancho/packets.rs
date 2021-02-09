@@ -29,17 +29,6 @@ impl id {
         match payload {
             // Payload not exists handlers
             None => {
-                let ctx = HandlerContext {
-                    request_ip,
-                    token,
-                    id: player_id,
-                    name: player_name,
-                    data,
-                    player_sessions,
-                    database,
-                    channel_list,
-                    payload: &[],
-                };
                 match self {
                     id::OSU_PING => {}
                     id::OSU_REQUEST_STATUS_UPDATE => {
@@ -51,8 +40,34 @@ impl id {
                             player.enqueue(packets::user_stats(&player).await).await;
                         }
                     }
-                    id::OSU_SPECTATE_STOP => events::spectates::spectate_stop(&ctx).await,
-                    id::OSU_SPECTATE_CANT => events::spectates::spectate_cant(&ctx).await,
+                    id::OSU_SPECTATE_STOP => {
+                        events::spectates::spectate_stop(&HandlerContext {
+                            request_ip,
+                            token,
+                            id: player_id,
+                            name: player_name,
+                            data,
+                            player_sessions,
+                            database,
+                            channel_list,
+                            payload: &[],
+                        })
+                        .await
+                    }
+                    id::OSU_SPECTATE_CANT => {
+                        events::spectates::spectate_cant(&HandlerContext {
+                            request_ip,
+                            token,
+                            id: player_id,
+                            name: player_name,
+                            data,
+                            player_sessions,
+                            database,
+                            channel_list,
+                            payload: &[],
+                        })
+                        .await
+                    }
                     _ => {
                         warn!(
                             "Unhandled packet (Non-payload): {:?}; user: {}({});",
@@ -90,9 +105,11 @@ impl id {
                     id::OSU_USER_CHANNEL_PART => events::users::channel_part(&ctx).await,
                     id::OSU_USER_CHANNEL_JOIN => events::users::channel_join(&ctx).await,
                     id::OSU_USER_LOGOUT => events::users::user_logout(&ctx).await,
-                    // TODO: Spectates ---------
+                    // Spectates ---------
                     id::OSU_SPECTATE_START => events::spectates::spectate_start(&ctx).await,
-                    id::OSU_SPECTATE_FRAMES => events::spectates::spectate_frames(&ctx).await,
+                    id::OSU_SPECTATE_FRAMES => {
+                        events::spectates::spectate_frames_received(&ctx).await
+                    }
                     // TODO: Matches ---------
                     _ => {
                         warn!(
