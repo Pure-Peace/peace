@@ -62,9 +62,9 @@ fn init_default(cfg: &mut ServiceConfig) {
 /// Routes for bancho
 fn init_bancho() -> impl HttpServiceFactory {
     scope("/bancho")
-        .route("", get().to(bancho::get::handler))
+        .route("/", get().to(bancho::get::handler))
         .route(
-            "",
+            "/",
             post()
                 .guard(guard::Header("user-agent", "osu!"))
                 .to(bancho::post::handler),

@@ -94,7 +94,7 @@ pub async fn create_specate_channel_if_not_exists(
     if !channel_list.read().await.contains_key(&channel_name) {
         let channel = Channel::new(
             channel_name.clone(),
-            format!("{} ({})'s spectator channel!", player_name, player_id),
+            format!("{}({}) 's spectator channel!", player_name, player_id),
             1,
             1,
             false,
