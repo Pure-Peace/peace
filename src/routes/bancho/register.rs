@@ -26,7 +26,7 @@ pub async fn osu_register(
     argon2_cache: Data<RwLock<Argon2Cache>>,
 ) -> HttpResponse {
     lazy_static::lazy_static! {
-        static ref USERNAME_REGEX: Regex = Regex::new(r"(^[0-9a-zA-Z_ \[\]-]{2,15}$)|(^[\w \[\]-]{1,8}$)").unwrap();
+        static ref USERNAME_REGEX: Regex = Regex::new(r"(^[0-9a-zA-Z_ \[\]-]{2,16}$)|(^[\w \[\]-]{1,8}$)").unwrap();
         static ref EMAIL_REGEX: Regex = Regex::new(r"^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{2,24}$").unwrap();
     }
 
@@ -91,12 +91,12 @@ pub async fn osu_register(
 
     // TODO: disallowed names check
 
-    // Check username is already use
+    // Check username is already use (using name_safe to check)
     if database
         .pg
         .query_first(
-            r#"SELECT 1 FROM "user"."base" WHERE "name" = $1;"#,
-            &[&form_data.username],
+            r#"SELECT 1 FROM "user"."base" WHERE "name_safe" = $1;"#,
+            &[&form_data.username.to_lowercase().replace(" ", "_")],
         )
         .await
         .is_ok()
