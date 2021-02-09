@@ -3,6 +3,7 @@ use crate::packets;
 use super::depends::*;
 
 #[inline(always)]
+/// #1: OSU_SEND_PUBLIC_MESSAGE
 pub async fn public<'a>(ctx: &HandlerContext<'a>) {
     // TODO: check player is slienced?
 
@@ -56,6 +57,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #24: OSU_SEND_PRIVATE_MESSAGE
 pub async fn private<'a>(ctx: &HandlerContext<'a>) {
     // TODO: check player is slienced?
 

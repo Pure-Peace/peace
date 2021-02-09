@@ -115,6 +115,9 @@ pub async fn create_specate_channel_if_not_exists(
     channel_name
 }
 
+#[inline(always)]
+/// #16: OSU_SPECTATE_START
+/// 
 pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
     let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
 
@@ -208,6 +211,8 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #17: OSU_SPECTATE_STOP (non-payload)
+/// 
 pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
     if ctx.data.spectating.is_none() {
         return;
@@ -226,6 +231,8 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #18: OSU_SPECTATE_FRAMES
+/// 
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
     let data = packets::spectator_frames(ctx.payload.to_vec());
 
@@ -240,6 +247,8 @@ pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #21: OSU_SPECTATE_CANT (non-payload)
+/// 
 pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
     if ctx.data.spectating.is_none() {
         return;

@@ -73,7 +73,7 @@ pub async fn handler(
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
                 .body(
-                    resp.add(packets::notification("lol"))
+                    resp.add(packets::notification("Welcome back!"))
                         .add(packets::bancho_restart(0))
                         .write_out(),
                 );
@@ -85,6 +85,11 @@ pub async fn handler(
     // Read & handle client packets
     let mut reader = PacketReader::from_bytes(body);
     while let Some((packet_id, payload)) = reader.next().await {
+        // osu_ping need not handle
+        if packet_id == id::OSU_PING {
+            continue;
+        };
+
         packet_id
             .read_handle(
                 &request_ip,
@@ -100,19 +105,15 @@ pub async fn handler(
 
     // Push player's packets to the response
     let player_sessions_r = player_sessions.read().await;
-    match player_sessions_r.token_map.read().await.get(&token) {
-        Some(player) => {
-            let mut player = player.write().await;
-            // Update player's active time
-            player.update_active();
-            // Dequeue player's packet into resp
-            while let Some(packet_data) = player.dequeue().await {
-                resp.add_ref(packet_data);
-            }
+    if let Some(player) = player_sessions_r.token_map.read().await.get(&token) {
+        let mut player = player.write().await;
+        // Update player's active time
+        player.update_active();
+        // Dequeue player's packet into resp
+        while let Some(packet_data) = player.dequeue().await {
+            resp.add_ref(packet_data);
         }
-        // Player has been logout
-        None => {}
-    };
+    }
     drop(player_sessions_r);
 
     let bancho_end = bancho_start.elapsed();

@@ -310,6 +310,9 @@ pub async fn user_presence(p: &Player) -> PacketData {
         .pack()
 }
 
+/// #83: BANCHO_USER_PRESENCE
+///
+/// including player stats and presence
 pub async fn user_presence_from_data(p: &PlayerData) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
