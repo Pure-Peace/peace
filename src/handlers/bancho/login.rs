@@ -84,7 +84,10 @@ pub async fn login(
     {
         Ok(from_base_row) => from_base_row,
         Err(_) => {
-            warn!("{} login failed, account not exists", username);
+            warn!(
+                "<{}> login failed: account not exists! request_ip: {}; osu_version: {}",
+                username, request_ip, osu_version
+            );
             return Err(("invalid_credentials", None));
         }
     };

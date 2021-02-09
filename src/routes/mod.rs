@@ -69,6 +69,7 @@ fn init_bancho() -> impl HttpServiceFactory {
                 .guard(guard::Header("user-agent", "osu!"))
                 .to(bancho::post::handler),
         )
+        .service(bancho::osu_register)
 }
 
 /// Routes for web

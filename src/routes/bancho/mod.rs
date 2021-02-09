@@ -2,6 +2,7 @@ pub mod get;
 pub mod post;
 
 mod login;
+mod register;
 
 mod depends {
     pub use actix_web::web::{Bytes, Data};
@@ -20,3 +21,5 @@ mod depends {
         types::{Argon2Cache, ChannelList},
     };
 }
+
+pub use register::osu_register;
