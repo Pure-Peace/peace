@@ -62,12 +62,53 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) {
         }
     }
 }
+
+#[inline(always)]
+/// #97: OSU_USER_PRESENCE_REQUEST
+/// 
+/// Send other's presence to self (list)
+pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) {
+    let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>().await;
+
     let player_sessions = ctx.player_sessions.read().await;
-    for p_id in &id_list {
-        player_sessions
-            .enqueue_by_id(p_id, packets::user_presence_from_data(ctx.data).await)
+    let id_session_map = player_sessions.id_session_map.read().await;
+
+    if let Some(ctx_player) = id_session_map.get(&ctx.id) {
+        let ctx_player = ctx_player.read().await;
+
+        for player_id in &id_list {
+            if let Some(player) = id_session_map.get(player_id) {
+                // Send presence to self
+                ctx_player
+                    .enqueue(packets::user_presence(&*player.read().await).await)
+                    .await;
+            }
+        }
+    }
+}
+
+#[inline(always)]
+/// # 98: OSU_USER_PRESENCE_REQUEST_ALL (non-payload)
+/// 
+// Send other's presence to self (all)
+pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) {
+    let player_sessions = ctx.player_sessions.read().await;
+    let id_session_map = player_sessions.id_session_map.read().await;
+
+    if let Some(ctx_player) = id_session_map.get(&ctx.id) {
+        let ctx_player = ctx_player.read().await;
+
+        for (player_id, player) in id_session_map.iter() {
+            // Skip self
+            if *player_id == ctx.id {
+                continue;
+            }
+            // Send presence to self
+            ctx_player
+                .enqueue(packets::user_presence(&*player.read().await).await)
             .await;
     }
+}
 }
 
 #[inline(always)]
