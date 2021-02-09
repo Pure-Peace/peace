@@ -3,34 +3,59 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr},
 };
 
-use actix_multipart::{Field, Multipart};
+use actix_multipart::Multipart;
 use actix_web::HttpRequest;
+use argon2::{ThreadMode, Variant, Version};
 
-use argon2::verify_encoded;
 use futures::StreamExt;
+use lazy_static::lazy_static;
 use maxminddb::{geoip2::City, Reader};
 use memmap::Mmap;
+use rand::Rng;
 use serde_qs;
 
 use crate::constants::{GeoData, GeoError};
 
+lazy_static! {
+    static ref ARGON2_CONFIG: argon2::Config<'static> = argon2::Config {
+        variant: Variant::Argon2i,
+        version: Version::Version13,
+        mem_cost: 4096,
+        time_cost: 3,
+        lanes: 1,
+        thread_mode: ThreadMode::Sequential,
+        secret: &[],
+        ad: &[],
+        hash_length: 32
+    };
+}
+
 #[inline(always)]
 /// Get deserialized multipart/form-data
 pub async fn get_form_data<T: serde::de::DeserializeOwned>(
-    mut payload: Multipart,
+    mut form_data: Multipart,
 ) -> Result<T, serde_qs::Error> {
-    let mut query: String = String::new();
-
-    while let Some(item) = payload.next().await {
-        let mut field: Field = item.unwrap();
-        let content_type = field.content_disposition().unwrap();
-        let name = content_type.get_name().unwrap();
-        while let Some(chunk) = field.next().await {
-            let value = String::from_utf8(chunk.unwrap().to_vec()).unwrap();
-            query.push_str(&format!("{}={}&", name, value));
+    let mut temp: String = String::new();
+    while let Some(item) = form_data.next().await {
+        let mut field = item.unwrap();
+        if let Some(content_type) = field.content_disposition() {
+            let key = content_type.get_name();
+            if key.is_none() {
+                continue;
+            }
+            while let Some(chunk) = field.next().await {
+                if chunk.is_err() {
+                    continue;
+                }
+                let value = String::from_utf8(chunk.unwrap().to_vec()).unwrap_or(String::new());
+                if temp.len() > 0 {
+                    temp.push('&');
+                }
+                temp.push_str(&format!("{}={}", key.unwrap(), value));
+            }
         }
     }
-    serde_qs::from_str(&query)
+    serde_qs::from_str(&temp)
 }
 
 #[inline(always)]
@@ -66,13 +91,29 @@ pub async fn get_token(req: &HttpRequest) -> String {
 #[inline(always)]
 /// Argon2 verify
 pub async fn argon2_verify(password_crypted: &str, password: &str) -> bool {
-    verify_encoded(password_crypted, password.as_bytes()).unwrap_or_else(|err| {
+    argon2::verify_encoded(password_crypted, password.as_bytes()).unwrap_or_else(|err| {
         error!(
             "failed to verify argon2: {:?}; crypted: {}, password: {}",
             err, password_crypted, password
         );
         false
     })
+}
+
+#[inline(always)]
+/// Argon2 encode
+pub async fn argon2_encode(password: &[u8]) -> String {
+    argon2::hash_encoded(password, rand_string().await.as_bytes(), &ARGON2_CONFIG).unwrap()
+}
+
+#[inline(always)]
+/// Argon2 encode
+pub async fn rand_string() -> String {
+    rand::thread_rng()
+        .sample_iter(rand::distributions::Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect::<String>()
 }
 
 #[inline(always)]

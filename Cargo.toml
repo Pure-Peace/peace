@@ -28,10 +28,12 @@ hashbrown = "0.9.1"
 lazy_static = "1.4.0"
 log = "0.4.11"
 maxminddb = { version = "0.17.0", features = ["mmap"] }
+md5 = "0.7.0"
 memmap = "0.7.0"
 num-traits = "0.2.14"
 prometheus = { version = "0.10.0", features = ["process"] }
 queue = "0.3.1"
+rand = "0.8.0"
 regex = "1.4.2"
 rust-argon2 = "0.8.3"
 serde = { version = "1.0.118", features = ["derive"] }
