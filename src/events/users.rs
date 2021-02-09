@@ -4,6 +4,8 @@ use crate::{constants::PresenceFilter, objects::PlayMods, packets};
 use num_traits::FromPrimitive;
 
 #[inline(always)]
+/// #2: OSU_USER_LOGOUT
+/// 
 /// Player logout from server
 pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) {
     ctx.player_sessions
@@ -14,6 +16,8 @@ pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #79: OSU_USER_RECEIVE_UPDATES
+/// 
 /// Update player's presence_filter
 pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) {
     let filter_val = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
@@ -119,12 +123,14 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) {
             // Send presence to self
             ctx_player
                 .enqueue(packets::user_presence(&*player.read().await).await)
-            .await;
+                .await;
+        }
     }
-}
 }
 
 #[inline(always)]
+/// #0: OSU_USER_CHANGE_ACTION
+/// 
 /// Update player's status
 pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
     // Read the packet
@@ -240,6 +246,8 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #73: OSU_USER_FRIEND_ADD
+/// 
 /// Add a player to friends
 pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
     let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
@@ -315,6 +323,8 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #74: OSU_USER_FRIEND_REMOVE
+/// 
 /// Remove a player from friends
 pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) {
     let target = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
@@ -384,6 +394,8 @@ pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #99: OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS
+/// 
 /// Player toggle block-non-friend-dms with a value
 pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) {
     let value = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
@@ -413,6 +425,8 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #63: OSU_USER_CHANNEL_JOIN
+/// 
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
@@ -430,6 +444,8 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
 }
 
 #[inline(always)]
+/// #78: OSU_USER_CHANNEL_PART
+/// 
 /// Player leave from a channel
 pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;

@@ -6,7 +6,7 @@ use crate::{
     database::Database,
     events,
     objects::{PlayerData, PlayerSessions},
-    packets::{self, HandlerContext},
+    packets::HandlerContext,
     types::ChannelList,
 };
 
@@ -29,45 +29,27 @@ impl id {
         match payload {
             // Payload not exists handlers
             None => {
+                let build_ctx = || HandlerContext {
+                    request_ip,
+                    token,
+                    id: player_id,
+                    name: player_name,
+                    data,
+                    player_sessions,
+                    database,
+                    channel_list,
+                    payload: &[],
+                };
                 match self {
                     id::OSU_PING => {}
-                    id::OSU_REQUEST_STATUS_UPDATE => {
-                        let player_sessions = player_sessions.read().await;
-                        let token_map = player_sessions.token_map.read().await;
-                        
-                        if let Some(player) = token_map.get(token) {
-                            let player = player.read().await;
-                            player.enqueue(packets::user_stats(&player).await).await;
-                        }
-                    }
-                    id::OSU_SPECTATE_STOP => {
-                        events::spectates::spectate_stop(&HandlerContext {
-                            request_ip,
-                            token,
-                            id: player_id,
-                            name: player_name,
-                            data,
-                            player_sessions,
-                            database,
-                            channel_list,
-                            payload: &[],
                     id::OSU_USER_REQUEST_STATUS_UPDATE => {
                         events::users::request_status_update(&build_ctx()).await
                     }
-                    id::OSU_SPECTATE_CANT => {
-                        events::spectates::spectate_cant(&HandlerContext {
-                            request_ip,
-                            token,
-                            id: player_id,
-                            name: player_name,
-                            data,
-                            player_sessions,
-                            database,
-                            channel_list,
-                            payload: &[],
-                        })
-                        .await
+                    id::OSU_USER_PRESENCE_REQUEST_ALL => {
+                        events::users::presence_request_all(&build_ctx()).await
                     }
+                    id::OSU_SPECTATE_STOP => events::spectates::spectate_stop(&build_ctx()).await,
+                    id::OSU_SPECTATE_CANT => events::spectates::spectate_cant(&build_ctx()).await,
                     _ => {
                         warn!(
                             "Unhandled packet (Non-payload): {:?}; user: {}({});",
@@ -106,6 +88,7 @@ impl id {
                     id::OSU_USER_CHANNEL_JOIN => events::users::channel_join(&ctx).await,
                     id::OSU_USER_LOGOUT => events::users::user_logout(&ctx).await,
                     id::OSU_USER_SET_AWAY_MESSAGE => events::users::set_away_message(&ctx).await,
+                    id::OSU_USER_PRESENCE_REQUEST => events::users::presence_request(&ctx).await,
                     // Spectates ---------
                     id::OSU_SPECTATE_START => events::spectates::spectate_start(&ctx).await,
                     id::OSU_SPECTATE_FRAMES => {
@@ -115,7 +98,10 @@ impl id {
                     _ => {
                         warn!(
                             "Unhandled packet: {:?}; user: {}({}); payload (length): {:?}",
-                            self, player_name, player_id, payload.len()
+                            self,
+                            player_name,
+                            player_id,
+                            payload.len()
                         );
                     }
                 };
