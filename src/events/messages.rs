@@ -9,21 +9,33 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
     let mut payload = PayloadReader::new(ctx.payload);
     let message = payload.read_message().await;
 
+    let channel_name = match message.target.as_str() {
+        "#spectator" => {
+            if ctx.data.spectating.is_some() {
+                format!("#spec_{}", ctx.data.spectating.unwrap())
+            } else if ctx.data.spectators.len() > 0 {
+                format!("#spec_{}", ctx.id)
+            } else {
+                return;
+            }
+        }
+        "#multiplayer" => {
+            // TODO: multiplayer chat
+            String::new()
+        },
+        x => x.to_string(),
+    };
+
     // Check channel
     let channel_list = ctx.channel_list.read().await;
-    match channel_list.get(&message.target) {
+    match channel_list.get(&channel_name) {
         Some(channel) => {
             // TODO: check player's priv?
 
             // TODO: Limit the length of message content?
             // Send message done
             channel
-                .broadcast(
-                    ctx.name,
-                    ctx.id,
-                    &message.content,
-                    false,
-                )
+                .broadcast(ctx.name, ctx.id, &message.content, false)
                 .await;
 
             // Drop locks
@@ -31,13 +43,13 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
 
             info!(
                 "{}({}) <pub> @ {}: {}",
-                ctx.name, ctx.id, message.target, message.content
+                ctx.name, ctx.id, channel_name, message.content
             );
         }
         None => {
             warn!(
                 "Player {}({}) try send message to non-existent channel: {}",
-                ctx.name, ctx.id, message.target
+                ctx.name, ctx.id, channel_name
             );
         }
     }

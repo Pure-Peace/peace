@@ -329,7 +329,7 @@ impl Player {
     }
 
     #[inline(always)]
-    pub async fn dequeue(&self) -> Option<PacketData> {
+    pub async fn dequeue(&mut self) -> Option<PacketData> {
         self.queue.lock().await.dequeue()
     }
 

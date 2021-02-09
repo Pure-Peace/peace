@@ -129,7 +129,7 @@ impl Channel {
         msg: &String,
         include_sender: bool,
     ) {
-        let packet_data = packets::send_message(sender, sender_id, msg, &self.name).await;
+        let packet_data = packets::send_message(sender, sender_id, msg, &self.display_name()).await;
         // For every players in channel
         for (id, player) in self.id_session_map.read().await.iter() {
             // If not include sender, skip sender
