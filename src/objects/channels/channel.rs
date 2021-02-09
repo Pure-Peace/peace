@@ -144,7 +144,7 @@ impl Channel {
     #[inline(always)]
     pub fn channel_info_packet(&self) -> PacketData {
         packets::channel_info(
-            &self.name,
+            &self.display_name(),
             &self.title,
             self.player_count.load(Ordering::SeqCst),
         )
@@ -218,7 +218,7 @@ impl Channel {
             self.player_count.fetch_add(1, Ordering::SeqCst);
 
             // Send it to player's client
-            player.enqueue(packets::channel_join(&self.name)).await;
+            player.enqueue(packets::channel_join(&self.display_name())).await;
 
             (player.name.clone(), player.id)
         };
@@ -257,7 +257,7 @@ impl Channel {
 
             player.channels.remove(&self.name);
             // Send it to player's client
-            player.enqueue(packets::channel_kick(&self.name)).await;
+            player.enqueue(packets::channel_kick(&self.display_name())).await;
 
             (player.name.clone(), player.id)
         };

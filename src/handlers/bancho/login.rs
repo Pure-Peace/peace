@@ -457,7 +457,7 @@ pub async fn login(
         // Join player into channel
         if channel.auto_join {
             channel.join(player_id, Some(&*player_sessions)).await;
-            resp.add_ref(packets::channel_join(&channel.name));
+            resp.add_ref(packets::channel_join(&channel.display_name()));
         }
 
         // Send channel info to client

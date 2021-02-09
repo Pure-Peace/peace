@@ -338,36 +338,14 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) {
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
-    handle_channel_join(&channel_name, ctx, None).await;
-}
-
-#[inline(always)]
-/// Player leave from a channel
-pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
-    let channel_name = PayloadReader::new(ctx.payload).read_string().await;
-    handle_channel_part(&channel_name, ctx, None).await;
-}
-
-#[inline(always)]
-/// Player join to a channel
-pub async fn handle_channel_join<'a>(
-    channel_name: &String,
-    ctx: &HandlerContext<'a>,
-    player_id: Option<i32>,
-) {
-    let player_id = match player_id {
-        Some(player_id) => player_id,
-        None => ctx.id,
-    };
-
-    match ctx.channel_list.read().await.get(channel_name) {
+    match ctx.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
-            channel.join(player_id, None).await;
+            channel.join(ctx.id, None).await;
         }
         None => {
             error!(
                 "Player {}({}) try join to a non-exists channel {}!",
-                ctx.name, player_id, channel_name
+                ctx.name, ctx.id, channel_name
             );
         }
     };
@@ -375,24 +353,16 @@ pub async fn handle_channel_join<'a>(
 
 #[inline(always)]
 /// Player leave from a channel
-pub async fn handle_channel_part<'a>(
-    channel_name: &String,
-    ctx: &HandlerContext<'a>,
-    player_id: Option<i32>,
-) {
-    let player_id = match player_id {
-        Some(player_id) => player_id,
-        None => ctx.id,
-    };
-
-    match ctx.channel_list.read().await.get(channel_name) {
+pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
+    let channel_name = PayloadReader::new(ctx.payload).read_string().await;
+    match ctx.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
-            channel.leave(player_id, None).await;
+            channel.leave(ctx.id, None).await;
         }
         None => {
             error!(
                 "Player {}({}) try to part from a non-exists channel {}!",
-                ctx.name, player_id, channel_name
+                ctx.name, ctx.id, channel_name
             );
         }
     };
