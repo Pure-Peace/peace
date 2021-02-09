@@ -78,14 +78,6 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    pub fn read_raw(&mut self) -> &[u8] {
-        let length = self.payload.len();
-        let data = &self.payload[self.index..length];
-        self.index = length;
-        data
-    }
-
-    #[inline(always)]
     pub async fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Integer {
         let data = self.read(std::mem::size_of::<Integer>());
         Integer::from_le_bytes(data)

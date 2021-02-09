@@ -1,7 +1,118 @@
+use std::sync::atomic::Ordering;
+
+use async_std::sync::RwLockReadGuard;
+
 use crate::{objects::Channel, packets};
 
 use super::depends::*;
-use super::users;
+
+#[inline(always)]
+pub async fn try_remove_spectator<'a>(
+    player_id: i32,
+    player_name: &String,
+    spectating_id: i32,
+    channel_list: &Data<RwLock<ChannelList>>,
+    player_sessions: &RwLockReadGuard<'_, PlayerSessions>,
+) {
+    // First, Remove spectating status from me
+    let id_session_map = player_sessions.id_session_map.read().await;
+    if let Some(player) = id_session_map.get(&player_id) {
+        player.write().await.spectating = None;
+    }
+
+    // And, remove me from spectating player
+    let non_spectators = if let Some(spectating_target) = id_session_map.get(&spectating_id) {
+        let mut t = spectating_target.write().await;
+        t.spectators.remove(&player_id);
+        t.spectators.len() == 0
+    } else {
+        false
+    };
+
+    let spectating_channel_name = format!("#spec_{}", spectating_id);
+    {
+        let mut channel_list = channel_list.write().await;
+        if let Some(spectating_channel) = channel_list.get_mut(&spectating_channel_name) {
+            // Remove me from spectating channel
+            spectating_channel
+                .leave(player_id, Some(&*player_sessions))
+                .await;
+
+            // The spectating player have not spectators
+            if non_spectators {
+                // Remove spectating player from spectating channel
+                spectating_channel
+                    .leave(spectating_id, Some(&*player_sessions))
+                    .await;
+            } else {
+                let fellow_data = packets::fellow_spectator_left(player_id);
+                let channel_info = spectating_channel.channel_info_packet();
+
+                if let Some(spectating_target) = id_session_map.get(&spectating_id) {
+                    let t = spectating_target.write().await;
+                    // Send channel info to spectating player
+                    t.enqueue(channel_info.clone()).await;
+
+                    // Send data to each spectators
+                    for id in t.spectators.iter() {
+                        if let Some(player) = id_session_map.get(&id) {
+                            let p = player.read().await;
+                            p.enqueue(fellow_data.clone()).await;
+                            p.enqueue(channel_info.clone()).await;
+                        }
+                    }
+                }
+            }
+
+            // If spectating channel is empty, remove it
+            if spectating_channel.player_count.load(Ordering::SeqCst) == 0 {
+                drop(spectating_channel);
+                channel_list.remove(&spectating_channel_name);
+            };
+        }
+    }
+
+    if let Some(spectating_target) = id_session_map.get(&spectating_id) {
+        let t = spectating_target.read().await;
+        t.enqueue(packets::spectator_left(player_id)).await;
+        debug!(
+            "Player {}({}) is no longer watching {}({}).",
+            t.name, t.id, player_name, player_id
+        )
+    }
+}
+
+#[inline(always)]
+pub async fn create_specate_channel_if_not_exists(
+    player_id: i32,
+    channel_list: &Data<RwLock<ChannelList>>,
+    player_sessions: &Data<RwLock<PlayerSessions>>,
+) -> String {
+    let channel_name = format!("#spec_{}", player_id);
+
+    if !channel_list.read().await.contains_key(&channel_name) {
+        let channel = Channel::new(
+            channel_name.clone(),
+            channel_name.clone(),
+            1,
+            1,
+            false,
+            true,
+            player_sessions.clone().into_inner(),
+        );
+
+        channel.join(player_id, None).await;
+
+        channel_list
+            .write()
+            .await
+            .insert(channel_name.clone(), channel);
+
+        debug!("Spectate channel {} created.", channel_name);
+    };
+
+    channel_name
+}
 
 pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
     let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
@@ -11,324 +122,135 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
         return;
     }
 
-    // Specate an offline player is not allowed
-    let target_token = match ctx
-        .player_sessions
-        .read()
-        .await
-        .get_token_by_id(&target_id)
-        .await
+    let player_sessions = ctx.player_sessions.read().await;
+
+    // Specate an offline player is not allowed!
+    if !player_sessions.id_is_exists(&target_id).await {
+        warn!(
+            "Player {}({}) tries to spectate an offline user {}.",
+            ctx.name, ctx.id, target_id
+        );
+        return;
+    }
+
+    // If already spectating
+    if ctx.data.spectating.is_some() {
+        try_remove_spectator(
+            ctx.id,
+            &ctx.name,
+            ctx.data.spectating.unwrap(),
+            &ctx.channel_list,
+            &player_sessions,
+        )
+        .await;
+    }
+
+    // Create channel
+    let channel_name =
+        create_specate_channel_if_not_exists(target_id, &ctx.channel_list, &ctx.player_sessions)
+            .await;
+
+    // Try join channel
     {
-        Some(token) => token,
-        None => {
+        let channel_list = ctx.channel_list.read().await;
+        let channel = channel_list.get(&channel_name);
+        if channel.is_none() {
+            warn!("Failed to create spectate channel {}.", channel_name);
+            return;
+        }
+        if !channel.unwrap().join(ctx.id, Some(&*player_sessions)).await {
             warn!(
-                "Player {}({}) tries to spectate an offline user {}.",
-                ctx.name, ctx.id, target_id
+                "Player {}({}) failed to join spectate channel {}.",
+                ctx.name, ctx.id, channel_name
             );
             return;
         }
-    };
+    }
 
-    // If already spectating someone
-    if let Some(spectating_id) = ctx.data.spectating {
-        // Then remove spectating from me
-        let _unused_result = ctx
-            .player_sessions
-            .read()
-            .await
-            .handle_player(ctx.token, |p| {
-                p.spectating = None;
-                Some(())
-            })
-            .await;
+    // Ready to send packet
+    {
+        let i_was_joined = packets::fellow_spectator_joined(ctx.id);
+        let i_was_joined2 = packets::spectator_joined(ctx.id);
 
-        // Try part me from spectating channel
-        let spectating_channel = format!("#spect_{}", spectating_id);
-        users::handle_channel_part(&spectating_channel, ctx, None).await;
-
-        // Get spectating player id
-        let spectating_token = match ctx
-            .player_sessions
-            .read()
-            .await
-            .get_token_by_id(&spectating_id)
-            .await
-        {
-            Some(token) => token,
-            None => {
-                error!("Failed to get spectating token {}.", spectating_id);
-                return;
-            }
-        };
-
-        // Try remove me from spectating player
-        let spectating = match ctx
-            .player_sessions
-            .read()
-            .await
-            .handle_player_get(&spectating_token, |p| {
-                p.spectators.remove(&ctx.id);
-                Some(())
-            })
-            .await
-        {
-            Ok(spectating) => spectating,
-            Err(()) => {
-                error!("Failed to stop spectating {}.", spectating_id);
-                return;
-            }
-        };
-
-        // If not any one spectate
-        if spectating.spectators.len() == 0 {
-            users::handle_channel_part(&spectating_channel, ctx, Some(spectating_id)).await;
-        } else {
-            let fellow = packets::fellow_spectator_left(ctx.id);
-            let channel_info = {
-                let c_lock = ctx.channel_list.read().await;
-                match c_lock.get(&spectating_channel) {
-                    Some(c) => c.channel_info_packet(),
-                    None => packets::channel_info(&spectating_channel, &spectating_channel, 99),
-                }
-            };
-
-            {
-                let player_sessions = ctx.player_sessions.read().await;
-                let player_sessions_map = player_sessions.token_map.read().await;
-                if let Some(p) = player_sessions_map.get(&spectating_token) {
-                    p.read().await.enqueue(channel_info.clone()).await;
-                };
-
-                let id_session_map = player_sessions.id_session_map.read().await;
-                for id in spectating.spectators {
-                    if let Some(p) = id_session_map.get(&id) {
-                        let p = p.read().await;
-                        p.enqueue(fellow.clone()).await;
-                        p.enqueue(channel_info.clone()).await;
-                    };
-                }
-            }
-        };
-
-        {
-            let player_sessions = ctx.player_sessions.read().await;
-            let player_sessions_map = player_sessions.token_map.read().await;
-            if let Some(p) = player_sessions_map.get(&spectating_token) {
-                p.read()
-                    .await
-                    .enqueue(packets::spectator_left(ctx.id))
-                    .await;
-            };
-            info!("{} is no longer watching {}.", ctx.name, spectating.name)
+        let id_session_map = player_sessions.id_session_map.read().await;
+        let (target, player) = (id_session_map.get(&target_id), id_session_map.get(&ctx.id));
+        if target.is_none() || player.is_none() {
+            return;
         }
-    };
 
-    // Create channel if not exists
-    let channel_name = format!("#spect_{}", target_id);
-    if !ctx.channel_list.read().await.contains_key(&channel_name) {
-        let channel = Channel::new(
-            channel_name.clone(),
-            channel_name.clone(),
-            1,
-            1,
-            false,
-            true,
-            ctx.player_sessions.clone().into_inner(),
+        let mut target = target.unwrap().write().await;
+        let mut player = player.unwrap().write().await;
+
+        for spectator_id in target.spectators.iter() {
+            if let Some(spectator) = id_session_map.get(&spectator_id) {
+                let s = spectator.read().await;
+                s.enqueue(i_was_joined.clone()).await;
+                player.enqueue(packets::fellow_spectator_joined(s.id)).await;
+            }
+        }
+        target.spectators.insert(ctx.id);
+        player.spectating = Some(target_id);
+
+        target.enqueue(i_was_joined2).await;
+        debug!(
+            "Player {}({}) is specating {}({}) now.",
+            ctx.name, ctx.id, target.name, target.id
         );
-        ctx.channel_list
-            .write()
-            .await
-            .insert(channel_name.clone(), channel);
-        info!("Spectate channel {} created.", channel_name);
-    };
-
-    // Join to channel
-    users::handle_channel_join(&channel_name, ctx, None).await;
-
-    let p_joined = packets::fellow_spectator_joined(ctx.id);
-
-    let player_sessions = ctx.player_sessions.read().await;
-    let player_id_session_map = player_sessions.id_session_map.read().await;
-
-    let mut spectators = vec![];
-    for id in player_sessions
-        .get_player_data(&target_token)
-        .await
-        .unwrap()
-        .spectators
-        .iter()
-    {
-        if let Some(player) = player_id_session_map.get(id) {
-            spectators.push(player)
-        }
-    }
-
-    let spectators1: Vec<i32> = player_sessions
-        .get_player_data(&target_token)
-        .await
-        .unwrap()
-        .spectators
-        .iter()
-        .map(|id| id.clone())
-        .collect();
-
-    let player_sessions = ctx.player_sessions.read().await;
-    for pp in spectators {
-        pp.read().await.enqueue(p_joined.clone()).await;
-    }
-
-    let player_sessions_map = player_sessions.token_map.read().await;
-
-    {
-        let mut me = player_sessions_map.get(ctx.token).unwrap().write().await;
-        for s in spectators1 {
-            me.enqueue(packets::fellow_spectator_joined(s)).await;
-        }
-        me.spectating = Some(target_id);
-    }
-
-    let mut target = player_sessions_map
-        .get(&target_token)
-        .unwrap()
-        .write()
-        .await;
-    target.spectators.insert(ctx.id);
-    target.enqueue(packets::spectator_joined(ctx.id)).await;
-    info!("fuck!");
-}
-
-pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
-    let spectating_id = ctx.data.spectating;
-    if spectating_id.is_none() {
-        error!("sb");
-        return;
-    }
-    let spectating_id = spectating_id.unwrap();
-
-    // Then remove spectating from me
-    let _unused_result = ctx
-        .player_sessions
-        .read()
-        .await
-        .handle_player(ctx.token, |p| {
-            p.spectating = None;
-            Some(())
-        })
-        .await;
-
-    // Try part me from spectating channel
-    let spectating_channel = format!("#spect_{}", spectating_id);
-    users::handle_channel_part(&spectating_channel, ctx, None).await;
-
-    // Get spectating player id
-    let spectating_token = match ctx
-        .player_sessions
-        .read()
-        .await
-        .get_token_by_id(&spectating_id)
-        .await
-    {
-        Some(token) => token,
-        None => {
-            error!("Failed to get spectating token {}.", spectating_id);
-            return;
-        }
-    };
-
-    // Try remove me from spectating player
-    let spectating = match ctx
-        .player_sessions
-        .read()
-        .await
-        .handle_player_get(&spectating_token, |p| {
-            p.spectators.remove(&ctx.id);
-            Some(())
-        })
-        .await
-    {
-        Ok(spectating) => spectating,
-        Err(()) => {
-            error!("Failed to stop spectating {}.", spectating_id);
-            return;
-        }
-    };
-
-    // If not any one spectate
-    if spectating.spectators.len() == 0 {
-        users::handle_channel_part(&spectating_channel, ctx, Some(spectating_id)).await;
-    } else {
-        let fellow = packets::fellow_spectator_left(ctx.id);
-        let channel_info = {
-            let c_lock = ctx.channel_list.read().await;
-            match c_lock.get(&spectating_channel) {
-                Some(c) => c.channel_info_packet(),
-                None => packets::channel_info(&spectating_channel, &spectating_channel, 99),
-            }
-        };
-
-        {
-            let player_sessions = ctx.player_sessions.read().await;
-            let player_sessions_map = player_sessions.token_map.read().await;
-            if let Some(p) = player_sessions_map.get(&spectating_token) {
-                p.read().await.enqueue(channel_info.clone()).await;
-            };
-
-            let id_session_map = player_sessions.id_session_map.read().await;
-            for id in spectating.spectators {
-                if let Some(p) = id_session_map.get(&id) {
-                    let p = p.read().await;
-                    p.enqueue(fellow.clone()).await;
-                    p.enqueue(channel_info.clone()).await;
-                };
-            }
-        }
-    };
-
-    {
-        let player_sessions = ctx.player_sessions.read().await;
-        let player_sessions_map = player_sessions.token_map.read().await;
-        if let Some(p) = player_sessions_map.get(&spectating_token) {
-            p.read()
-                .await
-                .enqueue(packets::spectator_left(ctx.id))
-                .await;
-        };
-        info!("{} is no longer watching {}.", ctx.name, spectating.name)
     }
 }
 
 #[inline(always)]
-pub async fn spectate_frames<'a>(ctx: &HandlerContext<'a>) {
-    let raw = PayloadReader::new(ctx.payload).read_raw().to_vec();
-
-    let k = ctx.player_sessions.read().await;
-    let p = k.id_session_map.read().await;
-    let mut s = vec![];
-
-    for i in ctx.data.spectators.iter() {
-        s.push(i);
+pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
+    if ctx.data.spectating.is_none() {
+        return;
     }
-    for i in s {
-        if let Some(j) = p.get(i) {
-            j.read().await.enqueue(raw.clone()).await;
-        }
-    }
-    info!("sb");
+
+    let player_sessions = ctx.player_sessions.read().await;
+
+    try_remove_spectator(
+        ctx.id,
+        &ctx.name,
+        ctx.data.spectating.unwrap(),
+        &ctx.channel_list,
+        &player_sessions,
+    )
+    .await;
 }
 
-pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
-    let data = packets::spectator_cant_spectate(ctx.id);
-    let target = ctx.data.spectating.unwrap();
-
-    let m = ctx.player_sessions.read().await;
-    let z = m.id_session_map.read().await;
-    let target = z.get(&target).unwrap().read().await;
-    target.enqueue(data.clone()).await;
-
-    for i in target.spectators.iter() {
-        if let Some(player) = z.get(i) {
-            player.read().await.enqueue(data.clone()).await;
+#[inline(always)]
+pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
+    let player_sessions = ctx.player_sessions.read().await;
+    let id_session_map = player_sessions.id_session_map.read().await;
+    // Send the spectate frames to our ctx's spectators
+    for id in &ctx.data.spectators {
+        if let Some(player) = id_session_map.get(id) {
+            player.read().await.enqueue(ctx.payload.to_vec()).await;
         }
     }
-    info!("sb");
+}
+
+#[inline(always)]
+pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
+    if ctx.data.spectating.is_none() {
+        return;
+    }
+
+    let data = packets::spectator_cant_spectate(ctx.id);
+    let spectate_target_id = ctx.data.spectating.unwrap();
+
+    let player_sessions = ctx.player_sessions.read().await;
+    let id_session_map = player_sessions.id_session_map.read().await;
+
+    // Send packet
+    if let Some(spectate_target) = id_session_map.get(&spectate_target_id) {
+        let spectate_target = spectate_target.read().await;
+
+        spectate_target.enqueue(data.clone()).await;
+
+        for id in spectate_target.spectators.iter() {
+            if let Some(spectator) = id_session_map.get(id) {
+                spectator.read().await.enqueue(data.clone()).await;
+            }
+        }
+    }
 }
