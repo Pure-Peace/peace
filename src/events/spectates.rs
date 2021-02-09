@@ -85,6 +85,7 @@ pub async fn try_remove_spectator<'a>(
 #[inline(always)]
 pub async fn create_specate_channel_if_not_exists(
     player_id: i32,
+    player_name: String,
     channel_list: &Data<RwLock<ChannelList>>,
     player_sessions: &Data<RwLock<PlayerSessions>>,
 ) -> String {
@@ -93,7 +94,7 @@ pub async fn create_specate_channel_if_not_exists(
     if !channel_list.read().await.contains_key(&channel_name) {
         let channel = Channel::new(
             channel_name.clone(),
-            channel_name.clone(),
+            format!("{} ({})'s spectator channel!", player_name, player_id),
             1,
             1,
             false,
@@ -125,13 +126,16 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
     let player_sessions = ctx.player_sessions.read().await;
 
     // Specate an offline player is not allowed!
-    if !player_sessions.id_is_exists(&target_id).await {
-        warn!(
-            "Player {}({}) tries to spectate an offline user {}.",
-            ctx.name, ctx.id, target_id
-        );
-        return;
-    }
+    let target_name = match player_sessions.id_session_map.read().await.get(&target_id) {
+        Some(target) => target.read().await.name.clone(),
+        None => {
+            warn!(
+                "Player {}({}) tries to spectate an offline user {}.",
+                ctx.name, ctx.id, target_id
+            );
+            return;
+        }
+    };
 
     // If already spectating
     if ctx.data.spectating.is_some() {
@@ -146,9 +150,13 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
     }
 
     // Create channel
-    let channel_name =
-        create_specate_channel_if_not_exists(target_id, &ctx.channel_list, &ctx.player_sessions)
-            .await;
+    let channel_name = create_specate_channel_if_not_exists(
+        target_id,
+        target_name,
+        &ctx.channel_list,
+        &ctx.player_sessions,
+    )
+    .await;
 
     // Try join channel
     {

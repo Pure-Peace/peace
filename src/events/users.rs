@@ -343,7 +343,7 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
             channel.join(ctx.id, None).await;
         }
         None => {
-            error!(
+            debug!(
                 "Player {}({}) try join to a non-exists channel {}!",
                 ctx.name, ctx.id, channel_name
             );
@@ -360,7 +360,7 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
             channel.leave(ctx.id, None).await;
         }
         None => {
-            error!(
+            debug!(
                 "Player {}({}) try to part from a non-exists channel {}!",
                 ctx.name, ctx.id, channel_name
             );

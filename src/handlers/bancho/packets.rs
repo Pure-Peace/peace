@@ -33,10 +33,10 @@ impl id {
                     id::OSU_PING => {}
                     id::OSU_REQUEST_STATUS_UPDATE => {
                         let player_sessions = player_sessions.read().await;
-                        let map = player_sessions.token_map.read().await;
-                        if let Some(player) = map.get(token) {
+                        let token_map = player_sessions.token_map.read().await;
+                        
+                        if let Some(player) = token_map.get(token) {
                             let player = player.read().await;
-
                             player.enqueue(packets::user_stats(&player).await).await;
                         }
                     }
@@ -113,8 +113,8 @@ impl id {
                     // TODO: Matches ---------
                     _ => {
                         warn!(
-                            "Unhandled packet: {:?}; user: {}({}); payload: {:?}",
-                            self, player_name, player_id, payload
+                            "Unhandled packet: {:?}; user: {}({}); payload (length): {:?}",
+                            self, player_name, player_id, payload.len()
                         );
                     }
                 };
