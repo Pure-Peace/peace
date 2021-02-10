@@ -15,6 +15,20 @@ fn unimplemented(route: &str) -> HttpResponse {
     HttpResponse::Ok().body("ok")
 }
 
+#[get("/check-updates.php")]
+pub async fn check_updates(
+    req: HttpRequest,
+    Query(query): Query<CheckUpdates>,
+    counter: Data<IntCounterVec>,
+) -> HttpResponse {
+    unimplemented("check-updates.php")
+}
+
+#[get("/bancho_connect.php")]
+pub async fn bancho_connect(req: HttpRequest, Query(query): Query<BanchoConnect>) -> HttpResponse {
+    unimplemented("bancho_connect.php")
+}
+
 #[get("/lastfm.php")]
 pub async fn lastfm(
     req: HttpRequest,
@@ -24,13 +38,19 @@ pub async fn lastfm(
     unimplemented("lastfm.php")
 }
 
-#[get("/check-updates.php")]
-pub async fn check_updates(
-    req: HttpRequest,
-    Query(query): Query<CheckUpdates>,
-    counter: Data<IntCounterVec>,
-) -> HttpResponse {
-    unimplemented("check-updates.php")
+#[get("/osu-rate.php")]
+pub async fn osu_rate(req: HttpRequest) -> HttpResponse {
+    unimplemented("osu-rate.php")
+}
+
+#[get("/osu-addfavourite.php")]
+pub async fn osu_add_favourite(req: HttpRequest) -> HttpResponse {
+    unimplemented("osu-addfavourite.php")
+}
+
+#[get("/osu-markasread.php")]
+pub async fn osu_mark_as_read(req: HttpRequest) -> HttpResponse {
+    unimplemented("osu-markasread.php")
 }
 
 #[get("/osu-getreplay.php")]
@@ -46,13 +66,15 @@ pub async fn osu_get_favourites(req: HttpRequest) -> HttpResponse {
 pub async fn osu_get_friends(req: HttpRequest) -> HttpResponse {
     unimplemented("osu-getfriends.php")
 }
-#[get("/bancho_connect.php")]
-pub async fn bancho_connect(req: HttpRequest, Query(query): Query<BanchoConnect>) -> HttpResponse {
-    unimplemented("bancho_connect.php")
+
+#[get("/osu-getseasonal.php")]
+pub async fn osu_get_seasonal(req: HttpRequest) -> HttpResponse {
+    unimplemented("osu-getseasonal.php")
 }
-#[get("/osu-addfavourite.php")]
-pub async fn osu_add_favourites(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-addfavourite.php")
+
+#[get("osu-get-beatmap-topic.php")]
+pub async fn osu_get_beatmap_topic(req: HttpRequest) -> HttpResponse {
+    unimplemented("osu-get-beatmap-topic.php")
 }
 
 #[get("/osu-search.php")]
@@ -64,29 +86,11 @@ pub async fn osu_search(req: HttpRequest) -> HttpResponse {
 pub async fn osu_search_set(req: HttpRequest) -> HttpResponse {
     unimplemented("osu-search-set.php")
 }
-#[get("/osu-rate.php")]
-pub async fn osu_rate(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-rate.php")
-}
 
 #[get("/osu-osz2-getscores.php")]
 pub async fn osu_osz2_get_scores(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-osz2-getscores.php")
-}
-
-#[get("/osu-markasread.php")]
-pub async fn osu_mark_as_read(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-markasread.php")
-}
-
-#[get("/osu-getseasonal.php")]
-pub async fn osu_get_seasonal(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-getseasonal.php")
-}
-
-#[get("osu-get-beatmap-topic.php")]
-pub async fn osu_get_beatmap_topic(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-get-beatmap-topic.php")
+    // unimplemented("osu-osz2-getscores.php")
+    HttpResponse::Ok().body("-1|false")
 }
 
 #[get("osu-osz2-bmsubmit-getid")]
