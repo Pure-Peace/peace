@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     packets::{self, PacketReader},
     utils,
@@ -67,8 +69,11 @@ pub async fn handler(
 
     // Get player
     let player_sessions_r = player_sessions.read().await;
-    let player_data = match player_sessions_r.token_map.read().await.get(&token) {
-        Some(player) => PlayerData::from(&*player.read().await),
+    let (player_data, weak_player) = match player_sessions_r.token_map.read().await.get(&token) {
+        Some(player) => (
+            PlayerData::from(&*player.read().await),
+            Arc::downgrade(player),
+        ),
         None => {
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
@@ -95,6 +100,7 @@ pub async fn handler(
                 &request_ip,
                 &token,
                 &player_data,
+                &weak_player,
                 &player_sessions,
                 &database,
                 &channel_list,

@@ -1,3 +1,5 @@
+use std::sync::Weak;
+
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 
@@ -5,7 +7,7 @@ use crate::{
     constants::id,
     database::Database,
     events,
-    objects::{PlayerData, PlayerSessions},
+    objects::{Player, PlayerData, PlayerSessions},
     packets::HandlerContext,
     types::ChannelList,
 };
@@ -17,6 +19,7 @@ impl id {
         request_ip: &'a String,
         token: &'a String,
         data: &'a PlayerData,
+        weak_player: &'a Weak<RwLock<Player>>,
         player_sessions: &'a Data<RwLock<PlayerSessions>>,
         database: &'a Data<Database>,
         channel_list: &'a Data<RwLock<ChannelList>>,
@@ -35,6 +38,7 @@ impl id {
                     id: player_id,
                     name: player_name,
                     data,
+                    weak_player,
                     player_sessions,
                     database,
                     channel_list,
@@ -66,6 +70,7 @@ impl id {
                     id: player_id,
                     name: player_name,
                     data,
+                    weak_player,
                     player_sessions,
                     database,
                     channel_list,

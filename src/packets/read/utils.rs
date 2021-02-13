@@ -1,5 +1,5 @@
-use std::convert::TryInto;
 use std::str;
+use std::{convert::TryInto, sync::Weak};
 
 use actix_web::web::{Bytes, Data};
 use async_std::sync::RwLock;
@@ -9,7 +9,7 @@ use num_traits::FromPrimitive;
 use crate::{
     constants::id,
     database::Database,
-    objects::{PlayerData, PlayerSessions},
+    objects::{Player, PlayerData, PlayerSessions},
     types::ChannelList,
 };
 
@@ -19,6 +19,7 @@ pub struct HandlerContext<'a> {
     pub id: i32,
     pub name: &'a String,
     pub data: &'a PlayerData,
+    pub weak_player: &'a Weak<RwLock<Player>>,
     pub player_sessions: &'a Data<RwLock<PlayerSessions>>,
     pub database: &'a Data<Database>,
     pub channel_list: &'a Data<RwLock<ChannelList>>,

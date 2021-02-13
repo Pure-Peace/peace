@@ -23,7 +23,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
         "#multiplayer" => {
             // TODO: multiplayer chat
             String::new()
-        },
+        }
         x => x.to_string(),
     };
 
@@ -70,7 +70,6 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
     }
 
     let player_sessions = ctx.player_sessions.read().await;
-    let token_map = player_sessions.token_map.read().await;
     let name_session_map = player_sessions.name_session_map.read().await;
 
     // Find target player
@@ -78,16 +77,16 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
         Some(target) => {
             // Active player (sender)
             let target = target.read().await;
-            let player = match token_map.get(ctx.token) {
-                Some(player) => player.read().await,
-                None => {
-                    warn!(
-                        "Failed to send private messages, player {}({}) has logout!",
-                        ctx.name, ctx.id
-                    );
-                    return;
-                }
+            let player = ctx.weak_player.upgrade();
+
+            if player.is_none() {
+                warn!(
+                    "Failed to send private messages, player {}({}) has logout!",
+                    ctx.name, ctx.id
+                );
+                return;
             };
+            let player = player.as_ref().unwrap().read().await;
 
             // Target player only allowed friend's pm
             // Admin are not limited

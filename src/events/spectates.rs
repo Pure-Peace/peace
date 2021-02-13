@@ -1,8 +1,11 @@
-use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, Weak};
 
 use async_std::sync::RwLockReadGuard;
 
-use crate::{objects::Channel, packets};
+use crate::{
+    objects::{Channel, Player},
+    packets,
+};
 
 use super::depends::*;
 
@@ -10,17 +13,18 @@ use super::depends::*;
 pub async fn try_remove_spectator<'a>(
     player_id: i32,
     player_name: &String,
+    weak_player: &Weak<RwLock<Player>>,
     spectating_id: i32,
     channel_list: &Data<RwLock<ChannelList>>,
     player_sessions: &RwLockReadGuard<'_, PlayerSessions>,
 ) {
     // First, Remove spectating status from me
-    let id_session_map = player_sessions.id_session_map.read().await;
-    if let Some(player) = id_session_map.get(&player_id) {
+    if let Some(player) = weak_player.upgrade() {
         player.write().await.spectating = None;
     }
 
     // And, remove me from spectating player
+    let id_session_map = player_sessions.id_session_map.read().await;
     let non_spectators = if let Some(spectating_target) = id_session_map.get(&spectating_id) {
         let mut t = spectating_target.write().await;
         t.spectators.remove(&player_id);
@@ -117,7 +121,7 @@ pub async fn create_specate_channel_if_not_exists(
 
 #[inline(always)]
 /// #16: OSU_SPECTATE_START
-/// 
+///
 pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
     let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
 
@@ -145,6 +149,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
         try_remove_spectator(
             ctx.id,
             &ctx.name,
+            ctx.weak_player,
             ctx.data.spectating.unwrap(),
             &ctx.channel_list,
             &player_sessions,
@@ -184,13 +189,13 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
         let i_was_joined2 = packets::spectator_joined(ctx.id);
 
         let id_session_map = player_sessions.id_session_map.read().await;
-        let (target, player) = (id_session_map.get(&target_id), id_session_map.get(&ctx.id));
+        let (target, player) = (id_session_map.get(&target_id), ctx.weak_player.upgrade());
         if target.is_none() || player.is_none() {
             return;
         }
 
         let mut target = target.unwrap().write().await;
-        let mut player = player.unwrap().write().await;
+        let mut player = player.as_ref().unwrap().write().await;
 
         for spectator_id in target.spectators.iter() {
             if let Some(spectator) = id_session_map.get(&spectator_id) {
@@ -212,7 +217,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
 
 #[inline(always)]
 /// #17: OSU_SPECTATE_STOP (non-payload)
-/// 
+///
 pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
     if ctx.data.spectating.is_none() {
         return;
@@ -223,6 +228,7 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
     try_remove_spectator(
         ctx.id,
         &ctx.name,
+        ctx.weak_player,
         ctx.data.spectating.unwrap(),
         &ctx.channel_list,
         &player_sessions,
@@ -232,23 +238,24 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
 
 #[inline(always)]
 /// #18: OSU_SPECTATE_FRAMES
-/// 
+///
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
     let data = packets::spectator_frames(ctx.payload.to_vec());
 
     let player_sessions = ctx.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
+
     // Send the spectate frames to our ctx's spectators
-    for id in &ctx.data.spectators {
-        if let Some(player) = id_session_map.get(id) {
-            player.read().await.enqueue(data.clone()).await;
+    for spectator_id in &ctx.data.spectators {
+        if let Some(spectator) = id_session_map.get(spectator_id) {
+            spectator.read().await.enqueue(data.clone()).await;
         }
     }
 }
 
 #[inline(always)]
 /// #21: OSU_SPECTATE_CANT (non-payload)
-/// 
+///
 pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
     if ctx.data.spectating.is_none() {
         return;

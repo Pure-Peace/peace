@@ -94,7 +94,7 @@ impl Player {
         playing_beatmap_id: i32,
         play_mods_value: u32,
         game_mode: GameMode,
-    ) -> Option<()> {
+    ) {
         self.status.action = action;
         self.status.info = info;
         self.status.playing_beatmap_md5 = playing_beatmap_md5;
@@ -102,7 +102,6 @@ impl Player {
         self.status.play_mods.update(play_mods_value);
         self.status.game_mode = game_mode;
         self.status.update_time = Local::now();
-        Some(())
     }
 
     #[inline(always)]
