@@ -29,6 +29,9 @@ actix_log_format = '%s - %{r}a "%r" %b %T'
 exclude_endpoints = ["/favicon.ico", "/bancho/"]
 exclude_endpoints_regex = ["/*"]
 
+# Logger will not record logs from these modules
+exclude_modules = ["maxminddb::decoder", "hyper", "reqwest"]
+
 # Logger mode is env_logger config
 # Support filter: "trace,mio::sys=info"
 # https://docs.rs/env_logger/0.8.1/env_logger/index.html
