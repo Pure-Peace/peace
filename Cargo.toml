@@ -7,13 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-cors = "0.5.3"
+actix-cors = "0.5.4"
 actix-multipart = "0.3"
 actix-rt = "1.1.1"
 actix-web = "3.1.0"
-actix-web-prom = "0.5.0"
+actix-web-prom = "0.5.1"
 askama = "0.10.5"
-async-std = "1.8.0"
+async-std = "1.9.0"
 celes = "1.0.6"
 chrono = "0.4.19"
 colored = "2.0.0"
@@ -22,33 +22,35 @@ deadpool-postgres = "0.5.6"
 deadpool-redis = "0.6.1"
 dotenv = "0.15.0"
 enum-primitive-derive = "0.2.1"
-env_logger = "0.8.2"
-futures = "0.3.8"
+env_logger = "0.8.3"
+futures = "0.3.12"
 hashbrown = "0.9.1"
 lazy_static = "1.4.0"
-log = "0.4.11"
-maxminddb = { version = "0.17.0", features = ["mmap"] }
+log = "0.4.14"
+maxminddb = { version = "0.17.2", features = ["mmap"] }
 md5 = "0.7.0"
 memmap = "0.7.0"
 num-traits = "0.2.14"
-prometheus = { version = "0.10.0", features = ["process"] }
+prometheus = { version = "0.11.0", features = ["process"] }
 queue = "0.3.1"
-rand = "0.8.0"
-regex = "1.4.2"
+rand = "0.8.3"
+regex = "1.4.3"
 rust-argon2 = "0.8.3"
-serde = { version = "1.0.118", features = ["derive"] }
-serde_derive = "1.0.118"
-serde_json = "1.0.61"
+serde = { version = "1.0.123", features = ["derive"] }
+serde_derive = "1.0.123"
+serde_json = "1.0.62"
 serde_postgres = "0.2.0"
 serde_qs = "0.8.2"
 strum = "0.20"
 strum_macros = "0.20"
-tokio-postgres = "0.5.5"
+tokio-pg-mapper = "0.1.8"
+tokio-pg-mapper-derive = "0.1.5"
+tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4"] }
 uuid = { version = "0.8.1", features = ["v4"] }
 
 
 [dev-dependencies]
-criterion = "0.3.3"
+criterion = "0.3.4"
 
 [[bench]]
 name = "packet_write"
