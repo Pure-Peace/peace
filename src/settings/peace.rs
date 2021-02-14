@@ -20,7 +20,7 @@ use prometheus::{opts, IntCounterVec};
 use crate::handlers::bancho;
 use crate::objects::{ChannelListBuilder, PlayerSessions};
 
-use super::model::Settings;
+use super::{bancho::BanchoConfig, model::Settings};
 
 /// Actix before start
 pub async fn before_start(cfg: &Config) -> (String, String) {
@@ -83,11 +83,10 @@ pub async fn start_server(
         .unwrap_or(vec!["/favicon.ico".to_string()]);
     let excludes_endpoint_log_regex: Vec<String> =
         cfg.get("logger.exclude_endpoints_regex").unwrap_or(vec![]);
-    let recycle_check_interval = cfg
-        .get_int("bancho.session.recycle_check_interval")
+    let session_recycle_check_interval = cfg
+        .get_int("bancho.session_recycle.check_interval")
         .unwrap_or(45) as u64;
-    let recycle_check_duration = std::time::Duration::from_secs(recycle_check_interval);
-    let session_timeout = cfg.get_int("bancho.session.timeout").unwrap_or(45);
+    let recycle_check_duration = std::time::Duration::from_secs(session_recycle_check_interval);
 
     {
         // Ready prometheus
@@ -119,11 +118,16 @@ pub async fn start_server(
         .register(Box::new(counter.clone()))
         .unwrap();
 
+    // Bancho config
+    let bancho_config = Data::new(RwLock::new(
+        BanchoConfig::from_database(&database).await.unwrap(),
+    ));
+    let bancho_config_cloned = bancho_config.clone();
+
     // Html renders
-    let bancho_get_render = BanchoGet {
-        server_name: settings.server.name.to_string(),
-        server_front: settings.server.front.to_string(),
-    };
+    let bancho_get_render = Data::new(RwLock::new(
+        BanchoGet::new(bancho_config.clone().into_inner()).await,
+    ));
 
     // Geo mmdb
     let geo_db = match settings.geoip.enabled {
@@ -149,13 +153,16 @@ pub async fn start_server(
     let channel_list_cloned: Data<RwLock<ChannelList>> = channel_list.clone();
 
     // Password cache
-    let argon2_cache: Data<RwLock<Argon2Cache>> = Data::new(RwLock::new(HashMap::new()));
+    let argon2_cache: Data<RwLock<Argon2Cache>> =
+        Data::new(RwLock::new(HashMap::with_capacity(100)));
 
     // Start auto recycle task,
     // it will auto logout deactive players each interval
     async_std::task::spawn(async move {
         loop {
             async_std::task::sleep(recycle_check_duration).await;
+
+            let session_timeout = bancho_config.read().await.timeout_player_session;
             bancho::sessions::recycle_handler(
                 &player_sessions_cloned,
                 &channel_list_cloned,
@@ -198,6 +205,7 @@ pub async fn start_server(
             .app_data(channel_list.clone())
             .app_data(argon2_cache.clone())
             .app_data(geo_db_data.clone())
+            .app_data(bancho_config_cloned.clone())
             .data(counter.clone())
             .data(database.clone())
             .data(bancho_get_render.clone())

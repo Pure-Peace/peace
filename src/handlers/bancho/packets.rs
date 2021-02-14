@@ -9,6 +9,7 @@ use crate::{
     events,
     objects::{Player, PlayerData, PlayerSessions},
     packets::HandlerContext,
+    settings::bancho::BanchoConfig,
     types::ChannelList,
 };
 
@@ -23,6 +24,7 @@ impl id {
         player_sessions: &'a Data<RwLock<PlayerSessions>>,
         database: &'a Data<Database>,
         channel_list: &'a Data<RwLock<ChannelList>>,
+        bancho_config: &'a Data<RwLock<BanchoConfig>>,
         payload: Option<&'a [u8]>,
     ) {
         // Data shorthand
@@ -42,6 +44,7 @@ impl id {
                     player_sessions,
                     database,
                     channel_list,
+                    bancho_config,
                     payload: &[],
                 };
                 match self {
@@ -74,6 +77,7 @@ impl id {
                     player_sessions,
                     database,
                     channel_list,
+                    bancho_config,
                     payload,
                 };
                 match self {

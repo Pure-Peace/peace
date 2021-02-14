@@ -5,7 +5,7 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::utils;
+use crate::{settings::bancho::BanchoConfig, utils};
 
 use super::depends::*;
 
@@ -23,6 +23,7 @@ pub async fn osu_register(
     req: HttpRequest,
     mut form_data: Multipart,
     database: Data<Database>,
+    bancho_config: Data<RwLock<BanchoConfig>>,
     argon2_cache: Data<RwLock<Argon2Cache>>,
 ) -> HttpResponse {
     lazy_static::lazy_static! {
@@ -30,11 +31,34 @@ pub async fn osu_register(
         static ref EMAIL_REGEX: Regex = Regex::new(r"^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{2,24}$").unwrap();
     }
 
+    let bancho_config = bancho_config.read().await;
+    // Register closed
+    if !bancho_config.registration_enabled {
+        return HttpResponse::BadRequest().body(json!({
+            "form_error": {
+                "user": {
+                    "username": ["In-game registration is currently closed! Please choose to register on the website or contact the administrator."],
+                    "user_email": ["游戏内注册目前已被关闭！请选择在网站注册，或联系管理员。"],
+                    "password": ["-- NaN --"]
+                }
+            }
+        }));
+    };
+
     let request_ip = utils::get_realip(&req).await;
     if request_ip.is_err() {
         return HttpResponse::InternalServerError().body("Server Error");
     }
     let request_ip = request_ip.unwrap();
+
+    // IP disallowed
+    if !bancho_config.ip_blacklist.contains(&request_ip)
+        || bancho_config
+            .registration_disallowed_ip
+            .contains(&request_ip)
+    {
+        return HttpResponse::InternalServerError().body("Server Error");
+    }
 
     // Parse register form data
     let form_data = {
@@ -89,7 +113,18 @@ pub async fn osu_register(
         username_errors.push(r#"You cannot include both "_" and " " in the name."#)
     }
 
-    // TODO: disallowed names check
+    // disallowed names check
+    if bancho_config
+        .registration_disallowed_usernames
+        .contains(&form_data.username)
+    {
+        username_errors.push("This is a username that is not allowed, please change it.")
+    }
+
+    // sensitive word check
+    if bancho_config.sensitive_words.contains(&form_data.username) {
+        username_errors.push("The username contains sensitive words, please change.")
+    }
 
     // Check username is already use (using name_safe to check)
     if database
@@ -104,9 +139,17 @@ pub async fn osu_register(
         username_errors.push("Your username is already being used by someone else.")
     }
 
-    // Check email
+    // Check email 1
     if !EMAIL_REGEX.is_match(&form_data.email) {
         email_errors.push("Invalid email address.");
+    }
+
+    // Check email 2
+    if bancho_config
+        .registration_disallowed_emails
+        .contains(&form_data.email)
+    {
+        email_errors.push("Email that is not allowed, please change")
     }
 
     // Check email is already use
@@ -122,9 +165,18 @@ pub async fn osu_register(
         email_errors.push("Your email is already being used by someone else.")
     }
 
-    // Check password
+    // Check password 1
     if (form_data.password.len() < 8) || (form_data.password.len() > 32) {
         password_errors.push("Password must be 8-32 characters.")
+    }
+
+    // Check password 2
+    if bancho_config
+        .registration_disallowed_passwords
+        .contains(&form_data.password)
+    {
+        password_errors
+            .push("Don't use weak passwords, this is dangerous. Please change the password.")
     }
 
     // Return registration error if exists

@@ -58,8 +58,7 @@ fn test_login() {
         .add(protocol_version(19))
         .add(notification("Welcome to Peace!"))
         .add(main_menu_icon(
-            "https://i.kafuu.pro/welcome.png",
-            "https://www.baidu.com",
+            "https://i.kafuu.pro/welcome.png|https://www.baidu.com",
         ))
         .add(silence_end(0))
         .add(channel_info_end());

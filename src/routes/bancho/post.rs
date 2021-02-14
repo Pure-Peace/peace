@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     packets::{self, PacketReader},
+    settings::bancho::BanchoConfig,
     utils,
 };
 
@@ -13,6 +14,7 @@ pub async fn handler(
     player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
     channel_list: Data<RwLock<ChannelList>>,
+    bancho_config: Data<RwLock<BanchoConfig>>,
     argon2_cache: Data<RwLock<Argon2Cache>>,
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
@@ -22,17 +24,26 @@ pub async fn handler(
         .with_label_values(&["/bancho", "post", "start"])
         .inc();
 
-    let bancho_start = std::time::Instant::now();
+    // Get real request ip
+    let request_ip = utils::get_realip(&req).await;
+    if request_ip.is_err() {
+        return HttpResponse::Ok().body("bad requests");
+    };
+    let request_ip = request_ip.unwrap();
+
+    // Blocked ip
+    if bancho_config
+        .read()
+        .await
+        .ip_blacklist
+        .contains(&request_ip)
+    {
+        return HttpResponse::Ok().body("bad requests");
+    };
 
     let mut resp = packets::PacketBuilder::new();
-
-    // Get headers
+    let bancho_start = std::time::Instant::now();
     let headers = req.headers();
-
-    // Get real request ip
-    let request_ip = utils::get_realip(&req)
-        .await
-        .expect("Cannot get request ip");
 
     // Get osu ver
     let osu_version = utils::get_osuver(&req).await;
@@ -48,6 +59,7 @@ pub async fn handler(
             database,
             player_sessions,
             channel_list,
+            bancho_config,
             argon2_cache,
             counter,
             geo_db,
@@ -104,14 +116,14 @@ pub async fn handler(
                 &player_sessions,
                 &database,
                 &channel_list,
+                &bancho_config,
                 payload,
             )
             .await;
     }
 
     // Push player's packets to the response
-    let player_sessions_r = player_sessions.read().await;
-    if let Some(player) = player_sessions_r.token_map.read().await.get(&token) {
+    if let Some(player) = weak_player.upgrade() {
         let mut player = player.write().await;
         // Update player's active time
         player.update_active();
@@ -120,7 +132,6 @@ pub async fn handler(
             resp.add_ref(packet_data);
         }
     }
-    drop(player_sessions_r);
 
     let bancho_end = bancho_start.elapsed();
     debug!(

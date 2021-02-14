@@ -1,6 +1,7 @@
 pub mod peace;
 pub mod logger;
 pub mod model;
+pub mod bancho;
 
 use colored::Colorize;
 use config::{Config, ConfigError, /* Environment, */ File};

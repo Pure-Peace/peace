@@ -59,10 +59,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 )))
                 .add(packets::protocol_version(19))
                 .add(packets::notification("Welcome to Peace!"))
-                .add(packets::main_menu_icon(
-                    "https://i.kafuu.pro/welcome.png",
-                    "https://www.baidu.com",
-                ))
+                .add(packets::main_menu_icon("https://i.kafuu.pro/welcome.png|https://www.baidu.com"))
                 .add(packets::silence_end(0))
                 .add(packets::channel_info_end())
                 .write_out()

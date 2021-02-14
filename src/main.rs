@@ -32,7 +32,8 @@ async fn main() -> std::io::Result<()> {
     println!("{}", PEACE_BANNER.green());
 
     // Create Peace's settings
-    let (cfg, settings) = Settings::new().unwrap();
+    let (cfg, settings) = Settings::new()
+        .expect("Settings failed to initialize, please check the local configuration file.");
 
     // Create database object includes postgres and redis pool
     let database = Database::new(&settings).await;

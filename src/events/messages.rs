@@ -8,7 +8,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let message = payload.read_message().await;
+    let mut message = payload.read_message().await;
 
     let channel_name = match message.target.as_str() {
         "#spectator" => {
@@ -27,13 +27,27 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
         x => x.to_string(),
     };
 
+    let bancho_config = ctx.bancho_config.read().await;
+
+    // Limit the length of message content
+    if let Some(max_len) = bancho_config.message_length_max {
+        let max_len = max_len as usize;
+        if message.content.len() > max_len {
+            message.content = message.content[0..max_len].to_string();
+        }
+    };
+
+    // sensitive words replace
+    for i in &bancho_config.sensitive_words {
+        message.content = message.content.replace(i, "**")
+    }
+
     // Check channel
     let channel_list = ctx.channel_list.read().await;
     match channel_list.get(&channel_name) {
         Some(channel) => {
             // TODO: check player's priv?
 
-            // TODO: Limit the length of message content?
             // Send message done
             channel
                 .broadcast(ctx.name, ctx.id, &message.content, false)
@@ -62,11 +76,26 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let message = payload.read_message().await;
+    let mut message = payload.read_message().await;
 
     // BanchoBot? current not exists
     if message.target == "BanchoBot" {
         return;
+    }
+
+    let bancho_config = ctx.bancho_config.read().await;
+
+    // Limit the length of message content
+    if let Some(max_len) = bancho_config.message_length_max {
+        let max_len = max_len as usize;
+        if message.content.len() > max_len {
+            message.content = message.content[0..max_len].to_string();
+        }
+    };
+
+    // sensitive words replace
+    for i in &bancho_config.sensitive_words {
+        message.content = message.content.replace(i, "**")
     }
 
     let player_sessions = ctx.player_sessions.read().await;

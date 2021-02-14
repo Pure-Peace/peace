@@ -71,7 +71,7 @@ impl Player {
             utc_offset: client_info.utc_offset as u8,
             location: (0.0, 0.0),
             stats: Stats::new(),
-            stats_cache: HashMap::new(),
+            stats_cache: HashMap::with_capacity(4),
             status: Status::new(),
             away_message: String::new(),
             queue: Mutex::new(Queue::new()),

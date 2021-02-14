@@ -5,7 +5,7 @@ use chrono::Local;
 use std::{
     fmt,
     sync::{
-        atomic::{AtomicU32, Ordering},
+        atomic::{AtomicI32, Ordering},
         Arc,
     },
 };
@@ -25,7 +25,7 @@ pub struct PlayerSessions {
     pub token_map: PlayerSessionMap,
     pub id_session_map: PlayerIdSessionMap,
     pub name_session_map: PlayerNameSessionMap,
-    pub player_count: AtomicU32,
+    pub player_count: AtomicI32,
     database: Database,
 }
 
@@ -47,7 +47,7 @@ impl PlayerSessions {
             id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
             /// Key: Player.name Value: Arc<RwLock<Player>>
             name_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
-            player_count: AtomicU32::new(0),
+            player_count: AtomicI32::new(0),
             database,
         }
     }

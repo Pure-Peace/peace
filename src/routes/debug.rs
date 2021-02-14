@@ -1,4 +1,4 @@
-use crate::{database::Database, types::ChannelList};
+use crate::{database::Database, settings::bancho::BanchoConfig, types::ChannelList};
 use crate::{objects::PlayerSessions, utils};
 
 use actix_web::web::{Data, Path, Query};
@@ -206,4 +206,20 @@ pub async fn test_geo_ip(
             .content_type("application/json; charset=utf-8")
             .body(json_error),
     }
+}
+
+/// GET "/bancho_config_get"
+#[get("/bancho_config_get")]
+pub async fn bancho_config_get(bancho_config: Data<RwLock<BanchoConfig>>) -> impl Responder {
+    HttpResponse::Ok().body(format!("{:?}", bancho_config.read().await))
+}
+
+/// GET "/bancho_config_update"
+#[get("/bancho_config_update")]
+pub async fn bancho_config_update(
+    database: Data<Database>,
+    bancho_config: Data<RwLock<BanchoConfig>>,
+) -> impl Responder {
+    let result = bancho_config.write().await.update(&database).await;
+    HttpResponse::Ok().body(format!("{}", result))
 }

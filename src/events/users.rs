@@ -459,7 +459,23 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
 /// #82: OSU_USER_SET_AWAY_MESSAGE
 ///
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) {
-    let message = PayloadReader::new(ctx.payload).read_message().await;
+    let mut message = PayloadReader::new(ctx.payload).read_message().await;
+
+    let bancho_config = ctx.bancho_config.read().await;
+
+    // Limit the length of message content
+    if let Some(max_len) = bancho_config.message_length_max {
+        let max_len = max_len as usize;
+        if message.content.len() > max_len {
+            message.content = message.content[0..max_len].to_string();
+        }
+    };
+
+    // sensitive words replace
+    for i in &bancho_config.sensitive_words {
+        message.content = message.content.replace(i, "**")
+    }
+
     if let Some(player) = ctx.weak_player.upgrade() {
         player.write().await.away_message = message.content;
     };

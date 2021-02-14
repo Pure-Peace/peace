@@ -1,19 +1,9 @@
-[hello]
-world = "hi"
-
 [server]
-name = "osu!Kafuu"
-front = "https://kafuu.pro"
 host = "127.0.0.1"
 port = 8080
-token = "key"
-secret = "secret"
-
-[bancho]
 
 
-[bancho.session]
-# each interval check once
-recycle_check_interval = 60
-# player session timeout
-timeout = 90
+[bancho.session_recycle]
+# Each interval check once, 
+# auto recycle deactive player sessions
+check_interval = 60

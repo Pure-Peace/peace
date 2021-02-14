@@ -10,6 +10,7 @@ use crate::{
     constants::id,
     database::Database,
     objects::{Player, PlayerData, PlayerSessions},
+    settings::bancho::BanchoConfig,
     types::ChannelList,
 };
 
@@ -23,6 +24,7 @@ pub struct HandlerContext<'a> {
     pub player_sessions: &'a Data<RwLock<PlayerSessions>>,
     pub database: &'a Data<Database>,
     pub channel_list: &'a Data<RwLock<ChannelList>>,
+    pub bancho_config: &'a Data<RwLock<BanchoConfig>>,
     pub payload: &'a [u8],
 }
 

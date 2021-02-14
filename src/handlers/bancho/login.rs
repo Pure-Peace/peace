@@ -3,14 +3,18 @@
 use actix_web::web::{Bytes, Data};
 use actix_web::HttpRequest;
 use async_std::sync::RwLock;
+use log::warn;
 use std::net::{IpAddr, Ipv4Addr};
 
-use crate::types::{Argon2Cache, ChannelList, PacketData};
 use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
     packets::PacketBuilder,
     utils::argon2_verify,
+};
+use crate::{
+    settings::bancho::BanchoConfig,
+    types::{Argon2Cache, ChannelList, PacketData},
 };
 
 use super::parser;
@@ -35,6 +39,7 @@ pub async fn login(
     database: &Data<Database>,
     player_sessions: &Data<RwLock<PlayerSessions>>,
     channel_list: &Data<RwLock<ChannelList>>,
+    bancho_config: &BanchoConfig,
     argon2_cache: &Data<RwLock<Argon2Cache>>,
     counter: &Data<IntCounterVec>,
     geo_db: &Data<Option<Reader<Mmap>>>,
@@ -67,6 +72,86 @@ pub async fn login(
         "login data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
     );
+
+    // Client check
+    if bancho_config.client_check && !bancho_config.client_whitelist.contains(&osu_version) {
+        // Black list check
+        if bancho_config.client_blacklist.contains(&osu_version) {
+            warn!(
+                "login refused, not allowed client version: {}; username: {}, ip: {}",
+                osu_version, username, request_ip
+            );
+            return Err(("not_allowed", None));
+        }
+
+        // Max version check
+        if let Some(max_version) = &bancho_config.client_max_version {
+            if &osu_version > max_version {
+                warn!(
+                    "login refused, over than max client version: {}({} max); username: {}, ip: {}",
+                    osu_version, max_version, username, request_ip
+                );
+                return Err(("not_allowed", None));
+            }
+        }
+
+        // Min version check
+        if let Some(min_version) = &bancho_config.client_min_version {
+            if &osu_version < min_version {
+                warn!(
+                    "login refused, lower than min client version: {}({} max); username: {}, ip: {}",
+                    osu_version, min_version, username, request_ip
+                );
+                return Err(("not_allowed", None));
+            }
+        }
+    }
+
+    // Not allowed username
+    if bancho_config.login_disallowed_usernames.contains(&username) {
+        warn!(
+            "login refused, not allowed username: {}; ip: {}",
+            username, request_ip
+        );
+        return Err(("not_allowed", None));
+    }
+
+    // Not allow hashes 1
+    let hardware_hashes = client_hashes.adapters_hash.clone() + &client_hashes.disk_id;
+    if bancho_config
+        .login_disallowed_hardware_hashes
+        .contains(&format!("{:x}", md5::compute(&hardware_hashes)))
+    {
+        warn!(
+            "login refused, not allowed hardware hashes: {}; username: {}, ip: {}",
+            hardware_hashes, username, request_ip
+        );
+        return Err(("not_allowed", None));
+    }
+
+    // Not allow hashes 2
+    if bancho_config
+        .login_disallowed_disk_hashes
+        .contains(&client_hashes.disk_id)
+    {
+        warn!(
+            "login refused, not allowed disk hash: {}; username: {}, ip: {}",
+            client_hashes.disk_id, username, request_ip
+        );
+        return Err(("not_allowed", None));
+    }
+
+    // Not allow hashes 3
+    if bancho_config
+        .login_disallowed_adapters_hashes
+        .contains(&client_hashes.adapters_hash)
+    {
+        warn!(
+            "login refused, not allowed adapters hash: {}; username: {}, ip: {}",
+            client_hashes.adapters_hash, username, request_ip
+        );
+        return Err(("not_allowed", None));
+    }
 
     // Select user base info from database ----------
     let select_base_start = Instant::now();
@@ -109,6 +194,14 @@ pub async fn login(
         "success to get player base info {}({}); time spent: {:.2?}; ",
         username, user_id, select_base_duration
     );
+    // Not allowed id
+    if bancho_config.login_disallowed_id.contains(&user_id) {
+        warn!(
+            "login refused, not allowed user id: {}; username: {}, ip: {}",
+            user_id, username, request_ip
+        );
+        return Err(("not_allowed", None));
+    }
 
     // Try read password hash from argon2 cache
     let cached_password_hash = {
@@ -174,6 +267,19 @@ pub async fn login(
             Some(
                 resp.add(packets::notification("you have been slained."))
                     .add(packets::login_reply(LoginFailed::UserBanned)),
+            ),
+        ));
+    }
+
+    // Maintenance mode
+    if bancho_config.maintenance_enabled && Privileges::Admin.not_enough(player_base.privileges) {
+        return Err((
+            "maintenance",
+            Some(
+                resp.add(packets::notification(
+                    &bancho_config.maintenance_notification,
+                ))
+                .add(packets::login_reply(LoginFailed::ServerError)),
             ),
         ));
     }
@@ -320,6 +426,9 @@ pub async fn login(
                 );
             }
 
+            // TODO: ban muti account?
+            if !bancho_config.muti_accounts_allowed {}
+
             // Create new login record for exists address
             /*  */
             (max_similar_address.id, max_similarity)
@@ -403,19 +512,20 @@ pub async fn login(
         packets::protocol_version(19),
         packets::bancho_privileges(player.bancho_privileges),
         user_data_packet.clone(),
-        packets::silence_end(0),
+        packets::silence_end(0), // TODO: real silence end
         packets::friends_list(&player.friends).await,
     ])
     .await;
 
-    // TODO: get login notification from cache (init by database)
-    resp.add_ref(packets::notification("Welcome to Peace!"));
+    // Notifications
+    for n in &bancho_config.login_notifications {
+        resp.add_ref(packets::notification(n));
+    }
 
-    // TODO: get menu icon from cache (init by database)
-    resp.add_ref(packets::main_menu_icon(
-        "https://i.kafuu.pro/welcome.png",
-        "https://www.baidu.com",
-    ));
+    // Menu icon
+    if let Some(menu_icon) = &bancho_config.menu_icon {
+        resp.add_ref(packets::main_menu_icon(menu_icon));
+    };
 
     let player_id = player.id;
     let player_priv = player.privileges;

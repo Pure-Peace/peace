@@ -270,10 +270,12 @@ pub fn protocol_version(version: i32) -> PacketData {
         .pack()
 }
 
+#[inline(always)]
 /// #76: BANCHO_MAIN_MENU_ICON
-pub fn main_menu_icon(image_url: &str, click_url: &str) -> PacketData {
+/// menu_icon = image_url: &str | click_url: &str
+pub fn main_menu_icon(menu_icon: &str) -> PacketData {
     PacketBuilder::with(id::BANCHO_MAIN_MENU_ICON)
-        .add(write_string(&format!("{}|{}", image_url, click_url)))
+        .add(write_string(menu_icon))
         .pack()
 }
 

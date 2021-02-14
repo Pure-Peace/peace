@@ -51,6 +51,8 @@ fn init_debug(cfg: &mut ServiceConfig) {
     cfg.service(pleyer_sessions_kick);
     cfg.service(pleyer_sessions_kick_uid);
     cfg.service(test_geo_ip);
+    cfg.service(bancho_config_update);
+    cfg.service(bancho_config_get);
 }
 
 /// Routes for default

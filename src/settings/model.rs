@@ -12,22 +12,12 @@ pub struct Settings {
     pub server: Server,
     pub geoip: Geoip,
     pub logger: Logger,
-    hello: Hello,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Hello {
-    world: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
-    pub name: String,
-    pub front: String,
     pub host: String,
     pub port: String,
-    pub token: String,
-    pub secret: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
