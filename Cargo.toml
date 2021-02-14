@@ -1,6 +1,6 @@
 [package]
 name = "peace"
-version = "0.0.1"
+version = "0.2.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 

@@ -124,6 +124,72 @@ CREATE SEQUENCE bancho.channels_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE bancho.channels_id_seq OWNED BY bancho.channels.id;
+CREATE TABLE bancho.config (
+    name character varying(255) NOT NULL,
+    comment character varying(255),
+    enabled boolean,
+    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    osu_api_keys character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    free_direct boolean DEFAULT true NOT NULL,
+    ip_blacklist character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    display_clan_name boolean DEFAULT true NOT NULL,
+    sensitive_words character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    menu_icon character varying,
+    seasonal_backgrounds character varying[],
+    server_front_url character varying(255) DEFAULT 'http://peace'::character varying NOT NULL,
+    server_name character varying(255) DEFAULT 'Peace'::character varying NOT NULL,
+    server_owner character varying(255) DEFAULT 'PurePeace'::character varying NOT NULL,
+    server_email character varying(255) DEFAULT 'peace@email.com'::character varying NOT NULL,
+    client_check boolean DEFAULT false NOT NULL,
+    client_whitelist character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    client_blacklist character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    client_min_version character varying(255),
+    client_max_version character varying(255),
+    beatmaps_loved_give_pp boolean DEFAULT false NOT NULL,
+    beatmaps_unranked_give_pp boolean DEFAULT false NOT NULL,
+    maintenance_enabled boolean DEFAULT false NOT NULL,
+    maintenance_notification character varying(255) DEFAULT 'Server is maintenance now!'::character varying NOT NULL,
+    login_enabled boolean DEFAULT true NOT NULL,
+    login_notifications character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    login_retry_max_count integer DEFAULT 4 NOT NULL,
+    login_retry_expire_seconds integer DEFAULT 300 NOT NULL,
+    timeout_player_session bigint DEFAULT 90 NOT NULL,
+    timeout_beatmap_cache bigint DEFAULT 3600 NOT NULL,
+    timeout_osu_updates_cache bigint DEFAULT 3600 NOT NULL,
+    online_users_limit boolean DEFAULT false NOT NULL,
+    online_users_max integer DEFAULT 300 NOT NULL,
+    message_frequency_limit boolean DEFAULT true NOT NULL,
+    message_per_minutes_max integer DEFAULT 40 NOT NULL,
+    message_base_limit_seconds bigint DEFAULT 10 NOT NULL,
+    message_length_max integer DEFAULT 1000,
+    muti_accounts_allowed boolean DEFAULT true NOT NULL,
+    muti_accounts_max integer DEFAULT 3 NOT NULL,
+    auto_ban_enabled boolean DEFAULT false NOT NULL,
+    auto_ban_whitelist integer[] DEFAULT ARRAY[]::integer[] NOT NULL,
+    auto_ban_pp_std integer,
+    auto_ban_pp_taiko integer,
+    auto_ban_pp_catch integer,
+    auto_ban_pp_mania integer,
+    auto_ban_pp_rx_std integer,
+    auto_ban_pp_rx_taiko integer,
+    auto_ban_pp_rx_catch integer,
+    auto_ban_pp_ap_std integer,
+    registration_enabled boolean DEFAULT true NOT NULL,
+    registration_disallowed_ip character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    registration_disallowed_emails character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    registration_disallowed_usernames character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    registration_disallowed_passwords character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    login_disallowed_ip character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    login_disallowed_id integer[] DEFAULT ARRAY[]::integer[] NOT NULL,
+    login_disallowed_usernames character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    login_disallowed_hardware_hashes character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    login_disallowed_disk_hashes character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    login_disallowed_adapters_hashes character varying[] DEFAULT ARRAY[]::character varying[] NOT NULL
+);
+COMMENT ON COLUMN bancho.config.name IS 'unique config name';
+COMMENT ON COLUMN bancho.config.comment IS 'comment';
+COMMENT ON COLUMN bancho.config.enabled IS 'enabled status';
+COMMENT ON COLUMN bancho.config.update_time IS 'auto update timestamp';
 CREATE TABLE game_scores.catch (
     id bigint NOT NULL,
     user_id integer NOT NULL,
@@ -736,6 +802,17 @@ CREATE SEQUENCE "user".base_id_seq
     MAXVALUE 2147483647
     CACHE 1;
 ALTER SEQUENCE "user".base_id_seq OWNED BY "user".base.id;
+CREATE TABLE "user".beatmap_collections (
+    user_id integer NOT NULL,
+    beatmap_set_id integer NOT NULL,
+    remark character varying(255),
+    create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+COMMENT ON TABLE "user".beatmap_collections IS 'user''s online beatmap collections';
+COMMENT ON COLUMN "user".beatmap_collections.user_id IS 'user_id, int 32';
+COMMENT ON COLUMN "user".beatmap_collections.beatmap_set_id IS 'beatmap_set_id, int 32';
+COMMENT ON COLUMN "user".beatmap_collections.remark IS 'why you like this map?';
+COMMENT ON COLUMN "user".beatmap_collections.create_time IS 'create timestamp, auto';
 CREATE TABLE "user".friends (
     user_id integer NOT NULL,
     friend_id integer NOT NULL,
@@ -896,6 +973,8 @@ ALTER TABLE ONLY user_records.rename ALTER COLUMN id SET DEFAULT nextval('user_r
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (1, '#osu', 'General discussion.', 1, 2, true, '2020-12-09 04:21:05.471552+08', '2020-12-09 04:21:14.652774+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (4, '#lobby', 'Multiplayer lobby discussion room.', 1, 2, true, '2020-12-09 04:21:46.339821+08', '2020-12-09 04:21:46.339821+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 4, true, '2020-12-09 04:21:35.551317+08', '2021-01-04 21:29:59.518299+08');
+INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes) VALUES ('test', NULL, NULL, '2021-02-14 10:47:27.825184+08', '{}', true, '{}', true, '{}', NULL, NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}');
+INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes) VALUES ('default', NULL, true, '2021-02-14 12:05:42.827964+08', '{}', true, '{}', true, '{}', 'https://i.kafuu.pro/welcome.png|https://www.baidu.com', NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{"welcome to osu!",测试！！}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:20.41087+08');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
@@ -911,14 +990,18 @@ INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ran
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', NULL, 'initial', '2020-12-15 01:15:37.586205+08', '2020-12-20 01:13:47.84393+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.3', 'PurePeace', NULL, 'add game_scores, game_stats, modify some column', '2020-12-15 01:15:37.586205+08', '2020-12-15 01:15:52.635208+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.4', 'PurePeace', NULL, 'now, score v2 be as a standalone model', '2021-01-04 21:31:45.010709+08', '2021-01-04 21:31:45.010709+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', NULL, 'add bancho config!!!', '2021-02-14 12:35:34.687537+08', '2021-02-14 12:35:48.29814+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', '0.1.0', 'initial (wip)', '2020-12-15 01:16:37.785543+08', '2020-12-20 01:16:34.355013+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-14 12:36:32.549068+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (5, 6, NULL, '2021-02-14 00:54:32.186799+08');
+INSERT INTO "user".friends (user_id, friend_id, remark, create_time) VALUES (6, 5, NULL, '2021-02-14 00:54:49.455337+08');
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1, '00:00:00', 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:00:00', 0, 0, 0, 0, '2021-01-07 00:54:31.214452+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:00:00', 0, 0, 0, 0, '2021-01-07 00:54:32.203337+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:08:16.436357', 0, 0, 1, 0, '2021-02-14 12:34:21.640415+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:04:50.014226', 0, 0, 1, 0, '2021-02-14 12:34:22.619238+08');
 SELECT pg_catalog.setval('bancho.channels_id_seq', 4, true);
 SELECT pg_catalog.setval('game_scores.catch_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.catch_rx_id_seq', 1, true);
@@ -939,6 +1022,8 @@ ALTER TABLE ONLY bancho.channels
 COMMENT ON CONSTRAINT "channel.name" ON bancho.channels IS 'channel name should be unique';
 ALTER TABLE ONLY bancho.channels
     ADD CONSTRAINT channels_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY bancho.config
+    ADD CONSTRAINT config_pkey PRIMARY KEY (name);
 ALTER TABLE ONLY game_scores.catch_rx
     ADD CONSTRAINT catch_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.catch
@@ -984,6 +1069,8 @@ ALTER TABLE ONLY "user".address
     ADD CONSTRAINT address_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY "user".base
     ADD CONSTRAINT base_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY "user".beatmap_collections
+    ADD CONSTRAINT beatmap_collections_pkey PRIMARY KEY (user_id, beatmap_set_id);
 ALTER TABLE ONLY "user".friends
     ADD CONSTRAINT friends_pkey PRIMARY KEY (user_id, friend_id);
 ALTER TABLE ONLY "user".status
@@ -1001,6 +1088,8 @@ ALTER TABLE ONLY user_records.rename
 CREATE UNIQUE INDEX "User.name" ON "user".base USING btree (name, name_safe);
 CREATE INDEX user_address ON "user".address USING btree (user_id);
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON bancho.channels FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON bancho.config FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+COMMENT ON TRIGGER auto_update_timestamp ON bancho.config IS 'auto update the update_time after update user info';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.catch IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
@@ -1076,6 +1165,9 @@ ALTER TABLE ONLY "user".address
 ALTER TABLE ONLY "user".statistic
     ADD CONSTRAINT "User.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id" ON "user".statistic IS 'user''s unique id';
+ALTER TABLE ONLY "user".beatmap_collections
+    ADD CONSTRAINT "User.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+COMMENT ON CONSTRAINT "User.id" ON "user".beatmap_collections IS 'user_id';
 ALTER TABLE ONLY "user".notes
     ADD CONSTRAINT "User.id (added_by)" FOREIGN KEY (added_by) REFERENCES "user".base(id) ON UPDATE CASCADE;
 ALTER TABLE ONLY "user".friends
