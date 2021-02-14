@@ -124,8 +124,11 @@ pub async fn osu_register(
     }
 
     // sensitive word check
-    if bancho_config.sensitive_words.contains(&form_data.username) {
-        username_errors.push("The username contains sensitive words, please change.")
+    for s_word in &bancho_config.sensitive_words {
+        if form_data.username.contains(s_word) {
+            username_errors.push("The username contains sensitive words, please change.");
+            break;
+        }
     }
 
     // Check username is already use (using name_safe to check)
