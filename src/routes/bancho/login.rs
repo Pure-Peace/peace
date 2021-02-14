@@ -40,7 +40,7 @@ pub async fn handler(
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
             .body(
-                resp.add(packets::login_reply(LoginFailed::UserBanned))
+                resp.add(packets::login_reply(LoginFailed::InvalidCredentials))
                     .add(packets::notification("You are not allowed to login!"))
                     .write_out(),
             );

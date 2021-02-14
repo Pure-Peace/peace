@@ -122,7 +122,7 @@ impl BanchoConfig {
             return false;
         };
         *self = new.unwrap();
-        info!("New BanchoConfig updated in {:?}", start.elapsed());
+        info!("New BanchoConfig ({}) updated in {:?}; update time: {}", self.name, start.elapsed(), self.update_time);
         true
     }
 }
