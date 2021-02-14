@@ -39,7 +39,7 @@ pub async fn osu_register(
                 "user": {
                     "username": ["In-game registration is currently closed! Please choose to register on the website or contact the administrator."],
                     "user_email": ["游戏内注册目前已被关闭！请选择在网站注册，或联系管理员。"],
-                    "password": ["-- NaN --"]
+                    "password": ["---hahahah--- NaN ---hahahaah---"]
                 }
             }
         }));
@@ -47,16 +47,18 @@ pub async fn osu_register(
 
     let request_ip = utils::get_realip(&req).await;
     if request_ip.is_err() {
+        error!("Failed to get real ip");
         return HttpResponse::InternalServerError().body("Server Error");
     }
     let request_ip = request_ip.unwrap();
 
     // IP disallowed
-    if !bancho_config.ip_blacklist.contains(&request_ip)
+    if bancho_config.ip_blacklist.contains(&request_ip)
         || bancho_config
             .registration_disallowed_ip
             .contains(&request_ip)
     {
+        error!("Disallowed ip finded, ip: {}", request_ip);
         return HttpResponse::InternalServerError().body("Server Error");
     }
 
