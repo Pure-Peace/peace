@@ -6,6 +6,8 @@ use actix_web::{get, HttpResponse, Responder};
 use async_std::sync::RwLock;
 use maxminddb::Reader;
 use memmap::Mmap;
+use reqwest::Client;
+use serde_json::json;
 
 use std::{collections::HashMap, time::Instant};
 
@@ -222,4 +224,46 @@ pub async fn bancho_config_update(
 ) -> impl Responder {
     let result = bancho_config.write().await.update(&database).await;
     HttpResponse::Ok().body(format!("{}", result))
+}
+
+/// GET "/osu_api_test"
+#[get("/osu_api_test")]
+pub async fn osu_api_test(bancho_config: Data<RwLock<BanchoConfig>>) -> impl Responder {
+    const TEST_API: &'static str = "https://old.ppy.sh/api/get_beatmaps";
+    let bancho_config = bancho_config.read().await;
+    let api_key_count = bancho_config.osu_api_keys.len();
+
+    if api_key_count == 0 {
+        let err =
+            "Cannot find any osu! api key, please add it at [database -> bancho.config] first.";
+        error!("{}", err);
+        return HttpResponse::Forbidden().body(err);
+    }
+
+    let client = Client::new();
+    let mut results = Vec::with_capacity(api_key_count);
+
+    for api_key in &bancho_config.osu_api_keys {
+        let start = std::time::Instant::now();
+        let response = client
+            .get(TEST_API)
+            .query(&[("k", api_key.as_str()), ("s", "1"), ("m", "0")])
+            .send()
+            .await;
+        let end = format!("{:?}", start.elapsed());
+        info!("osu! api test request with: {};", end);
+
+        let (status, err) = match response {
+            Ok(resp) => (resp.status() == 1, "".to_string()),
+            Err(err) => (false, err.to_string()),
+        };
+
+        results.push(json!({
+            "api_key": api_key,
+            "time_spent": end,
+            "status": status,
+            "error": err,
+        }));
+    }
+    HttpResponse::Ok().json(results)
 }

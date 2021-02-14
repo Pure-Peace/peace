@@ -35,6 +35,7 @@ prometheus = { version = "0.11.0", features = ["process"] }
 queue = "0.3.1"
 rand = "0.8.3"
 regex = "1.4.3"
+reqwest = { version = "0.10.10", features = ["json"] }
 rust-argon2 = "0.8.3"
 serde = { version = "1.0.123", features = ["derive"] }
 serde_derive = "1.0.123"

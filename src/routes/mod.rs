@@ -53,6 +53,7 @@ fn init_debug(cfg: &mut ServiceConfig) {
     cfg.service(test_geo_ip);
     cfg.service(bancho_config_update);
     cfg.service(bancho_config_get);
+    cfg.service(osu_api_test);
 }
 
 /// Routes for default
