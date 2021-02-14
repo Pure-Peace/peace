@@ -3,9 +3,10 @@
 
 use actix_web::web::{Data, Query};
 use actix_web::{get, HttpRequest, HttpResponse};
+use async_std::sync::RwLock;
 use prometheus::IntCounterVec;
 
-use crate::utils;
+use crate::{settings::bancho::BanchoConfig, utils};
 
 use super::data::*;
 
@@ -68,8 +69,16 @@ pub async fn osu_get_friends(req: HttpRequest) -> HttpResponse {
 }
 
 #[get("/osu-getseasonal.php")]
-pub async fn osu_get_seasonal(req: HttpRequest) -> HttpResponse {
-    unimplemented("osu-getseasonal.php")
+/// Seasonal background images
+/// 
+/// Locate on database -> bancho.config.seasonal_backgrounds
+/// String Array
+pub async fn osu_get_seasonal(bancho_config: Data<RwLock<BanchoConfig>>) -> HttpResponse {
+    if let Some(background_images) = &bancho_config.read().await.seasonal_backgrounds {
+        return HttpResponse::Ok().json(background_images);
+    };
+
+    HttpResponse::Ok().body("[]")
 }
 
 #[get("osu-get-beatmap-topic.php")]
