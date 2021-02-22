@@ -1,6 +1,7 @@
 use super::depends::*;
 
 use crate::{constants::PresenceFilter, objects::PlayMods, packets};
+use chrono::Local;
 use num_traits::FromPrimitive;
 
 #[inline(always)]
@@ -8,6 +9,10 @@ use num_traits::FromPrimitive;
 ///
 /// Player logout from server
 pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) {
+    if (ctx.data.login_time.timestamp() - Local::now().timestamp()) < 1 {
+        return;
+    }
+
     ctx.player_sessions
         .write()
         .await

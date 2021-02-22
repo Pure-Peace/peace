@@ -23,10 +23,11 @@ pub struct BanchoConfig {
     pub server_email: String,
 
     pub client_check: bool,
+    pub client_only_whitelist: bool,
     pub client_whitelist: Vec<String>,
     pub client_blacklist: Vec<String>,
-    pub client_min_version: Option<String>,
-    pub client_max_version: Option<String>,
+    pub client_min_version: Option<i32>,
+    pub client_max_version: Option<i32>,
 
     pub beatmaps_loved_give_pp: bool,
     pub beatmaps_unranked_give_pp: bool,

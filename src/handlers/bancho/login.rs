@@ -4,6 +4,7 @@ use actix_web::web::{Bytes, Data};
 use actix_web::HttpRequest;
 use async_std::sync::RwLock;
 use log::warn;
+use regex::Regex;
 use std::net::{IpAddr, Ipv4Addr};
 
 use crate::{constants, database::Database, packets};
@@ -27,6 +28,7 @@ use memmap::Mmap;
 
 lazy_static::lazy_static! {
     static ref DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+    static ref OSU_VERSION_REGEX: Regex = Regex::new(r"(?x)(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})").unwrap();
 }
 
 #[inline(always)]
@@ -75,34 +77,68 @@ pub async fn login(
 
     // Client check
     if bancho_config.client_check && !bancho_config.client_whitelist.contains(&osu_version) {
+        if bancho_config.client_only_whitelist {
+            warn!(
+                "login refused, not allowed osu version: {} username: {}, ip: {}",
+                osu_version, username, request_ip
+            );
+            return Err((
+                "not_allowed",
+                Some(resp.add(packets::notification("Not allowed osu! version."))),
+            ));
+        }
+
+        // Version digits
+        let version_captures = OSU_VERSION_REGEX.captures(&osu_version);
+        if version_captures.is_none() {
+            warn!(
+                "login refused, invalid osu version: {} username: {}, ip: {}",
+                osu_version, username, request_ip
+            );
+            return Err((
+                "not_allowed",
+                Some(resp.add(packets::notification("Invalid osu! version."))),
+            ));
+        }
+        let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
+
         // Black list check
         if bancho_config.client_blacklist.contains(&osu_version) {
             warn!(
-                "login refused, not allowed client version: {}; username: {}, ip: {}",
+                "login refused, not allowed osu version: {}; username: {}, ip: {}",
                 osu_version, username, request_ip
             );
-            return Err(("not_allowed", None));
+            return Err((
+                "not_allowed",
+                Some(resp.add(packets::notification("Not allowed osu! version."))),
+            ));
         }
 
         // Max version check
         if let Some(max_version) = &bancho_config.client_max_version {
-            if &osu_version > max_version {
+            if &version_captures > max_version {
                 warn!(
-                    "login refused, over than max client version: {}({} max); username: {}, ip: {}",
+                    "login refused, over than max osu version: {}({} max); username: {}, ip: {}",
                     osu_version, max_version, username, request_ip
                 );
-                return Err(("not_allowed", None));
+                return Err((
+                    "not_allowed",
+                    Some(resp.add(packets::notification("Not allowed osu! version."))),
+                ));
             }
         }
 
         // Min version check
         if let Some(min_version) = &bancho_config.client_min_version {
-            if &osu_version < min_version {
+            if &version_captures < min_version {
                 warn!(
-                    "login refused, lower than min client version: {}({} max); username: {}, ip: {}",
+                    "login refused, lower than min osu version: {}({} min); username: {}, ip: {}",
                     osu_version, min_version, username, request_ip
                 );
-                return Err(("not_allowed", None));
+                return Err((
+                    "not_allowed",
+                    Some(resp.add(packets::notification("osu! version too old."))),
+                ));
             }
         }
     }
@@ -560,7 +596,6 @@ pub async fn login(
     }
 
     // Join player into channel
-    resp.add_ref(packets::channel_info_end());
     for channel in channel_list.read().await.values() {
         // Have not privileges to join the channel
         if (player_priv & channel.read_priv) <= 0 {
@@ -576,9 +611,10 @@ pub async fn login(
         // Send channel info to client
         resp.add_ref(channel.channel_info_packet());
     }
-
     // Release lock
     drop(player_sessions);
+
+    resp.add_ref(packets::channel_info_end());
 
     let login_end = login_start.elapsed();
     info!(
