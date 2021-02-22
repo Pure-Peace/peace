@@ -127,6 +127,12 @@ pub async fn handler(
         let mut player = player.write().await;
         // Update player's active time
         player.update_active();
+
+        // Update player's ip data (includes geo ip data)
+        if request_ip != player.ip {
+            player.update_ip(request_ip, geo_db.as_ref());
+        }
+
         // Dequeue player's packet into resp
         while let Some(packet_data) = player.dequeue().await {
             resp.add_ref(packet_data);

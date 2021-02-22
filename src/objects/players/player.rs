@@ -1,4 +1,7 @@
-use crate::constants::GeoData;
+use maxminddb::Reader;
+use memmap::Mmap;
+
+use crate::{constants::GeoData, utils};
 
 use super::depends::*;
 
@@ -104,6 +107,19 @@ impl Player {
         self.status.play_mods.update(play_mods_value);
         self.status.game_mode = game_mode;
         self.status.update_time = Local::now();
+    }
+
+    #[inline(always)]
+    pub fn update_ip(&mut self, ip_address: String, geo_db: &Option<Reader<Mmap>>) {
+        // Update ip
+        self.ip = ip_address.clone();
+        // Try update geo ip data
+        if let Some(geo_db) = geo_db {
+            match utils::get_geo_ip_data(&ip_address, geo_db) {
+                Ok(geo_data) => self.geo_data = geo_data,
+                Err(_) => {}
+            }
+        }
     }
 
     #[inline(always)]
