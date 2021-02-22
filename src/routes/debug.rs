@@ -1,7 +1,7 @@
 use crate::{database::Database, settings::bancho::BanchoConfig, types::ChannelList};
 use crate::{objects::PlayerSessions, utils};
 
-use actix_web::web::{Data, Path, Query};
+use actix_web::web::{Data, Path};
 use actix_web::{get, HttpResponse, Responder};
 use async_std::sync::RwLock;
 use maxminddb::Reader;
@@ -9,7 +9,7 @@ use memmap::Mmap;
 use reqwest::Client;
 use serde_json::json;
 
-use std::{collections::HashMap, time::Instant};
+use std::time::Instant;
 
 /// GET "/test_pg"
 #[get("/test_pg")]
@@ -198,9 +198,8 @@ pub async fn pleyer_sessions_kick_uid(
 pub async fn test_geo_ip(
     ip_address: Path<String>,
     geo_db: Data<Option<Reader<Mmap>>>,
-    query: Query<HashMap<String, String>>,
 ) -> impl Responder {
-    match utils::geo_ip_info(&ip_address.to_string(), &geo_db.get_ref(), &*query).await {
+    match utils::geo_ip_info(&ip_address.to_string(), &geo_db.get_ref()).await {
         Ok(json_success) => HttpResponse::Ok()
             .content_type("application/json; charset=utf-8")
             .body(json_success),
@@ -254,7 +253,7 @@ pub async fn osu_api_test(bancho_config: Data<RwLock<BanchoConfig>>) -> impl Res
         info!("osu! api test request with: {};", end);
 
         let (status, err) = match response {
-            Ok(resp) => (resp.status() == 1, "".to_string()),
+            Ok(resp) => (resp.status() == 200, "".to_string()),
             Err(err) => (false, err.to_string()),
         };
 
