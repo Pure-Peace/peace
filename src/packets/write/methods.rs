@@ -304,8 +304,8 @@ pub async fn user_presence(p: &Player) -> PacketData {
                 Err(_) => 0,
             }),
             write_num((p.bancho_privileges | 0) as u8),
-            write_num(p.location.1),
-            write_num(p.location.0),
+            write_num(p.geo_data.latitude as f32),
+            write_num(p.geo_data.longitude as f32),
             write_num(p.stats.rank),
         ])
         .await
@@ -326,8 +326,8 @@ pub async fn user_presence_from_data(p: &PlayerData) -> PacketData {
                 Err(_) => 0,
             }),
             write_num((p.bancho_privileges | 0) as u8),
-            write_num(p.location.1),
-            write_num(p.location.0),
+            write_num(p.geo_data.latitude as f32),
+            write_num(p.geo_data.longitude as f32),
             write_num(p.stats.rank),
         ])
         .await

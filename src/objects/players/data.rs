@@ -1,6 +1,6 @@
 use crate::{
-    constants::{GameMode, PresenceFilter},
-    types::{Location, TokenString},
+    constants::{GameMode, GeoData, PresenceFilter},
+    types::TokenString,
 };
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
@@ -27,7 +27,7 @@ pub struct PlayerData {
     pub display_city: bool,
     pub osu_version: String,
     pub utc_offset: u8,
-    pub location: Location,
+    pub geo_data: GeoData,
     pub stats: Stats,
     pub stats_cache: HashMap<GameMode, Stats>,
     pub status: Status,
@@ -59,7 +59,7 @@ impl PlayerData {
             display_city: p.display_city,
             osu_version: p.osu_version.clone(),
             utc_offset: p.utc_offset,
-            location: p.location,
+            geo_data: p.geo_data.clone(),
             stats: p.stats.clone(),
             stats_cache: p.stats_cache.clone(),
             status: p.status.clone(),

@@ -1,3 +1,5 @@
+use crate::constants::GeoData;
+
 use super::depends::*;
 
 #[derive(Debug)]
@@ -16,7 +18,7 @@ pub struct Player {
     pub display_city: bool,
     pub osu_version: String,
     pub utc_offset: u8,
-    pub location: Location,
+    pub geo_data: GeoData,
     pub stats: Stats,
     pub stats_cache: HashMap<GameMode, Stats>,
     pub status: Status,
@@ -61,7 +63,7 @@ impl Player {
             bancho_privileges: Player::bancho_privileges(base.privileges),
             friends: vec![base.id],
             country: base.country,
-            ip,
+            ip: ip.clone(),
             address_id,
             address_similarity,
             only_friend_pm_allowed: client_info.only_friend_pm_allowed,
@@ -69,7 +71,7 @@ impl Player {
             display_city: client_info.display_city,
             osu_version: client_info.osu_version,
             utc_offset: client_info.utc_offset as u8,
-            location: (0.0, 0.0),
+            geo_data: GeoData::new(ip),
             stats: Stats::new(),
             stats_cache: HashMap::with_capacity(4),
             status: Status::new(),
