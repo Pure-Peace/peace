@@ -89,3 +89,9 @@ endpoint = "/metrics"
 
 # If true, logger will not log prometheus endpoint
 exclude_endpoint_log = true
+
+# PP Server's prometheus settings
+[pp_server.prometheus]
+namespace = "pp_server"
+endpoint = "/metrics"
+exclude_endpoint_log = true

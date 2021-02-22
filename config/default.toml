@@ -2,6 +2,9 @@
 host = "127.0.0.1"
 port = 8080
 
+[pp_server]
+host = "127.0.0.1"
+port = 8086
 
 [bancho.session_recycle]
 # Each interval check once, 

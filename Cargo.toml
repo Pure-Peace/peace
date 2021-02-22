@@ -3,6 +3,17 @@ name = "peace"
 version = "0.2.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace"
+default-run = "peace"
+
+[[bin]]
+name = "peace"
+path = "src/main.rs"
+
+[[bin]]
+name = "pp_server"
+path = "src/pp_server.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -56,6 +67,7 @@ criterion = "0.3.4"
 [[bench]]
 name = "packet_write"
 harness = false
+
 
 # link-time-optimization
 # Enabling makes the compiled program size smaller and higher performance, 
