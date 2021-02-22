@@ -11,7 +11,7 @@ use crate::{constants, database::Database, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
     packets::PacketBuilder,
-    utils::argon2_verify,
+    utils,
 };
 use crate::{
     settings::bancho::BanchoConfig,
@@ -23,7 +23,7 @@ use constants::{LoginFailed, Privileges};
 use prometheus::IntCounterVec;
 use std::time::Instant;
 
-use maxminddb::{geoip2::City, Reader};
+use maxminddb::Reader;
 use memmap::Mmap;
 
 lazy_static::lazy_static! {
@@ -265,7 +265,7 @@ pub async fn login(
             // Cache not hitted, do argon2 verify (ms level)
             let argon2_verify_start = Instant::now();
 
-            let verify_result = argon2_verify(&player_base.password, &password_hash).await;
+            let verify_result = utils::argon2_verify(&player_base.password, &password_hash).await;
 
             let argon2_verify_end = argon2_verify_start.elapsed();
             debug!(
@@ -514,23 +514,10 @@ pub async fn login(
     player.create_login_record(database).await;
 
     // update player's location (ip geo)
-    if let Some(reader) = geo_db.get_ref() {
-        match reader.lookup::<City>(request_ip.parse().unwrap_or(*DEFAULT_IP)) {
-            Ok(geo_data) => match geo_data.location.as_ref().and_then(|location| {
-                Some((
-                    location.latitude.unwrap_or(0.0),
-                    location.longitude.unwrap_or(0.0),
-                ))
-            }) {
-                Some((lati, longi)) => player.location = (lati as f32, longi as f32),
-                None => {
-                    warn!(
-                        "Failed to lookup player {}({})'s ip address location info: {}",
-                        player.name, player.id, request_ip
-                    );
-                }
-            },
-            Err(_err) => {
+    if let Some(geo_db) = geo_db.get_ref() {
+        match utils::get_geo_ip_data(request_ip, geo_db) {
+            Ok(geo_data) => player.geo_data = geo_data,
+            Err(_) => {
                 warn!(
                     "Failed to lookup player {}({})'s ip address: {}",
                     player.name, player.id, request_ip
