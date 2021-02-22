@@ -9,7 +9,7 @@ use num_traits::FromPrimitive;
 ///
 /// Player logout from server
 pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) {
-    if (ctx.data.login_time.timestamp() - Local::now().timestamp()) < 1 {
+    if (Local::now().timestamp() - ctx.data.login_time.timestamp()) < 1 {
         return;
     }
 
