@@ -298,8 +298,8 @@ pub async fn user_presence(p: &Player) -> PacketData {
             write_num(p.utc_offset + 24),
             write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
-            write_num(p.geo_data.latitude as f32),
             write_num(p.geo_data.longitude as f32),
+            write_num(p.geo_data.latitude as f32),
             write_num(p.stats.rank),
         ])
         .await
@@ -317,8 +317,8 @@ pub async fn user_presence_from_data(p: &PlayerData) -> PacketData {
             write_num(p.utc_offset + 24),
             write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
-            write_num(p.geo_data.latitude as f32),
             write_num(p.geo_data.longitude as f32),
+            write_num(p.geo_data.latitude as f32),
             write_num(p.stats.rank),
         ])
         .await
