@@ -1,7 +1,12 @@
 use maxminddb::Reader;
 use memmap::Mmap;
 
-use crate::{constants::GeoData, utils};
+use std::str::FromStr;
+
+use crate::{
+    constants::{CountryCodes, GeoData},
+    utils,
+};
 
 use super::depends::*;
 
@@ -120,6 +125,11 @@ impl Player {
                 Err(_) => {}
             }
         }
+    }
+
+    #[inline(always)]
+    pub fn get_country_code(&self) -> u8 {
+        CountryCodes::from_str(&self.country).unwrap_or(CountryCodes::UN) as u8
     }
 
     #[inline(always)]

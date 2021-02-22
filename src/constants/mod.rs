@@ -1,24 +1,26 @@
 #![allow(non_camel_case_types)]
 mod client_data;
+mod common;
+mod country;
 mod geoip;
 mod packets;
-mod common;
 mod privileges;
 
 use enum_primitive_derive::Primitive;
 use strum_macros::EnumIter;
 
 pub use client_data::*;
+pub use common::*;
+pub use country::*;
 pub use geoip::*;
 pub use packets::*;
-pub use common::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
 pub enum PresenceFilter {
     // A class to represent the update scope the client wishes to receive
-    None = 0,
-    All = 1,
+    None    = 0,
+    All     = 1,
     Friends = 2,
 }
 

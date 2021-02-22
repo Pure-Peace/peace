@@ -4,9 +4,6 @@ use crate::{
     types::PacketData,
 };
 
-use celes::Country;
-use std::str::FromStr;
-
 use super::utils::*;
 
 #[inline(always)]
@@ -299,10 +296,7 @@ pub async fn user_presence(p: &Player) -> PacketData {
             write_num(p.id),
             write_string(&p.name),
             write_num(p.utc_offset + 24),
-            write_num(match Country::from_str(&p.country) {
-                Ok(country) => country.value as u8,
-                Err(_) => 0,
-            }),
+            write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
             write_num(p.geo_data.latitude as f32),
             write_num(p.geo_data.longitude as f32),
@@ -321,10 +315,7 @@ pub async fn user_presence_from_data(p: &PlayerData) -> PacketData {
             write_num(p.id),
             write_string(&p.name),
             write_num(p.utc_offset + 24),
-            write_num(match Country::from_str(&p.country) {
-                Ok(country) => country.value as u8,
-                Err(_) => 0,
-            }),
+            write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
             write_num(p.geo_data.latitude as f32),
             write_num(p.geo_data.longitude as f32),
