@@ -23,11 +23,12 @@ pub async fn osu_register(
     req: HttpRequest,
     mut form_data: Multipart,
     database: Data<Database>,
+    geo_db: Data<Option<Reader<Mmap>>>,
     bancho_config: Data<RwLock<BanchoConfig>>,
     argon2_cache: Data<RwLock<Argon2Cache>>,
 ) -> HttpResponse {
     lazy_static::lazy_static! {
-        static ref USERNAME_REGEX: Regex = Regex::new(r"(^[0-9a-zA-Z_ \[\]-]{2,16}$)|(^[\w \[\]-]{1,8}$)").unwrap();
+        static ref USERNAME_REGEX: Regex = Regex::new(r"(^[0-9a-zA-Z_ \[\]-]{2,16}$)|(^[\w \[\]-]{1,10}$)").unwrap();
         static ref EMAIL_REGEX: Regex = Regex::new(r"^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{2,24}$").unwrap();
     }
 
@@ -107,7 +108,7 @@ pub async fn osu_register(
 
     // Check username 1
     if !USERNAME_REGEX.is_match(&form_data.username) {
-        username_errors.push("The length of the user name is 2-15 (alphanumeric as well as ][-_); if you use Chinese or non-English characters, the length is 1-8.");
+        username_errors.push("The length of the user name is 2-16 (alphanumeric as well as ][-_); if you use Chinese or non-English characters, the length is 1-10.");
     }
 
     // Check username 2
@@ -198,6 +199,18 @@ pub async fn osu_register(
     }
 
     if form_data.check == 0 {
+        // Get country code
+        let country = geo_db
+            .as_ref()
+            .as_ref()
+            .and_then(
+                |geo_db| match utils::get_geo_ip_data(&request_ip, &geo_db) {
+                    Ok(data) => data.country_code,
+                    Err(_) => None,
+                },
+            )
+            .unwrap_or("UN".to_string());
+
         // Get password md5, argon2
         let password_md5 = format!("{:x}", md5::compute(form_data.password));
         let password_argon2 = utils::argon2_encode(password_md5.as_bytes()).await;
@@ -214,8 +227,8 @@ pub async fn osu_register(
         let user_id: i32 = match database
             .pg
             .query_first(
-                r#"INSERT INTO "user"."base" ("name", "email", "password") VALUES ($1, $2, $3) RETURNING "id";"#,
-                &[&form_data.username, &form_data.email, &password_argon2],
+                r#"INSERT INTO "user"."base" ("name", "email", "password", "country") VALUES ($1, $2, $3, $4) RETURNING "id";"#,
+                &[&form_data.username, &form_data.email, &password_argon2, &country],
             )
             .await {
                 Ok(row) => row.get("id"),
@@ -229,8 +242,8 @@ pub async fn osu_register(
             };
 
         info!(
-            "New user {}({}) has registered!",
-            form_data.username, user_id
+            "New user {}({}) has registered! request_ip: {}",
+            form_data.username, user_id, request_ip
         );
     };
 
