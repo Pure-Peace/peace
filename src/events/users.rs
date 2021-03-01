@@ -397,7 +397,13 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
     match ctx.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
-            channel.join(ctx.id, None).await;
+            if channel.auto_close {
+                channel.join(ctx.id, None).await;
+            } else {
+                channel
+                    .join(ctx.id, Some(&*ctx.player_sessions.read().await))
+                    .await;
+            };
         }
         None => {
             debug!(
@@ -416,7 +422,13 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
     match ctx.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
-            channel.leave(ctx.id, None).await;
+            if channel.auto_close {
+                channel.leave(ctx.id, None).await;
+            } else {
+                channel
+                    .leave(ctx.id, Some(&*ctx.player_sessions.read().await))
+                    .await;
+            };
         }
         None => {
             debug!(
