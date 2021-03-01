@@ -1,13 +1,5 @@
-use actix_multipart::Multipart;
-use actix_web::post;
-use futures::StreamExt;
-use regex::Regex;
-use serde::Deserialize;
-use serde_json::json;
-
-use crate::{settings::bancho::BanchoConfig, utils};
-
 use super::depends::*;
+use crate::utils;
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterForm {

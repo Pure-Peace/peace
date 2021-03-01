@@ -1,12 +1,5 @@
-use std::sync::Arc;
-
-use crate::{
-    packets::{self, PacketReader},
-    settings::bancho::BanchoConfig,
-    utils,
-};
-
 use super::depends::*;
+use crate::{packets, utils};
 
 pub async fn handler(
     req: HttpRequest,
@@ -25,11 +18,12 @@ pub async fn handler(
         .inc();
 
     // Get real request ip
-    let request_ip = utils::get_realip(&req).await;
-    if request_ip.is_err() {
-        return HttpResponse::Ok().body("bad requests");
+    let request_ip = match utils::get_realip(&req).await {
+        Ok(ip) => ip,
+        Err(_) => {
+            return HttpResponse::BadRequest().body("bad requests");
+        }
     };
-    let request_ip = request_ip.unwrap();
 
     // Blocked ip
     if bancho_config
@@ -41,7 +35,7 @@ pub async fn handler(
         return HttpResponse::Ok().body("bad requests");
     };
 
-    let mut resp = packets::PacketBuilder::new();
+    let mut resp = PacketBuilder::new();
     let bancho_start = std::time::Instant::now();
     let headers = req.headers();
 

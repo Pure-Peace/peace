@@ -1,8 +1,5 @@
-use std::sync::atomic::Ordering;
-
-use crate::{packets, settings::bancho::BanchoConfig};
-
 use super::depends::*;
+use crate::packets;
 
 const DEFAULT_TOKEN: &str = "login_failed";
 
