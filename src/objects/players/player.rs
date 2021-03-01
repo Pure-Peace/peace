@@ -1,6 +1,7 @@
 use maxminddb::Reader;
 use memmap::Mmap;
 
+use derivative::Derivative;
 use std::str::FromStr;
 
 use crate::{
@@ -12,10 +13,12 @@ use crate::{
 
 use super::{depends::*, PlayMods};
 
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Player {
     pub id: i32,
     pub name: String,
+    #[derivative(Debug = "ignore")]
     _password: String,
     pub privileges: i32,
     pub bancho_privileges: i32,

@@ -77,47 +77,6 @@ impl PlayerData {
         }
     }
 
-    /// Returns: Stats, should update cache flag
-    #[inline(always)]
-    pub async fn get_stats_update(
-        &self,
-        game_mode: GameMode,
-        database: &Database,
-    ) -> (Option<Stats>, bool) {
-        match self.stats_cache.get(&game_mode) {
-            Some(stats) => {
-                // Cache expired, get from database
-                if Local::now().timestamp() > stats.update_time.timestamp() + 120 {
-                    debug!(
-                        "Player {}({}) stats cache expired (player-data)! will get new... game mode: {:?}",
-                        self.name, self.id, game_mode
-                    );
-                    return (
-                        self.get_stats_from_database(game_mode, database).await,
-                        true,
-                    );
-                };
-
-                debug!(
-                    "Player {}({}) stats cache hitted (player-data)! game mode: {:?}",
-                    self.name, self.id, game_mode
-                );
-                // Not expired, return cache
-                return (Some(stats.clone()), false);
-            }
-            None => {
-                debug!(
-                    "Player {}({}) stats cache not hitted (player-data)! will get new... game mode: {:?}",
-                    self.name, self.id, game_mode
-                );
-                (
-                    self.get_stats_from_database(game_mode, database).await,
-                    true,
-                )
-            }
-        }
-    }
-
     #[inline(always)]
     pub fn get_country_code(&self) -> u8 {
         CountryCodes::from_str(&self.country).unwrap_or(CountryCodes::UN) as u8
