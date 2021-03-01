@@ -27,7 +27,7 @@ actix_log_format = '%s - %{r}a "%r" %b %T'
 # For example,
 # i don't want logger to print logs about endpoint "/favicon.ico", so i fill it in
 exclude_endpoints = ["/favicon.ico", "/bancho/"]
-exclude_endpoints_regex = []
+exclude_endpoints_regex = ["/web*"]
 
 # Logger will not record logs from these modules
 exclude_modules = ["maxminddb::decoder", "hyper", "h2", "rustls"]
