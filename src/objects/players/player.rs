@@ -5,15 +5,18 @@ use std::str::FromStr;
 
 use crate::{
     constants::{CountryCodes, GeoData},
+    packets,
+    types::Argon2Cache,
     utils,
 };
 
-use super::depends::*;
+use super::{depends::*, PlayMods};
 
 #[derive(Debug)]
 pub struct Player {
     pub id: i32,
     pub name: String,
+    _password: String,
     pub privileges: i32,
     pub bancho_privileges: i32,
     pub friends: Vec<i32>,
@@ -67,6 +70,7 @@ impl Player {
         Player {
             id: base.id,
             name: base.name,
+            _password: base.password,
             privileges: base.privileges,
             bancho_privileges: Player::bancho_privileges(base.privileges),
             friends: vec![base.id],
@@ -130,6 +134,58 @@ impl Player {
     #[inline(always)]
     pub fn get_country_code(&self) -> u8 {
         CountryCodes::from_str(&self.country).unwrap_or(CountryCodes::UN) as u8
+    }
+
+    #[inline(always)]
+    pub async fn update_mods(
+        &mut self,
+        game_mode: &GameMode,
+        play_mods: &PlayMods,
+    ) -> Option<PacketData> {
+        if &self.status.game_mode != game_mode || self.status.play_mods.value != play_mods.value {
+            self.status.game_mode = game_mode.clone();
+            self.status.play_mods = play_mods.clone();
+            return Some(packets::user_stats(&self).await);
+        }
+        None
+    }
+
+    #[inline(always)]
+    pub async fn check_password_hash(
+        &self,
+        password_hash: &String,
+        argon2_cache: &RwLock<Argon2Cache>,
+    ) -> bool {
+        // Try read password hash from argon2 cache
+        let cached_password_hash = { argon2_cache.read().await.get(&self._password).cloned() };
+
+        // Cache hitted, checking
+        if let Some(cached_password_hash) = cached_password_hash {
+            debug!("password cache hitted: {}({})", self.name, self.id);
+            return &cached_password_hash == password_hash;
+        }
+
+        let verify_result = utils::argon2_verify(&self._password, password_hash).await;
+        if verify_result {
+            // If password is correct, cache it
+            // key = argon2 cipher, value = password hash
+            argon2_cache
+                .write()
+                .await
+                .insert(self._password.clone(), password_hash.clone());
+        }
+
+        verify_result
+    }
+
+    #[inline(always)]
+    pub fn check_password_argon2(&self, password_argon2: &String) -> bool {
+        &self._password == password_argon2
+    }
+
+    #[inline(always)]
+    pub fn update_password(&mut self, password: &String) {
+        self._password = password.clone()
     }
 
     #[inline(always)]
