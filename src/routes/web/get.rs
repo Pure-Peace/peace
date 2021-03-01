@@ -46,11 +46,11 @@ pub async fn handler(
         "osu-markasread" => {}
         "osu-getreplay" => {}
         "osu-getfavourites" => {}
-        "osu-getfriends" => {}
-        "osu-getseasonal" => {}
-        "osu-get-beatmap-topic" => {}
+        "osu-getfriends" => {}*/
+        "osu-getseasonal" => get::osu_get_seasonal(&ctx()).await,
+        /* "osu-get-beatmap-topic" => {}
         "osu-search" => {}
-        "osu-search-set" => {} */
+        "osu-search-set" => {}  */
         "osu-osz2-getscores" => get::osu_osz2_get_scores(&ctx()).await,
         //"osu-osz2-bmsubmit-getid" => {}
         _ => {

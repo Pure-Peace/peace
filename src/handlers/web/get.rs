@@ -1,17 +1,24 @@
-use actix_web::{
-    web::{Data, Query},
-    HttpRequest, HttpResponse,
-};
-use async_std::sync::RwLock;
+use actix_web::{web::Query, HttpResponse};
 use serde::Deserialize;
 
 use crate::{
     constants::{GameMode, ScoreboardType},
-    database::Database,
-    objects::{PlayMods, PlayerSessions},
+    objects::PlayMods,
     routes::web::Context,
-    types::Argon2Cache,
 };
+
+#[inline(always)]
+/// Seasonal background images
+///
+/// Locate on database -> bancho.config.seasonal_backgrounds
+/// String Array
+pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
+    if let Some(background_images) = &ctx.bancho_config.read().await.seasonal_backgrounds {
+        return HttpResponse::Ok().json(background_images);
+    };
+
+    HttpResponse::Ok().body("[]")
+}
 
 #[inline(always)]
 pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
