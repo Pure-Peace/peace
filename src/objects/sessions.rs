@@ -266,12 +266,7 @@ impl PlayerSessions {
     /// For debug, get PlayerSessions.map to string
     pub async fn map_to_string(&self) -> String {
         let token = format!("{:?}", self.token_map.read().await);
-        let id = format!("{:?}", self.id_session_map.read().await);
-        let name = format!("{:?}", self.name_session_map.read().await);
-        format!(
-            "token map: {}\n\nid map: {}\n\nname map: {}",
-            token, id, name
-        )
+        format!("token map: {}", token)
     }
 
     #[inline(always)]

@@ -71,33 +71,10 @@ fn init_bancho() -> impl HttpServiceFactory {
 
 /// Routes for web
 fn init_web() -> impl HttpServiceFactory {
-    use super::web::*;
+    use super::web;
     scope("/web")
-        // Get ---------
-        .service(check_updates)
-        .service(bancho_connect)
-        .service(lastfm)
-        .service(osu_rate)
-        .service(osu_add_favourite)
-        .service(osu_mark_as_read)
-        .service(osu_get_replay)
-        .service(osu_get_favourites)
-        .service(osu_get_friends)
-        .service(osu_get_seasonal)
-        .service(osu_get_beatmap_topic)
-        .service(osu_search)
-        .service(osu_search_set)
-        .service(osu_osz2_get_scores)
-        .service(osu_osz2_bm_submit_getid)
-        // Post ---------
-        .service(osu_session)
-        .service(osu_error)
-        .service(osu_get_beatmap_info)
-        .service(osu_submit_modular)
-        .service(osu_comment)
-        .service(osu_screenshot)
-        .service(osu_osz2_bm_submit_post)
-        .service(osu_osz2_bm_submit_upload)
+        .route("/{path}", get().to(web::get::handler))
+        .route("/{path}", post().to(web::post::handler))
 }
 
 /// Routes for api_v1

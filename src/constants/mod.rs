@@ -21,8 +21,8 @@ pub use privileges::{BanchoPrivileges, Privileges};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
 #[repr(u8)]
 pub enum ScoreboardType {
-    Local = 0,
-    Normal = 1,
+    Local   = 0,
+    Normal  = 1,
     PlayMod = 2,
     Friends = 3,
     Country = 4,
