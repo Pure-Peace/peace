@@ -1,3 +1,5 @@
+use serde::Deserializer;
+
 use super::depends::*;
 
 #[derive(Debug, Clone)]
@@ -6,12 +8,30 @@ pub struct PlayMods {
     pub list: Vec<PlayMod>,
 }
 
+impl<'de> Deserialize<'de> for PlayMods {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let play_mods_value: u32 = Deserialize::deserialize(deserializer)?;
+        Ok(PlayMods::parse(play_mods_value))
+    }
+}
+
 impl PlayMods {
     #[inline(always)]
     pub fn new(playmod: PlayMod) -> Self {
         PlayMods {
             value: playmod as u32,
             list: vec![playmod],
+        }
+    }
+
+    #[inline(always)]
+    pub fn parse(play_mods_value: u32) -> Self {
+        PlayMods {
+            value: play_mods_value,
+            list: PlayMods::get_mods(play_mods_value),
         }
     }
 

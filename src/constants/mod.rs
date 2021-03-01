@@ -7,14 +7,45 @@ mod packets;
 mod privileges;
 
 use enum_primitive_derive::Primitive;
+use serde::{de::Error, Deserialize, Deserializer};
 use strum_macros::EnumIter;
 
 pub use client_data::*;
 pub use common::*;
 pub use country::*;
 pub use geoip::*;
+use num_traits::FromPrimitive;
 pub use packets::*;
 pub use privileges::{BanchoPrivileges, Privileges};
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
+#[repr(u8)]
+pub enum ScoreboardType {
+    Local = 0,
+    Normal = 1,
+    PlayMod = 2,
+    Friends = 3,
+    Country = 4,
+}
+
+impl<'de> Deserialize<'de> for ScoreboardType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let scoreboard_value: u8 = Deserialize::deserialize(deserializer)?;
+        match ScoreboardType::parse(scoreboard_value) {
+            Some(s) => Ok(s),
+            None => Err("invalid scoreboard type value").map_err(D::Error::custom),
+        }
+    }
+}
+
+impl ScoreboardType {
+    pub fn parse(value: u8) -> Option<Self> {
+        ScoreboardType::from_u8(value)
+    }
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
 pub enum PresenceFilter {
@@ -45,8 +76,8 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn val(self) -> u8 {
-        self as u8
+    pub fn val(&self) -> u8 {
+        *self as u8
     }
 }
 
@@ -99,18 +130,18 @@ pub enum PlayMod {
 
 impl PlayMod {
     #[inline(always)]
-    pub fn val(self) -> u32 {
-        self as u32
+    pub fn val(&self) -> u32 {
+        *self as u32
     }
 
     #[inline(always)]
-    pub fn contains(self, value: u32) -> bool {
-        (value & self as u32) > 0
+    pub fn contains(&self, value: u32) -> bool {
+        (value & self.val()) > 0
     }
 
     #[inline(always)]
-    pub fn not_contains(self, value: u32) -> bool {
-        (value & self as u32) == 0
+    pub fn not_contains(&self, value: u32) -> bool {
+        (value & self.val()) == 0
     }
 }
 
@@ -129,26 +160,79 @@ pub enum GameMode {
     Std_ap    = 8,
 }
 
+impl<'de> Deserialize<'de> for GameMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let game_mode_value: u8 = Deserialize::deserialize(deserializer)?;
+        match GameMode::parse(game_mode_value) {
+            Some(s) => Ok(s),
+            None => Err("invalid game mode value").map_err(D::Error::custom),
+        }
+    }
+}
+
 impl GameMode {
     #[inline(always)]
-    pub fn val(self) -> u8 {
-        (self as u8) % 4
+    pub fn parse(game_mode_u8: u8) -> Option<Self> {
+        GameMode::from_u8(game_mode_u8)
     }
 
     #[inline(always)]
-    pub fn is_rx(self) -> bool {
-        let self_value = self as u8;
+    pub fn parse_with_playmod(game_mode_u8: u8, playmod_list: &Vec<PlayMod>) -> Option<Self> {
+        let game_mode_u8 = GameMode::value_with_playmod(game_mode_u8, playmod_list);
+        GameMode::from_u8(game_mode_u8)
+    }
+
+    #[inline(always)]
+    pub fn update_with_playmod(&mut self, playmod_list: &Vec<PlayMod>) {
+        let game_mode_u8 = GameMode::value_with_playmod(*self as u8, playmod_list);
+        if let Some(game_mode) = GameMode::from_u8(game_mode_u8) {
+            *self = game_mode;
+        }
+    }
+
+    #[inline(always)]
+    pub fn value_with_playmod(mut game_mode_u8: u8, playmod_list: &Vec<PlayMod>) -> u8 {
+        // !More detailed game mod but:
+        //
+        // 1. Mania have not relax
+        // 2. only std have autopilot
+        // 3. relax and autopilot cannot coexist
+        //
+        if game_mode_u8 < 4 && game_mode_u8 != 3 && playmod_list.contains(&PlayMod::Relax) {
+            game_mode_u8 += 4;
+        } else if game_mode_u8 == 0 && playmod_list.contains(&PlayMod::AutoPilot) {
+            game_mode_u8 += 8;
+        }
+        game_mode_u8
+    }
+
+    #[inline(always)]
+    pub fn raw_value(&self) -> u8 {
+        self.val() % 4
+    }
+
+    #[inline(always)]
+    pub fn val(&self) -> u8 {
+        *self as u8
+    }
+
+    #[inline(always)]
+    pub fn is_rx(&self) -> bool {
+        let self_value = self.val();
         self_value > 3 && self_value < 8
     }
 
     #[inline(always)]
-    pub fn is_ap(self) -> bool {
-        (self as u8) == 8
+    pub fn is_ap(&self) -> bool {
+        self.val() == 8
     }
 
     #[inline(always)]
-    pub fn is_vn(self) -> bool {
-        (self as u8) < 4
+    pub fn is_vn(&self) -> bool {
+        self.val() < 4
     }
 
     #[inline(always)]
@@ -162,8 +246,8 @@ impl GameMode {
     }
 
     #[inline(always)]
-    pub fn play_mod_name(self) -> String {
-        match self as u8 {
+    pub fn play_mod_name(&self) -> String {
+        match self.val() {
             value if value == 8 => String::from("ap"),
             value if value > 3 && value < 8 => String::from("rx"),
             _ => String::new(),
@@ -171,7 +255,7 @@ impl GameMode {
     }
 
     #[inline(always)]
-    pub fn play_mod_name_table(self) -> String {
+    pub fn play_mod_name_table(&self) -> String {
         match self.play_mod_name() {
             mut n if n != String::new() => {
                 n.insert(0, '_');
@@ -182,7 +266,7 @@ impl GameMode {
     }
 
     #[inline(always)]
-    pub fn get_table_names(self) -> (String, String) {
+    pub fn get_table_names(&self) -> (String, String) {
         (self.play_mod_name_table(), self.mode_name())
     }
 }

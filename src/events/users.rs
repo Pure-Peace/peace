@@ -148,7 +148,7 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) {
 pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
     // Read the packet
     let mut reader = PayloadReader::new(ctx.payload);
-    let (action, info, playing_beatmap_md5, play_mods_value, mut game_mode, playing_beatmap_id) = (
+    let (action, info, playing_beatmap_md5, play_mods_value, game_mode_u8, playing_beatmap_id) = (
         reader.read_integer::<u8>().await,
         reader.read_string().await,
         reader.read_string().await,
@@ -168,30 +168,16 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
         }
     };
 
-    let play_mod_list = PlayMods::get_mods(play_mods_value);
-
-    // !More detailed game mod but:
-    //
-    // 1. Mania have not relax
-    // 2. only std have autopilot
-    // 3. relax and autopilot cannot coexist
-    //
-    if game_mode != 3 && play_mod_list.contains(&PlayMod::Relax) {
-        game_mode += 4;
-    } else if game_mode == 0 && play_mod_list.contains(&PlayMod::AutoPilot) {
-        game_mode += 8;
+    let playmod_list = PlayMods::get_mods(play_mods_value);
+    let game_mode = GameMode::parse_with_playmod(game_mode_u8, &playmod_list);
+    if game_mode.is_none() {
+        error!(
+            "Failed to parse player {}({})'s game mode({:?})! <OSU_CHANGE_ACTION>; play_mod_list: {:?}",
+            ctx.name, ctx.id, game_mode_u8, playmod_list
+        );
+        return;
     }
-
-    let game_mode = match GameMode::from_u8(game_mode) {
-        Some(action) => action,
-        None => {
-            error!(
-                "Failed to parse player {}({})'s game mode({})! <OSU_CHANGE_ACTION>; play_mod_list: {:?}",
-                ctx.name, ctx.id, game_mode, play_mod_list
-            );
-            return;
-        }
-    };
+    let game_mode = game_mode.unwrap();
 
     debug!(
         "Player {}({}) changing action: <a: {:?} i: {} b: {} pm: {:?} gm: {:?} bid: {}>",
@@ -200,7 +186,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
         action,
         info,
         playing_beatmap_md5,
-        play_mod_list,
+        playmod_list,
         game_mode,
         playing_beatmap_id
     );
