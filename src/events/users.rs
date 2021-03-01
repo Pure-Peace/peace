@@ -191,29 +191,9 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
         playing_beatmap_id
     );
 
-    // Switch to new game mod stats or not
-    let update_stats = game_mode != ctx.data.status.game_mode;
-
-    let (stats, should_update_cache) = if update_stats {
-        ctx.data.get_stats_update(game_mode, ctx.database).await
-    } else {
-        (None, false)
-    };
-
     // Update player's status
     let player_stats_packets_new = if let Some(player) = ctx.weak_player.upgrade() {
         let mut player = player.write().await;
-
-        if update_stats && stats.is_some() {
-            let stats = stats.unwrap();
-            // Update cache if we should
-            if should_update_cache {
-                player.stats_cache.insert(game_mode, stats.clone());
-            }
-            // Update stats
-            player.stats = stats;
-        };
-
         player.update_status(
             action,
             info,
@@ -222,6 +202,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
             play_mods_value,
             game_mode,
         );
+        player.update_stats(ctx.database).await;
 
         packets::user_stats(&player).await
     } else {
