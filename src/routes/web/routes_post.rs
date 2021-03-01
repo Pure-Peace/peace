@@ -2,8 +2,9 @@
 #![allow(unused_imports)]
 
 use actix_multipart::Multipart;
-use actix_web::{post, HttpRequest, HttpResponse};
+use actix_web::{post, web::Query, HttpRequest, HttpResponse};
 use prometheus::IntCounterVec;
+use serde::Deserialize;
 
 use crate::utils;
 
