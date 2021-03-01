@@ -14,8 +14,8 @@ use crate::{
     database::Database,
     packets,
     types::{
-        ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap, PlayerSessionMap,
-        TokenString, UserId,
+        Argon2Cache, ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap,
+        PlayerSessionMap, TokenString, UserId,
     },
 };
 
@@ -125,11 +125,15 @@ impl PlayerSessions {
                 let mut player = match Arc::try_unwrap(arc_player) {
                     Ok(player) => player.into_inner(),
                     Err(arc_player) => {
-                        arc_player.write().await.update_logout_time(&self.database).await;
-                        return None
+                        arc_player
+                            .write()
+                            .await
+                            .update_logout_time(&self.database)
+                            .await;
+                        return None;
                     }
                 };
-                
+
                 player.update_logout_time(&self.database).await;
                 let logout_end = logout_start.elapsed();
                 info!(
@@ -169,30 +173,6 @@ impl PlayerSessions {
     }
 
     #[inline(always)]
-    pub async fn get_token_by_id(&self, user_id: &UserId) -> Option<String> {
-        match self.id_session_map.read().await.get(user_id) {
-            Some(player) => Some(player.read().await.token.clone()),
-            None => None,
-        }
-    }
-
-    #[inline(always)]
-    pub async fn get_id_by_token(&self, token: &TokenString) -> Option<i32> {
-        match self.token_map.read().await.get(token) {
-            Some(player) => Some(player.read().await.id.clone()),
-            None => None,
-        }
-    }
-
-    #[inline(always)]
-    pub async fn get_id_by_name(&self, name: &str) -> Option<i32> {
-        match self.name_session_map.read().await.get(name) {
-            Some(player) => Some(player.read().await.id.clone()),
-            None => None,
-        }
-    }
-
-    #[inline(always)]
     /// Token is exists or not
     pub async fn token_is_exists(&self, token: &TokenString) -> bool {
         self.token_map.read().await.contains_key(token)
@@ -201,6 +181,43 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn id_is_exists(&self, id: &UserId) -> bool {
         self.id_session_map.read().await.contains_key(&id)
+    }
+
+    #[inline(always)]
+    pub async fn get_player_by_id(&self, id: UserId) -> Option<Arc<RwLock<Player>>> {
+        self.id_session_map.read().await.get(&id).cloned()
+    }
+
+    #[inline(always)]
+    pub async fn get_player_by_token(&self, token: &String) -> Option<Arc<RwLock<Player>>> {
+        self.token_map.read().await.get(token).cloned()
+    }
+
+    #[inline(always)]
+    pub async fn get_player_by_name(&self, username: &String) -> Option<Arc<RwLock<Player>>> {
+        self.name_session_map.read().await.get(username).cloned()
+    }
+
+    #[inline(always)]
+    /// If user is online, check password and returns this user
+    pub async fn get_login_by_name(
+        &self,
+        username: &String,
+        password_hash: &String,
+        argon2_cache: &RwLock<Argon2Cache>,
+    ) -> Option<Arc<RwLock<Player>>> {
+        let player = self.get_player_by_name(username).await?;
+
+        if !player
+            .read()
+            .await
+            .check_password_hash(password_hash, argon2_cache)
+            .await
+        {
+            return None;
+        }
+
+        Some(player)
     }
 
     #[inline(always)]

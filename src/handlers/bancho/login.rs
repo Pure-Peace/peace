@@ -9,7 +9,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use crate::{constants, database::Database, packets};
 use crate::{
-    objects::{Player, PlayerAddress, PlayerBase, PlayerSessions},
+    objects::{Player, PlayerAddress, PlayerSessions},
     packets::PacketBuilder,
     utils,
 };
@@ -69,7 +69,6 @@ pub async fn login(
     let parse_duration = parse_start.elapsed();
     // Parse login data end ----------
     let osu_version = client_info.osu_version.clone();
-    let username_safe = username.to_lowercase().replace(" ", "_");
     debug!(
         "login data parsed; time spent: {:.2?}; ip: {}, osu_version: {}, username: {};",
         parse_duration, request_ip, osu_version, username
@@ -191,34 +190,12 @@ pub async fn login(
 
     // Select user base info from database ----------
     let select_base_start = Instant::now();
-    // Select from database
-    let from_base_row = match database
-        .pg
-        .query_first(
-            r#"SELECT 
-                    "id", "name", "privileges", "country", "password"
-                    FROM "user"."base" WHERE 
-                    "name_safe" = $1;"#,
-            &[&username_safe],
-        )
-        .await
-    {
-        Ok(from_base_row) => from_base_row,
-        Err(_) => {
+    let mut player_base = match utils::get_player_base(&username, &database).await {
+        Some(p) => p,
+        None => {
             warn!(
-                "<{}> login failed: account not exists! request_ip: {}; osu_version: {}",
+                "login failed, could not get playerbase ({}); ip: {}; osu version: {}",
                 username, request_ip, osu_version
-            );
-            return Err(("invalid_credentials", None));
-        }
-    };
-    // Try deserialize player base object
-    let mut player_base = match serde_postgres::from_row::<PlayerBase>(&from_base_row) {
-        Ok(player_base) => player_base,
-        Err(err) => {
-            error!(
-                "could not deserialize player base: {}; err: {:?}",
-                username, err
             );
             return Err(("invalid_credentials", None));
         }
@@ -239,58 +216,14 @@ pub async fn login(
         return Err(("not_allowed", None));
     }
 
-    // Try read password hash from argon2 cache
-    let cached_password_hash = {
-        argon2_cache
-            .read()
-            .await
-            .get(&player_base.password)
-            .cloned()
-    };
-
     // Checking password
-    match cached_password_hash {
-        // Cache hitted (μs level)
-        Some(cached_password_hash) => {
-            debug!(
-                "password cache hitted: {}({})",
-                player_base.name, player_base.id
-            );
-            if cached_password_hash != password_hash {
-                warn!("{} login failed, invalid password (cached)", username);
-                return Err(("invalid_credentials", None));
-            }
-        }
-        None => {
-            // Cache not hitted, do argon2 verify (ms level)
-            let argon2_verify_start = Instant::now();
-
-            let verify_result = utils::argon2_verify(&player_base.password, &password_hash).await;
-
-            let argon2_verify_end = argon2_verify_start.elapsed();
-            debug!(
-                "Argon2 verify success, time spent: {:.2?};",
-                argon2_verify_end
-            );
-
-            // Invalid password
-            if !verify_result {
-                warn!("{} login failed, invalid password (non-cached)", username);
-                return Err(("invalid_credentials", None));
-            }
-
-            // If password is correct, cache it
-            // key = argon2 cipher, key = password hash
-            argon2_cache
-                .write()
-                .await
-                .insert(player_base.password.clone(), password_hash);
-            debug!(
-                "new password cache added: {}({})",
-                player_base.name, player_base.id
-            );
-        }
-    };
+    if !utils::checking_password(&player_base, &password_hash, &argon2_cache).await {
+        warn!(
+            "login refused, failed to checking password; username: {}, ip: {}",
+            username, request_ip
+        );
+        return Err(("invalid_credentials", None));
+    }
 
     // Check user's privileges
     if Privileges::Normal.not_enough(player_base.privileges) {

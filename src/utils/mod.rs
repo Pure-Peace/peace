@@ -1,9 +1,13 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    time::Instant,
+};
 
 use actix_multipart::Multipart;
 use actix_web::HttpRequest;
 use argon2::{ThreadMode, Variant, Version};
 
+use async_std::sync::RwLock;
 use futures::StreamExt;
 use lazy_static::lazy_static;
 use maxminddb::{geoip2::City, Reader};
@@ -11,7 +15,7 @@ use memmap::Mmap;
 use rand::Rng;
 use serde_qs;
 
-use crate::constants::GeoData;
+use crate::{constants::GeoData, database::Database, objects::PlayerBase, types::Argon2Cache};
 
 lazy_static! {
     static ref ARGON2_CONFIG: argon2::Config<'static> = argon2::Config {
@@ -88,13 +92,20 @@ pub async fn get_token(req: &HttpRequest) -> String {
 #[inline(always)]
 /// Argon2 verify
 pub async fn argon2_verify(password_crypted: &str, password: &str) -> bool {
-    argon2::verify_encoded(password_crypted, password.as_bytes()).unwrap_or_else(|err| {
-        error!(
-            "failed to verify argon2: {:?}; crypted: {}, password: {}",
-            err, password_crypted, password
-        );
-        false
-    })
+    let argon2_verify_start = Instant::now();
+    let verify_result = argon2::verify_encoded(password_crypted, password.as_bytes());
+    let argon2_verify_end = argon2_verify_start.elapsed();
+    debug!("Argon2 verify done, time spent: {:.2?};", argon2_verify_end);
+    match verify_result {
+        Ok(result) => result,
+        Err(err) => {
+            error!(
+                "Failed to verify argon2: {:?}; crypted: {}, password: {}",
+                err, password_crypted, password
+            );
+            false
+        }
+    }
 }
 
 #[inline(always)]
@@ -226,4 +237,80 @@ pub fn get_geo_ip_data(ip_address: &String, geo_db: &Reader<Mmap>) -> Result<Geo
             return Err("Ip address not found.".to_string());
         }
     }
+}
+
+#[inline(always)]
+pub async fn get_player_base(username: &String, database: &Database) -> Option<PlayerBase> {
+    let username_safe = username.to_lowercase().replace(" ", "_");
+
+    // Select from database
+    let from_base_row = match database
+        .pg
+        .query_first(
+            r#"SELECT 
+                    "id", "name", "privileges", "country", "password"
+                    FROM "user"."base" WHERE 
+                    "name_safe" = $1;"#,
+            &[&username_safe],
+        )
+        .await
+    {
+        Ok(from_base_row) => from_base_row,
+        Err(_err) => {
+            warn!(
+                "failed to get playerbase: username ({}) is not exists! ",
+                username
+            );
+            return None;
+        }
+    };
+    // Try deserialize player base object
+    match serde_postgres::from_row::<PlayerBase>(&from_base_row) {
+        Ok(player_base) => Some(player_base),
+        Err(err) => {
+            error!(
+                "could not deserialize playerbase: {}; err: {:?}",
+                username, err
+            );
+            None
+        }
+    }
+}
+
+#[inline(always)]
+pub async fn checking_password(
+    player_base: &PlayerBase,
+    password_hash: &String,
+    argon2_cache: &RwLock<Argon2Cache>,
+) -> bool {
+    // Try read password hash from argon2 cache
+    let cached_password_hash = {
+        argon2_cache
+            .read()
+            .await
+            .get(&player_base.password)
+            .cloned()
+    };
+
+    // Cache hitted, checking
+    if let Some(cached_password_hash) = cached_password_hash {
+        debug!(
+            "password cache hitted: {}({})",
+            player_base.name, player_base.id
+        );
+        return &cached_password_hash == password_hash;
+    }
+
+    // Cache not hitted, do argon2 verify (ms level)
+    let verify_result = argon2_verify(&player_base.password, password_hash).await;
+    if verify_result {
+        // If password is correct, cache it
+        // key = argon2 cipher, value = password hash
+        argon2_cache
+            .write()
+            .await
+            .insert(player_base.password.clone(), password_hash.clone());
+    }
+
+    verify_result
 }
