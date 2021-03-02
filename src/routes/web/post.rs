@@ -1,7 +1,8 @@
 use super::depends::*;
+use crate::handlers::web::post;
 use crate::utils;
 
-const BASE: &'static str = "Bancho /web [GET]";
+const BASE: &'static str = "Bancho /web [POST]";
 
 pub async fn handler(
     req: HttpRequest,
@@ -12,6 +13,7 @@ pub async fn handler(
     bancho_config: Data<RwLock<BanchoConfig>>,
     argon2_cache: Data<RwLock<Argon2Cache>>,
     geo_db: Data<Option<Reader<Mmap>>>,
+    payload: Multipart,
 ) -> HttpResponse {
     counter.with_label_values(&["/web", "post", "start"]).inc();
     // Get real request ip
@@ -37,9 +39,9 @@ pub async fn handler(
     let handle_start = std::time::Instant::now();
     let handle_path = path.replace(".php", "");
     let resp = match handle_path.as_str() {
-        /* "osu-session" => {}
-        "osu-error" => {}
-        "osu-get-beatmapinfo" => {}
+        /* "osu-session" => {} */
+        "osu-error" => post::osu_error(&ctx(), payload).await,
+        /* "osu-get-beatmapinfo" => {}
         "osu-submit-modular-selector" => {}
         "osu-comment" => {}
         "osu-screenshot" => {}
