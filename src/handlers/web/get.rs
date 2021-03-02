@@ -7,6 +7,34 @@ use crate::{
     routes::web::Context,
 };
 
+macro_rules! get_login {
+    ($ctx:ident, $data:ident, $failed:ident) => {
+        match $ctx
+            .player_sessions
+            .read()
+            .await
+            .get_login_by_name(&$data.username, &$data.password_hash, &$ctx.argon2_cache)
+            .await
+        {
+            Some(p) => p,
+            None => {
+                return $failed;
+            }
+        }
+    };
+}
+
+macro_rules! parse_query {
+    ($ctx:ident, $typ:ty, $failed:ident) => {
+        match Query::<$typ>::from_query($ctx.req.query_string()) {
+            Ok(Query(data)) => data,
+            Err(_) => {
+                return $failed;
+            }
+        }
+    };
+}
+
 #[inline(always)]
 /// Seasonal background images
 ///
@@ -22,6 +50,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 
 #[inline(always)]
 pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
+    let failed = HttpResponse::Ok().body("-1|false");
     #[derive(Debug, Deserialize)]
     struct GetScores {
         // -
@@ -50,33 +79,12 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         password_hash: String,
     }
 
-    let failed = HttpResponse::Ok().body("-1|false");
-
     // Parse query
-    let mut data = match Query::<GetScores>::from_query(ctx.req.query_string()) {
-        Ok(Query(data)) => data,
-        Err(_) => {
-            return failed;
-        }
-    };
-
+    let mut data = parse_query!(ctx, GetScores, failed);
     // Update game mode with playmod list (rx / ap)
     data.game_mode.update_with_playmod(&data.play_mods.list);
-    debug!("osu-osz2-getscores: {:?}", data);
-
     // Get login
-    let player = match ctx
-        .player_sessions
-        .read()
-        .await
-        .get_login_by_name(&data.username, &data.password_hash, &ctx.argon2_cache)
-        .await
-    {
-        Some(p) => p,
-        None => {
-            return failed;
-        }
-    };
+    let player = get_login!(ctx, data, failed);
 
     // Try update user stats
     let update_result = player
