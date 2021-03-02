@@ -1,4 +1,6 @@
 use actix_web::{web::Query, HttpResponse};
+use async_std::fs::File;
+use async_std::prelude::*;
 use serde::Deserialize;
 
 use crate::{
@@ -35,6 +37,33 @@ macro_rules! parse_query {
     };
 }
 
+#[inline(always)]
+pub async fn osu_get_replay<'a>(ctx: &Context<'a>) -> HttpResponse {
+    const REPLAY_PATH: &'static str = ".data/replays";
+    let failed = HttpResponse::Unauthorized().body("");
+    #[derive(Debug, Deserialize)]
+    struct GetReplay {
+        #[serde(rename = "u")]
+        username: String,
+        #[serde(rename = "h")]
+        password_hash: String,
+        #[serde(rename = "c")]
+        score_id: u64,
+    }
+
+    // Parse query
+    let data = parse_query!(ctx, GetReplay, failed);
+    // Get login
+    let _player = get_login!(ctx, data, failed);
+
+    if let Ok(mut file) = File::open(format!("{}/{}.osr", REPLAY_PATH, data.score_id)).await {
+        let mut contents = Vec::new();
+        let _ = file.read_to_end(&mut contents).await;
+        return HttpResponse::Ok().body(contents);
+    }
+
+    failed
+}
 
 #[inline(always)]
 pub async fn osu_add_favourite<'a>(ctx: &Context<'a>) -> HttpResponse {

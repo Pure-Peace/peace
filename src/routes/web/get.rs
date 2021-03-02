@@ -44,6 +44,7 @@ pub async fn handler(
         "osu-rate" => {} */
         "osu-addfavourite" => get::osu_add_favourite(&ctx()).await,
         /*"osu-markasread" => {}*/
+        "osu-getreplay" => get::osu_get_replay(&ctx()).await,
         "osu-getfavourites" => get::osu_get_favourites(&ctx()).await,
         "osu-getfriends" => get::osu_get_friends(&ctx()).await,
         "osu-getseasonal" => get::osu_get_seasonal(&ctx()).await,
