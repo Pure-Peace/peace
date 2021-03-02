@@ -37,6 +37,44 @@ macro_rules! parse_query {
 
 
 #[inline(always)]
+pub async fn osu_add_favourite<'a>(ctx: &Context<'a>) -> HttpResponse {
+    let failed = HttpResponse::Unauthorized().body("");
+    #[derive(Debug, Deserialize)]
+    struct AddFavourites {
+        #[serde(rename = "u")]
+        username: String,
+        #[serde(rename = "h")]
+        password_hash: String,
+        #[serde(rename = "a")]
+        beatmap_set_id: i32,
+    }
+
+    // Parse query
+    let data = parse_query!(ctx, AddFavourites, failed);
+    // Get login
+    let player = get_login!(ctx, data, failed);
+
+    let player_id = player.read().await.id;
+
+    if let Ok(_) = ctx
+        .database
+        .pg
+        .execute(
+            r#"INSERT INTO "user"."beatmap_collections" (
+                "user_id",
+                "beatmap_set_id"
+             ) VALUES ($1, $2)"#,
+            &[&player_id, &data.beatmap_set_id],
+        )
+        .await
+    {
+        return HttpResponse::Ok().body("ok");
+    };
+
+    HttpResponse::Ok().body("failed")
+}
+
+#[inline(always)]
 pub async fn osu_get_favourites<'a>(ctx: &Context<'a>) -> HttpResponse {
     let failed = HttpResponse::Unauthorized().body("");
     #[derive(Debug, Deserialize)]
