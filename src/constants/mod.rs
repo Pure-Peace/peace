@@ -22,7 +22,7 @@ pub use privileges::{BanchoPrivileges, Privileges};
 #[repr(u8)]
 pub enum ScoreboardType {
     Local   = 0,
-    Normal  = 1,
+    Global  = 1,
     PlayMod = 2,
     Friends = 3,
     Country = 4,
