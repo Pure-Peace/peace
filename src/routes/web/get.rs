@@ -41,12 +41,7 @@ pub async fn handler(
         /* "check-updates" => {}
         "bancho_connect" => {}
         "lastfm" => {}
-        "osu-rate" => {}
-        "osu-addfavourite" => {}
-        "osu-markasread" => {}
-        "osu-getreplay" => {}
-        "osu-getfavourites" => {}
-        "osu-getfriends" => {}*/
+        "osu-getfriends" => get::osu_get_friends(&ctx()).await,
         "osu-getseasonal" => get::osu_get_seasonal(&ctx()).await,
         /* "osu-get-beatmap-topic" => {}
         "osu-search" => {}

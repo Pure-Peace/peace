@@ -35,10 +35,40 @@ macro_rules! parse_query {
     };
 }
 
+
+#[inline(always)]
+pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
+    let failed = HttpResponse::Unauthorized().body("");
+    #[derive(Debug, Deserialize)]
+    struct GetFriends {
+        #[serde(rename = "u")]
+        username: String,
+        #[serde(rename = "h")]
+        password_hash: String,
+    }
+
+    // Parse query
+    let data = parse_query!(ctx, GetFriends, failed);
+    // Get login
+    let player = get_login!(ctx, data, failed);
+
+    // Convert to string
+    let friends: String = player
+        .read()
+        .await
+        .friends
+        .iter()
+        .map(|id| id.to_string() + "\n")
+        .collect();
+
+    HttpResponse::Ok().body(friends)
+}
+
 #[inline(always)]
 /// Seasonal background images
 ///
 /// Locate on database -> bancho.config.seasonal_backgrounds
+///
 /// String Array
 pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
     if let Some(background_images) = &ctx.bancho_config.read().await.seasonal_backgrounds {
