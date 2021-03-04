@@ -1,7 +1,7 @@
 # Peace (WIP)
 
 ## osu! server written in Rust.
-[![Discord](https://discordapp.com/api/guilds/817149875635879997/widget.png?style=shield)](https://discord.gg/gbDJ5b9m) 
+[![Discord](https://discordapp.com/api/guilds/817149875635879997/widget.png?style=shield)](https://discord.gg/sgQwkNXpVe) 
 #### Fully asynchronous, high concurrency, high performance, and high security.
 
 
