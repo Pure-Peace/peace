@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 use actix_multipart::Multipart;
 use actix_web::HttpResponse;
 use serde::Deserialize;

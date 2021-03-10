@@ -122,15 +122,15 @@ pub async fn test_player_money_reduce_special(
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
 }
 
-/// GET "/pleyer_sessions_all"
-#[get("/pleyer_sessions_all")]
-pub async fn pleyer_sessions_all(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
+/// GET "/player_sessions_all"
+#[get("/player_sessions_all")]
+pub async fn player_sessions_all(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
     HttpResponse::Ok().body(player_sessions.read().await.map_to_string().await)
 }
 
-/// GET "/pleyer_maps_info"
-#[get("/pleyer_maps_info")]
-pub async fn pleyer_maps_info(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
+/// GET "/player_maps_info"
+#[get("/player_maps_info")]
+pub async fn player_maps_info(player_sessions: Data<RwLock<PlayerSessions>>) -> impl Responder {
     let start = Instant::now();
     let maps = player_sessions.read().await;
     let (token_map, id_session_map, name_session_map) = (
@@ -147,15 +147,15 @@ pub async fn pleyer_maps_info(player_sessions: Data<RwLock<PlayerSessions>>) -> 
     ))
 }
 
-/// GET "/pleyer_channels_all"
-#[get("/pleyer_channels_all")]
+/// GET "/player_channels_all"
+#[get("/player_channels_all")]
 pub async fn player_channels_all(channel_list: Data<RwLock<ChannelList>>) -> impl Responder {
     HttpResponse::Ok().body(format!("{:?}", channel_list.read().await.values()))
 }
 
-/// GET "/pleyer_sessions_kick"
-#[get("/pleyer_sessions_kick/{token}")]
-pub async fn pleyer_sessions_kick(
+/// GET "/player_sessions_kick"
+#[get("/player_sessions_kick/{token}")]
+pub async fn player_sessions_kick(
     token: Path<String>,
     channel_list: Data<RwLock<ChannelList>>,
     player_sessions: Data<RwLock<PlayerSessions>>,
@@ -173,9 +173,9 @@ pub async fn pleyer_sessions_kick(
     )
 }
 
-/// GET "/pleyer_sessions_kick_uid"
-#[get("/pleyer_sessions_kick_uid/{user_id}")]
-pub async fn pleyer_sessions_kick_uid(
+/// GET "/player_sessions_kick_uid"
+#[get("/player_sessions_kick_uid/{user_id}")]
+pub async fn player_sessions_kick_uid(
     user_id: Path<i32>,
     channel_list: Data<RwLock<ChannelList>>,
     player_sessions: Data<RwLock<PlayerSessions>>,

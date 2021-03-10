@@ -38,11 +38,11 @@ fn init_debug(cfg: &mut ServiceConfig) {
     cfg.service(test_player_money_add);
     cfg.service(test_player_money_reduce);
     cfg.service(test_player_money_reduce_special);
-    cfg.service(pleyer_sessions_all);
-    cfg.service(pleyer_maps_info);
+    cfg.service(player_sessions_all);
+    cfg.service(player_maps_info);
     cfg.service(player_channels_all);
-    cfg.service(pleyer_sessions_kick);
-    cfg.service(pleyer_sessions_kick_uid);
+    cfg.service(player_sessions_kick);
+    cfg.service(player_sessions_kick_uid);
     cfg.service(test_geo_ip);
     cfg.service(bancho_config_update);
     cfg.service(bancho_config_get);
