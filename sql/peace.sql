@@ -10,6 +10,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 CREATE SCHEMA bancho;
 COMMENT ON SCHEMA bancho IS 'Bancho configs';
+CREATE SCHEMA beatmaps;
 CREATE SCHEMA game_scores;
 COMMENT ON SCHEMA game_scores IS 'User''s game scores (including 4 mode, and vanilla, relax, autopilot tables)';
 CREATE SCHEMA game_stats;
@@ -18,6 +19,10 @@ CREATE SCHEMA "user";
 COMMENT ON SCHEMA "user" IS 'user''s info and base data';
 CREATE SCHEMA user_records;
 COMMENT ON SCHEMA user_records IS 'user''s records, such as login, rename, etc.';
+CREATE TYPE beatmaps.server AS ENUM (
+    'ppy',
+    'peace'
+);
 CREATE FUNCTION public.update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
@@ -97,7 +102,7 @@ CREATE FUNCTION user_records.increase_rename_count() RETURNS trigger
 	RETURN NEW;
 END$$;
 SET default_tablespace = '';
-SET default_with_oids = false;
+SET default_table_access_method = heap;
 CREATE TABLE bancho.channels (
     id integer NOT NULL,
     name character varying(64) NOT NULL,
@@ -191,6 +196,63 @@ COMMENT ON COLUMN bancho.config.name IS 'unique config name';
 COMMENT ON COLUMN bancho.config.comment IS 'comment';
 COMMENT ON COLUMN bancho.config.enabled IS 'enabled status';
 COMMENT ON COLUMN bancho.config.update_time IS 'auto update timestamp';
+CREATE SEQUENCE beatmaps.peace_bid
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 2147483647
+    CACHE 1;
+CREATE TABLE beatmaps.maps (
+    server beatmaps.server DEFAULT 'ppy'::beatmaps.server NOT NULL,
+    id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
+    set_id integer DEFAULT nextval('beatmaps.peace_bid'::regclass),
+    md5 character varying(32) NOT NULL,
+    title character varying(128) NOT NULL,
+    artist character varying(128) NOT NULL,
+    diff_name character varying(128) NOT NULL,
+    mapper character varying(32) NOT NULL,
+    mapper_id integer NOT NULL,
+    rank_status integer DEFAULT 0 NOT NULL,
+    mode smallint NOT NULL,
+    aim real DEFAULT 0.0 NOT NULL,
+    spd real DEFAULT 0.0 NOT NULL,
+    stars real DEFAULT 0.0 NOT NULL,
+    bpm real DEFAULT 0.0 NOT NULL,
+    cs real DEFAULT 0.0 NOT NULL,
+    od real DEFAULT 0.0 NOT NULL,
+    ar real DEFAULT 0.0 NOT NULL,
+    hp real DEFAULT 0.0 NOT NULL,
+    length integer DEFAULT 0 NOT NULL,
+    length_drain integer DEFAULT 0 NOT NULL,
+    source character varying(128),
+    tags character varying(255),
+    object_count integer DEFAULT 0 NOT NULL,
+    slider_count integer DEFAULT 0 NOT NULL,
+    spinner_count integer DEFAULT 0 NOT NULL,
+    max_combo integer DEFAULT 0 NOT NULL,
+    stars_taiko real DEFAULT 0.0 NOT NULL,
+    stars_catch real DEFAULT 0.0 NOT NULL,
+    stars_mania real DEFAULT 0.0 NOT NULL,
+    fixed_rank_status boolean DEFAULT false NOT NULL,
+    ranked_by character varying(128),
+    last_update timestamp without time zone,
+    update_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE TABLE beatmaps.statistic (
+    server beatmaps.server DEFAULT 'ppy'::beatmaps.server NOT NULL,
+    id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
+    set_id integer DEFAULT nextval('beatmaps.peace_bid'::regclass),
+    md5 character varying(32) NOT NULL,
+    plays integer DEFAULT 0 NOT NULL,
+    players integer DEFAULT 0 NOT NULL,
+    pp double precision DEFAULT 0.0 NOT NULL,
+    play_time interval DEFAULT '00:00:00'::interval NOT NULL,
+    pass integer DEFAULT 0 NOT NULL,
+    fail integer DEFAULT 0 NOT NULL,
+    clicked bigint DEFAULT 0 NOT NULL,
+    miss bigint DEFAULT 0 NOT NULL,
+    pick integer DEFAULT 0 NOT NULL
+);
 CREATE TABLE game_scores.catch (
     id bigint NOT NULL,
     user_id integer NOT NULL,
@@ -976,7 +1038,7 @@ INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, 
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 4, true, '2020-12-09 04:21:35.551317+08', '2021-01-04 21:29:59.518299+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (5, '#开发', 'development', 1, 2, true, '2021-02-15 22:28:01.031559+08', '2021-02-15 22:28:37.085566+08');
 INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes, client_only_whitelist) VALUES ('test', NULL, NULL, '2021-02-14 10:47:27.825184+08', '{}', true, '{}', true, '{}', NULL, NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', false);
-INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes, client_only_whitelist) VALUES ('default', NULL, true, '2021-02-22 22:21:50.147623+08', '{}', true, '{}', true, '{}', 'https://i.kafuu.pro/welcome.png|https://www.baidu.com', NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{"welcome to osu!",测试！}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', false);
+INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes, client_only_whitelist) VALUES ('default', NULL, true, '2021-03-16 04:18:45.150981+08', '{}', true, '{}', true, '{}', 'https://i.kafuu.pro/welcome.png|https://www.baidu.com', NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{"welcome to osu!",测试！}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', false);
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:20.41087+08');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
@@ -985,7 +1047,7 @@ INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, per
 INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
 INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-06 23:44:27.833964+08');
 INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-06 23:44:33.225096+08');
-INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (5, 400000, 400000, 0, 0, 0, 0, 0, 0, 0, 134, 0, 0, 0, 0, 0, 1, 0, 0, 0, 114514, 0, 0, 0, 0.98210001, 0, 0, 0, 1211, 0, 0, 0, 100, 0, 0, 0, '2021-01-06 23:45:43.917792+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (5, 400000, 400000, 0, 0, 0, 0, 0, 0, 0, 134, 0, 0, 0, 0, 0, 1, 0, 0, 0, 114514, 0, 0, 0, 0.9821, 0, 0, 0, 1211, 0, 0, 0, 100, 0, 0, 0, '2021-01-06 23:45:43.917792+08');
 INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:43:45.770011+08');
 INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:20.41087+08');
 INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-01-04 21:54:23.062969+08');
@@ -994,10 +1056,12 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.4', 'PurePeace', NULL, 'now, score v2 be as a standalone model', '2021-01-04 21:31:45.010709+08', '2021-01-04 21:31:45.010709+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', NULL, 'add bancho config!!!', '2021-02-14 12:35:34.687537+08', '2021-02-14 12:35:48.29814+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', NULL, 'modify', '2021-02-14 12:35:34.687537+08', '2021-02-14 12:35:48.29814+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.3.0', 'PurePeace', NULL, 'add beatmaps schema', '2021-03-16 04:17:59.07646+08', '2021-03-16 04:18:06.626569+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', '0.1.0', 'initial (wip)', '2020-12-15 01:16:37.785543+08', '2020-12-20 01:16:34.355013+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', 'modify', '2021-02-22 22:26:23.940376+08', '2021-02-22 22:26:36.959672+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.2', 'PurePeace', '0.3.0', NULL, '2021-03-16 04:18:30.749606+08', '2021-03-16 04:18:37.408118+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
@@ -1005,6 +1069,7 @@ INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, fr
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:00:00', 0, 0, -1, 0, '2021-02-22 22:20:46.863274+08');
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:00:00', 0, 0, -1, 0, '2021-02-22 22:20:46.861096+08');
 SELECT pg_catalog.setval('bancho.channels_id_seq', 5, true);
+SELECT pg_catalog.setval('beatmaps.peace_bid', 1, false);
 SELECT pg_catalog.setval('game_scores.catch_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.catch_rx_id_seq', 1, true);
 SELECT pg_catalog.setval('game_scores.mania_id_seq', 1, true);
@@ -1026,6 +1091,12 @@ ALTER TABLE ONLY bancho.channels
     ADD CONSTRAINT channels_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY bancho.config
     ADD CONSTRAINT config_pkey PRIMARY KEY (name);
+ALTER TABLE ONLY beatmaps.maps
+    ADD CONSTRAINT hash UNIQUE (md5);
+ALTER TABLE ONLY beatmaps.maps
+    ADD CONSTRAINT maps_pkey PRIMARY KEY (server, id);
+ALTER TABLE ONLY beatmaps.statistic
+    ADD CONSTRAINT statistic_pkey PRIMARY KEY (server, id);
 ALTER TABLE ONLY game_scores.catch_rx
     ADD CONSTRAINT catch_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.catch
@@ -1087,66 +1158,73 @@ ALTER TABLE ONLY user_records.login
     ADD CONSTRAINT login_records_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY user_records.rename
     ADD CONSTRAINT rename_records_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX beatmap_hash ON beatmaps.maps USING btree (md5);
+CREATE INDEX beatmap_id ON beatmaps.maps USING btree (id);
 CREATE UNIQUE INDEX "User.name" ON "user".base USING btree (name, name_safe);
 CREATE INDEX user_address ON "user".address USING btree (user_id);
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON bancho.channels FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
-CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON bancho.config FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON bancho.channels FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON bancho.config FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_timestamp ON bancho.config IS 'auto update the update_time after update user info';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.catch IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.catch_rx IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.mania FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.mania FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.mania IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.std IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_ap FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_ap FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.std_ap IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.std_rx IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_scv2 FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_scv2 FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.std_scv2 IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.taiko IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko_rx FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.taiko_rx IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.catch FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.catch FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_stats.catch IS 'auto update the time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.mania FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.mania FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_stats.mania IS 'auto update the time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.std FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.std FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_stats.std IS 'auto update the time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.taiko FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.taiko FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_stats.taiko IS 'auto update the time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.db_versions FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.versions FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
-CREATE TRIGGER auto_insert_related AFTER INSERT ON "user".base FOR EACH ROW EXECUTE PROCEDURE "user".insert_related_on_base_insert();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.db_versions FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.versions FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER auto_insert_related AFTER INSERT ON "user".base FOR EACH ROW EXECUTE FUNCTION "user".insert_related_on_base_insert();
 COMMENT ON TRIGGER auto_insert_related ON "user".base IS 'auto insert into related table';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".statistic FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".statistic FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON "user".statistic IS 'auto update the timestamp';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".status FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".status FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON "user".status IS 'auto update time';
-CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON "user".base FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON "user".base FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_timestamp ON "user".base IS 'auto update the update_time after update user info';
-CREATE TRIGGER decrease_friend_count AFTER DELETE ON "user".friends FOR EACH ROW EXECUTE PROCEDURE "user".decrease_friend_count();
+CREATE TRIGGER decrease_friend_count AFTER DELETE ON "user".friends FOR EACH ROW EXECUTE FUNCTION "user".decrease_friend_count();
 COMMENT ON TRIGGER decrease_friend_count ON "user".friends IS 'update the statistic';
-CREATE TRIGGER decrease_note_count AFTER DELETE ON "user".notes FOR EACH ROW EXECUTE PROCEDURE "user".decrease_note_count();
+CREATE TRIGGER decrease_note_count AFTER DELETE ON "user".notes FOR EACH ROW EXECUTE FUNCTION "user".decrease_note_count();
 COMMENT ON TRIGGER decrease_note_count ON "user".notes IS 'update the statistic';
-CREATE TRIGGER increase_friend_count AFTER INSERT ON "user".friends FOR EACH ROW EXECUTE PROCEDURE "user".increase_friend_count();
+CREATE TRIGGER increase_friend_count AFTER INSERT ON "user".friends FOR EACH ROW EXECUTE FUNCTION "user".increase_friend_count();
 COMMENT ON TRIGGER increase_friend_count ON "user".friends IS 'update the statistic';
-CREATE TRIGGER increase_note_count AFTER INSERT ON "user".notes FOR EACH ROW EXECUTE PROCEDURE "user".increase_note_count();
+CREATE TRIGGER increase_note_count AFTER INSERT ON "user".notes FOR EACH ROW EXECUTE FUNCTION "user".increase_note_count();
 COMMENT ON TRIGGER increase_note_count ON "user".notes IS 'update the statistic';
-CREATE TRIGGER safe_user_info BEFORE INSERT OR UPDATE ON "user".base FOR EACH ROW EXECUTE PROCEDURE "user".safe_user_info();
+CREATE TRIGGER safe_user_info BEFORE INSERT OR UPDATE ON "user".base FOR EACH ROW EXECUTE FUNCTION "user".safe_user_info();
 COMMENT ON TRIGGER safe_user_info ON "user".base IS 'auto make the user info safety';
-CREATE TRIGGER update_time_auto BEFORE UPDATE ON "user".notes FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
+CREATE TRIGGER update_time_auto BEFORE UPDATE ON "user".notes FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER update_time_auto ON "user".notes IS 'auto update the update_time after update note info';
-CREATE TRIGGER "user.id" BEFORE UPDATE ON "user".settings FOR EACH ROW EXECUTE PROCEDURE public.update_timestamp();
-CREATE TRIGGER auto_login_duration BEFORE UPDATE ON user_records.login FOR EACH ROW EXECUTE PROCEDURE user_records.auto_online_duration();
+CREATE TRIGGER "user.id" BEFORE UPDATE ON "user".settings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER auto_login_duration BEFORE UPDATE ON user_records.login FOR EACH ROW EXECUTE FUNCTION user_records.auto_online_duration();
 COMMENT ON TRIGGER auto_login_duration ON user_records.login IS 'auto update the online duration';
-CREATE TRIGGER increase_login_count BEFORE INSERT ON user_records.login FOR EACH ROW EXECUTE PROCEDURE user_records.increase_login_count();
+CREATE TRIGGER increase_login_count BEFORE INSERT ON user_records.login FOR EACH ROW EXECUTE FUNCTION user_records.increase_login_count();
 COMMENT ON TRIGGER increase_login_count ON user_records.login IS 'auto update the statistic';
-CREATE TRIGGER increase_rename_count BEFORE INSERT ON user_records.rename FOR EACH ROW EXECUTE PROCEDURE user_records.increase_rename_count();
+CREATE TRIGGER increase_rename_count BEFORE INSERT ON user_records.rename FOR EACH ROW EXECUTE FUNCTION user_records.increase_rename_count();
 COMMENT ON TRIGGER increase_rename_count ON user_records.rename IS 'update user statistic';
+ALTER TABLE ONLY beatmaps.statistic
+    ADD CONSTRAINT beatmap FOREIGN KEY (server, id) REFERENCES beatmaps.maps(server, id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY beatmaps.statistic
+    ADD CONSTRAINT beatmap_hash FOREIGN KEY (md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_stats.catch
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_stats.mania
