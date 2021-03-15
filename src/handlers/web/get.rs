@@ -215,22 +215,24 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Parse query
     let mut data = parse_query!(ctx, GetScores, failed);
+
     // Update game mode with playmod list (rx / ap)
     data.game_mode.update_with_playmod(&data.play_mods.list);
+
     // Get login
     let player = get_login!(ctx, data, failed);
 
     // Try update user stats
-    let update_result = player
+    if let Some(user_stats_packet) = player
         .write()
         .await
         .update_mods(&data.game_mode, &data.play_mods)
-        .await;
-    if let Some(user_stats) = update_result {
+        .await
+    {
         ctx.player_sessions
             .read()
             .await
-            .enqueue_all(&user_stats)
+            .enqueue_all(&user_stats_packet)
             .await;
     }
 

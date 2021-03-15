@@ -47,6 +47,8 @@ fn init_debug(cfg: &mut ServiceConfig) {
     cfg.service(bancho_config_update);
     cfg.service(bancho_config_get);
     cfg.service(osu_api_test);
+    cfg.service(osu_api_reload);
+    cfg.service(osu_api_all);
 }
 
 /// Routes for default

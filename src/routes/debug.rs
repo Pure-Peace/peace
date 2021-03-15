@@ -1,4 +1,6 @@
-use crate::{database::Database, settings::bancho::BanchoConfig, types::ChannelList};
+use crate::{
+    database::Database, objects::OsuApi, settings::bancho::BanchoConfig, types::ChannelList,
+};
 use crate::{objects::PlayerSessions, utils};
 
 use actix_web::web::{Data, Path};
@@ -6,8 +8,6 @@ use actix_web::{get, HttpResponse, Responder};
 use async_std::sync::RwLock;
 use maxminddb::Reader;
 use memmap::Mmap;
-use reqwest::Client;
-use serde_json::json;
 
 use std::time::Instant;
 
@@ -227,42 +227,25 @@ pub async fn bancho_config_update(
 
 /// GET "/osu_api_test"
 #[get("/osu_api_test")]
-pub async fn osu_api_test(bancho_config: Data<RwLock<BanchoConfig>>) -> impl Responder {
-    const TEST_API: &'static str = "https://old.ppy.sh/api/get_beatmaps";
-    let bancho_config = bancho_config.read().await;
-    let api_key_count = bancho_config.osu_api_keys.len();
+pub async fn osu_api_test(osu_api: Data<RwLock<OsuApi>>) -> impl Responder {
+    let results = osu_api.write().await.test_all().await;
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(results)
+}
 
-    if api_key_count == 0 {
-        let err =
-            "Cannot find any osu! api key, please add it at [database -> bancho.config] first.";
-        error!("{}", err);
-        return HttpResponse::Forbidden().body(err);
-    }
+/// GET "/osu_api_all"
+#[get("/osu_api_all")]
+pub async fn osu_api_all(osu_api: Data<RwLock<OsuApi>>) -> impl Responder {
+    HttpResponse::Ok().body(format!("{:?}", osu_api.read().await))
+}
 
-    let client = Client::new();
-    let mut results = Vec::with_capacity(api_key_count);
 
-    for api_key in &bancho_config.osu_api_keys {
-        let start = std::time::Instant::now();
-        let response = client
-            .get(TEST_API)
-            .query(&[("k", api_key.as_str()), ("s", "1"), ("m", "0")])
-            .send()
-            .await;
-        let end = format!("{:?}", start.elapsed());
-        info!("osu! api test request with: {};", end);
-
-        let (status, err) = match response {
-            Ok(resp) => (resp.status() == 200, "".to_string()),
-            Err(err) => (false, err.to_string()),
-        };
-
-        results.push(json!({
-            "api_key": api_key,
-            "time_spent": end,
-            "status": status,
-            "error": err,
-        }));
-    }
-    HttpResponse::Ok().json(results)
+/// GET "/osu_api_reload"
+#[get("/osu_api_reload")]
+pub async fn osu_api_reload(osu_api: Data<RwLock<OsuApi>>) -> impl Responder {
+    let start = Instant::now();
+    osu_api.write().await.reload_clients().await;
+    let end = start.elapsed();
+    HttpResponse::Ok().body(format!("done in: {:?}", end))
 }

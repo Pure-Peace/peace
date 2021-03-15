@@ -36,6 +36,7 @@ enum-primitive-derive = "0.2.1"
 env_logger = "0.8.3"
 futures = "0.3.12"
 hashbrown = "0.9.1"
+json = "0.12.4"
 lazy_static = "1.4.0"
 log = "0.4.14"
 maxminddb = { version = "0.17.2", features = ["mmap"] }

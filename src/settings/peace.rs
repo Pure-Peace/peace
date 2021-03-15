@@ -18,7 +18,7 @@ use maxminddb;
 use prometheus::{opts, IntCounterVec};
 
 use crate::handlers::bancho;
-use crate::objects::{ChannelListBuilder, PlayerSessions};
+use crate::objects::{ChannelListBuilder, OsuApi, PlayerSessions};
 
 use super::{bancho::BanchoConfig, model::Settings};
 
@@ -126,6 +126,9 @@ pub async fn start_server(
     ));
     let bancho_config_cloned = bancho_config.clone();
 
+    // osu api client
+    let osu_api = Data::new(RwLock::new(OsuApi::new(&bancho_config).await));
+
     // Html renders
     let bancho_get_render = Data::new(RwLock::new(
         BanchoGet::new(bancho_config.clone().into_inner()).await,
@@ -209,6 +212,7 @@ pub async fn start_server(
             .app_data(geo_db_data.clone())
             .app_data(bancho_config_cloned.clone())
             .app_data(bancho_get_render.clone())
+            .app_data(osu_api.clone())
             .data(counter.clone())
             .data(database.clone())
             .configure(move |service_cfg| routes::peace::init(service_cfg, settings_cloned))
