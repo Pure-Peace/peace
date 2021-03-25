@@ -9,7 +9,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use crate::{constants, database::Database, packets};
 use crate::{
-    objects::{Player, PlayerAddress, PlayerSessions},
+    objects::{Player, PlayerAddress, PlayerInfo, PlayerSessions, PlayerSettings},
     packets::PacketBuilder,
     utils,
 };
@@ -299,6 +299,17 @@ pub async fn login(
         player_addresses.len()
     );
 
+    let player_info = match PlayerInfo::from_database(user_id, &database).await {
+        Some(player_info) => player_info,
+        None => {
+            error!(
+                "login failed, could not get PlayerInfo ({}); ip: {}; osu version: {}",
+                username, request_ip, osu_version
+            );
+            return Err(("invalid_credentials", None));
+        }
+    };
+
     // PlayerAddress handle
     let (address_id, similarity) = match player_addresses.len() {
         // If not any addresses matched, create it
@@ -427,10 +438,22 @@ pub async fn login(
         );
     }
 
+    let player_settings = match PlayerSettings::from_database(user_id, &database).await {
+        Some(player_settings) => player_settings,
+        None => {
+            error!(
+                "login failed, could not get PlayerSettings ({}); ip: {}; osu version: {}",
+                username, request_ip, osu_version
+            );
+            return Err(("invalid_credentials", None));
+        }
+    };
 
     // Create player object
-    let mut player = Player::from_base(
+    let mut player = Player::create(
         player_base,
+        player_info,
+        player_settings,
         client_info,
         request_ip.clone(),
         address_id,
@@ -438,7 +461,7 @@ pub async fn login(
     )
     .await;
 
-    // all players have in-game "supporter" 
+    // all players have in-game "supporter"
     // if config "all_players_have_supporter" is enabled
     if bancho_config.all_players_have_supporter {
         player.bancho_privileges |= BanchoPrivileges::Supporter as i32;

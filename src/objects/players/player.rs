@@ -1,6 +1,7 @@
 use maxminddb::Reader;
 use memmap::Mmap;
 
+use crate::objects::{PlayerInfo, PlayerSettings};
 use derivative::Derivative;
 use std::str::FromStr;
 
@@ -33,6 +34,8 @@ pub struct Player {
     pub osu_version: String,
     pub utc_offset: u8,
     pub geo_data: GeoData,
+    pub info: PlayerInfo,
+    pub settings: PlayerSettings,
     pub stats: Stats,
     pub stats_cache: HashMap<GameMode, Stats>,
     pub status: Status,
@@ -61,8 +64,10 @@ impl Player {
         format!("{:?}", self)
     }
 
-    pub async fn from_base(
+    pub async fn create(
         base: PlayerBase,
+        info: PlayerInfo,
+        settings: PlayerSettings,
         client_info: ClientInfo,
         ip: String,
         address_id: i32,
@@ -87,6 +92,8 @@ impl Player {
             osu_version: client_info.osu_version,
             utc_offset: client_info.utc_offset as u8,
             geo_data: GeoData::new(ip),
+            info,
+            settings,
             stats: Stats::new(),
             stats_cache: HashMap::with_capacity(4),
             status: Status::new(),
