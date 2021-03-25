@@ -1,3 +1,4 @@
+#![allow(unused_macros)]
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     time::Instant,
@@ -29,6 +30,51 @@ lazy_static! {
         ad: &[],
         hash_length: 32
     };
+}
+
+#[macro_export]
+macro_rules! set_with_db {
+    (
+        table=$table:expr;
+        schema=$schema:expr;
+        $(#[$meta:meta])*
+        $vis:vis struct $struct_name:ident {
+            $(
+                $(#[$field_meta:meta])*
+                $field_vis:vis $field_name:ident : $field_type:ty
+            ),*$(,)+
+        }
+    ) => {
+        $(#[$meta])*
+        $vis struct $struct_name{
+            $(
+                $(#[$field_meta:meta])*
+                $field_vis $field_name: $field_type,
+            )*
+        }
+        paste::paste! {
+            impl $struct_name {
+                $(
+                    pub async fn [<set_ $field_name _with_db>](&mut self, value: $field_type, database: &Database) -> bool {
+                        let query = concat!(r#"UPDATE "#, stringify!($table), r#"."#, stringify!($schema), r#" SET ""#, stringify!($field_name), r#"" = $1 WHERE "id" = $2"#);
+                        println!("{}", query);
+                        let res = match database.pg.execute(query, &[&value, &self.id]).await {
+                            Ok(_) => true,
+                            Err(err) => {
+                                warn!(
+                                    stringify!("Failed to set "$struct_name"."$field_name" to table "$table", err: ""{:?}"),
+                                    err
+                                );
+                                false
+                            }
+                        };
+                        self.$field_name = value;
+                        res
+                    }
+                )*
+            }
+        }
+    }
 }
 
 #[inline(always)]
