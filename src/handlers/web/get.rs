@@ -213,31 +213,50 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         password_hash: String,
     }
 
-    // Parse query
-    let mut data = parse_query!(ctx, GetScores, failed);
-
-    // Update game mode with playmod list (rx / ap)
-    data.game_mode.update_with_playmod(&data.play_mods.list);
-
-    // Get login
-    let player = get_login!(ctx, data, failed);
+    // Parse query and get login
+    let (data, player) = {
+        let mut data = parse_query!(ctx, GetScores, failed);
+        // Update game mode with playmod list (rx / ap)
+        data.game_mode.update_with_playmod(&data.play_mods.list);
+        let player = get_login!(ctx, data, failed);
+        (data, player)
+    };
 
     // Try update user stats
-    if let Some(user_stats_packet) = player
-        .write()
-        .await
-        .update_mods(&data.game_mode, &data.play_mods)
-        .await
     {
-        ctx.player_sessions
-            .read()
+        let user_stats_packet = player
+            .write()
             .await
-            .enqueue_all(&user_stats_packet)
+            .update_mods(&data.game_mode, &data.play_mods)
             .await;
+
+        if let Some(user_stats_packet) = user_stats_packet {
+            ctx.player_sessions
+                .read()
+                .await
+                .enqueue_all(&user_stats_packet)
+                .await;
+        }
+    }
+
+    // Hack detected
+    if data.a == 1 {
+        let mut player = player.write().await;
+        if !player.info.cheat {
+            // TODO: Decrease the player's credibility value? maby
+            player.info.cheat = true;
+            warn!("Hack warning: {}({}).", player.name, player.id);
+        }
+    }
+
+    // server is currently not allowed get scores
+    if ctx.bancho_config.read().await.all_beatmaps_not_submitted {
+        // TODO: send notification to this player once
+        return failed;
     }
 
     // TODO: pp scoreboard or not? get settings from player object
-
+    
     // TODO: get beatmap by
 
     // unimplemented("osu-osz2-getscores.php")
