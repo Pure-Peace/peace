@@ -196,11 +196,10 @@ impl Player {
         let mut bancho_priv = 0;
 
         if Privileges::Normal.enough(privileges) {
-            bancho_priv |= BanchoPrivileges::Player as i32
-        }
-
-        if Privileges::Supporter.enough(privileges) {
-            bancho_priv |= BanchoPrivileges::Supporter as i32
+            // all players have in-game "supporter".
+            // this enables stuff like osu!direct,
+            // multiplayer in cutting edge, etc.
+            bancho_priv |= BanchoPrivileges::Player as i32 | BanchoPrivileges::Supporter as i32
         }
 
         if Privileges::Mod.enough(privileges) {

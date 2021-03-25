@@ -19,7 +19,7 @@ use crate::{
 };
 
 use super::parser;
-use constants::{LoginFailed, Privileges};
+use constants::{BanchoPrivileges, LoginFailed, Privileges};
 use prometheus::IntCounterVec;
 use std::time::Instant;
 
@@ -427,6 +427,7 @@ pub async fn login(
         );
     }
 
+
     // Create player object
     let mut player = Player::from_base(
         player_base,
@@ -436,6 +437,12 @@ pub async fn login(
         similarity,
     )
     .await;
+
+    // all players have in-game "supporter" 
+    // if config "all_players_have_supporter" is enabled
+    if bancho_config.all_players_have_supporter {
+        player.bancho_privileges |= BanchoPrivileges::Supporter as i32;
+    }
 
     // Update some player info
     player.update_friends(database).await;
