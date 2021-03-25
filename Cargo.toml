@@ -7,14 +7,6 @@ license = "MIT"
 repository = "https://github.com/pure-peace/peace"
 default-run = "peace"
 
-[[bin]]
-name = "peace"
-path = "src/main.rs"
-
-[[bin]]
-name = "pp_server"
-path = "src/pp_server.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

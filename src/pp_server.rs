@@ -1,6 +1,6 @@
-use peace::constants::PEACE_PP_SERVER_BANNER;
-use peace::database::Database;
-use peace::settings::{model::Settings, pp_server::start_server};
+use crate::constants::PEACE_PP_SERVER_BANNER;
+use crate::database::Database;
+use crate::settings::{model::Settings, pp_server::start_server};
 
 use colored::Colorize;
 

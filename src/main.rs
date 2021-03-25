@@ -1,10 +1,31 @@
+#![allow(dead_code)]
+extern crate config;
+extern crate serde;
+extern crate derivative;
+
+#[macro_use]
+extern crate log;
+
+pub mod constants;
+pub mod database;
+pub mod events;
+pub mod handlers;
+pub mod objects;
+pub mod packets;
+pub mod renders;
+pub mod routes;
+pub mod settings;
+pub mod types;
+pub mod utils;
+
+
 use async_std::sync::RwLock;
 use colored::Colorize;
 
-use peace::constants::PEACE_BANNER;
-use peace::database::Database;
-use peace::objects::PlayerSessions;
-use peace::settings::{model::Settings, peace::start_server};
+use crate::constants::PEACE_BANNER;
+use crate::database::Database;
+use crate::objects::PlayerSessions;
+use crate::settings::{model::Settings, peace};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -22,5 +43,5 @@ async fn main() -> std::io::Result<()> {
     let player_sessions = RwLock::new(PlayerSessions::new(100, database.clone()));
 
     // Start peace server
-    start_server(cfg, settings, database, player_sessions).await
+    peace::start_server(cfg, settings, database, player_sessions).await
 }
