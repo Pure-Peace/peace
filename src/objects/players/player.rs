@@ -41,6 +41,7 @@ pub struct Player {
     pub channels: HashSet<String>,
     pub spectators: HashSet<i32>,
     pub spectating: Option<i32>,
+    pub hack_flag: bool,
     pub login_time: DateTime<Local>,
     pub login_record_id: i64,
     pub token: TokenString,
@@ -95,6 +96,7 @@ impl Player {
             channels: HashSet::new(),
             spectators: HashSet::new(),
             spectating: None,
+            hack_flag: false,
             login_time: now_time,
             login_record_id: -1,
             token: Uuid::new_v4().to_string(),
@@ -196,10 +198,11 @@ impl Player {
         let mut bancho_priv = 0;
 
         if Privileges::Normal.enough(privileges) {
-            // all players have in-game "supporter".
-            // this enables stuff like osu!direct,
-            // multiplayer in cutting edge, etc.
-            bancho_priv |= BanchoPrivileges::Player as i32 | BanchoPrivileges::Supporter as i32
+            bancho_priv |= BanchoPrivileges::Player as i32
+        }
+
+        if Privileges::Supporter.enough(privileges) {
+            bancho_priv |= BanchoPrivileges::Supporter as i32
         }
 
         if Privileges::Mod.enough(privileges) {
