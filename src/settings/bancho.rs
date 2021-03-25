@@ -79,6 +79,9 @@ pub struct BanchoConfig {
     pub login_disallowed_hardware_hashes: Vec<String>,
     pub login_disallowed_disk_hashes: Vec<String>,
     pub login_disallowed_adapters_hashes: Vec<String>,
+
+    pub all_beatmaps_not_submitted: bool,
+    pub all_players_have_supporter: bool,
 }
 
 impl BanchoConfig {
