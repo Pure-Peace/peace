@@ -259,13 +259,13 @@ impl Player {
     }
 
     #[inline(always)]
-    pub async fn hack_detected(&mut self, hack_id: i32, database: &Database) {
+    pub async fn hack_detected(&mut self, hack_id: i32, detect_from: &str, notification: Option<&str> ,database: &Database) {
         const BASE_KEY: &str = "hack_dectected";
-        let key = format!("{}_{}", BASE_KEY, hack_id);
+        let key = format!("{}_{}_from_{}", BASE_KEY, hack_id, detect_from);
 
         if self.flag_cache.contains_key(&key) {
-            debug!("Hack ({:?}) dected but already added: player {}({}), login_record_id: {}, credit: {}, cheat count: {}.",
-            hack_id, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat);
+            debug!("Hack ({:?}) dected from {} but already added: player {}({}), login_record_id: {}, credit: {}, cheat count: {}.",
+            hack_id, detect_from, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat);
             return;
         }
 
@@ -276,6 +276,7 @@ impl Player {
                 "#json#{}",
                 json!({
                     "hack_id": hack_id,
+                    "detect_from": detect_from,
                     "login_record_id": self.login_record_id,
                     "credit": self.info.credit
                 })
@@ -287,15 +288,22 @@ impl Player {
 
         self.flag_cache.insert(key, Some(hack_id.to_string()));
 
+        // Update info and sync with DB
         self.info
             .set_cheat_with_db(self.info.cheat + 1, database)
             .await;
         self.info
             .set_credit_with_db(self.info.credit - CHEAT_DETECTED_DECREASE_CREDIT, database)
             .await;
+
+        // If have, sent notification to player
+        if let Some(notification) = notification {
+            self.enqueue(packets::notification(notification)).await;
+        }
+
         warn!(
-            "Hack ({:?}) detected warning: player {}({}), login_record_id: {}, credit: {}, cheat: {}.",
-            hack_id, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat
+            "Hack ({:?}) detected warning from {}: player {}({}), login_record_id: {}, credit: {}, cheat: {}.",
+            hack_id, detect_from, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat
         );
     }
 

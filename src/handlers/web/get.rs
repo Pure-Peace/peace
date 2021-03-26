@@ -42,6 +42,16 @@ const HACK_DETECTED_NOTIFICATION: Option<&str> = Some(
 );
 
 #[inline(always)]
+pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
+    HttpResponse::Ok().body("")
+}
+
+#[inline(always)]
+pub async fn bancho_connect<'a>(ctx: &Context<'a>) -> HttpResponse {
+    HttpResponse::Ok().body("")
+}
+
+#[inline(always)]
 pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
     let done = HttpResponse::Ok().body("-3");
     /// Query Data
@@ -108,6 +118,11 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
     // TODO: may sent to discord hooks
 
     done
+}
+
+#[inline(always)]
+pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
+    HttpResponse::Ok().body("")
 }
 
 #[inline(always)]
@@ -299,8 +314,16 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     {
         let mut player = player.write().await;
         // Hack detected
-        if data.a >= 1 {
-            player.hack_detected(data.a, &ctx.database).await;
+        if data.a > 0 {
+            player
+                .hack_detected(
+                    data.a,
+                    "osz2_get_scores",
+                    HACK_DETECTED_NOTIFICATION,
+                    &ctx.database,
+                )
+                .await;
+            // TODO: may sent to discord hooks
         }
         // update and get packet
         let user_stats_packet = player.update_mods(&data.game_mode, &data.play_mods).await;
