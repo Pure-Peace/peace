@@ -911,9 +911,10 @@ COMMENT ON COLUMN "user".friends.remark IS 'friend remark, such as aka';
 COMMENT ON COLUMN "user".friends.create_time IS 'create timestamp, auto';
 CREATE TABLE "user".info (
     id integer NOT NULL,
+    credit integer DEFAULT 800 NOT NULL,
     is_bot boolean DEFAULT false NOT NULL,
-    cheat boolean DEFAULT false NOT NULL,
-    multiaccount boolean DEFAULT false NOT NULL,
+    cheat integer DEFAULT 0 NOT NULL,
+    multiaccount integer DEFAULT 0 NOT NULL,
     donor_start timestamp(6) with time zone,
     silence_start timestamp(6) with time zone,
     restrict_start timestamp(6) with time zone,
@@ -936,18 +937,19 @@ COMMENT ON COLUMN "user".info.is_bot IS 'is bot';
 CREATE TABLE "user".notes (
     id integer NOT NULL,
     user_id integer NOT NULL,
-    note text NOT NULL,
-    type integer DEFAULT 0 NOT NULL,
-    added_by integer,
+    content text NOT NULL,
+    data jsonb,
+    type character varying(64) DEFAULT 0 NOT NULL,
+    added_by character varying(32),
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 COMMENT ON TABLE "user".notes IS 'User’s notes, which may be rewards or warnings etc.';
 COMMENT ON COLUMN "user".notes.id IS 'note id, unique';
 COMMENT ON COLUMN "user".notes.user_id IS 'user_id, int 32';
-COMMENT ON COLUMN "user".notes.note IS 'note, string';
-COMMENT ON COLUMN "user".notes.type IS 'note type, 0: common, 1: reward, 2: warn, 3: punish, 4: multiple accounts, 5: cheats, 6: not important';
-COMMENT ON COLUMN "user".notes.added_by IS 'added by who, user_id or null';
+COMMENT ON COLUMN "user".notes.content IS 'note, string';
+COMMENT ON COLUMN "user".notes.type IS 'note type';
+COMMENT ON COLUMN "user".notes.added_by IS 'added by who';
 COMMENT ON COLUMN "user".notes.create_time IS 'note create time, auto create';
 COMMENT ON COLUMN "user".notes.update_time IS 'note last update time, auto create and update';
 CREATE SEQUENCE "user".notes_id_seq
@@ -1075,6 +1077,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.5.0', 'PurePeace', NULL, 'game_scores add fields performance_v3; modify performance fields type from float -> jsonb', '2021-03-25 22:40:45.95958+08', '2021-03-25 22:40:45.95958+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.5.1', 'PurePeace', NULL, 'user.status -> user.info, modify user.settings', '2021-03-25 23:29:29.129352+08', '2021-03-25 23:29:53.324655+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.0', 'PurePeace', NULL, 'add auto insert triggers for user info, settings', '2021-03-26 00:39:55.096726+08', '2021-03-26 00:40:06.3158+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.1', 'PurePeace', NULL, 'modify user.info, user.notes', '2021-03-26 17:47:27.434628+08', '2021-03-26 17:47:27.434628+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1083,12 +1086,13 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.0', 'PurePeace', '0.5.0', '++', '2021-03-25 22:41:35.435096+08', '2021-03-25 23:30:13.073988+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.1', 'PurePeace', '0.5.1', '++', '2021-03-25 23:30:21.258548+08', '2021-03-25 23:30:21.258548+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.2', 'PurePeace', '0.6.0', '++', '2021-03-26 00:40:19.70588+08', '2021-03-26 00:40:27.59701+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.3', 'PurePeace', '0.6.1', '++', '2021-03-26 17:47:36.935998+08', '2021-03-26 17:47:36.935998+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
-INSERT INTO "user".info (id, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (6, false, false, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 00:38:53.110564+08');
-INSERT INTO "user".info (id, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (5, false, false, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 00:38:53.115553+08');
-INSERT INTO "user".info (id, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (1, false, false, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 00:38:53.116908+08');
+INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (1, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.00705+08');
+INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (5, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.72318+08');
+INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (6, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:48.001861+08');
 INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, update_time) VALUES (6, 0, 'en', true, false, '2021-03-26 00:38:53.110564+08');
 INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, update_time) VALUES (5, 0, 'en', true, false, '2021-03-26 00:38:53.115553+08');
 INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, update_time) VALUES (1, 0, 'en', true, false, '2021-03-26 00:38:53.116908+08');
@@ -1275,8 +1279,6 @@ COMMENT ON CONSTRAINT "User.id" ON "user".statistic IS 'user''s unique id';
 ALTER TABLE ONLY "user".beatmap_collections
     ADD CONSTRAINT "User.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id" ON "user".beatmap_collections IS 'user_id';
-ALTER TABLE ONLY "user".notes
-    ADD CONSTRAINT "User.id (added_by)" FOREIGN KEY (added_by) REFERENCES "user".base(id) ON UPDATE CASCADE;
 ALTER TABLE ONLY "user".friends
     ADD CONSTRAINT "User.id (friend)" FOREIGN KEY (friend_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id (friend)" ON "user".friends IS 'user_id (friend)';

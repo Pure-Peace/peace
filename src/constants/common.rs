@@ -1,5 +1,5 @@
-pub const DB_VERSION: &str = "0.6.0";
-pub const PEACE_VERSION: &str = "0.3.2";
+pub const DB_VERSION: &str = "0.6.1";
+pub const PEACE_VERSION: &str = "0.3.3";
 pub const PEACE_BANNER: &str = r#"
 
    .-.                            
