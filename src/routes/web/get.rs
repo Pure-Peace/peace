@@ -38,10 +38,8 @@ pub async fn handler(
     let handle_start = std::time::Instant::now();
     let handle_path = path.replace(".php", "");
     let resp = match handle_path.as_str() {
-        /* "check-updates" => {}
-        "bancho_connect" => {}
-        "lastfm" => {}
-        "osu-rate" => {} */
+        "lastfm" => get::lastfm(&ctx()).await,
+        "osu-rate" => get::osu_rate(&ctx()).await,
         "osu-addfavourite" => get::osu_add_favourite(&ctx()).await,
         /*"osu-markasread" => {}*/
         "osu-getreplay" => get::osu_get_replay(&ctx()).await,

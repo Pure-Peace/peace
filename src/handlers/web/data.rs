@@ -1,25 +1,5 @@
 use super::depends::*;
 
-/// Query Data
-///
-/// GET /web/lastfm.php
-///
-/// ```
-/// Lastfm {
-///     b: String = beatmap ban,
-///     action: String,
-///     us: String = username,
-///     ha: String = password hash,
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct Lastfm {
-    pub b: String,
-    pub action: String,
-    pub us: String,
-    pub ha: String,
-}
 
 /// Query Data
 ///

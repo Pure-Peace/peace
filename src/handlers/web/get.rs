@@ -37,6 +37,79 @@ macro_rules! parse_query {
     };
 }
 
+const HACK_DETECTED_NOTIFICATION: Option<&str> = Some(
+    "Warning: Please do not cheat. It makes no sense. If you do, you will most likely be banned.",
+);
+
+#[inline(always)]
+pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
+    let done = HttpResponse::Ok().body("-3");
+    /// Query Data
+    ///
+    /// GET /web/lastfm.php
+    ///
+    /// ```
+    /// Lastfm {
+    ///     b: String = beatmap ban,
+    ///     action: String,
+    ///     us: String = username,
+    ///     ha: String = password hash,
+    /// }
+    ///
+    /// ```
+    #[derive(Debug, Deserialize)]
+    pub struct Lastfm {
+        #[serde(rename = "b")]
+        beatmap_ban: String,
+        action: String,
+        #[serde(rename = "us")]
+        username: String,
+        #[serde(rename = "ha")]
+        password_hash: String,
+    }
+
+    let data = parse_query!(ctx, Lastfm, done);
+    warn!("lastfm: {:?}", data);
+
+    // Have not client flags
+    if !data.beatmap_ban.starts_with('a') {
+        return done;
+    }
+
+    // Try get value
+    let beatmap_ban = data.beatmap_ban.get(1..);
+    if beatmap_ban.is_none() {
+        return done;
+    }
+
+    // Try parse value
+    let beatmap_ban = beatmap_ban.unwrap().parse::<i32>();
+    if beatmap_ban.is_err() {
+        return done;
+    }
+    let beatmap_ban = beatmap_ban.unwrap();
+
+    let player = get_login!(ctx, data, done);
+    let mut player = player.write().await;
+    warn!(
+        "lastfm detected hack {} by player {}({})",
+        beatmap_ban, player.name, player.id
+    );
+
+    // Detected
+    player
+        .hack_detected(
+            beatmap_ban,
+            "lastfm",
+            HACK_DETECTED_NOTIFICATION,
+            &ctx.database,
+        )
+        .await;
+    // TODO: may sent to discord hooks
+
+    done
+}
+
 #[inline(always)]
 pub async fn osu_get_replay<'a>(ctx: &Context<'a>) -> HttpResponse {
     const REPLAY_PATH: &'static str = ".data/replays";
