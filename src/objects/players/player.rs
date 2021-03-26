@@ -229,6 +229,29 @@ impl Player {
         self.last_active_time = Local::now();
     }
 
+    #[inline(always)]
+    pub async fn add_notes(
+        &self,
+        content: &String,
+        note_type: Option<&str>,
+        data: Option<&str>,
+        added_by: Option<&str>,
+        database: &Database,
+    ) -> bool {
+        match database.pg.execute(
+            r#"INSERT INTO "user"."notes" ("id","content","data","type","added_by") VALUES ($1, $2, $3, $4, $5)"#, 
+            &[&self.id, content, &data, &note_type, &added_by]).await {
+            Ok(_) => true,
+            Err(err) => {
+                error!(
+                    "failed to add notes {}({:?}) for player {}({}), err: {:?}; data: {:?}",
+                    content, note_type, self.name, self.id, err, data
+                );
+                false
+            }
+        }
+    }
+
     pub async fn update_friends(&mut self, database: &Data<Database>) {
         match database
             .pg
