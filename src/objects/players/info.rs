@@ -11,9 +11,10 @@ set_with_db! {
     #[derive(Clone, Debug, PostgresMapper)]
     pub struct PlayerInfo {
         pub id: i32,
+        pub credit: i32,
         pub is_bot: bool,
-        pub cheat: bool,
-        pub multiaccount: bool,
+        pub cheat: i32,
+        pub multiaccount: i32,
         pub donor_start: Option<DateTime<Utc>>,
         pub silence_start: Option<DateTime<Utc>>,
         pub restrict_start: Option<DateTime<Utc>>,
@@ -64,10 +65,6 @@ impl PlayerInfo {
         Some(result.unwrap())
     }
 
-    /*     pub async fn set_with_db(&mut self, field: &str, value: , database: &Database) -> Result<()> {
-
-       }
-    */
     #[inline(always)]
     /// Update player info from database
     pub async fn update(&mut self, database: &Database) -> bool {

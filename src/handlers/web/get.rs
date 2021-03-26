@@ -224,28 +224,22 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Try update user stats
     {
-        let user_stats_packet = player
-            .write()
-            .await
-            .update_mods(&data.game_mode, &data.play_mods)
-            .await;
+        let mut player = player.write().await;
+        // Hack detected
+        if data.a >= 1 {
+            player.hack_detected(data.a, &ctx.database).await;
+        }
+        // update and get packet
+        let user_stats_packet = player.update_mods(&data.game_mode, &data.play_mods).await;
+        drop(player);
 
+        // send it
         if let Some(user_stats_packet) = user_stats_packet {
             ctx.player_sessions
                 .read()
                 .await
                 .enqueue_all(&user_stats_packet)
                 .await;
-        }
-    }
-
-    // Hack detected
-    if data.a == 1 {
-        let mut player = player.write().await;
-        if !player.info.cheat {
-            // TODO: Decrease the player's credibility value? maby
-            player.info.cheat = true;
-            warn!("Hack warning: {}({}).", player.name, player.id);
         }
     }
 
@@ -256,7 +250,6 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     }
 
     // TODO: pp scoreboard or not? get settings from player object
-    
     // TODO: get beatmap by
 
     // unimplemented("osu-osz2-getscores.php")

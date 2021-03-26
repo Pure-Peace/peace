@@ -14,6 +14,8 @@ use crate::{
 
 use super::{depends::*, PlayMods};
 
+const CHEAT_DETECTED_DECREASE_CREDIT: i32 = 200;
+
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Player {
@@ -40,6 +42,7 @@ pub struct Player {
     pub stats_cache: HashMap<GameMode, Stats>,
     pub status: Status,
     pub away_message: String,
+    pub flag_cache: HashMap<String, Option<String>>,
     pub queue: Mutex<Queue<PacketData>>,
     pub channels: HashSet<String>,
     pub spectators: HashSet<i32>,
@@ -98,6 +101,7 @@ impl Player {
             stats_cache: HashMap::with_capacity(4),
             status: Status::new(),
             away_message: String::new(),
+            flag_cache: HashMap::new(),
             queue: Mutex::new(Queue::new()),
             channels: HashSet::new(),
             spectators: HashSet::new(),
@@ -250,6 +254,34 @@ impl Player {
                 false
             }
         }
+    }
+
+    #[inline(always)]
+    pub async fn hack_detected(&mut self, hack_id: i32, database: &Database) {
+        const BASE_KEY: &str = "hack_dectected";
+        let key = format!("{}_{}", BASE_KEY, hack_id);
+
+        if self.flag_cache.contains_key(&key) {
+            debug!("Hack ({:?}) dected but already added: player {}({}), login_record_id: {}, credit: {}, cheat: {}.",
+            hack_id, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat);
+            return;
+        }
+
+        self.add_notes(&key, Some(BASE_KEY), None, Some("peace"), database)
+            .await;
+
+        self.flag_cache.insert(key, Some(hack_id.to_string()));
+
+        self.info
+            .set_cheat_with_db(self.info.cheat + 1, database)
+            .await;
+        self.info
+            .set_credit_with_db(self.info.credit - CHEAT_DETECTED_DECREASE_CREDIT, database)
+            .await;
+        warn!(
+            "Hack ({:?}) detected warning: player {}({}), login_record_id: {}, credit: {}, cheat: {}.",
+            hack_id, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat
+        );
     }
 
     pub async fn update_friends(&mut self, database: &Data<Database>) {
