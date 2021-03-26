@@ -43,7 +43,109 @@ const HACK_DETECTED_NOTIFICATION: Option<&str> = Some(
 
 #[inline(always)]
 pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
-    HttpResponse::Ok().body("")
+    let default = HttpResponse::Ok().body("[]");
+    const ACTION_VALID: &[&str; 3] = &["check", "path", "error"];
+    const STREAM_VALID: &[&str; 4] = &["cuttingedge", "stable40", "beta40", "stable"];
+    lazy_static::lazy_static! {
+        static ref REQ_CLIENT: reqwest::Client = reqwest::Client::new();
+    }
+    /// Query Data
+    ///
+    /// GET /web/check-updates.php
+    ///
+    /// ```
+    /// CheckUpdates {
+    ///     action: String = [check, path, error],
+    ///     stream: String = [cuttingedge, stable40, beta40, stable],
+    ///     time: String = timeStamp,
+    /// }
+    ///
+    /// ```
+    #[derive(Debug, Deserialize)]
+    struct CheckUpdates {
+        action: String,
+        stream: String,
+    }
+
+    // Read config
+    let (update_enabled, update_expires) = {
+        let temp = ctx.bancho_config.read().await;
+        (temp.client_update_enabled, temp.client_update_expires)
+    };
+
+    // Check should we update?
+    if !update_enabled {
+        return default;
+    }
+
+    let data = parse_query!(ctx, CheckUpdates, default);
+
+    // Validation check
+    if !ACTION_VALID.contains(&data.action.as_str())
+        || !STREAM_VALID.contains(&data.stream.as_str())
+    {
+        return default;
+    }
+    let query = format!("action={}&stream={}", data.action, data.stream);
+
+    // Try get from redis
+    if let Ok(result) = ctx.database.redis.get::<String, _>(&query).await {
+        debug!(
+            "check_updates: cache hitted, query: {}, result: {};",
+            query, result
+        );
+        return HttpResponse::Ok().body(result);
+    };
+
+    // Try get from osu! web
+    let resp = REQ_CLIENT
+        .get(&("https://old.ppy.sh/web/check-updates.php?".to_string() + &query))
+        .send()
+        .await;
+
+    if let Err(err) = resp {
+        warn!(
+            "(1) failed to request osu! check-updates with query: {}, err: {:?}",
+            query, err
+        );
+        return default;
+    };
+
+    let resp = resp.unwrap();
+    if resp.status() != 200 {
+        warn!(
+            "(2) failed to request osu! check-updates with query: {}, err: {:?}",
+            query,
+            resp.text().await
+        );
+        return default;
+    }
+
+    let resp = resp.text().await;
+    if let Err(err) = resp {
+        warn!(
+            "(3) failed to request osu! check-updates with query: {}, err: {:?}",
+            query, err
+        );
+        return default;
+    }
+
+    // Store to redis
+    let resp = resp.unwrap();
+    let mut cmd = ctx.database.redis.cmd("SET");
+    if let Err(err) = ctx
+        .database
+        .redis
+        .execute_cmd(&cmd.arg(resp.clone()).arg("EX").arg(update_expires))
+        .await
+    {
+        warn!(
+            "failed store check-updates result: {}, err: {:?}",
+            resp, err
+        );
+    }
+
+    HttpResponse::Ok().body(resp)
 }
 
 #[inline(always)]

@@ -1,25 +1,5 @@
 use super::depends::*;
 
-
-/// Query Data
-///
-/// GET /web/check-updates.php
-///
-/// ```
-/// CheckUpdates {
-///     action: String = [check, path, error],
-///     stream: String = [cuttingedge, stable40, beta40, stable],
-///     time: String = timeStamp,
-/// }
-///
-/// ```
-#[derive(Debug, Deserialize)]
-pub struct CheckUpdates {
-    pub action: String,
-    pub stream: String,
-    pub time: String,
-}
-
 /// Query Data
 ///
 /// GET /web/bancho_connect.php
