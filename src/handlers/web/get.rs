@@ -91,8 +91,8 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     // Try get from redis
     if let Ok(result) = ctx.database.redis.get::<String, _>(&query).await {
         debug!(
-            "check_updates: cache hitted, query: {}, result: {};",
-            query, result
+            "check_updates: cache hitted, query: {}, result: {:?};",
+            query, result.get(1..30)
         );
         return HttpResponse::Ok().body(result);
     };
@@ -131,17 +131,17 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     }
 
     // Store to redis
-    let resp = resp.unwrap();
+    let resp: String = resp.unwrap();
     let mut cmd = ctx.database.redis.cmd("SET");
     if let Err(err) = ctx
         .database
         .redis
-        .execute_cmd(&cmd.arg(resp.clone()).arg("EX").arg(update_expires))
+        .execute_cmd(&cmd.arg(query).arg(resp.clone()).arg("EX").arg(update_expires))
         .await
     {
         warn!(
-            "failed store check-updates result: {}, err: {:?}",
-            resp, err
+            "failed store check-updates result: {:?}, err: {:?}",
+            resp.get(1..30), err
         );
     }
 
