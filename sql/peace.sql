@@ -938,7 +938,7 @@ CREATE TABLE "user".notes (
     id integer NOT NULL,
     user_id integer NOT NULL,
     content text NOT NULL,
-    data jsonb,
+    data text,
     type character varying(64) DEFAULT 0 NOT NULL,
     added_by character varying(32),
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,

@@ -3,6 +3,7 @@ use memmap::Mmap;
 
 use crate::objects::{PlayerInfo, PlayerSettings};
 use derivative::Derivative;
+use serde_json::json;
 use std::str::FromStr;
 
 use crate::{
@@ -243,7 +244,7 @@ impl Player {
         database: &Database,
     ) -> bool {
         match database.pg.execute(
-            r#"INSERT INTO "user"."notes" ("id","content","data","type","added_by") VALUES ($1, $2, $3, $4, $5)"#, 
+            r#"INSERT INTO "user"."notes" ("user_id","content","data","type","added_by") VALUES ($1, $2, $3, $4, $5)"#, 
             &[&self.id, content, &data, &note_type, &added_by]).await {
             Ok(_) => true,
             Err(err) => {
@@ -262,13 +263,26 @@ impl Player {
         let key = format!("{}_{}", BASE_KEY, hack_id);
 
         if self.flag_cache.contains_key(&key) {
-            debug!("Hack ({:?}) dected but already added: player {}({}), login_record_id: {}, credit: {}, cheat: {}.",
+            debug!("Hack ({:?}) dected but already added: player {}({}), login_record_id: {}, credit: {}, cheat count: {}.",
             hack_id, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat);
             return;
         }
 
-        self.add_notes(&key, Some(BASE_KEY), None, Some("peace"), database)
-            .await;
+        self.add_notes(
+            &key,
+            Some(BASE_KEY),
+            Some(&format!(
+                "#json#{}",
+                json!({
+                    "hack_id": hack_id,
+                    "login_record_id": self.login_record_id,
+                    "credit": self.info.credit
+                })
+            )),
+            Some("peace"),
+            database,
+        )
+        .await;
 
         self.flag_cache.insert(key, Some(hack_id.to_string()));
 
