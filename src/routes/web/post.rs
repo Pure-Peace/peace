@@ -2,7 +2,7 @@ use super::depends::*;
 use crate::utils;
 use crate::{
     handlers::web::post,
-    objects::{Caches, OsuApi},
+    objects::{Bancho, Caches},
 };
 
 const BASE: &'static str = "Bancho /web [POST]";
@@ -10,13 +10,11 @@ const BASE: &'static str = "Bancho /web [POST]";
 pub async fn handler(
     req: HttpRequest,
     path: Path<String>,
+    bancho: Data<Bancho>,
     counter: Data<IntCounterVec>,
-    player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
-    bancho_config: Data<RwLock<BanchoConfig>>,
     geo_db: Data<Option<Reader<Mmap>>>,
     global_cache: Data<Caches>,
-    osu_api: Data<RwLock<OsuApi>>,
     payload: Multipart,
 ) -> HttpResponse {
     counter.with_label_values(&["/web", "post", "start"]).inc();
@@ -31,12 +29,12 @@ pub async fn handler(
     let ctx = || Context {
         req: &req,
         counter: &counter,
-        player_sessions: &player_sessions,
+        player_sessions: &bancho.player_sessions,
         database: &database,
-        bancho_config: &bancho_config,
+        bancho_config: &bancho.config,
         geo_db: &geo_db,
         global_cache: &global_cache,
-        osu_api: &osu_api,
+        osu_api: &bancho.osu_api,
     };
 
     debug!("{} Path: <{}>; ip: {}", BASE, path, request_ip);
