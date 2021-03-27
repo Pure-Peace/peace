@@ -13,10 +13,11 @@ pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) {
         return;
     }
 
-    ctx.player_sessions
+    ctx.bancho
+        .player_sessions
         .write()
         .await
-        .logout(ctx.token, Some(ctx.channel_list))
+        .logout(ctx.token, Some(&ctx.bancho.channel_list))
         .await;
 }
 
@@ -56,7 +57,7 @@ pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) {
 pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) {
     let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>().await;
 
-    let player_sessions = ctx.player_sessions.read().await;
+    let player_sessions = ctx.bancho.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
 
     if let Some(ctx_player) = &ctx.weak_player.upgrade() {
@@ -86,7 +87,7 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) {
     let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_list.len());
 
     {
-        let player_sessions = ctx.player_sessions.read().await;
+        let player_sessions = ctx.bancho.player_sessions.read().await;
         let id_session_map = player_sessions.id_session_map.read().await;
 
         for player_id in &id_list {
@@ -113,7 +114,7 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) {
 // Send other's presence to self (all)
 pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) {
     let user_presence_packets = {
-        let player_sessions = ctx.player_sessions.read().await;
+        let player_sessions = ctx.bancho.player_sessions.read().await;
         let id_session_map = player_sessions.id_session_map.read().await;
 
         let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_session_map.len());
@@ -214,7 +215,8 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
     };
 
     // Send it to all players
-    ctx.player_sessions
+    ctx.bancho
+        .player_sessions
         .read()
         .await
         .enqueue_all(&player_stats_packets_new)
@@ -235,6 +237,7 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) {
 
     // Add an offline player is not allowed
     if !ctx
+        .bancho
         .player_sessions
         .read()
         .await
@@ -313,7 +316,14 @@ pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) {
     }
 
     // Remove a offline player is not allowed
-    if !ctx.player_sessions.read().await.id_is_exists(&target).await {
+    if !ctx
+        .bancho
+        .player_sessions
+        .read()
+        .await
+        .id_is_exists(&target)
+        .await
+    {
         info!(
             "Player {}({}) tries to remove a offline {} from friends.",
             ctx.name, ctx.id, target
@@ -395,13 +405,13 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) {
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
-    match ctx.channel_list.read().await.get(&channel_name) {
+    match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
             if channel.auto_close {
                 channel.join(ctx.id, None).await;
             } else {
                 channel
-                    .join(ctx.id, Some(&*ctx.player_sessions.read().await))
+                    .join(ctx.id, Some(&*ctx.bancho.player_sessions.read().await))
                     .await;
             };
         }
@@ -420,13 +430,13 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) {
 /// Player leave from a channel
 pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = PayloadReader::new(ctx.payload).read_string().await;
-    match ctx.channel_list.read().await.get(&channel_name) {
+    match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
             if channel.auto_close {
                 channel.leave(ctx.id, None).await;
             } else {
                 channel
-                    .leave(ctx.id, Some(&*ctx.player_sessions.read().await))
+                    .leave(ctx.id, Some(&*ctx.bancho.player_sessions.read().await))
                     .await;
             };
         }
@@ -445,7 +455,7 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) {
     let mut message = PayloadReader::new(ctx.payload).read_message().await;
 
-    let bancho_config = ctx.bancho_config.read().await;
+    let bancho_config = ctx.bancho.config.read().await;
 
     // Limit the length of message content
     if let Some(max_len) = bancho_config.message_length_max {

@@ -130,7 +130,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
         return;
     }
 
-    let player_sessions = ctx.player_sessions.read().await;
+    let player_sessions = ctx.bancho.player_sessions.read().await;
 
     // Specate an offline player is not allowed!
     let target_name = match player_sessions.id_session_map.read().await.get(&target_id) {
@@ -151,7 +151,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
             &ctx.name,
             ctx.weak_player,
             ctx.data.spectating.unwrap(),
-            &ctx.channel_list,
+            &ctx.bancho.channel_list,
             &player_sessions,
         )
         .await;
@@ -161,14 +161,14 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
     let channel_name = create_specate_channel_if_not_exists(
         target_id,
         target_name,
-        &ctx.channel_list,
-        &ctx.player_sessions,
+        &ctx.bancho.channel_list,
+        &ctx.bancho.player_sessions,
     )
     .await;
 
     // Try join channel
     {
-        let channel_list = ctx.channel_list.read().await;
+        let channel_list = ctx.bancho.channel_list.read().await;
         let channel = channel_list.get(&channel_name);
         if channel.is_none() {
             warn!("Failed to create spectate channel {}.", channel_name);
@@ -223,14 +223,14 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
         return;
     }
 
-    let player_sessions = ctx.player_sessions.read().await;
+    let player_sessions = ctx.bancho.player_sessions.read().await;
 
     try_remove_spectator(
         ctx.id,
         &ctx.name,
         ctx.weak_player,
         ctx.data.spectating.unwrap(),
-        &ctx.channel_list,
+        &ctx.bancho.channel_list,
         &player_sessions,
     )
     .await;
@@ -242,7 +242,7 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
     let data = packets::spectator_frames(ctx.payload.to_vec());
 
-    let player_sessions = ctx.player_sessions.read().await;
+    let player_sessions = ctx.bancho.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
 
     // Send the spectate frames to our ctx's spectators
@@ -264,7 +264,7 @@ pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
     let data = packets::spectator_cant_spectate(ctx.id);
     let spectate_target_id = ctx.data.spectating.unwrap();
 
-    let player_sessions = ctx.player_sessions.read().await;
+    let player_sessions = ctx.bancho.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
 
     // Send packet

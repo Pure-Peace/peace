@@ -27,7 +27,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
         x => x.to_string(),
     };
 
-    let bancho_config = ctx.bancho_config.read().await;
+    let bancho_config = ctx.bancho.config.read().await;
 
     // Limit the length of message content
     if let Some(max_len) = bancho_config.message_length_max {
@@ -43,7 +43,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
     }
 
     // Check channel
-    let channel_list = ctx.channel_list.read().await;
+    let channel_list = ctx.bancho.channel_list.read().await;
     match channel_list.get(&channel_name) {
         Some(channel) => {
             // TODO: check player's priv?
@@ -83,7 +83,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
         return;
     }
 
-    let bancho_config = ctx.bancho_config.read().await;
+    let bancho_config = ctx.bancho.config.read().await;
 
     // Limit the length of message content
     if let Some(max_len) = bancho_config.message_length_max {
@@ -98,7 +98,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
         message.content = message.content.replace(i, "**")
     }
 
-    let player_sessions = ctx.player_sessions.read().await;
+    let player_sessions = ctx.bancho.player_sessions.read().await;
     let name_session_map = player_sessions.name_session_map.read().await;
 
     // Find target player
