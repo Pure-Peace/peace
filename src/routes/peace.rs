@@ -5,7 +5,7 @@ use crate::settings::model::Settings;
 
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes
-pub fn init(cfg: &mut ServiceConfig, settings: Settings) {
+pub fn init(cfg: &mut ServiceConfig, settings: &Settings) {
     init_default(cfg);
     cfg.service(init_bancho());
     cfg.service(init_web());
@@ -49,6 +49,7 @@ fn init_debug(cfg: &mut ServiceConfig) {
     cfg.service(osu_api_test);
     cfg.service(osu_api_reload);
     cfg.service(osu_api_all);
+    cfg.service(server_stop);
 }
 
 /// Routes for default

@@ -3,9 +3,12 @@ use crate::{
 };
 use crate::{objects::PlayerSessions, utils};
 
-use actix_web::web::{Data, Path};
+use actix_web::{
+    dev::Server,
+    web::{Data, Path},
+};
 use actix_web::{get, HttpResponse, Responder};
-use async_std::sync::RwLock;
+use async_std::{channel::Sender, sync::RwLock};
 use maxminddb::Reader;
 use memmap::Mmap;
 
@@ -240,12 +243,20 @@ pub async fn osu_api_all(osu_api: Data<RwLock<OsuApi>>) -> impl Responder {
     HttpResponse::Ok().body(format!("{:?}", osu_api.read().await))
 }
 
-
 /// GET "/osu_api_reload"
 #[get("/osu_api_reload")]
 pub async fn osu_api_reload(osu_api: Data<RwLock<OsuApi>>) -> impl Responder {
     let start = Instant::now();
     osu_api.write().await.reload_clients().await;
+    let end = start.elapsed();
+    HttpResponse::Ok().body(format!("done in: {:?}", end))
+}
+
+/// GET "/server_stop"
+#[get("/server_stop")]
+pub async fn server_stop(sender: Data<Sender<Option<Server>>>) -> impl Responder {
+    let start = Instant::now();
+    let _ = sender.send(None).await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("done in: {:?}", end))
 }
