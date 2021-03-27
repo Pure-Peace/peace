@@ -19,7 +19,7 @@ mod depends {
     pub use serde::Deserialize;
     pub use serde_json::json;
 
-    use crate::objects::{Caches, OsuApi};
+    use crate::objects::{Bancho, Caches};
     pub use crate::{
         constants::{id, LoginFailed},
         database::Database,
@@ -34,12 +34,10 @@ mod depends {
     pub struct Context<'a> {
         pub req: &'a HttpRequest,
         pub counter: &'a Data<IntCounterVec>,
-        pub player_sessions: &'a Data<RwLock<PlayerSessions>>,
+        pub bancho: &'a Data<Bancho>,
         pub database: &'a Data<Database>,
-        pub bancho_config: &'a Data<RwLock<BanchoConfig>>,
         pub geo_db: &'a Data<Option<Reader<Mmap>>>,
         pub global_cache: &'a Data<Caches>,
-        pub osu_api: &'a Data<RwLock<OsuApi>>,
     }
 }
 

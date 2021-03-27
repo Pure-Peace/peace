@@ -29,12 +29,10 @@ pub async fn handler(
     let ctx = || Context {
         req: &req,
         counter: &counter,
-        player_sessions: &bancho.player_sessions,
+        bancho: &bancho,
         database: &database,
-        bancho_config: &bancho.config,
         geo_db: &geo_db,
         global_cache: &global_cache,
-        osu_api: &bancho.osu_api,
     };
 
     debug!("{} Path: <{}>; ip: {}", BASE, path, request_ip);

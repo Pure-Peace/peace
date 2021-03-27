@@ -14,6 +14,7 @@ use crate::{
 macro_rules! get_login {
     ($ctx:ident, $data:ident, $failed:ident) => {
         match $ctx
+            .bancho
             .player_sessions
             .read()
             .await
@@ -75,7 +76,7 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Read config
     let (update_enabled, update_expires) = {
-        let temp = ctx.bancho_config.read().await;
+        let temp = ctx.bancho.config.read().await;
         (temp.client_update_enabled, temp.client_update_expires)
     };
 
@@ -449,7 +450,7 @@ pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///
 /// String Array
 pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
-    if let Some(background_images) = &ctx.bancho_config.read().await.seasonal_backgrounds {
+    if let Some(background_images) = &ctx.bancho.config.read().await.seasonal_backgrounds {
         return HttpResponse::Ok().json(background_images);
     };
 
@@ -496,7 +497,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         (data, player)
     };
 
-    let all_beatmaps_not_submitted = ctx.bancho_config.read().await.all_beatmaps_not_submitted;
+    let all_beatmaps_not_submitted = ctx.bancho.config.read().await.all_beatmaps_not_submitted;
 
     // Player handlers
     // try update user stats, get some info, etc.
@@ -537,7 +538,8 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
         // send it stats
         if let Some(user_stats_packet) = user_stats_packet {
-            ctx.player_sessions
+            ctx.bancho
+                .player_sessions
                 .read()
                 .await
                 .enqueue_all(&user_stats_packet)
