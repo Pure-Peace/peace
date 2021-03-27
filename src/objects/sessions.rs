@@ -39,7 +39,7 @@ impl fmt::Debug for PlayerSessions {
 impl PlayerSessions {
     /// Create new PlayerSessions with a default capacity
     /// Automatically expand when capacity is exceeded
-    pub fn new(capacity: usize, database: Database) -> Self {
+    pub fn new(capacity: usize, database: &Database) -> Self {
         PlayerSessions {
             /// Key: token, Value: Arc<RwLock<Player>>
             token_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
@@ -48,7 +48,7 @@ impl PlayerSessions {
             /// Key: Player.name Value: Arc<RwLock<Player>>
             name_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
             player_count: AtomicI32::new(0),
-            database,
+            database: database.clone(),
         }
     }
 

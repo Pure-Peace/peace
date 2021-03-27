@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
     constants::{GameMode, ScoreboardType},
-    objects::PlayMods,
+    objects::{Beatmaps, PlayMods},
     packets,
     routes::web::Context,
     utils,
@@ -17,7 +17,11 @@ macro_rules! get_login {
             .player_sessions
             .read()
             .await
-            .get_login_by_name(&$data.username, &$data.password_hash, &$ctx.argon2_cache)
+            .get_login_by_name(
+                &$data.username,
+                &$data.password_hash,
+                &$ctx.global_cache.argon2_cache,
+            )
             .await
         {
             Some(p) => p,
@@ -39,7 +43,7 @@ macro_rules! parse_query {
     };
 }
 
-const HACK_DETECTED_NOTIFICATION: Option<&str> = Some(
+const HAX_DETECTED_NOTIFICATION: Option<&str> = Some(
     "Warning: Please do not cheat. It makes no sense. If you do, you will most likely be banned.",
 );
 
@@ -222,7 +226,7 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
         .hack_detected(
             beatmap_ban,
             "lastfm",
-            HACK_DETECTED_NOTIFICATION,
+            HAX_DETECTED_NOTIFICATION,
             &ctx.database,
         )
         .await;
@@ -505,7 +509,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
                 .hack_detected(
                     data.a,
                     "osz2_get_scores",
-                    HACK_DETECTED_NOTIFICATION,
+                    HAX_DETECTED_NOTIFICATION,
                     &ctx.database,
                 )
                 .await;
@@ -548,8 +552,23 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         return failed;
     }
 
-    // TODO: pp scoreboard or not? get settings from player object
-    // TODO: get beatmap by
+    // Try get beatmap from cache
+    let beatmap =
+        Beatmaps::get_from_cache(&data.beatmap_hash, &ctx.global_cache.beatmaps_cache).await;
+
+    // If not get from cache, get from database
+    let beatmap = match beatmap {
+        Some(b) => Some(b),
+        None => Beatmaps::get_from_database(&data.beatmap_hash, true, &ctx.database).await,
+    };
+
+    // Still None? Try get from osu! api and cache it
+    /* let beatmap = match beatmap {
+        Some(b) => Some(b),
+        None => {
+
+        }
+    }; */
 
     // unimplemented("osu-osz2-getscores.php")
     return failed;

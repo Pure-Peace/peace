@@ -15,7 +15,7 @@ impl ChannelListBuilder {
     /// Initial channels list from database
     pub async fn new(
         database: &Database,
-        player_sessions: Arc<RwLock<PlayerSessions>>,
+        player_sessions: &Arc<RwLock<PlayerSessions>>,
     ) -> ChannelList {
         info!(
             "{}",
