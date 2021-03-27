@@ -2,9 +2,46 @@ use serde::Deserialize;
 
 use colored::Colorize;
 use config::{Config, ConfigError, /* Environment, */ File};
+use dotenv::dotenv;
+use serde::Deserialize;
 use std::env;
 
-use dotenv::dotenv;
+use crate::constants::PEACE_BANNER;
+
+#[derive(Debug, Clone)]
+pub struct LocalConfig {
+    pub env: String,
+    pub cfg: Config,
+    pub data: Settings,
+}
+
+impl LocalConfig {
+    pub fn new() -> Result<Self, ConfigError> {
+        // Print banner
+        println!("{}", PEACE_BANNER.green());
+
+        // Start loading
+        println!("{}", "> Start loading settings!".green());
+        let env = Settings::load_env();
+        let cfg = Settings::load_settings(env.clone())?;
+        let data: Settings = cfg.clone().try_into()?;
+        println!(
+            "{}",
+            "> Configuration loaded successfully!\n".bold().green()
+        );
+        // You can deserialize (and thus freeze) the entire configuration as cfg.try_into()
+        Ok(LocalConfig { env, cfg, data })
+    }
+
+    pub fn init() -> Self {
+        let cfg = LocalConfig::new();
+        if let Err(err) = cfg {
+            error!("Settings failed to initialize, please check the local configuration file! Error: {:?}", err);
+            panic!();
+        }
+        cfg.unwrap()
+    }
+}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
