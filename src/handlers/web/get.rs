@@ -92,7 +92,8 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     if let Ok(result) = ctx.database.redis.get::<String, _>(&query).await {
         debug!(
             "check_updates: cache hitted, query: {}, result: {:?};",
-            query, result.get(1..30)
+            query,
+            result.get(1..30)
         );
         return HttpResponse::Ok().body(result);
     };
@@ -136,12 +137,18 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     if let Err(err) = ctx
         .database
         .redis
-        .execute_cmd(&cmd.arg(query).arg(resp.clone()).arg("EX").arg(update_expires))
+        .execute_cmd(
+            &cmd.arg(query)
+                .arg(resp.clone())
+                .arg("EX")
+                .arg(update_expires),
+        )
         .await
     {
         warn!(
             "failed store check-updates result: {:?}, err: {:?}",
-            resp.get(1..30), err
+            resp.get(1..30),
+            err
         );
     }
 
@@ -149,7 +156,7 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
 }
 
 #[inline(always)]
-pub async fn bancho_connect<'a>(ctx: &Context<'a>) -> HttpResponse {
+pub async fn bancho_connect<'a>(_ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body("")
 }
 
@@ -224,7 +231,86 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
 
 #[inline(always)]
 pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
-    HttpResponse::Ok().body("")
+    let failed = HttpResponse::Unauthorized().body("");
+    #[derive(Debug, Deserialize)]
+    struct Rating {
+        #[serde(rename = "u")]
+        username: String,
+        #[serde(rename = "p")]
+        password_hash: String,
+        #[serde(rename = "c")]
+        beatmap_md5: String,
+        #[serde(rename = "v")]
+        vote: Option<i32>,
+    }
+    let data = parse_query!(ctx, Rating, failed);
+    let player = get_login!(ctx, data, failed);
+
+    let (player_id, player_name) = {
+        let p = player.read().await;
+        (p.id, p.name.clone())
+    };
+
+    // Data is include vote?
+    if let Some(vote) = data.vote {
+        // limit rating value in 1 - 10
+        let vote = match vote {
+            v if v > 10 => 10,
+            v if v < 1 => 1,
+            v => v,
+        };
+
+        // Add it
+        match ctx
+            .database
+            .pg
+            .execute(
+                r#"INSERT INTO "beatmaps"."ratings" 
+                        ("user_id","map_md5","rating") 
+                    VALUES ($1, $2, $3)"#,
+                &[&player_id, &player_name, &vote],
+            )
+            .await
+        {
+            Ok(_) => {
+                debug!(
+                    "player {}({}) voted beatmap {}, rating: {}",
+                    player_name, player_id, data.beatmap_md5, vote
+                );
+            }
+            Err(err) => {
+                error!(
+                    "failed to add ratings to beatmap {} by player {}({}), voted: {}; err: {:?}",
+                    data.beatmap_md5, player_name, player_id, vote, err
+                );
+            }
+        };
+    } else {
+        // Check is already voted?
+        if let Err(_) = ctx
+            .database
+            .pg
+            .query_first(
+                r#"SELECT 1 FROM "beatmaps"."ratings" WHERE "user_id" = $1 AND "map_md5" = $2"#,
+                &[&player_id, &data.beatmap_md5],
+            )
+            .await
+        {
+            // Not already, player can vote.
+            return HttpResponse::Ok().body("ok")
+        };
+    }
+
+    match ctx.database.pg.query_first(r#"SELECT AVG("rating")::float4 FROM "beatmaps"."ratings" WHERE "map_md5" = $1"#, &[&data.beatmap_md5]).await {
+        Ok(value) => {
+            let value: f32 = value.get(0);
+            HttpResponse::Ok().body(format!("alreadyvoted\n{}", value))
+        },
+        Err(err) => {
+            error!("failed to get avg rating from beatmap {}, err: {:?}", data.beatmap_md5, err);
+            HttpResponse::Ok().body("alreadyvoted\n10")
+        }
+    }
 }
 
 #[inline(always)]
