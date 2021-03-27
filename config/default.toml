@@ -1,12 +1,4 @@
 [server]
 host = "127.0.0.1"
 port = 8080
-
-[pp_server]
-host = "127.0.0.1"
-port = 8086
-
-[bancho.session_recycle]
-# Each interval check once, 
-# auto recycle deactive player sessions
-check_interval = 60
+pp_server_addr = "127.0.0.1:8082"
