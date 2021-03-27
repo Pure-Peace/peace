@@ -405,7 +405,7 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
     );
     let row = database.pg.query_first(&query, &[param]).await;
     if let Err(err) = row {
-        error!(
+        debug!(
             "Failed to get {} {:?} from database table {}.{} error: {:?}",
             type_name, param, table, schema, err
         );
