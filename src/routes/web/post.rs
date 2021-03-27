@@ -1,6 +1,9 @@
 use super::depends::*;
-use crate::handlers::web::post;
 use crate::utils;
+use crate::{
+    handlers::web::post,
+    objects::{Caches, OsuApi},
+};
 
 const BASE: &'static str = "Bancho /web [POST]";
 
@@ -11,8 +14,9 @@ pub async fn handler(
     player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
     bancho_config: Data<RwLock<BanchoConfig>>,
-    argon2_cache: Data<RwLock<Argon2Cache>>,
     geo_db: Data<Option<Reader<Mmap>>>,
+    global_cache: Data<Caches>,
+    osu_api: Data<RwLock<OsuApi>>,
     payload: Multipart,
 ) -> HttpResponse {
     counter.with_label_values(&["/web", "post", "start"]).inc();
@@ -30,8 +34,9 @@ pub async fn handler(
         player_sessions: &player_sessions,
         database: &database,
         bancho_config: &bancho_config,
-        argon2_cache: &argon2_cache,
         geo_db: &geo_db,
+        global_cache: &global_cache,
+        osu_api: &osu_api,
     };
 
     debug!("{} Path: <{}>; ip: {}", BASE, path, request_ip);

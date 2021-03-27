@@ -14,7 +14,7 @@ pub async fn handler(
     player_sessions: Data<RwLock<PlayerSessions>>,
     channel_list: Data<RwLock<ChannelList>>,
     bancho_config: Data<RwLock<BanchoConfig>>,
-    argon2_cache: Data<RwLock<Argon2Cache>>,
+    global_cache: Data<Caches>,
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
@@ -99,7 +99,7 @@ pub async fn handler(
         &player_sessions,
         &channel_list,
         &bancho_config,
-        &argon2_cache,
+        &global_cache,
         &counter,
         &geo_db,
     )

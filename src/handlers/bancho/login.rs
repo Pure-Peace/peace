@@ -7,7 +7,7 @@ use log::warn;
 use regex::Regex;
 use std::net::{IpAddr, Ipv4Addr};
 
-use crate::{constants, database::Database, packets};
+use crate::{constants, database::Database, objects::Caches, packets};
 use crate::{
     objects::{Player, PlayerAddress, PlayerInfo, PlayerSessions, PlayerSettings},
     packets::PacketBuilder,
@@ -15,7 +15,7 @@ use crate::{
 };
 use crate::{
     settings::bancho::BanchoConfig,
-    types::{Argon2Cache, ChannelList, PacketData},
+    types::{ChannelList, PacketData},
 };
 
 use super::parser;
@@ -42,7 +42,7 @@ pub async fn login(
     player_sessions: &Data<RwLock<PlayerSessions>>,
     channel_list: &Data<RwLock<ChannelList>>,
     bancho_config: &BanchoConfig,
-    argon2_cache: &Data<RwLock<Argon2Cache>>,
+    global_cache: &Data<Caches>,
     counter: &Data<IntCounterVec>,
     geo_db: &Data<Option<Reader<Mmap>>>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
@@ -217,7 +217,7 @@ pub async fn login(
     }
 
     // Checking password
-    if !utils::checking_password(&player_base, &password_hash, &argon2_cache).await {
+    if !utils::checking_password(&player_base, &password_hash, &global_cache.argon2_cache).await {
         warn!(
             "login refused, failed to checking password; username: {}, ip: {}",
             username, request_ip

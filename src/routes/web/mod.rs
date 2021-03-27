@@ -19,6 +19,7 @@ mod depends {
     pub use serde::Deserialize;
     pub use serde_json::json;
 
+    use crate::objects::{Caches, OsuApi};
     pub use crate::{
         constants::{id, LoginFailed},
         database::Database,
@@ -36,8 +37,9 @@ mod depends {
         pub player_sessions: &'a Data<RwLock<PlayerSessions>>,
         pub database: &'a Data<Database>,
         pub bancho_config: &'a Data<RwLock<BanchoConfig>>,
-        pub argon2_cache: &'a Data<RwLock<Argon2Cache>>,
         pub geo_db: &'a Data<Option<Reader<Mmap>>>,
+        pub global_cache: &'a Data<Caches>,
+        pub osu_api: &'a Data<RwLock<OsuApi>>,
     }
 }
 

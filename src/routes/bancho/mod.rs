@@ -27,7 +27,7 @@ mod depends {
         constants::{id, LoginFailed},
         database::Database,
         handlers::bancho,
-        objects::{Player, PlayerData, PlayerSessions},
+        objects::{Caches, Player, PlayerData, PlayerSessions},
         packets::{PacketBuilder, PacketReader},
         renders::BanchoGet,
         settings::bancho::BanchoConfig,

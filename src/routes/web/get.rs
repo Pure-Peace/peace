@@ -1,6 +1,6 @@
 use super::depends::*;
-use crate::handlers::web::get;
-use crate::utils;
+use crate::{handlers::web::get, objects::Caches};
+use crate::{objects::OsuApi, utils};
 
 const BASE: &'static str = "Bancho /web [GET]";
 
@@ -11,8 +11,9 @@ pub async fn handler(
     player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
     bancho_config: Data<RwLock<BanchoConfig>>,
-    argon2_cache: Data<RwLock<Argon2Cache>>,
     geo_db: Data<Option<Reader<Mmap>>>,
+    global_cache: Data<Caches>,
+    osu_api: Data<RwLock<OsuApi>>,
 ) -> HttpResponse {
     counter.with_label_values(&["/web", "get", "start"]).inc();
     // Get real request ip
@@ -29,8 +30,9 @@ pub async fn handler(
         player_sessions: &player_sessions,
         database: &database,
         bancho_config: &bancho_config,
-        argon2_cache: &argon2_cache,
         geo_db: &geo_db,
+        global_cache: &global_cache,
+        osu_api: &osu_api,
     };
 
     debug!("{} Path: <{}>; ip: {}", BASE, path, request_ip);
@@ -38,7 +40,7 @@ pub async fn handler(
     let handle_start = std::time::Instant::now();
     let handle_path = path.replace(".php", "");
     let resp = match handle_path.as_str() {
-         "check-updates" => get::check_updates(&ctx()).await,
+        "check-updates" => get::check_updates(&ctx()).await,
         /*"bancho_connect" => {}*/
         "lastfm" => get::lastfm(&ctx()).await,
         "osu-rate" => get::osu_rate(&ctx()).await,

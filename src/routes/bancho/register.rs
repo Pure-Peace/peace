@@ -17,7 +17,7 @@ pub async fn osu_register(
     database: Data<Database>,
     geo_db: Data<Option<Reader<Mmap>>>,
     bancho_config: Data<RwLock<BanchoConfig>>,
-    argon2_cache: Data<RwLock<Argon2Cache>>,
+    global_cache: Data<Caches>,
 ) -> HttpResponse {
     lazy_static::lazy_static! {
         static ref USERNAME_REGEX: Regex = Regex::new(r"(^[0-9a-zA-Z_ \[\]-]{2,16}$)|(^[\w \[\]-]{1,10}$)").unwrap();
@@ -208,7 +208,8 @@ pub async fn osu_register(
         let password_argon2 = utils::argon2_encode(password_md5.as_bytes()).await;
 
         // Cache it
-        argon2_cache
+        global_cache
+            .argon2_cache
             .write()
             .await
             .insert(password_argon2.clone(), password_md5);
