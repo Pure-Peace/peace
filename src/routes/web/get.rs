@@ -1,6 +1,9 @@
 use super::depends::*;
-use crate::{handlers::web::get, objects::Caches};
-use crate::{objects::OsuApi, utils};
+use crate::utils;
+use crate::{
+    handlers::web::get,
+    objects::{Bancho, Caches},
+};
 
 const BASE: &'static str = "Bancho /web [GET]";
 
@@ -8,12 +11,10 @@ pub async fn handler(
     req: HttpRequest,
     path: Path<String>,
     counter: Data<IntCounterVec>,
-    player_sessions: Data<RwLock<PlayerSessions>>,
     database: Data<Database>,
-    bancho_config: Data<RwLock<BanchoConfig>>,
     geo_db: Data<Option<Reader<Mmap>>>,
     global_cache: Data<Caches>,
-    osu_api: Data<RwLock<OsuApi>>,
+    bancho: Data<Bancho>,
 ) -> HttpResponse {
     counter.with_label_values(&["/web", "get", "start"]).inc();
     // Get real request ip
@@ -27,12 +28,12 @@ pub async fn handler(
     let ctx = || Context {
         req: &req,
         counter: &counter,
-        player_sessions: &player_sessions,
+        player_sessions: &bancho.player_sessions,
         database: &database,
-        bancho_config: &bancho_config,
+        bancho_config: &bancho.config,
         geo_db: &geo_db,
         global_cache: &global_cache,
-        osu_api: &osu_api,
+        osu_api: &bancho.osu_api,
     };
 
     debug!("{} Path: <{}>; ip: {}", BASE, path, request_ip);
