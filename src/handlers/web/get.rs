@@ -6,7 +6,9 @@ use serde::Deserialize;
 use crate::{
     constants::{GameMode, ScoreboardType},
     objects::PlayMods,
+    packets,
     routes::web::Context,
+    utils,
 };
 
 macro_rules! get_login {
@@ -303,7 +305,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     let value = utils::get_beatmap_rating(&data.beatmap_md5, &ctx.database).await;
     HttpResponse::Ok().body(format!("alreadyvoted\n{}", value.unwrap_or(10.0)))
-        }
+}
 
 #[inline(always)]
 pub async fn osu_get_replay<'a>(ctx: &Context<'a>) -> HttpResponse {
@@ -490,9 +492,13 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         (data, player)
     };
 
-    // Try update user stats
-    {
+    let all_beatmaps_not_submitted = ctx.bancho_config.read().await.all_beatmaps_not_submitted;
+
+    // Player handlers
+    // try update user stats, get some info, etc.
+    let pp_board = {
         let mut player = player.write().await;
+
         // Hack detected
         if data.a > 0 {
             player
@@ -505,11 +511,27 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
                 .await;
             // TODO: may sent to discord hooks
         }
+
         // update and get packet
         let user_stats_packet = player.update_mods(&data.game_mode, &data.play_mods).await;
+
+        // if all_beatmaps_not_submitted handle
+        if all_beatmaps_not_submitted {
+            const KEY: &str = "all_beatmaps_not_submitted";
+            // send notification to this player once
+            if !player.flag_cache.contains_key(KEY) {
+                player.enqueue(packets::notification("Server is currently not allowed get scores, all beatmaps will display not submitted, please wait for a moment, thanks.")).await;
+                player.flag_cache.insert(KEY.to_owned(), None);
+            }
+        }
+
+        // Get some info
+        let pp_board = player.settings.pp_scoreboard;
+
+        // Release player write lock
         drop(player);
 
-        // send it
+        // send it stats
         if let Some(user_stats_packet) = user_stats_packet {
             ctx.player_sessions
                 .read()
@@ -517,11 +539,12 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
                 .enqueue_all(&user_stats_packet)
                 .await;
         }
-    }
+
+        pp_board
+    };
 
     // server is currently not allowed get scores
-    if ctx.bancho_config.read().await.all_beatmaps_not_submitted {
-        // TODO: send notification to this player once
+    if all_beatmaps_not_submitted {
         return failed;
     }
 
