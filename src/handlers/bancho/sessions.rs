@@ -1,20 +1,16 @@
 use actix_web::web::Data;
-use async_std::sync::RwLock;
 
-use crate::{objects::PlayerSessions, types::ChannelList};
+use crate::objects::Bancho;
 
 /// Auto PlayerSession recycle
 #[inline(always)]
-pub async fn recycle_handler(
-    player_sessions: &Data<RwLock<PlayerSessions>>,
-    channel_list: &Data<RwLock<ChannelList>>,
-    session_timeout: i64,
-) {
+pub async fn recycle_handler(bancho: &Data<Bancho>) {
     // Get deactive user token list
-    let deactive_list = player_sessions
+    let deactive_list = bancho
+        .player_sessions
         .read()
         .await
-        .deactive_token_list(session_timeout)
+        .deactive_token_list(bancho.config.read().await.timeout_player_session)
         .await;
 
     // If not any deactive sessions, just break
@@ -22,22 +18,23 @@ pub async fn recycle_handler(
         return;
     };
 
-    info!("session recycle task start!");
+    debug!("recycle_handler: session recycle task start!");
     let mut recycled_sessions_count = 0;
     let session_recycle_start = std::time::Instant::now();
 
     // Logout each deactive sessions
     for token in deactive_list {
-        match player_sessions
+        match bancho
+            .player_sessions
             .write()
             .await
-            .logout(&token, Some(channel_list))
+            .logout(&token, Some(&bancho.channel_list))
             .await
         {
             Some(player) => {
                 recycled_sessions_count += 1;
-                warn!(
-                    "deactive user {}({}) has been recycled.",
+                debug!(
+                    "recycle_handler: deactive user {}({}) has been recycled.",
                     player.name, player.id
                 )
             }
@@ -47,8 +44,8 @@ pub async fn recycle_handler(
 
     // Done
     let session_recycle_end = session_recycle_start.elapsed();
-    info!(
-        "session recycle task complete in {:.2?}; recycled: {} sessions.",
+    debug!(
+        "recycle_handler: session recycle task complete in {:.2?}; recycled: {} sessions.",
         session_recycle_end, recycled_sessions_count
     );
 }

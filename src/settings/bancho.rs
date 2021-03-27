@@ -83,6 +83,7 @@ pub struct BanchoConfig {
     pub all_players_have_supporter: bool,
     pub client_update_enabled: bool,
     pub client_update_expires: i32,
+    pub session_recycle_check_interval: i32,
 }
 
 impl BanchoConfig {
