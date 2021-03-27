@@ -360,3 +360,26 @@ pub async fn checking_password(
 
     verify_result
 }
+
+/// Get beatmap ratings from database
+#[inline(always)]
+pub async fn get_beatmap_rating(beatmap_md5: &String, database: &Database) -> Option<f32> {
+    match database
+        .pg
+        .query_first(
+            r#"SELECT AVG("rating")::float4 FROM "beatmaps"."ratings" WHERE "map_md5" = $1"#,
+            &[beatmap_md5],
+        )
+        .await
+    {
+        Ok(value) => Some(value.get(0)),
+        Err(err) => {
+            error!(
+                "failed to get avg rating from beatmap {}, err: {:?}",
+                beatmap_md5, err
+            );
+            None
+        }
+    }
+}
+

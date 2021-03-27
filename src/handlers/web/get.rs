@@ -297,21 +297,13 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
             .await
         {
             // Not already, player can vote.
-            return HttpResponse::Ok().body("ok")
+            return HttpResponse::Ok().body("ok");
         };
     }
 
-    match ctx.database.pg.query_first(r#"SELECT AVG("rating")::float4 FROM "beatmaps"."ratings" WHERE "map_md5" = $1"#, &[&data.beatmap_md5]).await {
-        Ok(value) => {
-            let value: f32 = value.get(0);
-            HttpResponse::Ok().body(format!("alreadyvoted\n{}", value))
-        },
-        Err(err) => {
-            error!("failed to get avg rating from beatmap {}, err: {:?}", data.beatmap_md5, err);
-            HttpResponse::Ok().body("alreadyvoted\n10")
+    let value = utils::get_beatmap_rating(&data.beatmap_md5, &ctx.database).await;
+    HttpResponse::Ok().body(format!("alreadyvoted\n{}", value.unwrap_or(10.0)))
         }
-    }
-}
 
 #[inline(always)]
 pub async fn osu_get_replay<'a>(ctx: &Context<'a>) -> HttpResponse {
