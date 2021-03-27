@@ -1,5 +1,3 @@
-use serde::Deserialize;
-
 use colored::Colorize;
 use config::{Config, ConfigError, /* Environment, */ File};
 use dotenv::dotenv;
@@ -53,24 +51,13 @@ pub struct Settings {
     pub env: String,
     pub debug: bool,
     pub server: Server,
-    pub pp_server: PPServer,
     pub geoip: Geoip,
     pub logger: Logger,
+    #[serde(rename = "prometheus")]
+    pub prom: Prometheus,
 }
 
 impl Settings {
-    pub fn new() -> Result<(Config, Settings), ConfigError> {
-        println!("{}", "> Start loading settings!".green());
-        let env = Settings::load_env();
-        let cfg = Settings::load_settings(env)?;
-        println!(
-            "{}",
-            "> Configuration loaded successfully!\n".bold().green()
-        );
-        // You can deserialize (and thus freeze) the entire configuration as cfg.try_into()
-        Ok((cfg.clone(), cfg.try_into()?))
-    }
-
     pub fn load_env() -> String {
         // Load .env
         dotenv().ok();
@@ -141,6 +128,7 @@ pub struct Logger {
     pub mode: LoggerMode,
     pub actix_log_format: String,
     pub exclude_endpoints: Vec<String>,
+    pub exclude_endpoints_regex: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
