@@ -10,18 +10,16 @@ pub async fn handler(
     body: Bytes,
     request_ip: String,
     osu_version: String,
+    bancho: Data<Bancho>,
     database: Data<Database>,
-    player_sessions: Data<RwLock<PlayerSessions>>,
-    channel_list: Data<RwLock<ChannelList>>,
-    bancho_config: Data<RwLock<BanchoConfig>>,
     global_cache: Data<Caches>,
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
-    let bancho_config = bancho_config.read().await.clone();
+    let bcfg = bancho.config.read().await.clone();
 
     // Login is currently disabled
-    if !bancho_config.login_enabled {
+    if !bcfg.login_enabled {
         return HttpResponse::Ok()
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
@@ -32,7 +30,7 @@ pub async fn handler(
     }
 
     // Blocked ip
-    if bancho_config.login_disallowed_ip.contains(&request_ip) {
+    if bcfg.login_disallowed_ip.contains(&request_ip) {
         return HttpResponse::Ok()
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
@@ -44,15 +42,16 @@ pub async fn handler(
     }
 
     // Online user limit check
-    if bancho_config.online_users_limit {
+    if bcfg.online_users_limit {
         // Get online players
-        let online_users = player_sessions
+        let online_users = bancho
+            .player_sessions
             .read()
             .await
             .player_count
             .load(Ordering::SeqCst);
 
-        if online_users >= bancho_config.online_users_max {
+        if online_users >= bcfg.online_users_max {
             return HttpResponse::Ok()
                 .set_header("cho-token", "login_refused")
                 .set_header("cho-protocol", "19")
@@ -66,8 +65,8 @@ pub async fn handler(
         };
     };
 
-    let expire_secs = bancho_config.login_retry_expire_seconds;
-    let max_failed_count = bancho_config.login_retry_max_count;
+    let expire_secs = bcfg.login_retry_expire_seconds;
+    let max_failed_count = bcfg.login_retry_max_count;
 
     let failed_key = format!("{}-bancho_login_failed", &request_ip);
     let failed_count = database.redis.get(&failed_key).await.unwrap_or(0);
@@ -96,9 +95,7 @@ pub async fn handler(
         &request_ip,
         osu_version,
         &database,
-        &player_sessions,
-        &channel_list,
-        &bancho_config,
+        &bancho,
         &global_cache,
         &counter,
         &geo_db,

@@ -4,10 +4,8 @@ use crate::{packets, utils};
 pub async fn handler(
     req: HttpRequest,
     body: Bytes,
-    player_sessions: Data<RwLock<PlayerSessions>>,
+    bancho: Data<Bancho>,
     database: Data<Database>,
-    channel_list: Data<RwLock<ChannelList>>,
-    bancho_config: Data<RwLock<BanchoConfig>>,
     global_cache: Data<Caches>,
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
@@ -26,7 +24,8 @@ pub async fn handler(
     };
 
     // Blocked ip
-    if bancho_config
+    if bancho
+        .config
         .read()
         .await
         .ip_blacklist
@@ -50,10 +49,8 @@ pub async fn handler(
             body,
             request_ip,
             osu_version,
+            bancho,
             database,
-            player_sessions,
-            channel_list,
-            bancho_config,
             global_cache,
             counter,
             geo_db,
@@ -74,7 +71,7 @@ pub async fn handler(
     };
 
     // Get player
-    let player_sessions_r = player_sessions.read().await;
+    let player_sessions_r = bancho.player_sessions.read().await;
     let (player_data, weak_player) = match player_sessions_r.token_map.read().await.get(&token) {
         Some(player) => (
             PlayerData::from(&*player.read().await),
@@ -107,10 +104,8 @@ pub async fn handler(
                 &token,
                 &player_data,
                 &weak_player,
-                &player_sessions,
+                &bancho,
                 &database,
-                &channel_list,
-                &bancho_config,
                 payload,
             )
             .await;

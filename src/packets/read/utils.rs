@@ -9,9 +9,7 @@ use num_traits::FromPrimitive;
 use crate::{
     constants::id,
     database::Database,
-    objects::{Player, PlayerData, PlayerSessions},
-    settings::bancho::BanchoConfig,
-    types::ChannelList,
+    objects::{Bancho, Player, PlayerData},
 };
 
 pub struct HandlerContext<'a> {
@@ -21,10 +19,8 @@ pub struct HandlerContext<'a> {
     pub name: &'a String,
     pub data: &'a PlayerData,
     pub weak_player: &'a Weak<RwLock<Player>>,
-    pub player_sessions: &'a Data<RwLock<PlayerSessions>>,
+    pub bancho: &'a Data<Bancho>,
     pub database: &'a Data<Database>,
-    pub channel_list: &'a Data<RwLock<ChannelList>>,
-    pub bancho_config: &'a Data<RwLock<BanchoConfig>>,
     pub payload: &'a [u8],
 }
 

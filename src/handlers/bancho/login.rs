@@ -2,20 +2,21 @@
 
 use actix_web::web::{Bytes, Data};
 use actix_web::HttpRequest;
-use async_std::sync::RwLock;
 use log::warn;
 use regex::Regex;
 use std::net::{IpAddr, Ipv4Addr};
 
-use crate::{constants, database::Database, objects::Caches, packets};
+use crate::types::PacketData;
 use crate::{
-    objects::{Player, PlayerAddress, PlayerInfo, PlayerSessions, PlayerSettings},
-    packets::PacketBuilder,
-    utils,
+    constants,
+    database::Database,
+    objects::{Bancho, Caches},
+    packets,
 };
 use crate::{
-    settings::bancho::BanchoConfig,
-    types::{ChannelList, PacketData},
+    objects::{Player, PlayerAddress, PlayerInfo, PlayerSettings},
+    packets::PacketBuilder,
+    utils,
 };
 
 use super::parser;
@@ -39,14 +40,13 @@ pub async fn login(
     request_ip: &String,
     osu_version: String,
     database: &Data<Database>,
-    player_sessions: &Data<RwLock<PlayerSessions>>,
-    channel_list: &Data<RwLock<ChannelList>>,
-    bancho_config: &BanchoConfig,
+    bancho: &Data<Bancho>,
     global_cache: &Data<Caches>,
     counter: &Data<IntCounterVec>,
     geo_db: &Data<Option<Reader<Mmap>>>,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
     let login_start = Instant::now();
+    let bcfg = bancho.config.read().await;
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
@@ -75,8 +75,8 @@ pub async fn login(
     );
 
     // Client check
-    if bancho_config.client_check && !bancho_config.client_whitelist.contains(&osu_version) {
-        if bancho_config.client_only_whitelist {
+    if bcfg.client_check && !bcfg.client_whitelist.contains(&osu_version) {
+        if bcfg.client_only_whitelist {
             warn!(
                 "login refused, not allowed osu version: {} username: {}, ip: {}",
                 osu_version, username, request_ip
@@ -102,7 +102,7 @@ pub async fn login(
         let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
 
         // Black list check
-        if bancho_config.client_blacklist.contains(&osu_version) {
+        if bcfg.client_blacklist.contains(&osu_version) {
             warn!(
                 "login refused, not allowed osu version: {}; username: {}, ip: {}",
                 osu_version, username, request_ip
@@ -114,7 +114,7 @@ pub async fn login(
         }
 
         // Max version check
-        if let Some(max_version) = &bancho_config.client_max_version {
+        if let Some(max_version) = &bcfg.client_max_version {
             if &version_captures > max_version {
                 warn!(
                     "login refused, over than max osu version: {}({} max); username: {}, ip: {}",
@@ -128,7 +128,7 @@ pub async fn login(
         }
 
         // Min version check
-        if let Some(min_version) = &bancho_config.client_min_version {
+        if let Some(min_version) = &bcfg.client_min_version {
             if &version_captures < min_version {
                 warn!(
                     "login refused, lower than min osu version: {}({} min); username: {}, ip: {}",
@@ -143,7 +143,7 @@ pub async fn login(
     }
 
     // Not allowed username
-    if bancho_config.login_disallowed_usernames.contains(&username) {
+    if bcfg.login_disallowed_usernames.contains(&username) {
         warn!(
             "login refused, not allowed username: {}; ip: {}",
             username, request_ip
@@ -153,7 +153,7 @@ pub async fn login(
 
     // Not allow hashes 1
     let hardware_hashes = client_hashes.adapters_hash.clone() + &client_hashes.disk_id;
-    if bancho_config
+    if bcfg
         .login_disallowed_hardware_hashes
         .contains(&format!("{:x}", md5::compute(&hardware_hashes)))
     {
@@ -165,7 +165,7 @@ pub async fn login(
     }
 
     // Not allow hashes 2
-    if bancho_config
+    if bcfg
         .login_disallowed_disk_hashes
         .contains(&client_hashes.disk_id)
     {
@@ -177,7 +177,7 @@ pub async fn login(
     }
 
     // Not allow hashes 3
-    if bancho_config
+    if bcfg
         .login_disallowed_adapters_hashes
         .contains(&client_hashes.adapters_hash)
     {
@@ -208,7 +208,7 @@ pub async fn login(
         username, user_id, select_base_duration
     );
     // Not allowed id
-    if bancho_config.login_disallowed_id.contains(&user_id) {
+    if bcfg.login_disallowed_id.contains(&user_id) {
         warn!(
             "login refused, not allowed user id: {}; username: {}, ip: {}",
             user_id, username, request_ip
@@ -241,14 +241,12 @@ pub async fn login(
     }
 
     // Maintenance mode
-    if bancho_config.maintenance_enabled && Privileges::Admin.not_enough(player_base.privileges) {
+    if bcfg.maintenance_enabled && Privileges::Admin.not_enough(player_base.privileges) {
         return Err((
             "maintenance",
             Some(
-                resp.add(packets::notification(
-                    &bancho_config.maintenance_notification,
-                ))
-                .add(packets::login_reply(LoginFailed::ServerError)),
+                resp.add(packets::notification(&bcfg.maintenance_notification))
+                    .add(packets::login_reply(LoginFailed::ServerError)),
             ),
         ));
     }
@@ -407,7 +405,7 @@ pub async fn login(
             }
 
             // TODO: ban muti account?
-            if !bancho_config.muti_accounts_allowed {}
+            if !bcfg.muti_accounts_allowed {}
 
             // Create new login record for exists address
             /*  */
@@ -463,7 +461,7 @@ pub async fn login(
 
     // all players have in-game "supporter"
     // if config "all_players_have_supporter" is enabled
-    if bancho_config.all_players_have_supporter {
+    if bcfg.all_players_have_supporter {
         player.bancho_privileges |= BanchoPrivileges::Supporter as i32;
     }
 
@@ -504,12 +502,12 @@ pub async fn login(
     .await;
 
     // Notifications
-    for n in &bancho_config.login_notifications {
+    for n in &bcfg.login_notifications {
         resp.add_ref(packets::notification(n));
     }
 
     // Menu icon
-    if let Some(menu_icon) = &bancho_config.menu_icon {
+    if let Some(menu_icon) = &bcfg.menu_icon {
         resp.add_ref(packets::main_menu_icon(menu_icon));
     };
 
@@ -517,7 +515,7 @@ pub async fn login(
     let player_priv = player.privileges;
 
     // Lock the PlayerSessions before we handle it
-    let mut player_sessions = player_sessions.write().await;
+    let mut player_sessions = bancho.player_sessions.write().await;
 
     // Check is the user_id already login,
     // if true, logout old session
@@ -525,7 +523,7 @@ pub async fn login(
         // TODO: send notification to old session first
         // Logout old session
         player_sessions
-            .logout_with_id(user_id, Some(&channel_list))
+            .logout_with_id(user_id, Some(&bancho.channel_list))
             .await;
         // Send notification to current session
         resp.add_ref(packets::notification(
@@ -546,7 +544,7 @@ pub async fn login(
     }
 
     // Join player into channel
-    for channel in channel_list.read().await.values() {
+    for channel in bancho.channel_list.read().await.values() {
         // Have not privileges to join the channel
         if (player_priv & channel.read_priv) <= 0 {
             continue;
