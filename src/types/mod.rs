@@ -4,7 +4,7 @@ use std::sync::Arc;
 use async_std::sync::RwLock;
 use hashbrown::HashMap;
 
-use crate::objects::{Channel, Player};
+use crate::objects::{Beatmaps, Channel, Player};
 
 pub type TestType = RwLock<i32>;
 pub type TokenString = String;
@@ -26,3 +26,6 @@ pub type Location = (Latitude, Longitude);
 
 pub type Argon2CryptedCipher = String;
 pub type Argon2Cache = HashMap<Argon2CryptedCipher, Password>;
+
+pub type BeatmapMd5 = String;
+pub type BeatmapsCache = HashMap<BeatmapMd5, Beatmaps>;
