@@ -112,13 +112,6 @@ impl Settings {
         let server: &[String; 2] = &[cfg.get("server.host")?, cfg.get("server.port")?];
         cfg.set("server.addr", format!("{}:{}", server[0], server[1]))?;
 
-        // Set the pp server addr
-        let pp_server: &[String; 2] = &[cfg.get("pp_server.host")?, cfg.get("pp_server.port")?];
-        cfg.set(
-            "pp_server.addr",
-            format!("{}:{}", pp_server[0], pp_server[1]),
-        )?;
-
         // Example: Add in settings from the environment (with a prefix of APP)
         // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
         // cfg.merge(Environment::with_prefix("app"))?;
@@ -131,12 +124,7 @@ impl Settings {
 pub struct Server {
     pub host: String,
     pub port: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct PPServer {
-    pub host: String,
-    pub port: String,
+    pub pp_server_addr: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
