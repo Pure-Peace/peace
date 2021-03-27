@@ -1,4 +1,5 @@
-use crate::{database::Database, utils};
+use crate::{database::Database, types::BeatmapsCache, utils};
+use async_std::sync::RwLock;
 use chrono::{DateTime, Local, Utc};
 use tokio_pg_mapper_derive::PostgresMapper;
 
@@ -7,39 +8,22 @@ macro_rules! fast_from_database {
         impl $typ {
             #[inline(always)]
             pub async fn from_database_by_id(beatmap_id: i32, database: &Database) -> Option<$typ> {
-                utils::struct_from_database(
-                    concat!("\"beatmaps\".\"", $table, "\""),
-                    "id",
-                    &beatmap_id,
-                    database,
-                )
-                .await
+                utils::struct_from_database("beatmaps", $table, "id", &beatmap_id, database).await
             }
             #[inline(always)]
             pub async fn from_database_by_set_id(
                 beatmap_set_id: i32,
                 database: &Database,
             ) -> Option<$typ> {
-                utils::struct_from_database(
-                    concat!("\"beatmaps\".\"", $table, "\""),
-                    "set_id",
-                    &beatmap_set_id,
-                    database,
-                )
-                .await
+                utils::struct_from_database("beatmaps", $table, "set_id", &beatmap_set_id, database)
+                    .await
             }
             #[inline(always)]
             pub async fn from_database_by_md5(
                 beatmap_md5: &String,
                 database: &Database,
             ) -> Option<$typ> {
-                utils::struct_from_database(
-                    concat!("\"beatmaps\".\"", $table, "\""),
-                    "md5",
-                    beatmap_md5,
-                    database,
-                )
-                .await
+                utils::struct_from_database("beatmaps", $table, "md5", beatmap_md5, database).await
             }
         }
     };
@@ -48,7 +32,7 @@ macro_rules! fast_from_database {
 fast_from_database!("maps", BeatmapInfo);
 fast_from_database!("stats", BeatmapStats);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Beatmaps {
     pub info: BeatmapInfo,
     pub stats: Option<BeatmapStats>,
@@ -57,7 +41,7 @@ pub struct Beatmaps {
 
 impl Beatmaps {
     #[inline(always)]
-    pub async fn create_by_md5(
+    pub async fn get_from_database(
         beatmap_md5: &String,
         fetch_stats: bool,
         database: &Database,
@@ -72,10 +56,21 @@ impl Beatmaps {
             create_time: Local::now(),
         })
     }
+
+    #[inline(always)]
+    pub async fn get_from_cache(
+        beatmap_md5: &String,
+        beatmaps_cache: &RwLock<BeatmapsCache>,
+    ) -> Option<Beatmaps> {
+        beatmaps_cache.read().await.get(beatmap_md5).cloned()
+    }
+
+    #[inline(always)]
+    pub async fn get_from_osu_api(beatmap_md5: &String) {}
 }
 
 #[pg_mapper(table = "beatmaps.maps")]
-#[derive(Debug, PostgresMapper)]
+#[derive(Debug, Clone, PostgresMapper)]
 pub struct BeatmapInfo {
     pub server: String,
     pub id: i32,
@@ -114,7 +109,7 @@ pub struct BeatmapInfo {
 }
 
 #[pg_mapper(table = "beatmaps.stats")]
-#[derive(Debug, PostgresMapper)]
+#[derive(Debug, Clone, PostgresMapper)]
 pub struct BeatmapStats {
     pub server: String,
     pub id: i32,

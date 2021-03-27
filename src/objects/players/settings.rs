@@ -1,7 +1,6 @@
-use crate::{database::Database, utils};
 use crate::set_with_db;
+use crate::{database::Database, utils};
 use chrono::{DateTime, Utc};
-use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
 set_with_db! {
@@ -23,7 +22,7 @@ impl PlayerSettings {
     #[inline(always)]
     /// Initial PlayerSettings from database
     pub async fn from_database(user_id: i32, database: &Database) -> Option<PlayerSettings> {
-        utils::struct_from_database("user.settings", "id", &user_id, database).await
+        utils::struct_from_database("user", "settings", "id", &user_id, database).await
     }
 
     #[inline(always)]

@@ -5,7 +5,7 @@ use std::{
 };
 
 use actix_multipart::Multipart;
-use actix_web::HttpRequest;
+use actix_web::{web::Data, HttpRequest};
 use argon2::{ThreadMode, Variant, Version};
 
 use async_std::sync::RwLock;
@@ -392,21 +392,22 @@ fn get_type_of<T>(_: &T) -> String {
 #[inline(always)]
 /// Utils for struct from database
 pub async fn struct_from_database<T: FromTokioPostgresRow>(
-    table_name: &str,
+    table: &str,
+    schema: &str,
     query_by: &str,
     param: &(dyn tokio_postgres::types::ToSql + Sync),
     database: &Database,
 ) -> Option<T> {
     let type_name = std::any::type_name::<T>();
     let query = format!(
-        "SELECT * FROM \"{}\" WHERE \"{}\" = $1;",
-        table_name, query_by
+        "SELECT * FROM \"{}\".\"{}\" WHERE \"{}\" = $1;",
+        table, schema, query_by
     );
     let row = database.pg.query_first(&query, &[param]).await;
     if let Err(err) = row {
         error!(
-            "Failed to get {} {:?} from database table {}. error: {:?}",
-            type_name, param, table_name, err
+            "Failed to get {} {:?} from database table {}.{} error: {:?}",
+            type_name, param, table, schema, err
         );
         return None;
     }
@@ -422,4 +423,9 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
             None
         }
     }
+}
+
+#[inline(always)]
+pub fn lock_wrapper<T>(obj: T) -> Data<RwLock<T>> {
+    Data::new(RwLock::new(obj))
 }
