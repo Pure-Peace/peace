@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 extern crate config;
-extern crate serde;
 extern crate derivative;
+extern crate serde;
 
 #[macro_use]
 extern crate log;
@@ -18,30 +18,25 @@ pub mod settings;
 pub mod types;
 pub mod utils;
 
+use actix_web::web::Data;
+use objects::{Bancho, Peace};
 
-use async_std::sync::RwLock;
-use colored::Colorize;
-
-use crate::constants::PEACE_BANNER;
 use crate::database::Database;
-use crate::objects::PlayerSessions;
-use crate::settings::{model::Settings, peace};
+use crate::settings::model::LocalConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Print banner
-    println!("{}", PEACE_BANNER.green());
-
-    // Create Peace's settings
-    let (cfg, settings) = Settings::new()
-        .expect("Settings failed to initialize, please check the local configuration file.");
+    // Create local settings
+    let local_config = LocalConfig::init();
 
     // Create database object includes postgres and redis pool
-    let database = Database::new(&settings).await;
+    let database = Database::new(&local_config).await;
 
-    // Create PlayerSession for this server
-    let player_sessions = RwLock::new(PlayerSessions::new(100, database.clone()));
+    // Create bancho object
+    let bancho = Data::new(Bancho::init(&local_config, &database).await);
 
-    // Start peace server
-    peace::start_server(cfg, settings, database, player_sessions).await
+    // Create and start
+    let mut peace = Peace::new(bancho.clone(), local_config, database);
+
+    peace.start().await
 }

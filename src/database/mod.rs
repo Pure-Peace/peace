@@ -1,7 +1,9 @@
 pub mod connectors;
 
-use crate::constants::{DB_VERSION, PEACE_VERSION};
-use crate::settings::model::Settings;
+use crate::{
+    constants::{DB_VERSION, PEACE_VERSION},
+    settings::model::LocalConfig,
+};
 use colored::Colorize;
 
 use connectors::*;
@@ -16,7 +18,8 @@ pub struct Database {
 }
 
 impl Database {
-    pub async fn new(settings: &Settings) -> Self {
+    pub async fn new(local_config: &LocalConfig) -> Self {
+        let settings = &local_config.data;
         println!(
             "> {}",
             "Initializing database connections...".bright_purple()
@@ -38,10 +41,7 @@ impl Database {
     }
 
     pub async fn check_version(&self) {
-        println!(
-            "> {}",
-            "Checking Database version...".bright_purple()
-        );
+        println!("> {}", "Checking Database version...".bright_purple());
         match self
             .pg
             .query_first(
