@@ -16,7 +16,7 @@ pub async fn osu_register(
     mut form_data: Multipart,
     database: Data<Database>,
     geo_db: Data<Option<Reader<Mmap>>>,
-    bancho_config: Data<RwLock<BanchoConfig>>,
+    bancho: Data<Bancho>,
     global_cache: Data<Caches>,
 ) -> HttpResponse {
     lazy_static::lazy_static! {
@@ -24,7 +24,7 @@ pub async fn osu_register(
         static ref EMAIL_REGEX: Regex = Regex::new(r"^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{2,24}$").unwrap();
     }
 
-    let bancho_config = bancho_config.read().await;
+    let bancho_config = bancho.config.read().await;
     // Register closed
     if !bancho_config.registration_enabled {
         return HttpResponse::BadRequest().body(json!({
