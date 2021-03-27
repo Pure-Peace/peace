@@ -247,7 +247,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
         #[serde(rename = "c")]
         beatmap_md5: String,
         #[serde(rename = "v")]
-        vote: Option<i32>,
+        vote: Option<i16>,
     }
     let data = parse_query!(ctx, Rating, failed);
     let player = get_login!(ctx, data, failed);
