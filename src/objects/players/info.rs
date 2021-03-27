@@ -1,5 +1,5 @@
-use crate::database::Database;
 use crate::set_with_db;
+use crate::{database::Database, utils};
 use chrono::{DateTime, Utc};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
@@ -37,32 +37,7 @@ impl PlayerInfo {
     #[inline(always)]
     /// Initial pleyer info from database
     pub async fn from_database(user_id: i32, database: &Database) -> Option<PlayerInfo> {
-        let row = database
-            .pg
-            .query_first(
-                r#"SELECT * FROM "user"."info" WHERE "id" = $1;"#,
-                &[&user_id],
-            )
-            .await;
-        if row.is_err() {
-            error!(
-                "Failed to get user info{} from database! error: {:?}",
-                user_id, row
-            );
-            return None;
-        }
-
-        let row = row.unwrap();
-        let result = PlayerInfo::from_row(row);
-        if result.is_err() {
-            error!(
-                "Failed to deserialize PlayerInfo from pg-row! error: {:?}",
-                result
-            );
-            return None;
-        };
-
-        Some(result.unwrap())
+        utils::struct_from_database("user.info", "id", &user_id, database).await
     }
 
     #[inline(always)]

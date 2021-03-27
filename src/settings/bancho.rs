@@ -1,6 +1,5 @@
-use crate::database::Database;
+use crate::{database::Database, utils};
 use chrono::{DateTime, Utc};
-use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
 #[pg_mapper(table = "bancho.config")]
@@ -90,32 +89,7 @@ impl BanchoConfig {
     #[inline(always)]
     /// Initial bancho config from database
     pub async fn from_database(database: &Database) -> Option<BanchoConfig> {
-        let row = database
-            .pg
-            .query_first(
-                r#"SELECT * FROM "bancho"."config" WHERE "enabled" = TRUE;"#,
-                &[],
-            )
-            .await;
-        if row.is_err() {
-            error!(
-                "Failed to get bancho config from database! error: {:?}",
-                row
-            );
-            return None;
-        }
-
-        let row = row.unwrap();
-        let result = BanchoConfig::from_row(row);
-        if result.is_err() {
-            error!(
-                "Failed to deserialize bancho config from pg-row! error: {:?}",
-                result
-            );
-            return None;
-        };
-
-        Some(result.unwrap())
+        utils::struct_from_database("bancho.config", "enabled", &true, database).await
     }
 
     #[inline(always)]
@@ -128,7 +102,12 @@ impl BanchoConfig {
             return false;
         };
         *self = new.unwrap();
-        info!("New BanchoConfig ({}) updated in {:?}; update time: {}", self.name, start.elapsed(), self.update_time);
+        info!(
+            "New BanchoConfig ({}) updated in {:?}; update time: {}",
+            self.name,
+            start.elapsed(),
+            self.update_time
+        );
         true
     }
 }

@@ -15,6 +15,7 @@ use maxminddb::{geoip2::City, Reader};
 use memmap::Mmap;
 use rand::Rng;
 use serde_qs;
+use tokio_pg_mapper::FromTokioPostgresRow;
 
 use crate::{constants::GeoData, database::Database, objects::PlayerBase, types::Argon2Cache};
 
@@ -383,3 +384,42 @@ pub async fn get_beatmap_rating(beatmap_md5: &String, database: &Database) -> Op
     }
 }
 
+#[inline(always)]
+fn get_type_of<T>(_: &T) -> String {
+    format!("{}", std::any::type_name::<T>())
+}
+
+#[inline(always)]
+/// Utils for struct from database
+pub async fn struct_from_database<T: FromTokioPostgresRow>(
+    table_name: &str,
+    query_by: &str,
+    param: &(dyn tokio_postgres::types::ToSql + Sync),
+    database: &Database,
+) -> Option<T> {
+    let type_name = std::any::type_name::<T>();
+    let query = format!(
+        "SELECT * FROM \"{}\" WHERE \"{}\" = $1;",
+        table_name, query_by
+    );
+    let row = database.pg.query_first(&query, &[param]).await;
+    if let Err(err) = row {
+        error!(
+            "Failed to get {} {:?} from database table {}. error: {:?}",
+            type_name, param, table_name, err
+        );
+        return None;
+    }
+
+    let row = row.unwrap();
+    match <T>::from_row(row) {
+        Ok(result) => Some(result),
+        Err(err) => {
+            error!(
+                "Failed to deserialize {} from pg-row! error: {:?}",
+                type_name, err
+            );
+            None
+        }
+    }
+}
