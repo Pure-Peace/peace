@@ -53,6 +53,7 @@ tokio-pg-mapper = "0.1.8"
 tokio-pg-mapper-derive = "0.1.5"
 tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4"] }
 uuid = { version = "0.8.1", features = ["v4"] }
+serde_str = "0.1.0"
 
 
 [dev-dependencies]

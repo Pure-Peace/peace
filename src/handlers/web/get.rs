@@ -565,12 +565,14 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     };
 
     // Still None? Try get from osu! api and cache it
-    /* let beatmap = match beatmap {
+    let beatmap = match beatmap {
         Some(b) => Some(b),
         None => {
-
+            Beatmaps::get_from_osu_api(&data.beatmap_hash, &ctx.bancho.osu_api, &ctx.database)
+                .await;
+            None
         }
-    }; */
+    };
 
     // unimplemented("osu-osz2-getscores.php")
     return failed;

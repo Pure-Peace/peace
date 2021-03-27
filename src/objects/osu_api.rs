@@ -1,14 +1,127 @@
 use async_std::sync::RwLock;
+use chrono::{DateTime, Local};
 use derivative::Derivative;
 use json::object;
-use reqwest::{Error, Response};
-use serde::Serialize;
+use reqwest::Response;
+use serde::Deserialize;
+use serde::{de::DeserializeOwned, Serialize};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 
+use serde_str;
+use crate::utils::from_str_bool;
+
 use crate::settings::bancho::BanchoConfig;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BeatmapFromApi {
+    #[serde(rename = "beatmap_id", with = "serde_str")]
+    id: i32,
+    #[serde(rename = "beatmapset_id", with = "serde_str")]
+    set_id: i32,
+    #[serde(rename = "file_md5")]
+    md5: String,
+    artist: String,
+    artist_unicode: Option<String>,
+    title: String,
+    title_unicode: Option<String>,
+    #[serde(rename = "creator")]
+    mapper: String,
+    #[serde(rename = "creator_id", with = "serde_str")]
+    mapper_id: i32,
+    #[serde(rename = "approved", with = "serde_str")]
+    rank_status: i32,
+    #[serde(rename = "version")]
+    diff_name: String,
+    #[serde(rename = "diff_size", with = "serde_str")]
+    cs: f32,
+    #[serde(rename = "diff_overall", with = "serde_str")]
+    od: f32,
+    #[serde(rename = "diff_approach", with = "serde_str")]
+    ar: f32,
+    #[serde(rename = "diff_drain", with = "serde_str")]
+    hp: f32,
+    #[serde(with = "serde_str")]
+    mode: i16,
+    #[serde(rename = "count_normal", with = "serde_str")]
+    object_count: i32,
+    #[serde(rename = "count_slider", with = "serde_str")]
+    slider_count: i32,
+    #[serde(rename = "count_spinner", with = "serde_str")]
+    spinner_count: i32,
+    #[serde(with = "serde_str")]
+    bpm: f32,
+    source: Option<String>,
+    tags: Option<String>,
+    #[serde(with = "serde_str")]
+    genre_id: i16,
+    #[serde(with = "serde_str")]
+    language_id: i16,
+    #[serde(deserialize_with  = "from_str_bool")]
+    storyboard: bool,
+    #[serde(deserialize_with  = "from_str_bool")]
+    video: bool,
+    #[serde(with = "serde_str")]
+    max_combo: i32,
+    #[serde(rename = "total_length", with = "serde_str")]
+    length: i32,
+    #[serde(rename = "hit_length", with = "serde_str")]
+    length_drain: i32,
+    #[serde(rename = "diff_aim", with = "serde_str")]
+    aim: f32,
+    #[serde(rename = "diff_speed", with = "serde_str")]
+    spd: f32,
+    #[serde(rename = "difficultyrating", with = "serde_str")]
+    stars: f32,
+    #[serde(rename = "submit_date", with = "my_serde")]
+    submit_time: Option<DateTime<Local>>,
+    #[serde(rename = "approved_date", with = "my_serde")]
+    approved_time: Option<DateTime<Local>>,
+    #[serde(with = "my_serde")]
+    last_update: Option<DateTime<Local>>,
+}
+
+mod my_serde {
+    use chrono::{DateTime, Local, TimeZone};
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    const FORMAT: &'static str = "%Y-%m-%d %H:%M:%S";
+
+    // The signature of a serialize_with function must follow the pattern:
+    //
+    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
+    //    where
+    //        S: Serializer
+    //
+    // although it may also be generic over the input types T.
+    pub fn serialize<S>(date: &Option<DateTime<Local>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = format!("{}", date.unwrap().format(FORMAT));
+        serializer.serialize_str(&s)
+    }
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Local>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Local
+            .datetime_from_str(&s, FORMAT)
+            .map_err(serde::de::Error::custom)
+            .map(|f| Some(f))
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -41,6 +154,8 @@ impl OsuApiClient {
     }
 }
 
+const NOT_API_KEYS: &'static str = "osu! apikeys not added, could not send requests.";
+
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct OsuApi {
@@ -54,10 +169,13 @@ pub struct OsuApi {
 
 impl OsuApi {
     pub async fn new(bancho_config: &Arc<RwLock<BanchoConfig>>) -> Self {
-        let api_clients = bancho_config
-            .read()
-            .await
-            .osu_api_keys
+        let api_keys = &bancho_config.read().await.osu_api_keys;
+
+        if api_keys.is_empty() {
+            warn!("osu! api: No osu! apikeys has been added, please add it to the bancho.config of the database! Otherwise, the osu!api request cannot be used.");
+        }
+
+        let api_clients = api_keys
             .iter()
             .map(|key| OsuApiClient::new(key.clone()))
             .collect();
@@ -112,16 +230,22 @@ impl OsuApi {
         }
     }
 
-    pub async fn get<T: Serialize + ?Sized>(
-        &self,
-        url: &str,
-        query: &T,
-    ) -> Result<Response, Error> {
-        let mut err: Option<Result<Response, Error>> = None;
+    #[inline(always)]
+    pub async fn get<T: Serialize + ?Sized>(&self, url: &str, query: &T) -> Option<Response> {
+        if self.api_clients.is_empty() {
+            error!("{}", NOT_API_KEYS);
+            return None;
+        }
 
         for api_client in &self.api_clients {
             let start = std::time::Instant::now();
-            let res = api_client.requester.get(url).query(query).send().await;
+            let res = api_client
+                .requester
+                .get(url)
+                .query(&[("k", api_client.key.as_str())])
+                .query(query)
+                .send()
+                .await;
             let delay = start.elapsed().as_millis() as usize;
             if res.is_err() {
                 warn!(
@@ -130,24 +254,56 @@ impl OsuApi {
                 );
                 api_client.failed();
                 self.failed(delay);
-                err = Some(res);
                 continue;
             }
 
             debug!(
-                "[success] osu! api({}) request with: {:?};",
+                "[success] osu! api({}) request with: {:?}ms;",
                 api_client.key, delay
             );
             api_client.success();
             self.success(delay);
-            return res;
+            return Some(res.unwrap());
         }
-        err.unwrap()
+        None
+    }
+
+    #[inline(always)]
+    pub async fn get_json<Q: Serialize + ?Sized, T: DeserializeOwned>(
+        &self,
+        url: &str,
+        query: &Q,
+    ) -> Option<T> {
+        let res = self.get(url, query).await?;
+        match res.json().await {
+            Ok(value) => Some(value),
+            Err(err) => {
+                error!(
+                    "[failed] osu! api could not parse data to json, err: {:?}",
+                    err
+                );
+                None
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap(&self, beatmap_hash: &String) -> Option<Vec<BeatmapFromApi>> {
+        self.get_json(
+            "https://old.ppy.sh/api/get_beatmaps",
+            &[("h", beatmap_hash)],
+        )
+        .await?
     }
 
     pub async fn test_all(&self) -> String {
         const TEST_URL: &'static str = "https://old.ppy.sh/api/get_beatmaps";
         let mut results = json::JsonValue::new_array();
+
+        if self.api_clients.is_empty() {
+            error!("{}", NOT_API_KEYS);
+            return NOT_API_KEYS.to_string();
+        }
 
         for api_client in &self.api_clients {
             let start = std::time::Instant::now();

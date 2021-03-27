@@ -8,7 +8,13 @@ use actix_multipart::Multipart;
 use actix_web::{web::Data, HttpRequest};
 use argon2::{ThreadMode, Variant, Version};
 
+use std::fmt::Display;
+use std::str::FromStr;
+
+use serde::de::{self, Deserialize, Deserializer};
+
 use async_std::sync::RwLock;
+use chrono::{DateTime, Local};
 use futures::StreamExt;
 use lazy_static::lazy_static;
 use maxminddb::{geoip2::City, Reader};
@@ -76,6 +82,33 @@ macro_rules! set_with_db {
             }
         }
     }
+}
+
+#[inline(always)]
+pub fn from_str<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+where
+    T: FromStr,
+    T::Err: Display,
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    T::from_str(&s).map_err(de::Error::custom)
+}
+
+#[inline(always)]
+pub fn from_str_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match String::deserialize(deserializer)?.as_str() {
+        "1" => Ok(true),
+        _ => Ok(false),
+    }
+}
+
+#[inline(always)]
+pub fn noew_time_local() -> DateTime<Local> {
+    Local::now()
 }
 
 #[inline(always)]

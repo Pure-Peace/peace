@@ -1,7 +1,10 @@
 use crate::{database::Database, types::BeatmapsCache, utils};
+use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::{DateTime, Local, Utc};
 use tokio_pg_mapper_derive::PostgresMapper;
+
+use super::OsuApi;
 
 macro_rules! fast_from_database {
     ($table:expr, $typ:ty) => {
@@ -66,7 +69,16 @@ impl Beatmaps {
     }
 
     #[inline(always)]
-    pub async fn get_from_osu_api(beatmap_md5: &String) {}
+    pub async fn get_from_osu_api(
+        beatmap_md5: &String,
+        osu_api: &Data<RwLock<OsuApi>>,
+        database: &Database,
+    ) {
+        info!(
+            "{:?}",
+            osu_api.read().await.fetch_beatmap(beatmap_md5).await
+        );
+    }
 }
 
 #[pg_mapper(table = "beatmaps.maps")]
