@@ -260,7 +260,7 @@ CREATE TABLE beatmaps.ratings (
     comments character varying(255),
     update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
-CREATE TABLE beatmaps.statistic (
+CREATE TABLE beatmaps.stats (
     server beatmaps.server DEFAULT 'ppy'::beatmaps.server NOT NULL,
     id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
     set_id integer DEFAULT nextval('beatmaps.peace_bid'::regclass),
@@ -268,12 +268,13 @@ CREATE TABLE beatmaps.statistic (
     plays integer DEFAULT 0 NOT NULL,
     players integer DEFAULT 0 NOT NULL,
     pp double precision DEFAULT 0.0 NOT NULL,
-    play_time interval DEFAULT '00:00:00'::interval NOT NULL,
+    play_time bigint DEFAULT 0 NOT NULL,
     pass integer DEFAULT 0 NOT NULL,
     fail integer DEFAULT 0 NOT NULL,
     clicked bigint DEFAULT 0 NOT NULL,
     miss bigint DEFAULT 0 NOT NULL,
-    pick integer DEFAULT 0 NOT NULL
+    pick integer DEFAULT 0 NOT NULL,
+    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE TABLE game_scores.catch (
     id bigint NOT NULL,
@@ -1089,6 +1090,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.1', 'PurePeace', NULL, 'modify user.info, user.notes', '2021-03-26 17:47:27.434628+08', '2021-03-26 17:47:27.434628+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.3', 'PurePeace', NULL, 'add config.enable_client_update', '2021-03-26 21:30:18.218534+08', '2021-03-26 21:30:18.218534+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.4', 'PurePeace', NULL, 'add beatmaps.ratings', '2021-03-27 10:16:11.720151+08', '2021-03-27 10:16:11.720151+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.5', 'PurePeace', NULL, 'modify beatmaps.statistic.playtime interval -> int8', '2021-03-27 14:22:34.605093+08', '2021-03-27 14:22:59.795308+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1099,7 +1101,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.2', 'PurePeace', '0.6.0', '++', '2021-03-26 00:40:19.70588+08', '2021-03-26 00:40:27.59701+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.3', 'PurePeace', '0.6.1', '++', '2021-03-26 17:47:36.935998+08', '2021-03-26 17:47:36.935998+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.4', 'PurePeace', '0.6.3', '+', '2021-03-26 21:30:33.374054+08', '2021-03-26 21:30:33.374054+08');
-INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.5', 'PurePeace', '0.6.4', '+++', '2021-03-27 10:16:26.051501+08', '2021-03-27 10:16:26.051501+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.3.5', 'PurePeace', '0.6.5', '+++', '2021-03-27 10:16:26.051501+08', '2021-03-27 14:23:09.101698+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
@@ -1141,7 +1143,7 @@ ALTER TABLE ONLY beatmaps.maps
     ADD CONSTRAINT maps_pkey PRIMARY KEY (server, id);
 ALTER TABLE ONLY beatmaps.ratings
     ADD CONSTRAINT ratings_pkey PRIMARY KEY (user_id, map_md5);
-ALTER TABLE ONLY beatmaps.statistic
+ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT statistic_pkey PRIMARY KEY (server, id);
 ALTER TABLE ONLY game_scores.catch_rx
     ADD CONSTRAINT catch_rx_scores_pkey PRIMARY KEY (id);
@@ -1213,6 +1215,7 @@ CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON bancho.config FOR EACH ROW
 COMMENT ON TRIGGER auto_update_timestamp ON bancho.config IS 'auto update the update_time after update user info';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.ratings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.stats FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.catch IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
@@ -1271,9 +1274,9 @@ COMMENT ON TRIGGER increase_rename_count ON user_records.rename IS 'update user 
 ALTER TABLE ONLY beatmaps.ratings
     ADD CONSTRAINT "User.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id" ON beatmaps.ratings IS 'user''s unique id';
-ALTER TABLE ONLY beatmaps.statistic
+ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT beatmap FOREIGN KEY (server, id) REFERENCES beatmaps.maps(server, id) ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE ONLY beatmaps.statistic
+ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT beatmap_hash FOREIGN KEY (md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY beatmaps.ratings
     ADD CONSTRAINT "map.md5" FOREIGN KEY (map_md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
