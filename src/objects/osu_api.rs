@@ -4,9 +4,12 @@ use json::object;
 
 use reqwest::Response;
 use serde::{de::DeserializeOwned, Serialize};
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
+use std::{
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
 
 use crate::objects::BeatmapFromApi;
@@ -24,9 +27,15 @@ pub struct OsuApiClient {
 
 impl OsuApiClient {
     pub fn new(key: String) -> Self {
+        let requester = reqwest::Client::builder()
+            .connection_verbose(false)
+            .timeout(Duration::from_secs(5))
+            .pool_idle_timeout(Some(Duration::from_secs(300)))
+            .build()
+            .unwrap();
         OsuApiClient {
             key,
-            requester: reqwest::Client::new(),
+            requester,
             success_count: AtomicUsize::new(0),
             failed_count: AtomicUsize::new(0),
         }
@@ -126,33 +135,40 @@ impl OsuApi {
             return None;
         }
 
-        for api_client in &self.api_clients {
-            let start = std::time::Instant::now();
-            let res = api_client
-                .requester
-                .get(url)
-                .query(&[("k", api_client.key.as_str())])
-                .query(query)
-                .send()
-                .await;
-            let delay = start.elapsed().as_millis() as usize;
-            if res.is_err() {
-                warn!(
-                    "[failed] osu! api({}) request with: {}ms; err: {:?};",
-                    api_client.key, delay, res
+        let mut tries = 1;
+        loop {
+            if tries > 3 {
+                warn!("[osu!api] request over 3 times but still failed, stop request.");
+                break;
+            };
+            for api_client in &self.api_clients {
+                let start = std::time::Instant::now();
+                let res = api_client
+                    .requester
+                    .get(url)
+                    .query(&[("k", api_client.key.as_str())])
+                    .query(query)
+                    .send()
+                    .await;
+                let delay = start.elapsed().as_millis() as usize;
+                if res.is_err() {
+                    warn!(
+                        "[failed] osu! api({}) request-{} with: {}ms; err: {:?};",
+                        api_client.key, tries, delay, res
+                    );
+                    api_client.failed();
+                    self.failed(delay);
+                    tries += 1;
+                    continue;
+                }
+                info!(
+                    "[success] osu! api({}) request-{} with: {:?}ms;",
+                    api_client.key, tries, delay
                 );
-                api_client.failed();
-                self.failed(delay);
-                continue;
+                api_client.success();
+                self.success(delay);
+                return Some(res.unwrap());
             }
-
-            debug!(
-                "[success] osu! api({}) request with: {:?}ms;",
-                api_client.key, delay
-            );
-            api_client.success();
-            self.success(delay);
-            return Some(res.unwrap());
         }
         None
     }
