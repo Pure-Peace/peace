@@ -96,11 +96,32 @@ where
 }
 
 #[inline(always)]
+pub fn from_str_optional<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: FromStr,
+    T::Err: Display,
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer);
+    if s.is_err() {
+        return Ok(None);
+    };
+    Ok(match T::from_str(&s.unwrap()) {
+        Ok(t) => Some(t),
+        Err(_) => None,
+    })
+}
+
+#[inline(always)]
 pub fn from_str_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
 {
-    match String::deserialize(deserializer)?.as_str() {
+    let de = String::deserialize(deserializer);
+    if de.is_err() {
+        return Ok(false);
+    };
+    match de.unwrap().as_str() {
         "1" => Ok(true),
         _ => Ok(false),
     }
@@ -428,13 +449,14 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
     table: &str,
     schema: &str,
     query_by: &str,
+    fields: &str,
     param: &(dyn tokio_postgres::types::ToSql + Sync),
     database: &Database,
 ) -> Option<T> {
     let type_name = std::any::type_name::<T>();
     let query = format!(
-        "SELECT * FROM \"{}\".\"{}\" WHERE \"{}\" = $1;",
-        table, schema, query_by
+        "SELECT {} FROM \"{}\".\"{}\" WHERE \"{}\" = $1;",
+        fields, table, schema, query_by
     );
     let row = database.pg.query_first(&query, &[param]).await;
     if let Err(err) = row {

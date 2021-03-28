@@ -22,7 +22,7 @@ impl PlayerSettings {
     #[inline(always)]
     /// Initial PlayerSettings from database
     pub async fn from_database(user_id: i32, database: &Database) -> Option<PlayerSettings> {
-        utils::struct_from_database("user", "settings", "id", &user_id, database).await
+        utils::struct_from_database("user", "settings", "id", "*", &user_id, database).await
     }
 
     #[inline(always)]

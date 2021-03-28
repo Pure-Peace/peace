@@ -1,41 +1,62 @@
+use std::time::Instant;
+
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::{DateTime, Local};
 use field_names::FieldNames;
-use serde::{Deserialize, Serialize};
-use serde_str;
-
 use postgres_types::{FromSql, ToSql};
-
-use chrono::Utc;
+use serde::Deserialize;
+use serde_str;
 use tokio_pg_mapper_derive::PostgresMapper;
 
-use crate::utils::from_str_bool;
+use super::{Bancho, Caches, OsuApi};
+use crate::utils::{from_str_bool, from_str_optional};
 use crate::{database::Database, types::BeatmapsCache, utils};
-
-use super::OsuApi;
 
 macro_rules! fast_from_database {
     ($table:expr, $typ:ty) => {
         impl $typ {
             #[inline(always)]
             pub async fn from_database_by_id(beatmap_id: i32, database: &Database) -> Option<$typ> {
-                utils::struct_from_database("beatmaps", $table, "id", &beatmap_id, database).await
+                utils::struct_from_database(
+                    "beatmaps",
+                    $table,
+                    "id",
+                    <$typ>::get_query_fields().as_str(),
+                    &beatmap_id,
+                    database,
+                )
+                .await
             }
             #[inline(always)]
             pub async fn from_database_by_set_id(
                 beatmap_set_id: i32,
                 database: &Database,
             ) -> Option<$typ> {
-                utils::struct_from_database("beatmaps", $table, "set_id", &beatmap_set_id, database)
-                    .await
+                utils::struct_from_database(
+                    "beatmaps",
+                    $table,
+                    "set_id",
+                    <$typ>::get_query_fields().as_str(),
+                    &beatmap_set_id,
+                    database,
+                )
+                .await
             }
             #[inline(always)]
             pub async fn from_database_by_md5(
                 beatmap_md5: &String,
                 database: &Database,
             ) -> Option<$typ> {
-                utils::struct_from_database("beatmaps", $table, "md5", beatmap_md5, database).await
+                utils::struct_from_database(
+                    "beatmaps",
+                    $table,
+                    "md5",
+                    <$typ>::get_query_fields().as_str(),
+                    beatmap_md5,
+                    database,
+                )
+                .await
             }
         }
     };
@@ -53,12 +74,72 @@ pub struct Beatmaps {
 
 impl Beatmaps {
     #[inline(always)]
+    pub async fn get(
+        md5: &String,
+        bancho: &Bancho,
+        database: &Database,
+        cache: &Caches,
+        use_cache: bool,
+    ) -> Option<Self> {
+        if use_cache {
+            // Try get beatmap from local cache
+            let expire = bancho.config.read().await.timeout_beatmap_cache;
+            if let Some(b) = Self::get_from_cache(&md5, &cache.beatmaps_cache, expire).await {
+                info!("[Beatmaps] get from cache: {};", md5);
+                return Some(b);
+            }
+        }
+
+        // Try get from database or api, etc.
+        if let Some(b) = Self::get_from_source(md5, bancho, database).await {
+            cache
+                .beatmaps_cache
+                .write()
+                .await
+                .insert(md5.to_string(), b.clone());
+            return Some(b);
+        }
+
+        info!("[Beatmaps] Failed to get beatmap from anyway: {}", md5);
+        None
+    }
+
+    #[inline(always)]
+    pub async fn get_from_source(
+        md5: &String,
+        bancho: &Bancho,
+        database: &Database,
+    ) -> Option<Self> {
+        let start = Instant::now();
+        // Try get beatmap from database
+        if let Some(b) = Self::get_from_database(&md5, false, &database).await {
+            info!(
+                "[Beatmaps] get from database: {}; time spent: {:?}",
+                md5,
+                start.elapsed()
+            );
+            return Some(b);
+        }
+
+        if let Some(b) = Self::get_from_osu_api(&md5, &bancho.osu_api, &database).await {
+            info!(
+                "[Beatmaps] get from osu!api: {}; time spent: {:?}",
+                md5,
+                start.elapsed()
+            );
+            return Some(b);
+        }
+
+        None
+    }
+
+    #[inline(always)]
     pub async fn get_from_database(
         beatmap_md5: &String,
         fetch_stats: bool,
         database: &Database,
-    ) -> Option<Beatmaps> {
-        Some(Beatmaps {
+    ) -> Option<Self> {
+        Some(Self {
             info: BeatmapInfo::from_database_by_md5(beatmap_md5, database).await?,
             stats: if fetch_stats {
                 let stats = BeatmapStats::from_database_by_md5(beatmap_md5, database).await;
@@ -75,12 +156,28 @@ impl Beatmaps {
     }
 
     #[inline(always)]
+    pub fn is_expired(&self, expires: i64) -> bool {
+        (Local::now() - self.create_time).num_seconds() > expires
+    }
+
+    #[inline(always)]
     pub async fn get_from_cache(
         beatmap_md5: &String,
         beatmaps_cache: &RwLock<BeatmapsCache>,
-    ) -> Option<Beatmaps> {
+        expire: i64,
+    ) -> Option<Self> {
         debug!("try get beatmap {} info from cache...", beatmap_md5);
-        beatmaps_cache.read().await.get(beatmap_md5).cloned()
+        match beatmaps_cache.read().await.get(beatmap_md5) {
+            Some(b) => {
+                // Check is expired
+                if b.is_expired(expire) {
+                    debug!("get from beatmap cache but expired: {}", beatmap_md5);
+                    return None;
+                }
+                Some(b.clone())
+            }
+            None => None,
+        }
     }
 
     #[inline(always)]
@@ -88,136 +185,18 @@ impl Beatmaps {
         beatmap_md5: &String,
         osu_api: &Data<RwLock<OsuApi>>,
         database: &Database,
-    ) -> Option<BeatmapFromApi> {
-        debug!("try get beatmap {} info from osu!api...", beatmap_md5);
-        match osu_api.read().await.fetch_beatmap_by_md5(beatmap_md5).await {
+    ) -> Option<Self> {
+        match BeatmapFromApi::get_from_osu_api(beatmap_md5, osu_api, database).await {
             Some(f) => {
-                debug!("get_from_osu_api success: {:?}", f);
-                match database
-                    .pg
-                    .execute(
-                        format!(
-                            "INSERT INTO \"beatmaps\".\"maps\" (\"{}\") VALUES ({})",
-                            BeatmapFromApi::FIELDS.join("\",\""),
-                            utils::build_s(BeatmapFromApi::FIELDS.len())
-                        )
-                        .as_str(),
-                        &[
-                            &f.id,
-                            &f.set_id,
-                            &f.md5,
-                            &f.artist,
-                            &f.artist_unicode,
-                            &f.title,
-                            &f.title_unicode,
-                            &f.mapper,
-                            &f.mapper_id,
-                            &f.rank_status,
-                            &f.diff_name,
-                            &f.cs,
-                            &f.od,
-                            &f.ar,
-                            &f.hp,
-                            &f.mode,
-                            &f.object_count,
-                            &f.slider_count,
-                            &f.spinner_count,
-                            &f.bpm,
-                            &f.source,
-                            &f.tags,
-                            &f.genre_id,
-                            &f.language_id,
-                            &f.storyboard,
-                            &f.video,
-                            &f.max_combo,
-                            &f.length,
-                            &f.length_drain,
-                            &f.aim,
-                            &f.spd,
-                            &f.stars,
-                            &f.submit_time,
-                            &f.approved_time,
-                            &f.last_update,
-                        ],
-                    )
-                    .await
-                {
-                    Ok(_) => {
-                        debug!("successfully insert beatmap {} to database.", beatmap_md5);
-                    }
-                    Err(err) => {
-                        debug!(
-                            "failed to insert beatmap {} to database, err: {:?}",
-                            beatmap_md5, err
-                        );
-                    }
-                };
-                Some(f)
+                debug!("get it, do Beatmaps convert from api object...");
+                Some(f.convert_to_beatmap())
             }
             None => None,
         }
     }
 }
 
-#[pg_mapper(table = "beatmaps.maps")]
-#[derive(Debug, Clone, FromSql, ToSql, PostgresMapper)]
-pub struct BeatmapInfo {
-    pub server: String,
-    pub id: i32,
-    pub set_id: i32,
-    pub md5: String,
-    pub title: String,
-    pub artist: String,
-    pub diff_name: String,
-    pub mapper: String,
-    pub mapper_id: i32,
-    pub rank_status: i32,
-    pub mode: i16,
-    pub aim: f32,
-    pub spd: f32,
-    pub stars: f32,
-    pub bpm: f32,
-    pub cs: f32,
-    pub od: f32,
-    pub ar: f32,
-    pub hp: f32,
-    pub length: i32,
-    pub length_drain: i32,
-    pub source: Option<String>,
-    pub tags: Option<String>,
-    pub object_count: i32,
-    pub slider_count: i32,
-    pub spinner_count: i32,
-    pub max_combo: i32,
-    pub stars_taiko: f32,
-    pub stars_catch: f32,
-    pub stars_mania: f32,
-    pub fixed_rank_status: bool,
-    pub ranked_by: Option<String>,
-    pub last_update: Option<DateTime<Local>>,
-    pub update_time: DateTime<Local>,
-}
-
-#[pg_mapper(table = "beatmaps.stats")]
-#[derive(Debug, Clone, PostgresMapper)]
-pub struct BeatmapStats {
-    pub server: String,
-    pub id: i32,
-    pub set_id: i32,
-    pub md5: String,
-    pub plays: i32,
-    pub players: i32,
-    pub pp: f64,
-    pub play_time: i64,
-    pub pass: i32,
-    pub fail: i32,
-    pub clicked: i64,
-    pub miss: i64,
-    pub pick: i32,
-    pub update_time: DateTime<Utc>,
-}
-
-#[derive(Debug, FieldNames, ToSql, Deserialize, Serialize, Clone)]
+#[derive(Debug, FieldNames, ToSql, Deserialize, Clone)]
 pub struct BeatmapFromApi {
     #[serde(rename = "beatmap_id", with = "serde_str")]
     id: i32,
@@ -265,16 +244,16 @@ pub struct BeatmapFromApi {
     storyboard: bool,
     #[serde(deserialize_with = "from_str_bool")]
     video: bool,
-    #[serde(with = "serde_str")]
-    max_combo: i32,
+    #[serde(deserialize_with = "from_str_optional")]
+    max_combo: Option<i32>,
     #[serde(rename = "total_length", with = "serde_str")]
     length: i32,
     #[serde(rename = "hit_length", with = "serde_str")]
     length_drain: i32,
-    #[serde(rename = "diff_aim", with = "serde_str")]
-    aim: f32,
-    #[serde(rename = "diff_speed", with = "serde_str")]
-    spd: f32,
+    #[serde(rename = "diff_aim", deserialize_with = "from_str_optional")]
+    aim: Option<f32>,
+    #[serde(rename = "diff_speed", deserialize_with = "from_str_optional")]
+    spd: Option<f32>,
     #[serde(rename = "difficultyrating", with = "serde_str")]
     stars: f32,
     #[serde(rename = "submit_date", with = "my_serde")]
@@ -283,6 +262,180 @@ pub struct BeatmapFromApi {
     approved_time: Option<DateTime<Local>>,
     #[serde(with = "my_serde")]
     last_update: Option<DateTime<Local>>,
+}
+
+impl BeatmapFromApi {
+    #[inline(always)]
+    pub fn convert_to_beatmap(self) -> Beatmaps {
+        Beatmaps {
+            info: BeatmapInfo::from(self),
+            stats: None,
+            create_time: Local::now(),
+        }
+    }
+
+    #[inline(always)]
+    pub async fn get_from_osu_api(
+        beatmap_md5: &String,
+        osu_api: &Data<RwLock<OsuApi>>,
+        database: &Database,
+    ) -> Option<Self> {
+        debug!("try get beatmap {} info from osu!api...", beatmap_md5);
+        match osu_api.read().await.fetch_beatmap_by_md5(beatmap_md5).await {
+            Some(beatmap_from_api) => {
+                debug!("get_from_osu_api success: {:?}", beatmap_from_api);
+                beatmap_from_api.save_to_database(database).await;
+                Some(beatmap_from_api)
+            }
+            None => None,
+        }
+    }
+
+    #[inline(always)]
+    pub async fn save_to_database(&self, database: &Database) -> Option<()> {
+        match database
+            .pg
+            .execute(
+                format!(
+                    "INSERT INTO \"beatmaps\".\"maps\" (\"{}\") VALUES ({})",
+                    BeatmapFromApi::FIELDS.join("\",\""),
+                    utils::build_s(BeatmapFromApi::FIELDS.len())
+                )
+                .as_str(),
+                &[
+                    &self.id,
+                    &self.set_id,
+                    &self.md5,
+                    &self.artist,
+                    &self.artist_unicode,
+                    &self.title,
+                    &self.title_unicode,
+                    &self.mapper,
+                    &self.mapper_id,
+                    &self.rank_status,
+                    &self.diff_name,
+                    &self.cs,
+                    &self.od,
+                    &self.ar,
+                    &self.hp,
+                    &self.mode,
+                    &self.object_count,
+                    &self.slider_count,
+                    &self.spinner_count,
+                    &self.bpm,
+                    &self.source,
+                    &self.tags,
+                    &self.genre_id,
+                    &self.language_id,
+                    &self.storyboard,
+                    &self.video,
+                    &self.max_combo,
+                    &self.length,
+                    &self.length_drain,
+                    &self.aim,
+                    &self.spd,
+                    &self.stars,
+                    &self.submit_time,
+                    &self.approved_time,
+                    &self.last_update,
+                ],
+            )
+            .await
+        {
+            Ok(_) => {
+                debug!("successfully insert beatmap {} to database.", self.md5);
+                Some(())
+            }
+            Err(err) => {
+                error!(
+                    "failed to insert beatmap {} to database, err: {:?}",
+                    self.md5, err
+                );
+                None
+            }
+        }
+    }
+}
+
+#[pg_mapper(table = "beatmaps.maps")]
+#[derive(Debug, FieldNames, Clone, FromSql, ToSql, PostgresMapper)]
+pub struct BeatmapInfo {
+    pub server: String,
+    pub id: i32,
+    pub set_id: i32,
+    pub md5: String,
+    pub title: String,
+    pub artist: String,
+    pub diff_name: String,
+    pub mapper: String,
+    pub mapper_id: i32,
+    pub rank_status: i32,
+    pub mode: i16,
+    pub length: i32,
+    pub length_drain: i32,
+    pub max_combo: Option<i32>,
+    pub fixed_rank_status: bool,
+    pub ranked_by: Option<String>,
+    pub last_update: Option<DateTime<Local>>,
+    pub update_time: DateTime<Local>,
+}
+
+impl BeatmapInfo {
+    #[inline]
+    pub fn get_query_fields() -> String {
+        format!("(\"{}\")", BeatmapInfo::FIELDS.join("\",\""))
+    }
+}
+
+impl From<BeatmapFromApi> for BeatmapInfo {
+    fn from(f: BeatmapFromApi) -> Self {
+        Self {
+            server: "ppy".to_string(),
+            id: f.id,
+            set_id: f.set_id,
+            md5: f.md5,
+            title: f.title,
+            artist: f.artist,
+            diff_name: f.diff_name,
+            mapper: f.mapper,
+            mapper_id: f.mapper_id,
+            rank_status: f.rank_status,
+            mode: f.mode,
+            length: f.length,
+            length_drain: f.length_drain,
+            max_combo: f.max_combo,
+            fixed_rank_status: [1, 2].contains(&f.rank_status),
+            ranked_by: None,
+            last_update: f.last_update,
+            update_time: f.last_update.unwrap_or(Local::now()),
+        }
+    }
+}
+
+#[pg_mapper(table = "beatmaps.stats")]
+#[derive(Debug, FieldNames, Clone, PostgresMapper)]
+pub struct BeatmapStats {
+    pub server: String,
+    pub id: i32,
+    pub set_id: i32,
+    pub md5: String,
+    pub plays: i32,
+    pub players: i32,
+    pub pp: f64,
+    pub play_time: i64,
+    pub pass: i32,
+    pub fail: i32,
+    pub clicked: i64,
+    pub miss: i64,
+    pub pick: i32,
+    pub update_time: DateTime<Local>,
+}
+
+impl BeatmapStats {
+    #[inline]
+    pub fn get_query_fields() -> String {
+        format!("(\"{}\")", BeatmapStats::FIELDS.join("\",\""))
+    }
 }
 
 mod my_serde {

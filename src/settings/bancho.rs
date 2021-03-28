@@ -90,7 +90,7 @@ impl BanchoConfig {
     #[inline(always)]
     /// Initial bancho config from database
     pub async fn from_database(database: &Database) -> Option<BanchoConfig> {
-        utils::struct_from_database("bancho", "config", "enabled", &true, database).await
+        utils::struct_from_database("bancho", "config", "enabled", "*", &true, database).await
     }
 
     #[inline(always)]
