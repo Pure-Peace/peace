@@ -23,6 +23,20 @@ CREATE TYPE beatmaps.server AS ENUM (
     'ppy',
     'peace'
 );
+CREATE FUNCTION beatmaps.beatmaps_map_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+		NEW.update_time = CURRENT_TIMESTAMP;
+				--only for insert
+		IF (TG_OP = 'INSERT') THEN
+			IF (NEW.fixed_rank_status = NULL) THEN
+				IF (NEW.rank_status = 2 OR NEW.rank_status = 1) THEN
+					NEW.fixed_rank_status = TRUE;
+				END IF;
+			END IF;
+		END IF;
+	RETURN NEW;
+END$$;
 CREATE FUNCTION public.update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
@@ -1224,9 +1238,9 @@ CREATE INDEX user_address ON "user".address USING btree (user_id);
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON bancho.channels FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON bancho.config FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_timestamp ON bancho.config IS 'auto update the update_time after update user info';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.ratings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.stats FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+CREATE TRIGGER maps_trigger BEFORE INSERT OR UPDATE ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION beatmaps.beatmaps_map_trigger();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_scores.catch IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
