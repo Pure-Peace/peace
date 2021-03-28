@@ -67,12 +67,26 @@ fast_from_database!("stats", BeatmapStats);
 
 #[derive(Debug, Clone)]
 pub struct Beatmaps {
-    pub info: BeatmapInfo,
+    pub info: Option<BeatmapInfo>,
     pub stats: Option<BeatmapStats>,
     pub create_time: DateTime<Local>,
 }
 
 impl Beatmaps {
+    #[inline(always)]
+    pub fn default() -> Self {
+        Beatmaps {
+            info: None,
+            stats: None,
+            create_time: Local::now(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn is_not_submit(&self) -> bool {
+        self.info.is_none()
+    }
+
     #[inline(always)]
     pub async fn get(
         md5: &String,
@@ -100,7 +114,15 @@ impl Beatmaps {
             return Some(b);
         }
 
-        info!("[Beatmaps] Failed to get beatmap from anyway: {}", md5);
+        info!(
+            "[Beatmaps] Failed to get beatmap from anyway: {}, cache it not submitted.",
+            md5
+        );
+        cache
+            .beatmaps_cache
+            .write()
+            .await
+            .insert(md5.to_string(), Beatmaps::default());
         None
     }
 
@@ -140,7 +162,7 @@ impl Beatmaps {
         database: &Database,
     ) -> Option<Self> {
         Some(Self {
-            info: BeatmapInfo::from_database_by_md5(beatmap_md5, database).await?,
+            info: Some(BeatmapInfo::from_database_by_md5(beatmap_md5, database).await?),
             stats: if fetch_stats {
                 let stats = BeatmapStats::from_database_by_md5(beatmap_md5, database).await;
                 if let Some(s) = stats {
@@ -157,6 +179,12 @@ impl Beatmaps {
 
     #[inline(always)]
     pub fn is_expired(&self, expires: i64) -> bool {
+        if let Some(info) = &self.info {
+            // Fixed never expire!
+            if info.fixed_rank_status {
+                return false;
+            }
+        };
         (Local::now() - self.create_time).num_seconds() > expires
     }
 
@@ -268,7 +296,7 @@ impl BeatmapFromApi {
     #[inline(always)]
     pub fn convert_to_beatmap(self) -> Beatmaps {
         Beatmaps {
-            info: BeatmapInfo::from(self),
+            info: Some(BeatmapInfo::from(self)),
             stats: None,
             create_time: Local::now(),
         }

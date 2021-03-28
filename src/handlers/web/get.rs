@@ -499,6 +499,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         (data, player)
     };
 
+    debug!("osu_osz2_get_scores, data: {:?}", data);
     let all_beatmaps_not_submitted = ctx.bancho.config.read().await.all_beatmaps_not_submitted;
 
     // Player handlers
@@ -557,20 +558,18 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     }
 
     // Get beatmap
-    let beatmap = match Beatmaps::get(
+    let beatmap = Beatmaps::get(
         &data.beatmap_hash,
         &ctx.bancho,
         &ctx.database,
         &ctx.global_cache,
         true,
     )
-    .await
-    {
-        Some(b) => b,
-        None => {
-            return failed;
-        }
-    };
+    .await;
+    if beatmap.is_none() {
+        return failed;
+    }
+    let beatmap = beatmap.unwrap();
 
     // TODO: XXX
 
