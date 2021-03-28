@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use actix_web::{web::Query, HttpResponse};
 use async_std::fs::File;
 use async_std::prelude::*;
@@ -554,25 +556,64 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         return failed;
     }
 
+    // Get beatmap
+    let start_get = Instant::now();
+
     // Try get beatmap from cache
     let beatmap =
         Beatmaps::get_from_cache(&data.beatmap_hash, &ctx.global_cache.beatmaps_cache).await;
 
     // If not get from cache, get from database
     let beatmap = match beatmap {
-        Some(b) => Some(b),
-        None => Beatmaps::get_from_database(&data.beatmap_hash, true, &ctx.database).await,
+        Some(b) => {
+            debug!(
+                "[Beatmaps] get from beatmap cache success, beatmap cache hitted: {}",
+                data.beatmap_hash
+            );
+            Some(b)
+        }
+        None => {
+            debug!("[Beatmaps] beatmaps cache not hitted, try get from database...");
+            Beatmaps::get_from_database(&data.beatmap_hash, true, &ctx.database).await
+        }
     };
 
     // Still None? Try get from osu! api and cache it
     let beatmap = match beatmap {
-        Some(b) => Some(b),
+        Some(b) => {
+            debug!("[Beatmaps] get from database success.");
+            Some(b)
+        }
         None => {
+            debug!(
+                "[Beatmaps] could not get beatmap from database, try get from osu!api: {}",
+                data.beatmap_hash
+            );
             Beatmaps::get_from_osu_api(&data.beatmap_hash, &ctx.bancho.osu_api, &ctx.database)
                 .await;
             None
         }
     };
+
+    // Check done
+    if beatmap.is_none() {
+        warn!(
+            "[Beatmaps] failed to get beatmap {} info anyway.",
+            data.beatmap_hash
+        );
+        return failed;
+    }
+
+    // Success get beatmap
+    let beatmap = beatmap.unwrap();
+    info!(
+        "[Beatmaps] success to get beatmap {}, info: {:?}; time spent: {:?}",
+        data.beatmap_hash,
+        beatmap,
+        start_get.elapsed()
+    );
+
+    // TODO: XXX
 
     // unimplemented("osu-osz2-getscores.php")
     return failed;

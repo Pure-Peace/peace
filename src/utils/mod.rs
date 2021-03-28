@@ -462,3 +462,17 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
 pub fn lock_wrapper<T>(obj: T) -> Data<RwLock<T>> {
     Data::new(RwLock::new(obj))
 }
+
+#[inline(always)]
+pub fn build_s(len: usize) -> String {
+    let mut s = String::new();
+    for i in 1..len + 1 {
+        s += (if i == len {
+            format!("${}", i)
+        } else {
+            format!("${},", i)
+        })
+        .as_str();
+    }
+    s
+}

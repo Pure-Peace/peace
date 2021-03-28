@@ -26,6 +26,7 @@ derivative = "2.2.0"
 dotenv = "0.15.0"
 enum-primitive-derive = "0.2.1"
 env_logger = "0.8.3"
+field_names = "0.1.1"
 futures = "0.3.12"
 hashbrown = "0.9.1"
 json = "0.12.4"
@@ -36,6 +37,7 @@ md5 = "0.7.0"
 memmap = "0.7.0"
 num-traits = "0.2.14"
 paste = "1.0.5"
+postgres-types = { version = "0.1.2", features = ["derive", "with-chrono-0_4", "with-serde_json-1"] }
 prometheus = { version = "0.11.0", features = ["process"] }
 queue = "0.3.1"
 rand = "0.8.3"
@@ -47,13 +49,13 @@ serde_derive = "1.0.123"
 serde_json = "1.0.62"
 serde_postgres = "0.2.0"
 serde_qs = "0.8.2"
+serde_str = "0.1.0"
 strum = "0.20"
 strum_macros = "0.20"
 tokio-pg-mapper = "0.1.8"
 tokio-pg-mapper-derive = "0.1.5"
-tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4"] }
+tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
 uuid = { version = "0.8.1", features = ["v4"] }
-serde_str = "0.1.0"
 
 
 [dev-dependencies]

@@ -1,127 +1,16 @@
 use async_std::sync::RwLock;
-use chrono::{DateTime, Local};
 use derivative::Derivative;
 use json::object;
+
 use reqwest::Response;
-use serde::Deserialize;
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 
-use serde_str;
-use crate::utils::from_str_bool;
-
+use crate::objects::BeatmapFromApi;
 use crate::settings::bancho::BanchoConfig;
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct BeatmapFromApi {
-    #[serde(rename = "beatmap_id", with = "serde_str")]
-    id: i32,
-    #[serde(rename = "beatmapset_id", with = "serde_str")]
-    set_id: i32,
-    #[serde(rename = "file_md5")]
-    md5: String,
-    artist: String,
-    artist_unicode: Option<String>,
-    title: String,
-    title_unicode: Option<String>,
-    #[serde(rename = "creator")]
-    mapper: String,
-    #[serde(rename = "creator_id", with = "serde_str")]
-    mapper_id: i32,
-    #[serde(rename = "approved", with = "serde_str")]
-    rank_status: i32,
-    #[serde(rename = "version")]
-    diff_name: String,
-    #[serde(rename = "diff_size", with = "serde_str")]
-    cs: f32,
-    #[serde(rename = "diff_overall", with = "serde_str")]
-    od: f32,
-    #[serde(rename = "diff_approach", with = "serde_str")]
-    ar: f32,
-    #[serde(rename = "diff_drain", with = "serde_str")]
-    hp: f32,
-    #[serde(with = "serde_str")]
-    mode: i16,
-    #[serde(rename = "count_normal", with = "serde_str")]
-    object_count: i32,
-    #[serde(rename = "count_slider", with = "serde_str")]
-    slider_count: i32,
-    #[serde(rename = "count_spinner", with = "serde_str")]
-    spinner_count: i32,
-    #[serde(with = "serde_str")]
-    bpm: f32,
-    source: Option<String>,
-    tags: Option<String>,
-    #[serde(with = "serde_str")]
-    genre_id: i16,
-    #[serde(with = "serde_str")]
-    language_id: i16,
-    #[serde(deserialize_with  = "from_str_bool")]
-    storyboard: bool,
-    #[serde(deserialize_with  = "from_str_bool")]
-    video: bool,
-    #[serde(with = "serde_str")]
-    max_combo: i32,
-    #[serde(rename = "total_length", with = "serde_str")]
-    length: i32,
-    #[serde(rename = "hit_length", with = "serde_str")]
-    length_drain: i32,
-    #[serde(rename = "diff_aim", with = "serde_str")]
-    aim: f32,
-    #[serde(rename = "diff_speed", with = "serde_str")]
-    spd: f32,
-    #[serde(rename = "difficultyrating", with = "serde_str")]
-    stars: f32,
-    #[serde(rename = "submit_date", with = "my_serde")]
-    submit_time: Option<DateTime<Local>>,
-    #[serde(rename = "approved_date", with = "my_serde")]
-    approved_time: Option<DateTime<Local>>,
-    #[serde(with = "my_serde")]
-    last_update: Option<DateTime<Local>>,
-}
-
-mod my_serde {
-    use chrono::{DateTime, Local, TimeZone};
-    use serde::{self, Deserialize, Deserializer, Serializer};
-
-    const FORMAT: &'static str = "%Y-%m-%d %H:%M:%S";
-
-    // The signature of a serialize_with function must follow the pattern:
-    //
-    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
-    //    where
-    //        S: Serializer
-    //
-    // although it may also be generic over the input types T.
-    pub fn serialize<S>(date: &Option<DateTime<Local>>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{}", date.unwrap().format(FORMAT));
-        serializer.serialize_str(&s)
-    }
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Local>>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Local
-            .datetime_from_str(&s, FORMAT)
-            .map_err(serde::de::Error::custom)
-            .map(|f| Some(f))
-    }
-}
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -288,12 +177,35 @@ impl OsuApi {
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap(&self, beatmap_hash: &String) -> Option<Vec<BeatmapFromApi>> {
-        self.get_json(
-            "https://old.ppy.sh/api/get_beatmaps",
-            &[("h", beatmap_hash)],
-        )
-        .await?
+    pub async fn fetch_beatmap<Q: Serialize + ?Sized>(&self, query: &Q) -> Option<BeatmapFromApi> {
+        self.get_json::<_, Vec<BeatmapFromApi>>("https://old.ppy.sh/api/get_beatmaps", query)
+            .await?
+            .pop()
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap_by(&self, key: &str, value: &str) -> Option<BeatmapFromApi> {
+        self.fetch_beatmap(&[(key, value)]).await
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap_by_md5(&self, beatmap_hash: &str) -> Option<BeatmapFromApi> {
+        self.fetch_beatmap(&[("h", beatmap_hash)]).await
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap_by_bid(&self, beatmap_id: i32) -> Option<BeatmapFromApi> {
+        self.fetch_beatmap(&[("b", beatmap_id)]).await
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap_by_sid(&self, beatmap_set_id: i32) -> Option<BeatmapFromApi> {
+        self.fetch_beatmap(&[("s", beatmap_set_id)]).await
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap_by_uid(&self, user_id: i32) -> Option<BeatmapFromApi> {
+        self.fetch_beatmap(&[("u", user_id)]).await
     }
 
     pub async fn test_all(&self) -> String {
