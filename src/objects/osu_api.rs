@@ -29,7 +29,7 @@ impl OsuApiClient {
     pub fn new(key: String) -> Self {
         let requester = reqwest::Client::builder()
             .connection_verbose(false)
-            .timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(10))
             .pool_idle_timeout(Some(Duration::from_secs(300)))
             .build()
             .unwrap();
@@ -178,49 +178,60 @@ impl OsuApi {
         &self,
         url: &str,
         query: &Q,
-    ) -> Option<T> {
-        let res = self.get(url, query).await?;
-        match res.json().await {
-            Ok(value) => Some(value),
+    ) -> Result<T, i32> {
+        let res = self.get(url, query).await;
+        if res.is_none() {
+            return Err(-1);
+        };
+        match res.unwrap().json().await {
+            Ok(value) => Ok(value),
             Err(err) => {
                 error!(
                     "[failed] osu! api could not parse data to json, err: {:?}",
                     err
                 );
-                None
+                Err(-2)
             }
         }
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap<Q: Serialize + ?Sized>(&self, query: &Q) -> Option<BeatmapFromApi> {
-        self.get_json::<_, Vec<BeatmapFromApi>>("https://old.ppy.sh/api/get_beatmaps", query)
+    pub async fn fetch_beatmap<Q: Serialize + ?Sized>(
+        &self,
+        query: &Q,
+    ) -> Result<BeatmapFromApi, i32> {
+        match self
+            .get_json::<_, Vec<BeatmapFromApi>>("https://old.ppy.sh/api/get_beatmaps", query)
             .await?
             .pop()
+        {
+            Some(b) => Ok(b),
+            None => Err(0),
+        }
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by(&self, key: &str, value: &str) -> Option<BeatmapFromApi> {
+    pub async fn fetch_beatmap_by(&self, key: &str, value: &str) -> Result<BeatmapFromApi, i32> {
         self.fetch_beatmap(&[(key, value)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_md5(&self, beatmap_hash: &str) -> Option<BeatmapFromApi> {
+    pub async fn fetch_beatmap_by_md5(&self, beatmap_hash: &str) -> Result<BeatmapFromApi, i32> {
         self.fetch_beatmap(&[("h", beatmap_hash)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_bid(&self, beatmap_id: i32) -> Option<BeatmapFromApi> {
+    pub async fn fetch_beatmap_by_bid(&self, beatmap_id: i32) -> Result<BeatmapFromApi, i32> {
         self.fetch_beatmap(&[("b", beatmap_id)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_sid(&self, beatmap_set_id: i32) -> Option<BeatmapFromApi> {
+    pub async fn fetch_beatmap_by_sid(&self, beatmap_set_id: i32) -> Result<BeatmapFromApi, i32> {
         self.fetch_beatmap(&[("s", beatmap_set_id)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_uid(&self, user_id: i32) -> Option<BeatmapFromApi> {
+    pub async fn fetch_beatmap_by_uid(&self, user_id: i32) -> Result<BeatmapFromApi, i32> {
         self.fetch_beatmap(&[("u", user_id)]).await
     }
 

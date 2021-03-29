@@ -105,25 +105,30 @@ impl Beatmaps {
         }
 
         // Try get from database or api, etc.
-        if let Some(b) = Self::get_from_source(md5, bancho, database).await {
-            cache
-                .beatmaps_cache
-                .write()
-                .await
-                .insert(md5.to_string(), b.clone());
-            return Some(b);
+        match Self::get_from_source(md5, bancho, database).await {
+            Ok(b) => {
+                cache
+                    .beatmaps_cache
+                    .write()
+                    .await
+                    .insert(md5.to_string(), b.clone());
+                Some(b)
+            }
+            Err(i) => {
+                // 0: not exists; -1: request err; -2: parse err
+                if i != -1 {
+                    cache
+                        .beatmaps_cache
+                        .write()
+                        .await
+                        .insert(md5.to_string(), Beatmaps::default());
+                };
+                info!(
+                    "[Beatmaps:err{}] Failed to get beatmap from anyway: {}, cache it not submitted.",i, md5
+                );
+                None
+            }
         }
-
-        info!(
-            "[Beatmaps] Failed to get beatmap from anyway: {}, cache it not submitted.",
-            md5
-        );
-        cache
-            .beatmaps_cache
-            .write()
-            .await
-            .insert(md5.to_string(), Beatmaps::default());
-        None
     }
 
     #[inline(always)]
@@ -131,7 +136,7 @@ impl Beatmaps {
         md5: &String,
         bancho: &Bancho,
         database: &Database,
-    ) -> Option<Self> {
+    ) -> Result<Self, i32> {
         let start = Instant::now();
         // Try get beatmap from database
         if let Some(b) = Self::get_from_database(&md5, false, &database).await {
@@ -140,19 +145,19 @@ impl Beatmaps {
                 md5,
                 start.elapsed()
             );
-            return Some(b);
+            return Ok(b);
         }
-
-        if let Some(b) = Self::get_from_osu_api(&md5, &bancho.osu_api, &database).await {
-            info!(
-                "[Beatmaps] get from osu!api: {}; time spent: {:?}",
-                md5,
-                start.elapsed()
-            );
-            return Some(b);
+        match Self::get_from_osu_api(&md5, &bancho.osu_api, &database).await {
+            Ok(b) => {
+                info!(
+                    "[Beatmaps] get from osu!api: {}; time spent: {:?}",
+                    md5,
+                    start.elapsed()
+                );
+                Ok(b)
+            }
+            Err(i) => Err(i),
         }
-
-        None
     }
 
     #[inline(always)]
@@ -213,13 +218,13 @@ impl Beatmaps {
         beatmap_md5: &String,
         osu_api: &Data<RwLock<OsuApi>>,
         database: &Database,
-    ) -> Option<Self> {
+    ) -> Result<Self, i32> {
         match BeatmapFromApi::get_from_osu_api(beatmap_md5, osu_api, database).await {
-            Some(f) => {
+            Ok(f) => {
                 debug!("get it, do Beatmaps convert from api object...");
-                Some(f.convert_to_beatmap())
+                Ok(f.convert_to_beatmap())
             }
-            None => None,
+            Err(i) => Err(i),
         }
     }
 }
@@ -307,15 +312,15 @@ impl BeatmapFromApi {
         beatmap_md5: &String,
         osu_api: &Data<RwLock<OsuApi>>,
         database: &Database,
-    ) -> Option<Self> {
+    ) -> Result<Self, i32> {
         debug!("try get beatmap {} info from osu!api...", beatmap_md5);
         match osu_api.read().await.fetch_beatmap_by_md5(beatmap_md5).await {
-            Some(beatmap_from_api) => {
+            Ok(beatmap_from_api) => {
                 debug!("get_from_osu_api success: {:?}", beatmap_from_api);
                 beatmap_from_api.save_to_database(database).await;
-                Some(beatmap_from_api)
+                Ok(beatmap_from_api)
             }
-            None => None,
+            Err(i) => Err(i),
         }
     }
 
