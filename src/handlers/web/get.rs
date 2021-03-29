@@ -558,7 +558,9 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Get beatmap
     let beatmap = Beatmaps::get(
-        &data.beatmap_hash,
+        Some(&data.beatmap_hash),
+        Some(data.beatmap_set_id),
+        Some(&data.file_name),
         &ctx.bancho,
         &ctx.database,
         &ctx.global_cache,
