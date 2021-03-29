@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
     let bancho = Data::new(Bancho::init(&local_config, &database).await);
 
     // Create and start
-    let mut peace = Peace::new(bancho.clone(), local_config, database);
+    let mut peace = Peace::new(bancho.clone(), database);
 
     peace.start().await
 }

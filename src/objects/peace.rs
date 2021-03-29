@@ -34,7 +34,8 @@ pub struct Peace {
 }
 
 impl Peace {
-    pub fn new(bancho: Data<Bancho>, local_config: LocalConfig, database: Database) -> Self {
+    pub fn new(bancho: Data<Bancho>, database: Database) -> Self {
+        let local_config = bancho.local_config.clone();
         let sets = &local_config.data;
         let addr = local_config
             .cfg
