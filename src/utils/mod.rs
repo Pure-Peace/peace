@@ -458,6 +458,7 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
         "SELECT {} FROM \"{}\".\"{}\" WHERE \"{}\" = $1;",
         fields, table, schema, query_by
     );
+    debug!("struct_from_database query: {}", query);
     let row = database.pg.query_first(&query, &[param]).await;
     if let Err(err) = row {
         debug!(

@@ -18,6 +18,7 @@ macro_rules! fast_from_database {
         impl $typ {
             #[inline(always)]
             pub async fn from_database_by_id(beatmap_id: i32, database: &Database) -> Option<$typ> {
+                debug!("try get beatmap id: {} info from cache...", beatmap_id);
                 utils::struct_from_database(
                     "beatmaps",
                     $table,
@@ -33,6 +34,10 @@ macro_rules! fast_from_database {
                 beatmap_set_id: i32,
                 database: &Database,
             ) -> Option<$typ> {
+                debug!(
+                    "try get beatmap set id: {} info from cache...",
+                    beatmap_set_id
+                );
                 utils::struct_from_database(
                     "beatmaps",
                     $table,
@@ -48,6 +53,7 @@ macro_rules! fast_from_database {
                 beatmap_md5: &String,
                 database: &Database,
             ) -> Option<$typ> {
+                debug!("try get beatmap md5: {} info from cache...", beatmap_md5);
                 utils::struct_from_database(
                     "beatmaps",
                     $table,
@@ -416,7 +422,7 @@ pub struct BeatmapInfo {
 impl BeatmapInfo {
     #[inline]
     pub fn get_query_fields() -> String {
-        format!("(\"{}\")", BeatmapInfo::FIELDS.join("\",\""))
+        format!("\"{}\"", BeatmapInfo::FIELDS.join("\",\""))
     }
 }
 
@@ -467,7 +473,7 @@ pub struct BeatmapStats {
 impl BeatmapStats {
     #[inline]
     pub fn get_query_fields() -> String {
-        format!("(\"{}\")", BeatmapStats::FIELDS.join("\",\""))
+        format!("\"{}\"", BeatmapStats::FIELDS.join("\",\""))
     }
 }
 
