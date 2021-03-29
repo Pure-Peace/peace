@@ -15,6 +15,8 @@ use std::{
 use crate::objects::BeatmapFromApi;
 use crate::settings::bancho::BanchoConfig;
 
+use super::ApiError;
+
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct OsuApiClient {
@@ -52,7 +54,7 @@ impl OsuApiClient {
     }
 }
 
-const NOT_API_KEYS: &'static str = "osu! apikeys not added, could not send requests.";
+const NOT_API_KEYS: &'static str = "[OsuApi] Api keys not added, could not send requests.";
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -70,7 +72,7 @@ impl OsuApi {
         let api_keys = &bancho_config.read().await.osu_api_keys;
 
         if api_keys.is_empty() {
-            warn!("osu! api: No osu! apikeys has been added, please add it to the bancho.config of the database! Otherwise, the osu!api request cannot be used.");
+            warn!("[OsuApi] No osu! apikeys has been added, please add it to the bancho.config of the database! Otherwise, the osu!api request cannot be used.");
         }
 
         let api_clients = api_keys
@@ -111,7 +113,7 @@ impl OsuApi {
         }
         for idx in should_remove {
             let removed = self.api_clients.remove(idx);
-            info!("osu api: Removed key {}", removed.key);
+            info!("[OsuApi] Removed api key and client: {}", removed.key);
         }
 
         // Add new clients
@@ -122,7 +124,7 @@ impl OsuApi {
             .collect();
         for key in new_keys {
             if !old_keys.contains(&key) {
-                info!("osu api: Added key {}", key);
+                info!("[OsuApi] Added key and client: {}", key);
                 self.api_clients.push(OsuApiClient::new(key));
             }
         }
@@ -138,7 +140,7 @@ impl OsuApi {
         let mut tries = 1;
         loop {
             if tries > 3 {
-                warn!("[osu!api] request over 3 times but still failed, stop request.");
+                warn!("[OsuApi] Request over 3 times but still failed, stop request.");
                 break;
             };
             for api_client in &self.api_clients {
@@ -153,7 +155,7 @@ impl OsuApi {
                 let delay = start.elapsed().as_millis() as usize;
                 if res.is_err() {
                     warn!(
-                        "[failed] osu! api({}) request-{} with: {}ms; err: {:?};",
+                        "[OsuApi] key ({}) request-{} with: {}ms; err: {:?};",
                         api_client.key, tries, delay, res
                     );
                     api_client.failed();
@@ -162,7 +164,7 @@ impl OsuApi {
                     continue;
                 }
                 info!(
-                    "[success] osu! api({}) request-{} with: {:?}ms;",
+                    "[OsuApi] key ({}) request-{} with: {:?}ms;",
                     api_client.key, tries, delay
                 );
                 api_client.success();
@@ -178,19 +180,16 @@ impl OsuApi {
         &self,
         url: &str,
         query: &Q,
-    ) -> Result<T, i32> {
+    ) -> Result<T, ApiError> {
         let res = self.get(url, query).await;
         if res.is_none() {
-            return Err(-1);
+            return Err(ApiError::NotExists);
         };
         match res.unwrap().json().await {
             Ok(value) => Ok(value),
             Err(err) => {
-                error!(
-                    "[failed] osu! api could not parse data to json, err: {:?}",
-                    err
-                );
-                Err(-2)
+                error!("[OsuApi] Could not parse data to json, err: {:?}", err);
+                Err(ApiError::ParseError)
             }
         }
     }
@@ -199,40 +198,59 @@ impl OsuApi {
     pub async fn fetch_beatmap<Q: Serialize + ?Sized>(
         &self,
         query: &Q,
-    ) -> Result<BeatmapFromApi, i32> {
-        match self
-            .get_json::<_, Vec<BeatmapFromApi>>("https://old.ppy.sh/api/get_beatmaps", query)
-            .await?
-            .pop()
-        {
+    ) -> Result<BeatmapFromApi, ApiError> {
+        match self.fetch_beatmap_list(query).await?.pop() {
             Some(b) => Ok(b),
-            None => Err(0),
+            None => Err(ApiError::NotExists),
         }
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by(&self, key: &str, value: &str) -> Result<BeatmapFromApi, i32> {
-        self.fetch_beatmap(&[(key, value)]).await
+    pub async fn fetch_beatmap_list<Q: Serialize + ?Sized>(
+        &self,
+        query: &Q,
+    ) -> Result<Vec<BeatmapFromApi>, ApiError> {
+        Ok(self
+            .get_json::<_, Vec<BeatmapFromApi>>("https://old.ppy.sh/api/get_beatmaps", query)
+            .await?)
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_md5(&self, beatmap_hash: &str) -> Result<BeatmapFromApi, i32> {
+    pub async fn fetch_beatmap_by_md5(
+        &self,
+        beatmap_hash: &String,
+    ) -> Result<BeatmapFromApi, ApiError> {
         self.fetch_beatmap(&[("h", beatmap_hash)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_bid(&self, beatmap_id: i32) -> Result<BeatmapFromApi, i32> {
+    pub async fn fetch_beatmap_by_bid(&self, beatmap_id: i32) -> Result<BeatmapFromApi, ApiError> {
         self.fetch_beatmap(&[("b", beatmap_id)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_sid(&self, beatmap_set_id: i32) -> Result<BeatmapFromApi, i32> {
-        self.fetch_beatmap(&[("s", beatmap_set_id)]).await
+    pub async fn fetch_beatmap_by_sid(
+        &self,
+        beatmap_set_id: i32,
+    ) -> Result<Vec<BeatmapFromApi>, ApiError> {
+        self.fetch_beatmap_list(&[("s", beatmap_set_id)]).await
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_uid(&self, user_id: i32) -> Result<BeatmapFromApi, i32> {
-        self.fetch_beatmap(&[("u", user_id)]).await
+    pub async fn fetch_beatmap_by(
+        &self,
+        key: &str,
+        value: &String,
+    ) -> Result<Vec<BeatmapFromApi>, ApiError> {
+        self.fetch_beatmap_list(&[(key, value)]).await
+    }
+
+    #[inline(always)]
+    pub async fn fetch_beatmap_by_uid(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<BeatmapFromApi>, ApiError> {
+        self.fetch_beatmap_list(&[("u", user_id)]).await
     }
 
     pub async fn test_all(&self) -> String {
@@ -254,7 +272,7 @@ impl OsuApi {
                 .await;
             let delay = start.elapsed().as_millis() as usize;
 
-            debug!("osu! api test request with: {:?};", delay);
+            debug!("[OsuApi] test_all request with: {:?} totaly;", delay);
             let (status, err) = match res {
                 Ok(resp) => {
                     api_client.success();
