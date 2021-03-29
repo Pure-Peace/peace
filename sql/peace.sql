@@ -215,12 +215,42 @@ CREATE TABLE bancho.config (
     all_players_have_supporter boolean DEFAULT true NOT NULL,
     client_update_enabled boolean DEFAULT true NOT NULL,
     client_update_expires integer DEFAULT 3600 NOT NULL,
-    session_recycle_check_interval integer DEFAULT 60 NOT NULL
+    session_recycle_check_interval integer DEFAULT 60 NOT NULL,
+    allow_unicode_username boolean DEFAULT true NOT NULL
 );
 COMMENT ON COLUMN bancho.config.name IS 'unique config name';
 COMMENT ON COLUMN bancho.config.comment IS 'comment';
 COMMENT ON COLUMN bancho.config.enabled IS 'enabled status';
 COMMENT ON COLUMN bancho.config.update_time IS 'auto update timestamp';
+COMMENT ON COLUMN bancho.config.free_direct IS 'in-game free osu!direct';
+COMMENT ON COLUMN bancho.config.ip_blacklist IS 'banned ip';
+COMMENT ON COLUMN bancho.config.display_clan_name IS 'display clan name in game';
+COMMENT ON COLUMN bancho.config.sensitive_words IS 'auto filter out the words in the list, includes message, username (refuse registration)';
+COMMENT ON COLUMN bancho.config.menu_icon IS 'osu menu icon url';
+COMMENT ON COLUMN bancho.config.seasonal_backgrounds IS 'background images (url)';
+COMMENT ON COLUMN bancho.config.client_check IS 'osu login client version check';
+COMMENT ON COLUMN bancho.config.login_enabled IS 'allow user log in osu';
+COMMENT ON COLUMN bancho.config.login_notifications IS 'login success then send notifications (list)';
+COMMENT ON COLUMN bancho.config.login_retry_max_count IS 'if login failed and over this, will auto refuse this ip';
+COMMENT ON COLUMN bancho.config.timeout_player_session IS 'if user not send request for than this time, will be auto logout';
+COMMENT ON COLUMN bancho.config.timeout_beatmap_cache IS 'beatmap cache timeout (not fixed status beatmap)';
+COMMENT ON COLUMN bancho.config.message_length_max IS 'game max message length, over this will cut';
+COMMENT ON COLUMN bancho.config.muti_accounts_allowed IS 'if not allow, auto ban any mutiaccount user';
+COMMENT ON COLUMN bancho.config.muti_accounts_max IS 'if someone''s mutiaccount over this, auto ban';
+COMMENT ON COLUMN bancho.config.auto_ban_enabled IS 'enable high pp auto ban';
+COMMENT ON COLUMN bancho.config.auto_ban_whitelist IS 'auto ban system will not check id in whitelist';
+COMMENT ON COLUMN bancho.config.login_disallowed_ip IS 'banned ip list';
+COMMENT ON COLUMN bancho.config.login_disallowed_id IS 'banned id list';
+COMMENT ON COLUMN bancho.config.login_disallowed_usernames IS 'banned username list';
+COMMENT ON COLUMN bancho.config.login_disallowed_hardware_hashes IS 'banned  hardware hash list';
+COMMENT ON COLUMN bancho.config.login_disallowed_disk_hashes IS 'banned disk hash list';
+COMMENT ON COLUMN bancho.config.login_disallowed_adapters_hashes IS 'banned adapter hash list';
+COMMENT ON COLUMN bancho.config.client_only_whitelist IS 'only in-whitelist client version can log in game';
+COMMENT ON COLUMN bancho.config.all_beatmaps_not_submitted IS 'all beatmaps in game will display not submitted';
+COMMENT ON COLUMN bancho.config.all_players_have_supporter IS 'all players have in-game supporter';
+COMMENT ON COLUMN bancho.config.client_update_expires IS 'osu! client update cache timeout';
+COMMENT ON COLUMN bancho.config.session_recycle_check_interval IS 'each interval will do session check, auto logout deactive player';
+COMMENT ON COLUMN bancho.config.allow_unicode_username IS 'all user can use unicode username, like chinese, japanese, emoji, etc.';
 CREATE SEQUENCE beatmaps.peace_bid
     START WITH 1
     INCREMENT BY 1
@@ -1087,7 +1117,7 @@ INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, 
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (4, '#lobby', 'Multiplayer lobby discussion room.', 1, 2, true, '2020-12-09 04:21:46.339821+08', '2020-12-09 04:21:46.339821+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 4, true, '2020-12-09 04:21:35.551317+08', '2021-01-04 21:29:59.518299+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (5, '#开发', 'development', 1, 2, true, '2021-02-15 22:28:01.031559+08', '2021-02-15 22:28:37.085566+08');
-INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes, client_only_whitelist, all_beatmaps_not_submitted, all_players_have_supporter, client_update_enabled, client_update_expires, session_recycle_check_interval) VALUES ('test', NULL, true, '2021-03-29 06:44:02.197919+08', '{}', true, '{}', true, '{}', NULL, NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', false, false, true, true, 86400, 60);
+INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes, client_only_whitelist, all_beatmaps_not_submitted, all_players_have_supporter, client_update_enabled, client_update_expires, session_recycle_check_interval, allow_unicode_username) VALUES ('test', NULL, true, '2021-03-29 06:44:02.197919+08', '{}', true, '{}', true, '{}', NULL, NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', false, false, true, true, 86400, 60, true);
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
 INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
