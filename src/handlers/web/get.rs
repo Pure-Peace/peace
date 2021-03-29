@@ -472,7 +472,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         #[serde(rename = "c")]
         beatmap_hash: String,
         #[serde(rename = "f")]
-        beatmap_filename: String,
+        file_name: String,
         #[serde(rename = "m")]
         game_mode: GameMode,
         #[serde(rename = "i")]

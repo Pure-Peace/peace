@@ -11,8 +11,6 @@ use argon2::{ThreadMode, Variant, Version};
 use std::fmt::Display;
 use std::str::FromStr;
 
-use serde::de::{self, Deserialize, Deserializer};
-
 use async_std::sync::RwLock;
 use chrono::{DateTime, Local};
 use futures::StreamExt;
@@ -20,6 +18,7 @@ use lazy_static::lazy_static;
 use maxminddb::{geoip2::City, Reader};
 use memmap::Mmap;
 use rand::Rng;
+use serde::de::{self, Deserialize, Deserializer};
 use serde_qs;
 use tokio_pg_mapper::FromTokioPostgresRow;
 
@@ -496,6 +495,14 @@ pub fn build_s(len: usize) -> String {
             format!("${},", i)
         })
         .as_str();
+    }
+    s
+}
+
+#[inline(always)]
+pub fn safe_file_name(mut s: String) -> String {
+    for i in r#":\*></?"|"#.chars() {
+        s = s.replace(i, "");
     }
     s
 }
