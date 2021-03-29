@@ -1,5 +1,4 @@
-use std::time::Instant;
-
+#![allow(unused_variables)]
 use actix_web::{web::Query, HttpResponse};
 use async_std::fs::File;
 use async_std::prelude::*;

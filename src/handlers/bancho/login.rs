@@ -3,7 +3,6 @@
 use actix_web::web::{Bytes, Data};
 use actix_web::HttpRequest;
 use log::warn;
-use regex::Regex;
 use std::net::{IpAddr, Ipv4Addr};
 
 use crate::types::PacketData;
@@ -29,7 +28,6 @@ use memmap::Mmap;
 
 lazy_static::lazy_static! {
     static ref DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-    static ref OSU_VERSION_REGEX: Regex = Regex::new(r"(?x)(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})").unwrap();
 }
 
 #[inline(always)]
@@ -88,7 +86,7 @@ pub async fn login(
         }
 
         // Version digits
-        let version_captures = OSU_VERSION_REGEX.captures(&osu_version);
+        let version_captures = constants::regexes::OSU_VERSION_REGEX.captures(&osu_version);
         if version_captures.is_none() {
             warn!(
                 "login refused, invalid osu version: {} username: {}, ip: {}",

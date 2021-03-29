@@ -41,6 +41,7 @@ pub async fn handler(
     let resp = match handle_path.as_str() {
         "check-updates" => get::check_updates(&ctx()).await,
         /*"bancho_connect" => {}*/
+        /* "maps/" => get::osu_get_beatmap_update(&ctx()).await, */
         "lastfm" => get::lastfm(&ctx()).await,
         "osu-rate" => get::osu_rate(&ctx()).await,
         "osu-addfavourite" => get::osu_add_favourite(&ctx()).await,

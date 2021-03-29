@@ -1,5 +1,5 @@
 use super::depends::*;
-use crate::utils;
+use crate::{constants, utils};
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterForm {
@@ -19,11 +19,6 @@ pub async fn osu_register(
     bancho: Data<Bancho>,
     global_cache: Data<Caches>,
 ) -> HttpResponse {
-    lazy_static::lazy_static! {
-        static ref USERNAME_REGEX: Regex = Regex::new(r"(^[0-9a-zA-Z_ \[\]-]{2,16}$)|(^[\w \[\]-]{1,10}$)").unwrap();
-        static ref EMAIL_REGEX: Regex = Regex::new(r"^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{2,24}$").unwrap();
-    }
-
     let bancho_config = bancho.config.read().await;
     // Register closed
     if !bancho_config.registration_enabled {
@@ -99,7 +94,7 @@ pub async fn osu_register(
     let mut password_errors = Vec::new();
 
     // Check username 1
-    if !USERNAME_REGEX.is_match(&form_data.username) {
+    if !constants::regexes::USERNAME_REGEX.is_match(&form_data.username) {
         username_errors.push("The length of the user name is 2-16 (alphanumeric as well as ][-_); if you use Chinese or non-English characters, the length is 1-10.");
     }
 
@@ -138,7 +133,7 @@ pub async fn osu_register(
     }
 
     // Check email 1
-    if !EMAIL_REGEX.is_match(&form_data.email) {
+    if !constants::regexes::EMAIL_REGEX.is_match(&form_data.email) {
         email_errors.push("Invalid email address.");
     }
 

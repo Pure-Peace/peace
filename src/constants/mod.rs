@@ -5,6 +5,7 @@ mod country;
 mod geoip;
 mod packets;
 mod privileges;
+pub mod regexes;
 
 use enum_primitive_derive::Primitive;
 use serde::{de::Error, Deserialize, Deserializer};
