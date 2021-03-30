@@ -19,6 +19,34 @@ use num_traits::FromPrimitive;
 pub use packets::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
+#[derive(Debug, Clone)]
+pub enum RankStatus {
+    Graveyard,
+    Wip,
+    Pending,
+    Ranked,
+    Approved,
+    Qualified,
+    Loved,
+    Unknown,
+}
+
+impl RankStatus {
+    #[inline(always)]
+    pub fn from_i32(i: i32) -> Self {
+        match i {
+            -2 => Self::Graveyard,
+            -1 => Self::Wip,
+            0 => Self::Pending,
+            1 => Self::Ranked,
+            2 => Self::Approved,
+            3 => Self::Qualified,
+            4 => Self::Loved,
+            _ => Self::Unknown,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
 #[repr(u8)]
 pub enum ScoreboardType {
