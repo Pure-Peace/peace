@@ -1,5 +1,6 @@
 use super::{depends::*, Beatmap, BeatmapInfo, GetBeatmapMethod};
-use crate::{objects::ApiError, utils};
+use crate::objects::osu_api::errors::ApiError;
+use crate::utils;
 
 #[derive(Debug, FieldNames, ToSql, Deserialize, Clone)]
 pub struct BeatmapFromApi {
