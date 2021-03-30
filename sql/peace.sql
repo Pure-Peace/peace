@@ -27,7 +27,7 @@ CREATE FUNCTION beatmaps.beatmaps_map_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
 		NEW.update_time = CURRENT_TIMESTAMP;
-        --only for insert
+		--only for insert
 		IF (TG_OP = 'INSERT') THEN
 			--if beatmap already exists and new has modifyed, we should delete old.
 			perform FROM "beatmaps"."maps" WHERE "server" = NEW."server" AND "id" = NEW."id" AND "md5" <> NEW."md5";
