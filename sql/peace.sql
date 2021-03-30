@@ -27,8 +27,14 @@ CREATE FUNCTION beatmaps.beatmaps_map_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
 		NEW.update_time = CURRENT_TIMESTAMP;
-				--only for insert
+        --only for insert
 		IF (TG_OP = 'INSERT') THEN
+			--if beatmap already exists and new has modifyed, we should delete old.
+			perform FROM "beatmaps"."maps" WHERE "server" = NEW."server" AND "id" = NEW."id" AND "md5" <> NEW."md5";
+			IF FOUND THEN
+				DELETE FROM "beatmaps"."maps" WHERE "server" = NEW."server" AND "id" = NEW."id";
+			END IF;
+			--fixed rank status
 			IF (NEW.fixed_rank_status IS NULL) THEN
 				IF (NEW.rank_status = 2 OR NEW.rank_status = 1) THEN
 					NEW.fixed_rank_status = TRUE;
@@ -1146,8 +1152,8 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.4', 'PurePeace', NULL, 'add beatmaps.ratings', '2021-03-27 10:16:11.720151+08', '2021-03-27 10:16:11.720151+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.5', 'PurePeace', NULL, 'modify beatmaps.statistic.playtime interval -> int8', '2021-03-27 14:22:34.605093+08', '2021-03-27 14:22:59.795308+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.0', 'PurePeace', NULL, 'done beatmaps.', '2021-03-28 10:38:16.374035+08', '2021-03-28 10:38:16.374035+08');
-INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.1', 'PurePeace', NULL, 'add triggers
-add triggers', '2021-03-29 06:44:49.025951+08', '2021-03-29 06:44:49.025951+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.1', 'PurePeace', NULL, 'add triggers', '2021-03-29 06:44:49.025951+08', '2021-03-29 06:44:49.025951+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.2', 'PurePeace', NULL, 'fix beatmap insert, work with on conflict', '2021-03-30 08:53:12.94511+08', '2021-03-30 08:53:12.94511+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1162,7 +1168,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.0', 'PurePeace', '0.6.5', 'big refactor', '2021-03-28 01:59:32.294525+08', '2021-03-28 01:59:44.657543+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.5', 'PurePeace', '0.7.0', '+++', '2021-03-28 10:38:35.46138+08', '2021-03-28 10:38:38.685742+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.6', 'PurePeace', '0.7.1', '+', '2021-03-29 06:44:51.298491+08', '2021-03-29 06:44:51.298491+08');
-INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.7', 'PurePeace', '0.7.1', '+', '2021-03-30 07:55:56.184291+08', '2021-03-30 07:55:56.184291+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.7', 'PurePeace', '0.7.2', '+', '2021-03-30 08:53:12.94511+08', '2021-03-30 08:53:12.94511+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
