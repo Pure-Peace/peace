@@ -1,6 +1,6 @@
 [package]
 name = "peace"
-version = "0.5.7"
+version = "0.2.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -70,7 +70,9 @@ harness = false
 # Enabling makes the compiled program size smaller and higher performance, 
 # but it will extend compilation time.
 [profile.release]
-lto = false
+lto = true
+codegen-units = 1
+opt-level = 's'
 
 # link-time-optimization
 # Enabling makes the compiled program size smaller and higher performance, 
