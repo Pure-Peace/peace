@@ -1,4 +1,4 @@
-use super::{depends::*, BeatmapFromApi};
+use super::{depends::*, BeatmapFromApi, GetBeatmapMethod};
 use crate::utils;
 
 #[pg_mapper(table = "beatmaps.maps")]
@@ -42,52 +42,38 @@ impl BeatmapInfo {
     }
 
     #[inline(always)]
-    pub async fn from_database_by_bid(beatmap_id: i32, database: &Database) -> Option<Self> {
+    pub async fn from_database_by<T: Any + Display>(
+        key: &T,
+        method: GetBeatmapMethod,
+        database: &Database,
+    ) -> Option<Self> {
+        let v = key as &dyn Any;
         debug!(
-            "[FastDB] Try get beatmap by id: {} info from database...",
-            beatmap_id
+            "[BeatmapInfo] Try get with Method({:?}) {} from database...",
+            method, key
         );
         utils::struct_from_database(
             "beatmaps",
             "maps",
-            "id",
+            method.db_column_name().as_str(),
             Self::get_query_fields().as_str(),
-            &beatmap_id,
+            v.downcast_ref::<String>().unwrap(),
             database,
         )
         .await
+    }
+
+    #[inline(always)]
+    pub async fn from_database_by_bid(beatmap_id: i32, database: &Database) -> Option<Self> {
+        Self::from_database_by(&beatmap_id, GetBeatmapMethod::Bid, database).await
     }
     #[inline(always)]
     pub async fn from_database_by_sid(beatmap_set_id: i32, database: &Database) -> Option<Self> {
-        debug!(
-            "[FastDB] Try get beatmap by set id: {} info from database...",
-            beatmap_set_id
-        );
-        utils::struct_from_database(
-            "beatmaps",
-            "maps",
-            "set_id",
-            Self::get_query_fields().as_str(),
-            &beatmap_set_id,
-            database,
-        )
-        .await
+        Self::from_database_by(&beatmap_set_id, GetBeatmapMethod::Sid, database).await
     }
     #[inline(always)]
     pub async fn from_database_by_md5(beatmap_md5: &String, database: &Database) -> Option<Self> {
-        debug!(
-            "[FastDB] Try get beatmap by md5: {} info from database...",
-            beatmap_md5
-        );
-        utils::struct_from_database(
-            "beatmaps",
-            "maps",
-            "md5",
-            Self::get_query_fields().as_str(),
-            beatmap_md5,
-            database,
-        )
-        .await
+        Self::from_database_by(beatmap_md5, GetBeatmapMethod::Md5, database).await
     }
 }
 

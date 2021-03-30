@@ -13,6 +13,18 @@ pub enum GetBeatmapMethod {
     Sid,
 }
 
+impl GetBeatmapMethod {
+    #[inline(always)]
+    pub fn db_column_name(&self) -> String {
+        match self {
+            &Self::Md5 => "md5",
+            &Self::Bid => "id",
+            &Self::Sid => "set_id",
+        }
+        .to_string()
+    }
+}
+
 mod depends {
     pub use crate::database::Database;
     pub use crate::objects::{Bancho, Caches, OsuApi};
