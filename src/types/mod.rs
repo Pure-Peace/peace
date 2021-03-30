@@ -28,4 +28,4 @@ pub type Argon2CryptedCipher = String;
 pub type Argon2Cache = HashMap<Argon2CryptedCipher, Password>;
 
 pub type BeatmapMd5 = String;
-pub type BeatmapsCache = HashMap<BeatmapMd5, Beatmap>;
+pub type BeatmapsCache = HashMap<BeatmapMd5, Beatmap>; // TODO: like player sessions map, it should can query by bid, sid, md5. need refactors (save Arc<Beatmap>)

@@ -68,7 +68,18 @@ impl Beatmap {
     }
 
     #[inline(always)]
-    /// Get beatmap with MD5 or SID
+    /// Get beatmap with MD5 or SID, from local, database, osu!api.
+    ///
+    /// if `try_from_cache` is true, will try get it from local cache or database first.
+    /// if success to get a map from osu!api, will auto cache it to local and database.
+    /// if failed to get a map from osu!api, will auto cache it to local as "not submit".
+    ///
+    /// cache expires seconds can be setted in database (bancho.config.timeout_beatmap_cache),
+    /// default is 3600s (one hour)
+    ///
+    /// TODO: add bid support?
+    /// TODO: refactor beatmaps cache, can use sid or bid?
+    ///
     pub async fn get(
         md5: Option<&String>,
         sid: Option<i32>,
@@ -81,26 +92,30 @@ impl Beatmap {
         let expire = bancho.config.read().await.timeout_beatmap_cache;
         // MD5 Available
         if let Some(md5) = md5 {
-            // Try get beatmap from local cache
+            // Try get beatmap from local cache or database
             if try_from_cache {
+                // Get from local cache
                 if let Some(b) = Self::from_cache(md5, &cache, expire).await {
                     info!("[Beatmap] Get from cache: {};", md5);
                     return Some(b);
                 };
+
+                // Local cache expired or not founded, then
+                // Try get beatmap from database
+                // If get, will auto cache it to local.
+                if let Some(b) = Beatmap::from_database(md5, GetBeatmapMethod::Md5, database).await
+                {
+                    // If not expired, cache it locally and returns it.
+                    if !b.is_expired(expire) {
+                        cache.cache_beatmap(md5.clone(), &b).await;
+                        return Some(b);
+                    }
+                };
             };
 
-            // Local cache expired or not founded, then
-            // Try get beatmap from database
-            if let Some(b) = Beatmap::from_database(md5, GetBeatmapMethod::Md5, database).await {
-                // If not expired, cache it locally and returns it.
-                if !b.is_expired(expire) {
-                    cache.cache_beatmap(md5.clone(), &b).await;
-                    return Some(b);
-                }
-            };
-
-            // Database cache expired or not founded, then
+            // Cache expired or not founded, then
             // Try get beatmap from osu!api (try with md5)
+            // If get, will auto cache it to local and database.
             match Beatmap::from_osu_api(md5, GetBeatmapMethod::Md5, None, &bancho.osu_api, database)
                 .await
             {
@@ -169,6 +184,7 @@ impl Beatmap {
     }
 
     #[inline(always)]
+    // TODO: from cache by bid, sid...
     pub async fn from_cache(beatmap_md5: &String, cache: &Caches, expire: i64) -> Option<Self> {
         debug!("[Beatmap] try get beatmap {} from cache...", beatmap_md5);
         let b = cache.get_beatmap(beatmap_md5).await?;

@@ -460,7 +460,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 
 #[inline(always)]
 pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
-    let failed = HttpResponse::Ok().body("-1|false");
+    let not_submit = HttpResponse::Ok().body("-1|false");
     #[derive(Debug, Deserialize)]
     struct GetScores {
         // -
@@ -491,10 +491,10 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Parse query and get login
     let (data, player) = {
-        let mut data = parse_query!(ctx, GetScores, failed);
+        let mut data = parse_query!(ctx, GetScores, not_submit);
         // Update game mode with playmod list (rx / ap)
         data.game_mode.update_with_playmod(&data.play_mods.list);
-        let player = get_login!(ctx, data, failed);
+        let player = get_login!(ctx, data, not_submit);
         (data, player)
     };
 
@@ -553,27 +553,39 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // server is currently not allowed get scores
     if all_beatmaps_not_submitted {
-        return failed;
+        return not_submit;
     }
 
-    // Get beatmap
-    let beatmap = Beatmap::get(
-        Some(&data.beatmap_hash),
-        Some(data.beatmap_set_id),
-        Some(&data.file_name),
-        &ctx.bancho,
-        &ctx.database,
-        &ctx.global_cache,
-        true,
-    )
-    .await;
-    if beatmap.is_none() {
-        return failed;
-    }
-    let beatmap = beatmap.unwrap();
+    // get beatmap
+    let beatmap = {
+        // Try get beatmap with MD5, Setid and filename,
+        // from local cache, database cache, and osu!api.
+        // if get a beatmap, will auto cache it.
+        let b = Beatmap::get(
+            Some(&data.beatmap_hash),
+            Some(data.beatmap_set_id),
+            Some(&data.file_name),
+            &ctx.bancho,
+            &ctx.database,
+            &ctx.global_cache,
+            true,
+        )
+        .await;
+        // If cannot get beatmap anyway, return it not submit.
+        if b.is_none() {
+            return not_submit;
+        };
+        // Check beatmap is "not submit"?
+        let b = b.unwrap();
+        if b.is_not_submit() {
+            return not_submit;
+        };
+        // for else, we have the beatmap now.
+        b
+    };
 
     // TODO: XXX
 
     // unimplemented("osu-osz2-getscores.php")
-    return failed;
+    return not_submit;
 }
