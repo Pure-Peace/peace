@@ -3,7 +3,7 @@ use hashbrown::HashMap;
 
 use crate::types::{Argon2Cache, BeatmapsCache};
 
-use super::Beatmaps;
+use super::Beatmap;
 
 pub struct Caches {
     pub beatmaps_cache: RwLock<BeatmapsCache>,
@@ -19,7 +19,7 @@ impl Caches {
     }
 
     #[inline(always)]
-    pub async fn cache_beatmap(&self, beatmap_md5: String, beatmaps: &Beatmaps) -> Option<Beatmaps> {
+    pub async fn cache_beatmap(&self, beatmap_md5: String, beatmaps: &Beatmap) -> Option<Beatmap> {
         self.beatmaps_cache
             .write()
             .await
@@ -27,7 +27,7 @@ impl Caches {
     }
 
     #[inline(always)]
-    pub async fn get_beatmap(&self, beatmap_md5: &String) -> Option<Beatmaps> {
+    pub async fn get_beatmap(&self, beatmap_md5: &String) -> Option<Beatmap> {
         self.beatmaps_cache.read().await.get(beatmap_md5).cloned()
     }
 

@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::{
     constants::{GameMode, ScoreboardType},
-    objects::{Beatmaps, PlayMods},
+    objects::{Beatmap, PlayMods},
     packets,
     routes::web::Context,
     utils,
@@ -557,7 +557,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     }
 
     // Get beatmap
-    let beatmap = Beatmaps::get(
+    let beatmap = Beatmap::get(
         Some(&data.beatmap_hash),
         Some(data.beatmap_set_id),
         Some(&data.file_name),

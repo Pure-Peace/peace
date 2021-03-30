@@ -15,7 +15,12 @@ use std::{
 use crate::objects::BeatmapFromApi;
 use crate::settings::bancho::BanchoConfig;
 
-use super::ApiError;
+#[derive(Debug, Eq, PartialEq)]
+pub enum ApiError {
+    NotExists,
+    RequestError,
+    ParseError,
+}
 
 #[derive(Derivative)]
 #[derivative(Debug)]
