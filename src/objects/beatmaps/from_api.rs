@@ -1,4 +1,4 @@
-use super::{depends::*, Beatmap, BeatmapInfo, GetBeatmapMethod};
+use super::{depends::*, Beatmap, BeatmapCache, GetBeatmapMethod};
 use crate::objects::osu_api::errors::ApiError;
 use crate::utils;
 
@@ -73,8 +73,13 @@ pub struct BeatmapFromApi {
 impl BeatmapFromApi {
     #[inline(always)]
     pub fn convert_to_beatmap(self) -> Beatmap {
-        Beatmap {
-            info: Some(BeatmapInfo::from(self)),
+        Beatmap::from(self)
+    }
+
+    #[inline(always)]
+    pub fn convert_to_beatmap_cache(self) -> BeatmapCache {
+        BeatmapCache {
+            beatmap: Some(Beatmap::from(self)),
             create_time: Local::now(),
         }
     }
@@ -93,7 +98,7 @@ impl BeatmapFromApi {
     #[inline(always)]
     pub async fn from_osu_api<T: Any + Display>(
         key: &T,
-        method: GetBeatmapMethod,
+        method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &Data<RwLock<OsuApi>>,
         database: &Database,
@@ -101,17 +106,17 @@ impl BeatmapFromApi {
         let v = key as &dyn Any;
         let osu_api = osu_api.read().await;
         let b = match method {
-            GetBeatmapMethod::Md5 => {
+            &GetBeatmapMethod::Md5 => {
                 osu_api
                     .fetch_beatmap_by_md5(v.downcast_ref().unwrap())
                     .await
             }
-            GetBeatmapMethod::Bid => {
+            &GetBeatmapMethod::Bid => {
                 osu_api
                     .fetch_beatmap_by_bid(*v.downcast_ref().unwrap())
                     .await
             }
-            GetBeatmapMethod::Sid => {
+            &GetBeatmapMethod::Sid => {
                 if let Some(file_name) = file_name {
                     let beatmap_list = osu_api
                         .fetch_beatmap_by_sid(*v.downcast_ref().unwrap())

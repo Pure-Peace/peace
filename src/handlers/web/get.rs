@@ -578,19 +578,13 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         if b.is_none() {
             return not_submit;
         };
-        // Check beatmap is "not submit"?
-        let b = b.unwrap();
-        if b.is_not_submit() {
-            return not_submit;
-        };
         // for else, we have the beatmap now.
-        b
+        b.unwrap()
     };
-    let beatmap_info = beatmap.info.as_ref().unwrap();
 
     // If unranked and config not allowed
     if !all_beatmaps_have_scoreboard && beatmap.is_unranked() {
-        return HttpResponse::Ok().body(beatmap_info.rank_status.to_string() + "|false");
+        return HttpResponse::Ok().body(beatmap.rank_status.to_string() + "|false");
     };
     // TODO: XXX
 

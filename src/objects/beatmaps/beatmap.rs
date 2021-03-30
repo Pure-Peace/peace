@@ -1,78 +1,49 @@
-use crate::objects::osu_api::errors::ApiError;
+use super::{depends::*, BeatmapFromApi, GetBeatmapMethod};
+use crate::{objects::errors::ApiError, utils};
 
-use super::{depends::*, BeatmapFromApi, BeatmapInfo, GetBeatmapMethod};
-
-#[derive(Debug, Clone)]
+#[pg_mapper(table = "beatmaps.maps")]
+#[derive(Debug, FieldNames, Clone, FromSql, ToSql, PostgresMapper)]
 pub struct Beatmap {
-    pub info: Option<BeatmapInfo>,
-    pub create_time: DateTime<Local>,
+    pub server: String,
+    pub id: i32,
+    pub set_id: i32,
+    pub md5: String,
+    pub title: String,
+    pub artist: String,
+    pub diff_name: String,
+    pub mapper: String,
+    pub mapper_id: i32,
+    pub rank_status: i32,
+    pub mode: i16,
+    pub length: i32,
+    pub length_drain: i32,
+    pub max_combo: Option<i32>,
+    pub fixed_rank_status: bool,
+    pub ranked_by: Option<String>,
+    pub last_update: Option<DateTime<Local>>,
+    pub update_time: DateTime<Local>,
 }
 
 impl Beatmap {
     #[inline(always)]
-    pub fn default() -> Self {
-        Beatmap {
-            info: None,
-            create_time: Local::now(),
-        }
-    }
-
-    #[inline(always)]
-    pub fn is_not_submit(&self) -> bool {
-        self.info.is_none()
+    pub fn get_query_fields() -> String {
+        format!("\"{}\"", Beatmap::FIELDS.join("\",\""))
     }
 
     #[inline(always)]
     pub fn is_unranked(&self) -> bool {
-        if let Some(info) = &self.info {
-            return info.rank_status > 0;
-        }
-        false
+        self.rank_status > 0
     }
 
     #[inline(always)]
-    pub async fn from_database<T: Any + Display>(
-        key: &T,
-        method: GetBeatmapMethod,
-        database: &Database,
-    ) -> Option<Self> {
-        let v = key as &dyn Any;
-        let info = match method {
-            GetBeatmapMethod::Md5 => {
-                BeatmapInfo::from_database_by_md5(v.downcast_ref().unwrap(), database).await?
-            }
-            GetBeatmapMethod::Sid => {
-                BeatmapInfo::from_database_by_sid(*v.downcast_ref().unwrap(), database).await?
-            }
-            GetBeatmapMethod::Bid => {
-                BeatmapInfo::from_database_by_bid(*v.downcast_ref().unwrap(), database).await?
-            }
-        };
-        let create_time = info.update_time.clone();
-        let new = Self {
-            info: Some(info),
-            create_time,
-        };
-        info!(
-            "[Beatmap] get from database with Method({:?}): {}",
-            method, key
-        );
-        Some(new)
-    }
-
-    #[inline(always)]
-    pub async fn from_osu_api<T: Any + Display>(
-        key: &T,
-        method: GetBeatmapMethod,
-        file_name: Option<&String>,
-        osu_api: &Data<RwLock<OsuApi>>,
-        database: &Database,
-    ) -> Result<Self, ApiError> {
-        Ok(
-            BeatmapFromApi::from_osu_api(key, method, file_name, osu_api, database)
-                .await?
-                .convert_to_beatmap(),
-        )
+    pub fn file_name(&self) -> String {
+        utils::safe_file_name(format!(
+            "{artist} - {title} ({mapper}) [{diff_name}].osu",
+            artist = self.artist,
+            title = self.title,
+            mapper = self.mapper,
+            diff_name = self.diff_name
+        ))
     }
 
     #[inline(always)]
@@ -103,19 +74,18 @@ impl Beatmap {
             // Try get beatmap from local cache or database
             if try_from_cache {
                 // Get from local cache
-                if let Some(b) = Self::from_cache(md5, &cache, expire).await {
+                if let Ok(b) = Self::from_cache(md5, &cache, expire).await {
                     info!("[Beatmap] Get from cache: {};", md5);
-                    return Some(b);
+                    return b;
                 };
 
                 // Local cache expired or not founded, then
                 // Try get beatmap from database
                 // If get, will auto cache it to local.
-                if let Some(b) = Beatmap::from_database(md5, GetBeatmapMethod::Md5, database).await
-                {
+                if let Some(b) = Self::from_database(md5, &GetBeatmapMethod::Md5, database).await {
                     // If not expired, cache it locally and returns it.
                     if !b.is_expired(expire) {
-                        cache.cache_beatmap(md5.clone(), &b).await;
+                        cache.cache_beatmap(md5.clone(), Some(&b)).await;
                         return Some(b);
                     }
                 };
@@ -124,11 +94,11 @@ impl Beatmap {
             // Cache expired or not founded, then
             // Try get beatmap from osu!api (try with md5)
             // If get, will auto cache it to local and database.
-            match Beatmap::from_osu_api(md5, GetBeatmapMethod::Md5, None, &bancho.osu_api, database)
+            match Self::from_osu_api(md5, &GetBeatmapMethod::Md5, None, &bancho.osu_api, database)
                 .await
             {
                 Ok(b) => {
-                    cache.cache_beatmap(md5.clone(), &b).await;
+                    cache.cache_beatmap(md5.clone(), Some(&b)).await;
                     return Some(b);
                 }
                 Err(err) => {
@@ -136,7 +106,7 @@ impl Beatmap {
                     debug!("[Beatmap] Failed to get beatmap ({}), err: {:?};", md5, err);
                     if err != ApiError::RequestError {
                         // Else, cache it Not submitted
-                        cache.cache_beatmap(md5.clone(), &Beatmap::default()).await;
+                        cache.cache_beatmap(md5.clone(), None).await;
                     };
                 }
             };
@@ -146,9 +116,9 @@ impl Beatmap {
         // If SID Available,
         // Try get beatmap from osu!api (try with sid and file name)
         if let Some(sid) = sid {
-            match Beatmap::from_osu_api(
+            match Self::from_osu_api(
                 &sid,
-                GetBeatmapMethod::Sid,
+                &GetBeatmapMethod::Sid,
                 file_name,
                 &bancho.osu_api,
                 database,
@@ -156,17 +126,17 @@ impl Beatmap {
             .await
             {
                 Ok(b) => {
-                    let md5 = md5.unwrap_or(&b.info.as_ref().unwrap().md5).clone();
-                    cache.cache_beatmap(md5, &b).await;
+                    let md5 = md5.unwrap_or(&b.md5).clone();
+                    cache.cache_beatmap(md5, Some(&b)).await;
                     return Some(b);
                 }
                 Err(err) => {
-                    // If request error, we will not cache it.
                     debug!("[Beatmap] Failed to get beatmap ({}), err: {:?};", sid, err);
                     if let Some(md5) = md5 {
+                        // If request error, we will not cache it as "not submit".
                         if err != ApiError::RequestError {
                             // Else, cache it Not submitted
-                            cache.cache_beatmap(md5.clone(), &Beatmap::default()).await;
+                            cache.cache_beatmap(md5.clone(), None).await;
                         };
                     }
                 }
@@ -181,28 +151,110 @@ impl Beatmap {
     }
 
     #[inline(always)]
-    pub fn is_expired(&self, expires: i64) -> bool {
-        if let Some(info) = &self.info {
-            // Fixed never expire!
-            if info.fixed_rank_status {
-                return false;
-            }
+    // TODO: from cache by bid, sid...
+    pub async fn from_cache(
+        beatmap_md5: &String,
+        cache: &Caches,
+        expire: i64,
+    ) -> Result<Option<Self>, ()> {
+        debug!("[Beatmap] try get beatmap {} from cache...", beatmap_md5);
+        let c = cache.get_beatmap(beatmap_md5).await;
+        if let Some(c) = c {
+            // Check is expires
+            if c.is_expired(expire) {
+                debug!(
+                    "[Beatmap] get from beatmap {} cache but expired, cache time: {:?}",
+                    beatmap_md5, c.create_time
+                );
+                return Ok(None);
+            };
+            return Ok(c.beatmap);
         };
-        (Local::now() - self.create_time).num_seconds() > expires
+        // Not in cache
+        Err(())
     }
 
     #[inline(always)]
-    // TODO: from cache by bid, sid...
-    pub async fn from_cache(beatmap_md5: &String, cache: &Caches, expire: i64) -> Option<Self> {
-        debug!("[Beatmap] try get beatmap {} from cache...", beatmap_md5);
-        let b = cache.get_beatmap(beatmap_md5).await?;
-        if b.is_expired(expire) {
-            debug!(
-                "[Beatmap] get from beatmap {} cache but expired, cache time: {:?}",
-                beatmap_md5, b.create_time
-            );
-            return None;
-        };
-        Some(b)
+    pub async fn from_osu_api<T: Any + Display>(
+        key: &T,
+        method: &GetBeatmapMethod,
+        file_name: Option<&String>,
+        osu_api: &Data<RwLock<OsuApi>>,
+        database: &Database,
+    ) -> Result<Self, ApiError> {
+        Ok(
+            BeatmapFromApi::from_osu_api(key, method, file_name, osu_api, database)
+                .await?
+                .convert_to_beatmap(),
+        )
+    }
+
+    #[inline(always)]
+    pub async fn from_database<T: Any + Display>(
+        key: &T,
+        method: &GetBeatmapMethod,
+        database: &Database,
+    ) -> Option<Self> {
+        let v = key as &dyn Any;
+        debug!(
+            "[Beatmap] Try get with Method({:?}) {} from database...",
+            method, key
+        );
+        utils::struct_from_database(
+            "beatmaps",
+            "maps",
+            method.db_column_name().as_str(),
+            Self::get_query_fields().as_str(),
+            v.downcast_ref::<String>().unwrap(),
+            database,
+        )
+        .await
+    }
+
+    #[inline(always)]
+    pub async fn from_database_by_bid(beatmap_id: i32, database: &Database) -> Option<Self> {
+        Self::from_database(&beatmap_id, &GetBeatmapMethod::Bid, database).await
+    }
+    #[inline(always)]
+    pub async fn from_database_by_sid(beatmap_set_id: i32, database: &Database) -> Option<Self> {
+        Self::from_database(&beatmap_set_id, &GetBeatmapMethod::Sid, database).await
+    }
+    #[inline(always)]
+    pub async fn from_database_by_md5(beatmap_md5: &String, database: &Database) -> Option<Self> {
+        Self::from_database(beatmap_md5, &GetBeatmapMethod::Md5, database).await
+    }
+
+    #[inline(always)]
+    pub fn is_expired(&self, expires: i64) -> bool {
+        // Fixed never expire!
+        if self.fixed_rank_status {
+            return false;
+        }
+        (Local::now() - self.update_time).num_seconds() > expires
+    }
+}
+
+impl From<BeatmapFromApi> for Beatmap {
+    fn from(f: BeatmapFromApi) -> Self {
+        Self {
+            server: "ppy".to_string(),
+            id: f.id,
+            set_id: f.set_id,
+            md5: f.md5,
+            title: f.title,
+            artist: f.artist,
+            diff_name: f.diff_name,
+            mapper: f.mapper,
+            mapper_id: f.mapper_id,
+            rank_status: f.rank_status,
+            mode: f.mode,
+            length: f.length,
+            length_drain: f.length_drain,
+            max_combo: f.max_combo,
+            fixed_rank_status: [1, 2].contains(&f.rank_status),
+            ranked_by: None,
+            last_update: f.last_update,
+            update_time: f.last_update.unwrap_or(Local::now()),
+        }
     }
 }

@@ -1,10 +1,10 @@
-mod beatmap;
+mod cache;
 mod from_api;
-mod info;
+mod beatmap;
 
-pub use beatmap::*;
+pub use cache::*;
 pub use from_api::*;
-pub use info::*;
+pub use beatmap::*;
 
 #[derive(Debug)]
 pub enum GetBeatmapMethod {
