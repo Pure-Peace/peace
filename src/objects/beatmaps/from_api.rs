@@ -160,7 +160,10 @@ impl BeatmapFromApi {
             .pg
             .execute(
                 format!(
-                    "INSERT INTO \"beatmaps\".\"maps\" (\"{}\") VALUES ({})",
+                    "INSERT INTO \"beatmaps\".\"maps\" (\"{}\") VALUES ({}) 
+                        ON CONFLICT (\"md5\") DO UPDATE SET 
+                            rank_status = EXCLUDED.rank_status,
+                            approved_time = EXCLUDED.approved_time;",
                     BeatmapFromApi::FIELDS.join("\",\""),
                     utils::build_s(BeatmapFromApi::FIELDS.len())
                 )
