@@ -23,6 +23,14 @@ impl Beatmap {
     }
 
     #[inline(always)]
+    pub fn is_unranked(&self) -> bool {
+        if let Some(info) = &self.info {
+            return info.rank_status > 0;
+        }
+        false
+    }
+
+    #[inline(always)]
     pub async fn from_database<T: Any + Display>(
         key: &T,
         method: GetBeatmapMethod,

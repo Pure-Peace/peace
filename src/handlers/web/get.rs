@@ -499,7 +499,10 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     };
 
     debug!("osu_osz2_get_scores, data: {:?}", data);
-    let all_beatmaps_not_submitted = ctx.bancho.config.read().await.all_beatmaps_not_submitted;
+    let (all_beatmaps_not_submitted, all_beatmaps_have_scoreboard) = {
+        let c = ctx.bancho.config.read().await;
+        (c.all_beatmaps_not_submitted, c.all_beatmaps_have_scoreboard)
+    };
 
     // Player handlers
     // try update user stats, get some info, etc.
@@ -583,7 +586,12 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         // for else, we have the beatmap now.
         b
     };
+    let beatmap_info = beatmap.info.as_ref().unwrap();
 
+    // If unranked and config not allowed
+    if !all_beatmaps_have_scoreboard && beatmap.is_unranked() {
+        return HttpResponse::Ok().body(beatmap_info.rank_status.to_string() + "|false");
+    };
     // TODO: XXX
 
     // unimplemented("osu-osz2-getscores.php")

@@ -80,6 +80,7 @@ pub struct BanchoConfig {
     pub login_disallowed_adapters_hashes: Vec<String>,
 
     pub all_beatmaps_not_submitted: bool,
+    pub all_beatmaps_have_scoreboard: bool,
     pub all_players_have_supporter: bool,
     pub client_update_enabled: bool,
     pub client_update_expires: i32,
