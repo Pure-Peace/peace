@@ -353,7 +353,7 @@ CREATE TABLE game_scores.catch (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -403,7 +403,7 @@ CREATE TABLE game_scores.catch_rx (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -453,7 +453,7 @@ CREATE TABLE game_scores.mania (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -503,7 +503,7 @@ CREATE TABLE game_scores.std (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -546,7 +546,7 @@ CREATE TABLE game_scores.std_ap (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -603,7 +603,7 @@ CREATE TABLE game_scores.std_rx (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -653,7 +653,7 @@ CREATE TABLE game_scores.std_scv2 (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -716,7 +716,7 @@ CREATE TABLE game_scores.taiko (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -766,7 +766,7 @@ CREATE TABLE game_scores.taiko_rx (
     n100 integer NOT NULL,
     n50 integer NOT NULL,
     miss integer NOT NULL,
-    geiki integer NOT NULL,
+    geki integer NOT NULL,
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
@@ -1200,7 +1200,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.6', 'PurePeace', '0.7.1', '+', '2021-03-29 06:44:51.298491+08', '2021-03-29 06:44:51.298491+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.7', 'PurePeace', '0.7.2', '+', '2021-03-30 08:53:12.94511+08', '2021-03-30 08:53:12.94511+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.8', 'PurePeace', '0.7.3', '+', '2021-03-31 00:13:15.196893+08', '2021-03-31 00:13:17.098844+08');
-INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.0', 'PurePeace', '0.8.0', '++++', '2021-03-31 13:26:49.524224+08', '2021-03-31 13:26:57.541795+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.2', 'PurePeace', '0.8.0', '++++', '2021-03-31 15:26:49.524224+08', '2021-03-31 15:26:57.541795+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
