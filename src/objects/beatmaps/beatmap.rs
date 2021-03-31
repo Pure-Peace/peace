@@ -166,7 +166,7 @@ impl Beatmap {
                     "[Beatmap] get from beatmap {} cache but expired, cache time: {:?}",
                     beatmap_md5, c.create_time
                 );
-                return Ok(None);
+                return Err(());
             };
             return Ok(c.beatmap);
         };
@@ -254,7 +254,7 @@ impl From<BeatmapFromApi> for Beatmap {
             fixed_rank_status: [1, 2].contains(&f.rank_status),
             ranked_by: None,
             last_update: f.last_update,
-            update_time: f.last_update.unwrap_or(Local::now()),
+            update_time: Local::now(),
         }
     }
 }
