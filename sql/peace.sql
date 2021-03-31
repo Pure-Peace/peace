@@ -357,6 +357,9 @@ CREATE TABLE game_scores.catch (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -404,6 +407,9 @@ CREATE TABLE game_scores.catch_rx (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,    
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -451,6 +457,9 @@ CREATE TABLE game_scores.mania (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -498,6 +507,9 @@ CREATE TABLE game_scores.std (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -538,6 +550,9 @@ CREATE TABLE game_scores.std_ap (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -592,6 +607,9 @@ CREATE TABLE game_scores.std_rx (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -639,6 +657,9 @@ CREATE TABLE game_scores.std_scv2 (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -699,6 +720,9 @@ CREATE TABLE game_scores.taiko (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -746,6 +770,9 @@ CREATE TABLE game_scores.taiko_rx (
     katu integer NOT NULL,
     playtime integer NOT NULL,
     perfect boolean DEFAULT false NOT NULL,
+    status smallint DEFAULT 0 NOT NULL,
+    grade character varying(4) DEFAULT 'N' NOT NULL,
+    client_flags integer DEFAULT 0 NOT NULL,
     client_version character varying(64) NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
@@ -1156,6 +1183,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.1', 'PurePeace', NULL, 'add triggers', '2021-03-29 06:44:49.025951+08', '2021-03-29 06:44:49.025951+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.2', 'PurePeace', NULL, 'fix beatmap insert, work with on conflict', '2021-03-30 08:53:12.94511+08', '2021-03-30 08:53:12.94511+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.3', 'PurePeace', NULL, 'add config', '2021-03-31 00:13:02.334884+08', '2021-03-31 00:13:02.334884+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.0', 'PurePeace', NULL, 'game_scores all table add status, grade, client_flags', '2021-03-31 13:26:41.955093+08', '2021-03-31 13:26:41.955093+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1172,6 +1200,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.6', 'PurePeace', '0.7.1', '+', '2021-03-29 06:44:51.298491+08', '2021-03-29 06:44:51.298491+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.7', 'PurePeace', '0.7.2', '+', '2021-03-30 08:53:12.94511+08', '2021-03-30 08:53:12.94511+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.8', 'PurePeace', '0.7.3', '+', '2021-03-31 00:13:15.196893+08', '2021-03-31 00:13:17.098844+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.0', 'PurePeace', '0.8.0', '++++', '2021-03-31 13:26:49.524224+08', '2021-03-31 13:26:57.541795+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
@@ -1351,6 +1380,24 @@ ALTER TABLE ONLY beatmaps.stats
 ALTER TABLE ONLY beatmaps.ratings
     ADD CONSTRAINT "map.md5" FOREIGN KEY (map_md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "map.md5" ON beatmaps.ratings IS 'beatmap''s unique id';
+ALTER TABLE ONLY game_scores.catch
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.catch_rx
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.mania
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.std
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.std_ap
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.std_rx
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.std_scv2
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.taiko
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY game_scores.taiko_rx
+    ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_stats.catch
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_stats.mania
