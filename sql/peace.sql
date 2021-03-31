@@ -1377,9 +1377,6 @@ ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT beatmap_hash FOREIGN KEY (md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT ids FOREIGN KEY (server, id) REFERENCES beatmaps.maps(server, id) ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE ONLY beatmaps.ratings
-    ADD CONSTRAINT "map.md5" FOREIGN KEY (map_md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
-COMMENT ON CONSTRAINT "map.md5" ON beatmaps.ratings IS 'beatmap''s unique id';
 ALTER TABLE ONLY game_scores.catch
     ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_scores.catch_rx
