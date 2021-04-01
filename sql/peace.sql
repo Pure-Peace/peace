@@ -45,6 +45,40 @@ CREATE FUNCTION beatmaps.beatmaps_map_trigger() RETURNS trigger
 		END IF;
 	RETURN NEW;
 END$$;
+CREATE FUNCTION game_scores.scores_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+	DECLARE 
+		sid BIGINT;
+		pp INTEGER;
+	BEGIN
+		NEW.update_time = CURRENT_TIMESTAMP;
+		IF TG_OP = 'INSERT' THEN
+			IF NEW.status = 1 THEN
+				EXECUTE 'SELECT id, performance_v2 FROM '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
+				' WHERE user_id = '||NEW.user_id||
+				' AND map_md5 = '''||NEW.map_md5||
+				''' AND status = 2' INTO sid, pp;
+				IF sid > 0 THEN
+					IF NEW.performance_v2 >= pp THEN
+						NEW.status = 2;
+						EXECUTE 'UPDATE '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
+						' SET status = 1 WHERE id = '||sid;
+					END IF;
+				ELSE
+					NEW.status = 2;
+				END IF;
+			END IF;
+		ELSEIF TG_OP = 'UPDATE' THEN
+			IF NEW.status = 2 AND OLD.status <> 2 THEN
+				EXECUTE 'UPDATE '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
+				' SET status = 1 WHERE user_id = '''||NEW.user_id||
+				''' AND map_md5 = '''||NEW.map_md5||
+				''' AND status = 2';
+			END IF;
+		END IF;
+	RETURN NEW;
+END$$;
 CREATE FUNCTION public.update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
@@ -1194,6 +1228,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.7.3', 'PurePeace', NULL, 'add config', '2021-03-31 00:13:02.334884+08', '2021-03-31 00:13:02.334884+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.0', 'PurePeace', NULL, 'game_scores all table add status, grade, client_flags', '2021-03-31 13:26:41.955093+08', '2021-03-31 13:26:41.955093+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.1', 'PurePeace', NULL, 'modify game_scores performance fields type', '2021-04-01 15:40:18.993189+08', '2021-04-01 15:40:18.993189+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.5', 'PurePeace', NULL, 'add score_triggers', '2021-04-02 03:27:14.388894+08', '2021-04-02 03:27:19.582632+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1212,6 +1247,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.5.8', 'PurePeace', '0.7.3', '+', '2021-03-31 00:13:15.196893+08', '2021-03-31 00:13:17.098844+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.2', 'PurePeace', '0.8.0', '++++', '2021-03-31 15:26:49.524224+08', '2021-03-31 15:26:57.541795+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.3', 'PurePeace', '0.8.1', 'done get scoreboard', '2021-04-01 15:40:51.160652+08', '2021-04-01 15:40:51.160652+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.4', 'PurePeace', '0.8.5', 'auto personal best flag triggers', '2021-04-02 03:27:44.1726+08', '2021-04-02 03:27:44.1726+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
@@ -1326,24 +1362,15 @@ COMMENT ON TRIGGER auto_update_timestamp ON bancho.config IS 'auto update the up
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.ratings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.stats FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER maps_trigger BEFORE INSERT OR UPDATE ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION beatmaps.beatmaps_map_trigger();
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.catch IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.catch_rx IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.mania FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.mania IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.std IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_ap FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.std_ap IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.std_rx IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.std_scv2 FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.std_scv2 IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.taiko IS 'auto update time';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_scores.taiko_rx FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON game_scores.taiko_rx IS 'auto update time';
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.catch FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.mania FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.std FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.std_ap FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.std_rx FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.std_scv2 FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.taiko FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
+CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.taiko_rx FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.catch FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON game_stats.catch IS 'auto update the time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON game_stats.mania FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
