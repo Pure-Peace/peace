@@ -19,7 +19,8 @@ pub async fn test_pg(database: Data<Database>) -> impl Responder {
     let contents = database
         .pg
         .query_first_simple(r#"SELECT 'PurePeace' as "name";"#)
-        .await;
+        .await
+        .unwrap();
     let end = start.elapsed();
     let name: String = contents.get("name");
     HttpResponse::Ok()

@@ -14,7 +14,7 @@ impl OsuApiClient {
     pub fn new(key: String) -> Self {
         let requester = reqwest::Client::builder()
             .connection_verbose(false)
-            .timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(14))
             .pool_idle_timeout(Some(Duration::from_secs(300)))
             .build()
             .unwrap();

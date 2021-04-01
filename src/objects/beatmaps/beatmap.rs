@@ -1,5 +1,5 @@
 use super::{depends::*, BeatmapFromApi, GetBeatmapMethod};
-use crate::{objects::errors::ApiError, utils};
+use crate::{constants::RankStatusInServer, objects::errors::ApiError, utils};
 
 #[pg_mapper(table = "beatmaps.maps")]
 #[derive(Debug, FieldNames, Clone, FromSql, ToSql, PostgresMapper)]
@@ -32,7 +32,22 @@ impl Beatmap {
 
     #[inline(always)]
     pub fn is_unranked(&self) -> bool {
-        self.rank_status > 0
+        self.rank_status < 1
+    }
+
+    #[inline(always)]
+    pub fn is_ranked(&self) -> bool {
+        self.rank_status > 0 && self.rank_status != 4
+    }
+
+    #[inline(always)]
+    pub fn is_qualified(&self) -> bool {
+        self.rank_status == 3
+    }
+
+    #[inline(always)]
+    pub fn rank_status_in_server(&self) -> RankStatusInServer {
+        RankStatusInServer::from_api_rank_status(self.rank_status)
     }
 
     #[inline(always)]
@@ -69,14 +84,22 @@ impl Beatmap {
         try_from_cache: bool,
     ) -> Option<Self> {
         let expire = bancho.config.read().await.timeout_beatmap_cache;
+        let mut backup_beatmap = None;
         // MD5 Available
         if let Some(md5) = md5 {
             // Try get beatmap from local cache or database
             if try_from_cache {
                 // Get from local cache
-                if let Ok(b) = Self::from_cache(md5, &cache, expire).await {
-                    info!("[Beatmap] Get from cache: {};", md5);
-                    return b;
+                if let Some(c) = cache.get_beatmap(md5).await {
+                    if !c.is_expired(expire) {
+                        info!("[Beatmap] Get from cache: {};", md5);
+                        return c.beatmap;
+                    };
+                    debug!(
+                        "[Beatmap] get beatmap {} from cache but expired, cache time: {:?}",
+                        md5, c.create_time
+                    );
+                    backup_beatmap = c.beatmap;
                 };
 
                 // Local cache expired or not founded, then
@@ -88,6 +111,11 @@ impl Beatmap {
                         cache.cache_beatmap(md5.clone(), Some(&b)).await;
                         return Some(b);
                     }
+                    debug!(
+                        "[Beatmap] get beatmap {} from database but expired, cache time: {:?}",
+                        md5, b.update_time
+                    );
+                    backup_beatmap = Some(b);
                 };
             };
 
@@ -143,11 +171,18 @@ impl Beatmap {
             };
         };
 
-        info!(
-            "[Beatmap] Failed to get beatmaps anyway, md5: {:?}, sid: {:?}.",
-            md5, sid
-        );
-        None
+        if backup_beatmap.is_none() {
+            info!(
+                "[Beatmap] Failed to get beatmaps anyway, md5: {:?}, sid: {:?}.",
+                md5, sid
+            );
+        } else {
+            info!(
+                "[Beatmap] Get may outdated beatmap, fail to update beatmap cache. md5: {:?}, sid: {:?}.",
+                md5, sid
+            );
+        }
+        backup_beatmap
     }
 
     #[inline(always)]
@@ -163,7 +198,7 @@ impl Beatmap {
             // Check is expires
             if c.is_expired(expire) {
                 debug!(
-                    "[Beatmap] get from beatmap {} cache but expired, cache time: {:?}",
+                    "[Beatmap] get beatmap {} from cache but expired, cache time: {:?}",
                     beatmap_md5, c.create_time
                 );
                 return Err(());

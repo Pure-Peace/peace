@@ -28,6 +28,11 @@ impl PlayMods {
     }
 
     #[inline(always)]
+    pub fn include(&self, play_mod: &PlayMod) -> bool {
+        self.list.contains(play_mod)
+    }
+
+    #[inline(always)]
     pub fn parse(play_mods_value: u32) -> Self {
         PlayMods {
             value: play_mods_value,

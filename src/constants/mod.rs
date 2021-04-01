@@ -20,23 +20,23 @@ pub use packets::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
 #[derive(Debug, Clone)]
-pub enum RankStatus {
-    Graveyard,
-    Wip,
-    Pending,
-    Ranked,
-    Approved,
-    Qualified,
-    Loved,
+pub enum RankStatusInServer {
+    NotSubmitted    = -1,
+    Pending         = 0,
+    Outdated        = 1,
+    Ranked          = 2,
+    Approved        = 3,
+    Qualified       = 4,
+    Loved           = 5,
     Unknown,
 }
 
-impl RankStatus {
+impl RankStatusInServer {
     #[inline(always)]
-    pub fn from_i32(i: i32) -> Self {
+    pub fn from_api_rank_status(i: i32) -> Self {
         match i {
-            -2 => Self::Graveyard,
-            -1 => Self::Wip,
+            -2 => Self::Pending,
+            -1 => Self::Pending,
             0 => Self::Pending,
             1 => Self::Ranked,
             2 => Self::Approved,
@@ -45,6 +45,18 @@ impl RankStatus {
             _ => Self::Unknown,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum RankStatusInOsuApi {
+    Graveyard   = -2,
+    Wip         = -1,
+    Pending     = 0,
+    Ranked      = 1,
+    Approved    = 2,
+    Qualified   = 3,
+    Loved       = 4,
+    Unknown,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
@@ -186,7 +198,10 @@ pub enum GameMode {
     Taiko_rx  = 5,
     Catch_rx  = 6,
     // Mania_rx  = 7, but not exists
+
     Std_ap    = 8,
+
+    Std_scv2  = 12,
 }
 
 impl<'de> Deserialize<'de> for GameMode {
@@ -232,8 +247,12 @@ impl GameMode {
         //
         if game_mode_u8 < 4 && game_mode_u8 != 3 && playmod_list.contains(&PlayMod::Relax) {
             game_mode_u8 += 4;
-        } else if game_mode_u8 == 0 && playmod_list.contains(&PlayMod::AutoPilot) {
-            game_mode_u8 += 8;
+        } else if game_mode_u8 == 0 {
+            if playmod_list.contains(&PlayMod::AutoPilot) {
+                game_mode_u8 += 8;
+            } else if playmod_list.contains(&PlayMod::ScoreV2) {
+                game_mode_u8 += 12;
+            }
         }
         game_mode_u8
     }
@@ -260,6 +279,11 @@ impl GameMode {
     }
 
     #[inline(always)]
+    pub fn is_scv2(&self) -> bool {
+        self.val() == 12
+    }
+
+    #[inline(always)]
     pub fn is_vn(&self) -> bool {
         self.val() < 4
     }
@@ -278,6 +302,7 @@ impl GameMode {
     pub fn play_mod_name(&self) -> String {
         match self.val() {
             value if value == 8 => String::from("ap"),
+            value if value == 12 => String::from("scv2"),
             value if value > 3 && value < 8 => String::from("rx"),
             _ => String::new(),
         }

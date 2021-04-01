@@ -2,6 +2,7 @@
 use std::sync::Arc;
 
 use async_std::sync::RwLock;
+use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 
 use crate::objects::{BeatmapCache, Channel, Player};
@@ -29,3 +30,5 @@ pub type Argon2Cache = HashMap<Argon2CryptedCipher, Password>;
 
 pub type BeatmapMd5 = String;
 pub type BeatmapsCache = HashMap<BeatmapMd5, BeatmapCache>; // TODO: like player sessions map, it should can query by bid, sid, md5. need refactors (save Arc<BeatmapCache>)
+
+pub type TempTableCache = HashMap<String, DateTime<Local>>;

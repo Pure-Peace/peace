@@ -88,6 +88,12 @@ impl Postgres {
     }
 
     #[inline(always)]
+    pub async fn batch_execute(&self, query: &str) -> Result<(), Error> {
+        let c = self.get_client().await;
+        c.batch_execute(query).await
+    }
+
+    #[inline(always)]
     /// Query and get all result rows
     ///
     /// # Examples:
@@ -131,8 +137,8 @@ impl Postgres {
     /// ```
     /// let row: Row = query_first_simple("YOUR SQL");
     /// ```
-    pub async fn query_first_simple(&self, query: &str) -> Row {
-        self.query_first(query, &[]).await.unwrap()
+    pub async fn query_first_simple(&self, query: &str) -> Result<Row, Error> {
+        self.query_first(query, &[]).await
     }
 
     #[inline(always)]

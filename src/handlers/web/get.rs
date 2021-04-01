@@ -1,8 +1,13 @@
 #![allow(unused_variables)]
+use crate::objects::ScroeFromDatabase;
+use std::time::Instant;
+
 use actix_web::{web::Query, HttpResponse};
 use async_std::fs::File;
 use async_std::prelude::*;
+use chrono::Local;
 use serde::Deserialize;
+use tokio_pg_mapper::FromTokioPostgresRow;
 
 use crate::{
     constants::{GameMode, ScoreboardType},
@@ -459,6 +464,74 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 }
 
 #[inline(always)]
+/// Get scoreboard in-game
+///
+/// TODO: Performance optimization
+/// Get scoreboard option 2: Multiple JOINs
+/// ```
+///
+/// let top_50 = ctx
+///     .database
+///     .pg
+///     .query(
+///         &format!(
+///             "SELECT ROW_NUMBER() OVER () as rank, res.*
+///         FROM (
+///             SELECT s.id, u.id as user_id, u.name,
+///             s.{0} AS any_score, s.combo,
+///             s.n50, s.n100, s.n300, s.miss, s.katu,
+///             s.geki, s.perfect, s.mods, s.create_time
+///         FROM game_scores.{1} s
+///         LEFT JOIN \"user\".base u ON u.id = s.user_id
+///         WHERE s.map_md5 = $1
+///         AND s.status = 2
+///         AND u.privileges & 1 > 0
+///         AND s.mods = 0 ORDER BY any_score DESC LIMIT 50) AS res;",
+///             score_type, score_table
+///         ),
+///         &[&beatmap.md5],
+///     )
+///     .await;
+/// let personal_best = ctx
+///     .database
+///     .pg
+///     .query(
+///         &format!(
+///             "SELECT * FROM (
+///         SELECT ROW_NUMBER() OVER (ORDER BY res.any_score DESC) AS rank, res.*
+///         FROM (
+///             SELECT s.id, u.id as user_id, u.name, s.{0} AS any_score,
+///             s.combo, s.n50, s.n100, s.n300, s.miss, s.katu, s.geki, s.perfect,
+///             s.mods, s.create_time FROM game_scores.{1} s
+///             LEFT JOIN \"user\".base u ON u.id = s.user_id
+///             WHERE s.map_md5 = $1
+///             AND s.status = 2
+///             AND u.privileges & 1 > 0
+///             AND s.mods = 0
+///         ) AS res) AS foo WHERE user_id = 5;",
+///             score_type, score_table
+///         ),
+///         &[&beatmap.md5],
+///     )
+///     .await;
+/// let total_count = ctx
+///     .database
+///     .pg
+///     .query(
+///         &format!(
+///             "SELECT COUNT(*) FROM game_scores.{} s
+///         LEFT JOIN \"user\".base u ON u.id = s.user_id
+///         WHERE map_md5 = $1
+///         AND s.status = 2
+///         AND u.privileges & 1 > 0
+///         AND s.mods = 0;",
+///             score_table
+///         ),
+///         &[&beatmap.md5],
+///     )
+///     .await;
+///
+/// ```
 pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     let not_submit = HttpResponse::Ok().body("-1|false");
     #[derive(Debug, Deserialize)]
@@ -492,7 +565,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     // Parse query and get login
     let (data, player) = {
         let mut data = parse_query!(ctx, GetScores, not_submit);
-        // Update game mode with playmod list (rx / ap)
+        // Update game mode with playmod list (rx / ap / score v2)
         data.game_mode.update_with_playmod(&data.play_mods.list);
         let player = get_login!(ctx, data, not_submit);
         (data, player)
@@ -506,7 +579,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Player handlers
     // try update user stats, get some info, etc.
-    let pp_board = {
+    let (pp_board, player_id, player_country) = {
         let mut player = player.write().await;
 
         // Hack detected
@@ -537,6 +610,8 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
         // Get some info
         let pp_board = player.settings.pp_scoreboard;
+        let player_id = player.id;
+        let player_country = player.country.clone();
 
         // Release player write lock
         drop(player);
@@ -551,7 +626,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
                 .await;
         }
 
-        pp_board
+        (pp_board, player_id, player_country)
     };
 
     // server is currently not allowed get scores
@@ -582,12 +657,197 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         b.unwrap()
     };
 
+    // Returns it outdated, should update.
+    if beatmap.md5 != data.beatmap_hash {
+        return HttpResponse::Ok().body("1|false");
+    }
+
     // If unranked and config not allowed
     if !all_beatmaps_have_scoreboard && beatmap.is_unranked() {
-        return HttpResponse::Ok().body(beatmap.rank_status.to_string() + "|false");
+        return HttpResponse::Ok().body("0|false");
     };
-    // TODO: XXX
 
-    // unimplemented("osu-osz2-getscores.php")
-    return not_submit;
+    let score_type = if pp_board { "performance_v2" } else { "score" };
+    let score_table = data.game_mode.full_name();
+    let temp_table = format!("{}_{}_{}", score_type, score_table, beatmap.md5);
+
+    // Get scoreboard option 1: Use temporary tables for caching
+    // I prefer this option,
+    // It may work better when the number of players on the server becomes larger
+    // Check temp table cache
+    let cache_record = ctx.global_cache.get_temp_table(&temp_table).await;
+    if cache_record.is_none() || (Local::now() - cache_record.unwrap()).num_seconds() > 90 {
+        // If not temp table exists or its expired, create it
+        // TODO: Change to: create table if not exists,
+        // according to my design, table will also be created when the score is submitted,
+        // so when get scores we may not need to create the table
+        let start = Instant::now();
+        if let Err(err) = ctx
+            .database
+            .pg
+            .batch_execute(&format!(
+                "CREATE TEMP TABLE IF NOT EXISTS \"{0}\" AS (
+    SELECT ROW_NUMBER() OVER () as rank, res.* FROM (
+        SELECT
+            s.id, u.id as user_id, u.name, u.country, s.{1} AS any_score,
+            s.combo, s.n50, s.n100, s.n300, s.miss,
+            s.katu, s.geki, s.perfect, s.mods, s.create_time
+        FROM game_scores.{2} s
+            LEFT JOIN \"user\".base u ON u.id = s.user_id
+        WHERE s.map_md5 = '{3}'
+            AND s.status = 2
+            AND u.privileges & 1 > 0
+        ORDER BY any_score DESC) AS res);",
+                temp_table, score_type, score_table, beatmap.md5
+            ))
+            .await
+        {
+            error!(
+                "osu_osz2_get_scores: Failed to create temp table for beatmap {}, err: {:?}",
+                beatmap.md5, err
+            );
+        };
+        debug!(
+            "temp table {} created, time spent: {:?}",
+            temp_table,
+            start.elapsed()
+        );
+        ctx.global_cache.cache_temp_table(temp_table.clone()).await;
+    };
+
+    // Get scoreboard info
+    let start_top_list = Instant::now();
+    let top_list = {
+        const DEFAULT_WHERE: &'static str = "rank <= 50";
+        let mut query = format!("SELECT * FROM \"{}\" WHERE ", temp_table);
+        match data.scoreboard_type {
+            ScoreboardType::PlayMod => {
+                query += &format!("mods = '{}'", data.play_mods.value);
+            }
+            ScoreboardType::Friends => {
+                query += &format!("(user_id IN (SELECT friend_id FROM \"user\".friends WHERE user_id = '{0}') OR user_id = '{0}')", player_id);
+            }
+            ScoreboardType::Country => {
+                query += &format!("country = UPPER('{}')", player_country);
+            }
+            _ => {
+                query += DEFAULT_WHERE;
+            }
+        };
+        // Not default ranking, should re-order
+        if !query.contains(DEFAULT_WHERE) {
+            query += " ORDER BY any_score DESC LIMIT 50";
+        };
+        match ctx.database.pg.query_simple(&query).await {
+            Ok(scores_row) => {
+                let mut scores = Vec::with_capacity(scores_row.len());
+                for row in scores_row {
+                    match ScroeFromDatabase::from_row(row) {
+                        Ok(s) => scores.push(s),
+                        Err(err) => error!(
+                            "[ScroeFromDatabase]: Failed to parse top_list row, err: {:?}",
+                            err
+                        ),
+                    }
+                }
+                scores
+            }
+            Err(err) => {
+                error!(
+                    "osu_osz2_get_scores: Failed to get top_list scores, query: {}, err: {:?}",
+                    query, err
+                );
+                Vec::new()
+            }
+        }
+    };
+    debug!("fetch top-list time spent: {:?}", start_top_list.elapsed());
+
+    let start_personal_best = Instant::now();
+    let personal_best = {
+        match ctx
+            .database
+            .pg
+            .query_first(
+                &format!("SELECT * FROM {} WHERE user_id = $1 LIMIT 1", temp_table),
+                &[&player_id],
+            )
+            .await
+        {
+            Ok(score_row) => match ScroeFromDatabase::from_row(score_row) {
+                Ok(s) => Some(s),
+                Err(err) => {
+                    error!(
+                        "[ScroeFromDatabase]: Failed to parse personal_best row, err: {:?}",
+                        err
+                    );
+                    None
+                }
+            },
+            Err(_) => None,
+        }
+    };
+    debug!(
+        "fetch personal_best time spent: {:?}",
+        start_personal_best.elapsed()
+    );
+
+    let start_scores_count = Instant::now();
+    let scores_count_in_table: i64 = {
+        match ctx
+            .database
+            .pg
+            .query_first_simple(&format!("SELECT COUNT(*) FROM {}", temp_table))
+            .await
+        {
+            Ok(count_row) => count_row.try_get("count").unwrap_or(0),
+            Err(err) => {
+                error!(
+                    "[ScroeFromDatabase]: Failed to parse personal_best row, err: {:?}",
+                    err
+                );
+                0
+            }
+        }
+    };
+    debug!(
+        "fetch scores_count time spent: {:?}",
+        start_scores_count.elapsed()
+    );
+
+    // Build string data return to osu! client
+    let start_buid_data = Instant::now();
+    // Line 1
+    let mut first_line = format!(
+        "{rank_status}|{server_has_osz2}|{beatmap_id}|{beatmap_set_id}|{scores_count_in_table}\n",
+        rank_status = match beatmap.rank_status_in_server() as i32 {
+            // We have unranked scoreboard, so if status is 0(pending), returns it loved(5)
+            0 => 5,
+            n => n,
+        },
+        server_has_osz2 = false,
+        beatmap_id = beatmap.id,
+        beatmap_set_id = beatmap.set_id,
+        scores_count_in_table = scores_count_in_table
+    );
+    // Line 2 - 4
+    // {recommend_offset}\n[bold:0,size:20]{beatmap_artist}|{beatmap_title}\n{beatmap_rating}
+    first_line += &format!(
+        "0\n[bold:0,size:20]{beatmap_artist}|{beatmap_title}\n10.0\n",
+        beatmap_artist = beatmap.artist,
+        beatmap_title = beatmap.title,
+    );
+    // Line 5 personal best (optional)
+    if let Some(personal_best) = personal_best {
+        first_line += &(personal_best.to_string() + "\n");
+    } else {
+        first_line += "\n";
+    };
+    // Line 6 - N (top list)
+    for s in &top_list {
+        first_line += &(s.to_string() + "\n");
+    }
+    debug!("buid_data time spent: {:?}", start_buid_data.elapsed());
+
+    HttpResponse::Ok().body(first_line)
 }
