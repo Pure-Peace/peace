@@ -78,4 +78,6 @@ opt-level = 's'
 # Enabling makes the compiled program size smaller and higher performance, 
 # but it will extend compilation time.
 [profile.bench]
-lto = false
+lto = true
+codegen-units = 1
+opt-level = 's'

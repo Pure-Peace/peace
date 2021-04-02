@@ -43,15 +43,15 @@ impl Peace {
             .unwrap_or("127.0.0.1:8080".to_string());
 
         // Prometheus
-        let (prometheus, counter) = Peace::prom_init(&addr, sets);
+        let (prometheus, counter) = Self::prom_init(&addr, sets);
         // Geo mmdb
-        let geo_db = Data::new(Peace::mmdb_init(sets));
+        let geo_db = Data::new(Self::mmdb_init(sets));
         // Global cache
         let global_cache = Data::new(Caches::new());
 
         let (sender, receiver) = unbounded();
 
-        Peace {
+        Self {
             addr,
             bancho,
             local_config,
@@ -82,7 +82,7 @@ impl Peace {
             HttpServer::new(move || {
                 // App
                 App::new()
-                    .wrap(Peace::make_logger(&settings_cloned))
+                    .wrap(Self::make_logger(&settings_cloned))
                     .wrap(prom.clone())
                     .wrap(
                         Cors::default()
@@ -113,7 +113,7 @@ impl Peace {
         // Start auto recycle task,
         // it will auto logout deactive players each interval
         info!("{}", "Starting session recycle...".bold().bright_blue());
-        async_std::task::spawn(Peace::session_recycle(self.bancho.clone()));
+        async_std::task::spawn(Self::session_recycle(self.bancho.clone()));
 
         self.run_server().await;
 

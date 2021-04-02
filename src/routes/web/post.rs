@@ -42,9 +42,9 @@ pub async fn handler(
     let resp = match handle_path.as_str() {
         /* "osu-session" => {} */
         "osu-error" => post::osu_error(&ctx(), payload).await,
-        /* "osu-get-beatmapinfo" => {}
-        "osu-submit-modular-selector" => {}
-        "osu-comment" => {}
+        /*  "osu-get-beatmapinfo" => {} */
+        "osu-submit-modular-selector" => post::osu_submit_modular(&ctx(), payload).await,
+        /*"osu-comment" => {}
         "osu-screenshot" => {}
         "osu-osz2-bmsubmit-post" => {}
         "osu-osz2-bmsubmit-upload" => {} */

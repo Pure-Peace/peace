@@ -67,3 +67,8 @@ pub async fn osu_error<'a>(ctx: &Context<'a>, payload: Multipart) -> HttpRespons
 
     HttpResponse::Ok().body("ok")
 }
+
+#[inline(always)]
+pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> HttpResponse {
+    HttpResponse::Ok().body("666")
+}

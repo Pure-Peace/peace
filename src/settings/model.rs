@@ -83,12 +83,12 @@ impl Settings {
         println!("{}", "> Loading user settings...".green());
 
         // The "default" configuration file
-        cfg.merge(File::with_name("config/default"))?;
+        cfg.merge(File::with_name("peace-config/default"))?;
 
         // Add in the current environment file
-        cfg.merge(File::with_name(&format!("config/{}", env)).required(true))
+        cfg.merge(File::with_name(&format!("peace-config/{}", env)).required(true))
             .expect(
-                "Please make sure that the configuration file of the current environment exists",
+                "Please make sure that the configuration file of the current environment exists in ./peace-config",
             );
 
         // Initial logger
