@@ -35,7 +35,7 @@ impl ScroeFromDatabase {
             miss = self.miss,
             katu = self.katu,
             geki = self.geki,
-            perfect = if self.perfect { 1 } else { 0 },
+            perfect = if self.perfect { "1" } else { "0" },
             mods = self.mods,
             user_id = self.user_id,
             rank = self.rank,
