@@ -72,7 +72,7 @@ harness = false
 [profile.release]
 lto = true
 codegen-units = 1
-opt-level = 's'
+opt-level = "s"
 
 # link-time-optimization
 # Enabling makes the compiled program size smaller and higher performance, 
@@ -80,4 +80,4 @@ opt-level = 's'
 [profile.bench]
 lto = true
 codegen-units = 1
-opt-level = 's'
+opt-level = "s"

@@ -280,7 +280,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
             .execute(
                 r#"INSERT INTO "beatmaps"."ratings" 
                         ("user_id","map_md5","rating") 
-                    VALUES ($1, $2, $3)"#,
+                    VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"#,
                 &[&player_id, &player_name, &vote],
             )
             .await
@@ -373,7 +373,7 @@ pub async fn osu_add_favourite<'a>(ctx: &Context<'a>) -> HttpResponse {
             r#"INSERT INTO "user"."beatmap_collections" (
                 "user_id",
                 "beatmap_set_id"
-             ) VALUES ($1, $2)"#,
+             ) VALUES ($1, $2) ON CONFLICT DO NOTHING"#,
             &[&player_id, &data.beatmap_set_id],
         )
         .await

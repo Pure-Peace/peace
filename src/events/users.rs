@@ -285,7 +285,7 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) {
         .database
         .pg
         .execute(
-            r#"INSERT INTO "user"."friends" VALUES ($1, $2);"#,
+            r#"INSERT INTO "user"."friends" VALUES ($1, $2) ON CONFLICT DO NOTHING;"#,
             &[&ctx.id, &target_id],
         )
         .await
