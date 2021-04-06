@@ -1,4 +1,5 @@
 #![allow(unused_macros)]
+use bytes::Bytes;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     time::Instant,
@@ -7,6 +8,7 @@ use std::{
 use actix_multipart::Multipart;
 use actix_web::{web::Data, HttpRequest};
 use argon2::{ThreadMode, Variant, Version};
+use hashbrown::HashMap;
 
 use std::fmt::Display;
 use std::str::FromStr;
@@ -133,30 +135,84 @@ pub fn noew_time_local() -> DateTime<Local> {
 
 #[inline(always)]
 /// Get deserialized multipart/form-data
-pub async fn get_form_data<T: serde::de::DeserializeOwned>(
+///
+/// use query method, some data types not support (such as bytes)
+pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
     mut form_data: Multipart,
 ) -> Result<T, serde_qs::Error> {
     let mut temp: String = String::new();
     while let Some(item) = form_data.next().await {
-        let mut field = item.unwrap();
-        if let Some(content_type) = field.content_disposition() {
-            let key = content_type.get_name();
-            if key.is_none() {
-                continue;
-            }
-            while let Some(chunk) = field.next().await {
-                if chunk.is_err() {
-                    continue;
+        let mut field = match item {
+            Ok(f) => f,
+            Err(_e) => continue,
+        };
+        if let Some(disposition) = field.content_disposition() {
+            if let Some(key) = disposition.get_name() {
+                while let Some(Ok(chunk)) = field.next().await {
+                    let value = String::from_utf8(chunk.to_vec()).unwrap_or(String::new());
+                    if temp.len() > 0 {
+                        temp.push('&');
+                    }
+                    temp.push_str(&format!("{}={}", key, value));
                 }
-                let value = String::from_utf8(chunk.unwrap().to_vec()).unwrap_or(String::new());
-                if temp.len() > 0 {
-                    temp.push('&');
-                }
-                temp.push_str(&format!("{}={}", key.unwrap(), value));
             }
         }
     }
     serde_qs::from_str(&temp)
+}
+
+#[derive(Debug)]
+pub struct MultipartData {
+    pub forms: HashMap<String, String>,
+    pub files: HashMap<String, Bytes>,
+}
+
+impl MultipartData {
+    #[inline(always)]
+    pub fn form<T>(&mut self, key: &str) -> Option<T>
+    where
+        T: FromStr,
+    {
+        let s = self.forms.remove(key)?;
+        match T::from_str(s.as_ref()) {
+            Ok(t) => Some(t),
+            Err(_) => None,
+        }
+    }
+
+    #[inline(always)]
+    pub fn file(&mut self, key: &str) -> Option<Bytes> {
+        self.files.remove(key)
+    }
+}
+
+#[inline(always)]
+/// Get deserialized multipart/form-data or files
+pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
+    let mut files = HashMap::new();
+    let mut forms = HashMap::new();
+    while let Some(item) = mutipart_data.next().await {
+        let mut field = match item {
+            Ok(f) => f,
+            Err(_e) => continue,
+        };
+        if let Some(disposition) = field.content_disposition() {
+            let file_name = disposition.get_filename();
+            if let Some(key) = disposition.get_name() {
+                while let Some(Ok(chunk)) = field.next().await {
+                    if file_name.is_some() {
+                        files.insert(key.to_string(), chunk);
+                    } else {
+                        forms.insert(
+                            key.to_string(),
+                            String::from_utf8(chunk.to_vec()).unwrap_or(String::new()),
+                        );
+                    }
+                }
+            }
+        }
+    }
+    MultipartData { forms, files }
 }
 
 #[inline(always)]
@@ -505,4 +561,23 @@ pub fn safe_file_name(mut s: String) -> String {
         s = s.replace(i, "");
     }
     s
+}
+
+#[inline(always)]
+pub fn osu_sumit_token_checker(req: &HttpRequest) -> bool {
+    if let Some(token) = req.headers().get("Token") {
+        if let Ok(token) = token.to_str() {
+            let token = token.split("|").collect::<Vec<&str>>();
+            if token.len() == 2 && token[0].len() > 4000 && token[1].len() == 32 {
+                return true;
+            };
+            warn!(
+                "[osu_sumit_token_checker] Token len: {}, len[0]: {}, len[1]: {}",
+                token.len(),
+                token[0].len(),
+                token[1].len()
+            );
+        };
+    };
+    false
 }

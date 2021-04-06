@@ -17,6 +17,7 @@ actix-web = "3.1.0"
 actix-web-prom = "0.5.1"
 askama = "0.10.5"
 async-std = "1.9.0"
+bytes = "0.5.6"
 chrono = "0.4.19"
 colored = "2.0.0"
 config = "0.10.1"
@@ -56,7 +57,6 @@ tokio-pg-mapper = "0.1.8"
 tokio-pg-mapper-derive = "0.1.5"
 tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
 uuid = { version = "0.8.1", features = ["v4"] }
-
 
 [dev-dependencies]
 criterion = "0.3.4"

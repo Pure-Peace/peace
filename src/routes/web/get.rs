@@ -26,7 +26,7 @@ pub async fn handler(
     };
 
     let ctx = || Context {
-        req: &req,
+        req,
         counter: &counter,
         bancho: &bancho,
         database: &database,

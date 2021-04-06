@@ -32,7 +32,7 @@ mod depends {
     };
 
     pub struct Context<'a> {
-        pub req: &'a HttpRequest,
+        pub req: HttpRequest,
         pub counter: &'a Data<IntCounterVec>,
         pub bancho: &'a Data<Bancho>,
         pub database: &'a Data<Database>,
