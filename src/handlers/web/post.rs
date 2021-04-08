@@ -72,28 +72,31 @@ pub async fn osu_error<'a>(ctx: &Context<'a>, payload: Multipart) -> HttpRespons
 
 #[derive(Debug)]
 pub struct SubmitModular {
-    pub quit: i32,         // x (quit 0 or 1)
-    pub fail_time: i32,    // ft (fail time)
-    pub score_b64: String, // score (base64)
+    pub quit: bool,     // x (quit 0 or 1)
+    pub fail_time: i32, // ft (fail time)
+    pub score: Vec<u8>, // score (base64 -> bytes)
     pub fs: String,
     pub beatmap_hash: String, // bmk
     pub c1: String,
     pub st: i32,
     pub password: String,    // pass (password)
-    pub osu_version: i32, // osuver
+    pub osu_version: i32,    // osuver
     pub client_hash: String, // s (client_hash)
-    pub iv: String,          // iv (initialization vector)
+    pub iv: Vec<u8>,         // iv (initialization vector base64 - bytes)
 
-    pub score_data: Bytes, // score (replay file, octet-stream)
+    pub score_data: Bytes, // score (replay file, octet-stream bytes)
 }
 
 impl SubmitModular {
     #[inline(always)]
     pub fn from_mutipart(mut data: MultipartData) -> Option<Self> {
         Some(Self {
-            quit: data.form("x")?,
+            quit: data.form::<i32>("x")? == 1,
             fail_time: data.form("ft")?,
-            score_b64: data.form("score")?,
+            score: match decode(data.form::<String>("score")?) {
+                Ok(s) => s,
+                Err(e) => return None,
+            },
             fs: data.form("fs")?,
             beatmap_hash: data.form("bmk")?,
             c1: data.form("c1")?,
@@ -101,10 +104,14 @@ impl SubmitModular {
             password: data.form("pass")?,
             osu_version: data.form("osuver")?,
             client_hash: data.form("s")?,
-            iv: data.form("iv")?,
+            iv: match decode(data.form::<String>("iv")?) {
+                Ok(s) => s,
+                Err(e) => return None,
+            },
             score_data: data.file("score")?,
         })
     }
+
 }
 
 #[inline(always)]
