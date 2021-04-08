@@ -112,6 +112,35 @@ impl SubmitModular {
         })
     }
 
+    #[inline(always)]
+    /// Because Rust does not have an implementation of the rijndael algorithm,
+    /// it is temporarily solved with the built-in python3 interpreter.
+    pub fn python_decrypt(&self) -> Result<Vec<String>, PyErr> {
+        debug!("[SubmitModular] Python decrypt start");
+        let start = Instant::now();
+        let gil = Python::acquire_gil();
+        let python = gil.python();
+        let module = python.import("__main__")?;
+
+        let decryp_result = module
+            .call_method1(
+                "rijndael_cbc_decrypt",
+                (
+                    format!("osu!-scoreburgr---------{}", self.osu_version),
+                    PyBytes::new(python, &self.iv),
+                    PyBytes::new(python, &self.score),
+                ),
+            )?
+            .extract()?;
+        let end = start.elapsed();
+        debug!(
+            "[SubmitModular] Python decrypt success, time spent: {:?}",
+            end
+        );
+        return Ok(decryp_result);
+    }
+}
+
 }
 
 #[inline(always)]
