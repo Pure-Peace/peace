@@ -5,6 +5,7 @@ use actix_cors::Cors;
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
 use async_std::channel::{unbounded, Receiver, Sender};
 use memmap::Mmap;
+use pyo3::Python;
 use std::time::Instant;
 
 use colored::Colorize;
@@ -67,6 +68,7 @@ impl Peace {
         }
     }
 
+    #[inline(always)]
     pub async fn run_server(&mut self) {
         // Run server
         info!("{}", "Starting http server...".bold().bright_blue());
@@ -110,15 +112,33 @@ impl Peace {
     }
 
     pub async fn start(&mut self) -> std::io::Result<()> {
-        // Start auto recycle task,
-        // it will auto logout deactive players each interval
-        info!("{}", "Starting session recycle...".bold().bright_blue());
-        async_std::task::spawn(Self::session_recycle(self.bancho.clone()));
+        self.python_init();
 
+        self.session_recycle().await;
+
+        // Start
         self.run_server().await;
 
         // Wait for stopped
         self.stopped().await
+    }
+
+    #[inline(always)]
+    /// Initialize some methods into the global python interpreter
+    ///
+    /// NOTE: This is a temporary solution.
+    /// Some problems cannot be solved temporarily.
+    /// When the problem is solved, Python may be removed..
+    ///
+    pub fn python_init(&self) {
+        info!("{}", "Initialing Python3...".bold().bright_blue());
+        let code = include_str!("../utils/rijndael.py");
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        if let Err(err) = py.run(code, None, None) {
+            error!("[Python] Failed to initial python3, err: {:?}", err);
+            panic!()
+        };
     }
 
     /// Server started
@@ -170,15 +190,21 @@ impl Peace {
         logger
     }
 
-    #[inline(always)]
-    pub async fn session_recycle(bancho: Data<Bancho>) {
-        loop {
-            let interval = bancho.config.read().await.session_recycle_check_interval as u64;
-            // Sleep interval
-            async_std::task::sleep(std::time::Duration::from_secs(interval)).await;
-            // Check recycle
-            bancho::sessions::recycle_handler(&bancho).await;
+    /// Start auto recycle task,
+    /// it will auto logout deactive players from bancho each interval
+    pub async fn session_recycle(&mut self) {
+        #[inline(always)]
+        async fn handle_session_recycle(bancho: Data<Bancho>) {
+            loop {
+                let interval = bancho.config.read().await.session_recycle_check_interval as u64;
+                // Sleep interval
+                async_std::task::sleep(std::time::Duration::from_secs(interval)).await;
+                // Check recycle
+                bancho::sessions::recycle_handler(&bancho).await;
+            }
         }
+        info!("{}", "Starting session recycle...".bold().bright_blue());
+        async_std::task::spawn(handle_session_recycle(self.bancho.clone()));
     }
 
     pub fn prom_init(addr: &String, sets: &Settings) -> (PrometheusMetrics, IntCounterVec) {
