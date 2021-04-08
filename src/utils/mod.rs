@@ -166,7 +166,7 @@ pub fn try_parse<T>(string: &str) -> Option<T>
 where
     T: FromStr,
 {
-    match T::from_str(s) {
+    match T::from_str(string) {
         Ok(t) => Some(t),
         Err(_) => None,
     }
