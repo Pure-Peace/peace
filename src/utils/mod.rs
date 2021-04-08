@@ -161,6 +161,17 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
     serde_qs::from_str(&temp)
 }
 
+#[inline(always)]
+pub fn try_parse<T>(string: &str) -> Option<T>
+where
+    T: FromStr,
+{
+    match T::from_str(s) {
+        Ok(t) => Some(t),
+        Err(_) => None,
+    }
+}
+
 #[derive(Debug)]
 pub struct MultipartData {
     pub forms: HashMap<String, String>,
