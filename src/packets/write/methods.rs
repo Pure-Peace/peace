@@ -54,7 +54,7 @@ pub async fn user_stats(p: &Player) -> PacketData {
             write_num(p.stats.playcount),
             write_num(p.stats.total_score),
             write_num(p.stats.rank),
-            write_num(p.stats.performance_v2),
+            write_num(p.stats.pp_v2),
         ])
         .await
         .pack()
@@ -75,7 +75,7 @@ pub async fn user_stats_from_data(p: &PlayerData) -> PacketData {
             write_num(p.stats.playcount),
             write_num(p.stats.total_score),
             write_num(p.stats.rank),
-            write_num(p.stats.performance_v2),
+            write_num(p.stats.pp_v2),
         ])
         .await
         .pack()

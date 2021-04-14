@@ -4,8 +4,8 @@ pub struct Stats {
     #[serde(skip_deserializing)]
     #[serde(default = "default_rank")]
     pub rank: i32,
-    pub performance_v1: i16,
-    pub performance_v2: i16,
+    pub pp_v1: i16,
+    pub pp_v2: i16,
     pub accuracy: f32,
     pub total_score: i64,
     pub ranked_score: i64,
@@ -21,8 +21,8 @@ impl Stats {
     pub fn new() -> Self {
         Stats {
             rank: 100000,
-            performance_v1: 0,
-            performance_v2: 0,
+            pp_v1: 0,
+            pp_v2: 0,
             accuracy: 0.0,
             total_score: 0,
             ranked_score: 0,
@@ -47,7 +47,7 @@ impl Stats {
     ) {
         // TODO: Support for ppv1!!!!! current default is ppv2!~!!!
         let recalculate_start = Instant::now();
-        let default_performance = format!("performance_v2{}", play_mod_name);
+        let default_performance = format!("pp_v2{}", play_mod_name);
         let sql = format!(
             r#"SELECT "rank"::INT4 FROM (
                 SELECT 
@@ -61,7 +61,7 @@ impl Stats {
             default_performance, mode_name
         );
 
-        match database.pg.query_first(&sql, &[&self.performance_v2]).await {
+        match database.pg.query_first(&sql, &[&self.pp_v2]).await {
             Ok(row) => self.rank = row.get("rank"),
             Err(err) => {
                 error!("Failed to recalculate player's rank: {:?}", err);

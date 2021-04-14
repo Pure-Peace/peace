@@ -667,7 +667,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         return HttpResponse::Ok().body("0|false");
     };
 
-    let score_type = if pp_board { "performance_v2" } else { "score" };
+    let score_type = if pp_board { "pp_v2" } else { "score" };
     let score_table = data.game_mode.full_name();
     let temp_table = format!("{}_{}_{}", score_type, score_table, beatmap.md5);
 

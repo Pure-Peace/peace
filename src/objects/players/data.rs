@@ -92,8 +92,8 @@ impl PlayerData {
         let (play_mod_name, mode_name) = game_mode.get_table_names();
         let sql = format!(
             r#"SELECT 
-                "performance_v1{0}" as "performance_v1",
-                "performance_v2{0}" as "performance_v2",
+                "pp_v1{0}" as "pp_v1",
+                "pp_v2{0}" as "pp_v2",
                 "accuracy{0}" as "accuracy",
                 "total_score{0}" as "total_score",
                 "ranked_score{0}" as "ranked_score",
