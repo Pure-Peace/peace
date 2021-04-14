@@ -1,4 +1,7 @@
 [server]
 host = "127.0.0.1"
 port = 8080
-pp_server_addr = "127.0.0.1:8082"
+
+[pp_server]
+url = "http://127.0.0.1:8088"
+pp_calc_timeout = 8

@@ -51,6 +51,7 @@ pub struct Settings {
     pub env: String,
     pub debug: bool,
     pub server: Server,
+    pub pp_server: PpServer,
     pub geoip: Geoip,
     pub logger: Logger,
     #[serde(rename = "prometheus")]
@@ -111,7 +112,12 @@ impl Settings {
 pub struct Server {
     pub host: String,
     pub port: String,
-    pub pp_server_addr: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct PpServer {
+    pub url: String,
+    pub pp_calc_timeout: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
