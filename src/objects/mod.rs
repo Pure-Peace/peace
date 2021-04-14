@@ -6,6 +6,7 @@ mod osu_api;
 mod peace;
 mod player_sessions;
 mod players;
+mod pp_calc;
 mod scores;
 
 pub use bancho::Bancho;
@@ -16,4 +17,5 @@ pub use osu_api::*;
 pub use peace::Peace;
 pub use player_sessions::PlayerSessions;
 pub use players::*;
+pub use pp_calc::*;
 pub use scores::*;
