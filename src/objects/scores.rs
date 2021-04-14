@@ -1,12 +1,16 @@
 use base64::decode;
 use bytes::Bytes;
 use chrono::{DateTime, Local};
+use derivative::Derivative;
 use pyo3::{types::PyBytes, PyErr, Python};
 use std::time::Instant;
 use tokio_pg_mapper_derive::PostgresMapper;
 
-use crate::utils::{self, MultipartData};
 use crate::{constants::GameMode, objects::PlayMods};
+use crate::{
+    constants::SubmissionStatus,
+    utils::{self, MultipartData},
+};
 
 #[pg_mapper(table = "")]
 #[derive(Debug, PostgresMapper)]
@@ -52,20 +56,23 @@ impl ScroeFromDatabase {
     }
 }
 
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct SubmitModular {
     pub quit: bool,     // x (quit 0 or 1)
     pub fail_time: i32, // ft (fail time)
+    #[derivative(Debug = "ignore")]
     pub score: Vec<u8>, // score (base64 -> bytes)
     pub fs: String,
     pub beatmap_hash: String, // bmk
     pub c1: String,
-    pub st: i32,
-    pub password: String,    // pass (password)
-    pub osu_version: i32,    // osuver
-    pub client_hash: String, // s (client_hash)
-    pub iv: Vec<u8>,         // iv (initialization vector base64 - bytes)
-
+    pub success_time: i32, // st (success time)
+    pub password: String,  // pass (password)
+    pub osu_version: i32,  // osuver
+    // pub s: String, // s (s??) what's that?
+    #[derivative(Debug = "ignore")]
+    pub iv: Vec<u8>, // iv (initialization vector base64 -> bytes)
+    #[derivative(Debug = "ignore")]
     pub score_data: Bytes, // score (replay file, octet-stream bytes)
 }
 
@@ -82,10 +89,10 @@ impl SubmitModular {
             fs: data.form("fs")?,
             beatmap_hash: data.form("bmk")?,
             c1: data.form("c1")?,
-            st: data.form("st")?,
+            success_time: data.form("st")?,
             password: data.form("pass")?,
             osu_version: data.form("osuver")?,
-            client_hash: data.form("s")?,
+            // s: data.form("s")?, what
             iv: match decode(data.form::<String>("iv")?) {
                 Ok(s) => s,
                 Err(_err) => return None,
@@ -127,7 +134,7 @@ impl SubmitModular {
 pub struct ScoreData {
     pub beatmap_md5: String,
     pub player_name: String,
-    pub score_md5: String,
+    pub md5: String,
     pub n300: i32,
     pub n100: i32,
     pub n50: i32,
@@ -139,10 +146,13 @@ pub struct ScoreData {
     pub perfect: bool,
     pub grade: String,
     pub mods: PlayMods,
+    pub status: SubmissionStatus,
     pub pass: bool,
     pub mode: GameMode,
     pub osu_version: i32,
     pub client_flags: i32,
+    pub total_obj: Option<i32>,
+    pub accuracy: Option<f32>,
 }
 
 impl ScoreData {
@@ -164,10 +174,25 @@ impl ScoreData {
         let player_name = data[1].trim().to_string();
         // Check beatmap md5
         let beatmap_md5 = data[0].to_string();
-        if beatmap_md5.len() != 32 || beatmap_md5 != submit_data.beatmap_hash {
+        if beatmap_md5.len() != 32 {
             warn!(
-                "[SubmitModular] Refused: {}; decrypted submit beatmap hash({}) not equal({}).",
+                "[SubmitModular] Refused: {}; invalid scode_data beatmap hash({}).",
+                player_name, beatmap_md5
+            );
+            return None;
+        } else if beatmap_md5 != submit_data.beatmap_hash {
+            warn!(
+                "[SubmitModular] Refused: {}; decrypted score_data beatmap hash({}) not equal with submit_data({}).",
                 player_name, beatmap_md5, submit_data.beatmap_hash
+            );
+            return None;
+        };
+        // Check score md5
+        let md5 = data[2].to_string();
+        if md5.len() != 32 {
+            warn!(
+                "[SubmitModular] Refused: {}; invalid score md5({}).",
+                player_name, md5
             );
             return None;
         };
@@ -192,10 +217,11 @@ impl ScoreData {
         let mods = PlayMods::parse(try_parse(&data[13])?);
         let mode = GameMode::parse_with_playmod(try_parse(&data[15])?, &mods.list)?;
 
-        Some(Self {
-            beatmap_md5: data[0].to_string(),
+        let pass = &data[14] == "True";
+        let mut data = Self {
+            beatmap_md5,
             player_name,
-            score_md5: data[2].to_string(),
+            md5,
             n300: try_parse(&data[3])?,
             n100: try_parse(&data[4])?,
             n50: try_parse(&data[5])?,
@@ -205,12 +231,89 @@ impl ScoreData {
             score: try_parse(&data[9])?,
             max_combo: try_parse(&data[10])?,
             perfect: &data[11] == "True",
-            grade: data[12].to_string(),
+            grade: if pass {
+                data[12].to_string()
+            } else {
+                "F".to_string()
+            },
             mods,
-            pass: &data[14] == "True",
+            status: if pass {
+                SubmissionStatus::Passed
+            } else {
+                SubmissionStatus::Failed
+            },
+            pass,
             mode,
             osu_version,
             client_flags,
-        })
+            total_obj: None,
+            accuracy: None,
+        };
+
+        data.total_obj = Some(data.get_total_obj(false));
+        data.accuracy = Some(data.get_acc(false));
+
+        Some(data)
+    }
+
+    #[inline(always)]
+    pub fn query(&self) -> String {
+        let mut query = format!(
+            "md5={}&n300={}&n100={}&n50={}&katu={}&combo={}&miss={}",
+            self.beatmap_md5, self.n300, self.n100, self.n50, self.katu, self.max_combo, self.miss
+        );
+        if !self.pass {
+            query += &format!(
+                "&passed_obj={}",
+                self.n300 + self.n100 + self.n50 + self.miss
+            );
+        };
+        query
+    }
+
+    #[inline(always)]
+    pub fn get_total_obj(&self, recalc: bool) -> i32 {
+        if self.total_obj.is_some() && !recalc {
+            return self.total_obj.unwrap();
+        };
+        let base = self.n300 + self.n50 + self.n100 + self.miss;
+        match self.mode.raw_value() {
+            0 => base,
+            1 => base - self.n50,
+            2 => base + self.katu,
+            3 => base + self.geki + self.katu,
+            x => {
+                error!("[ScoreData] what happened? why {:?}={}?", self, x);
+                base
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_acc(&self, recalc: bool) -> f32 {
+        if self.accuracy.is_some() && !recalc {
+            return self.accuracy.unwrap();
+        };
+        let total = self.get_total_obj(recalc);
+        if total == 0 {
+            return 0.0;
+        };
+        let val = match self.mode.raw_value() {
+            0 => {
+                (self.n300 * 300 + self.n100 * 100 + self.n50 * 50) as f32 / ((total * 300) as f32)
+            }
+            1 => (self.n300 as f32 + self.n100 as f32 * 0.5) / (total as f32),
+            2 => (self.n300 + self.n100 + self.n50) as f32 / (total as f32),
+            3 => {
+                ((self.n300 + self.geki) * 300 + self.katu * 200 + self.n100 * 100 + self.n50 * 50)
+                    as f32
+                    / ((total * 300) as f32)
+            }
+            x => {
+                error!("[ScoreData] what happened? why {:?}={}?", self, x);
+                0f32
+            }
+        } * 100.0;
+        val
     }
 }

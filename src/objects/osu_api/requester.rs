@@ -101,7 +101,7 @@ impl OsuApi {
                 let delay = start.elapsed().as_millis() as usize;
                 if res.is_err() {
                     warn!(
-                        "[OsuApi] key ({}) request-{} with: {}ms; err: {:?};",
+                        "[OsuApi] Failed, key ({}) request-{} with: {}ms; err: {:?};",
                         api_client.key, tries, delay, res
                     );
                     api_client.failed();
@@ -110,7 +110,7 @@ impl OsuApi {
                     continue;
                 }
                 info!(
-                    "[OsuApi] key ({}) request-{} with: {:?}ms;",
+                    "[OsuApi] Success, key ({}) request-{} with: {:?}ms;",
                     api_client.key, tries, delay
                 );
                 api_client.success();

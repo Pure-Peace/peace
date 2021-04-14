@@ -1,4 +1,4 @@
-use crate::{database::Database, utils};
+use crate::{constants::GameMode, database::Database, utils};
 use chrono::{DateTime, Utc};
 use tokio_pg_mapper_derive::PostgresMapper;
 
@@ -111,5 +111,20 @@ impl BanchoConfig {
             self.update_time
         );
         true
+    }
+
+    #[inline(always)]
+    pub fn auto_ban_pp(&self, mode: &GameMode) -> Option<i32> {
+        match mode {
+            GameMode::Std => self.auto_ban_pp_std,
+            GameMode::Taiko => self.auto_ban_pp_taiko,
+            GameMode::Catch => self.auto_ban_pp_catch,
+            GameMode::Mania => self.auto_ban_pp_mania,
+            GameMode::Std_rx => self.auto_ban_pp_rx_std,
+            GameMode::Taiko_rx => self.auto_ban_pp_rx_taiko,
+            GameMode::Catch_rx => self.auto_ban_pp_rx_catch,
+            GameMode::Std_ap => self.auto_ban_pp_ap_std,
+            GameMode::Std_scv2 => self.auto_ban_pp_std,
+        }
     }
 }

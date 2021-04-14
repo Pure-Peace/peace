@@ -47,6 +47,20 @@ impl RankStatusInServer {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SubmissionStatus {
+    Failed          = 0,
+    Passed          = 1,
+    PassedAndTop    = 2,
+}
+
+impl SubmissionStatus {
+    #[inline(always)]
+    pub fn val(&self) -> i16 {
+        *self as i16
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum RankStatusInOsuApi {
     Graveyard   = -2,
@@ -198,7 +212,6 @@ pub enum GameMode {
     Taiko_rx  = 5,
     Catch_rx  = 6,
     // Mania_rx  = 7, but not exists
-
     Std_ap    = 8,
 
     Std_scv2  = 12,

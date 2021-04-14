@@ -259,7 +259,13 @@ impl Player {
     }
 
     #[inline(always)]
-    pub async fn hack_detected(&mut self, hack_id: i32, detect_from: &str, notification: Option<&str> ,database: &Database) {
+    pub async fn hack_detected(
+        &mut self,
+        hack_id: i32,
+        detect_from: &str,
+        notification: Option<&str>,
+        database: &Database,
+    ) {
         const BASE_KEY: &str = "hack_dectected";
         let key = format!("{}_{}_from_{}", BASE_KEY, hack_id, detect_from);
 
@@ -482,6 +488,15 @@ impl Player {
                 );
                 return None;
             }
+        };
+    }
+
+    #[inline(always)]
+    pub async fn once_notification(&mut self, key: &str, notification: &str) {
+        if !self.flag_cache.contains_key(key) {
+            // send notification to this player once
+            self.enqueue(packets::notification(notification)).await;
+            self.flag_cache.insert(key.to_owned(), None);
         };
     }
 

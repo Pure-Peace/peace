@@ -12,7 +12,6 @@ use tokio_pg_mapper::FromTokioPostgresRow;
 use crate::{
     constants::{GameMode, ScoreboardType},
     objects::{Beatmap, PlayMods},
-    packets,
     routes::web::Context,
     utils,
 };
@@ -599,14 +598,10 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         let user_stats_packet = player.update_mods(&data.game_mode, &data.play_mods).await;
 
         // if all_beatmaps_not_submitted handle
+        const KEY: &str = "all_beatmaps_not_submitted";
         if all_beatmaps_not_submitted {
-            const KEY: &str = "all_beatmaps_not_submitted";
-            // send notification to this player once
-            if !player.flag_cache.contains_key(KEY) {
-                player.enqueue(packets::notification("Server is currently not allowed get scores, all beatmaps will display not submitted, please wait for a moment, thanks.")).await;
-                player.flag_cache.insert(KEY.to_owned(), None);
-            }
-        }
+            player.once_notification(KEY, "Server is currently not allowed get scores, all beatmaps will display not submitted, please wait for a moment, thanks.").await;
+        };
 
         // Get some info
         let pp_board = player.settings.pp_scoreboard;
@@ -676,7 +671,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     // It may work better when the number of players on the server becomes larger
     // Check temp table cache
     let cache_record = ctx.global_cache.get_temp_table(&temp_table).await;
-    if cache_record.is_none() || (Local::now() - cache_record.unwrap()).num_seconds() > 90 {
+    if cache_record.is_none() || (Local::now() - cache_record.unwrap()).num_seconds() > 3600 {
         // If not temp table exists or its expired, create it
         // TODO: Change to: create table if not exists,
         // according to my design, table will also be created when the score is submitted,
@@ -689,7 +684,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
                 "CREATE TEMP TABLE IF NOT EXISTS \"{0}\" AS (
     SELECT ROW_NUMBER() OVER () as rank, res.* FROM (
         SELECT
-            s.id, u.id as user_id, u.name, u.country, s.{1} AS any_score,
+            s.id, u.id as user_id, u.name, u.country, INT4(s.{1}) AS any_score,
             s.combo, s.n50, s.n100, s.n300, s.miss,
             s.katu, s.geki, s.perfect, s.mods, s.create_time
         FROM game_scores.{2} s
@@ -803,7 +798,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
             Ok(count_row) => count_row.try_get("count").unwrap_or(0),
             Err(err) => {
                 error!(
-                    "[ScroeFromDatabase]: Failed to parse personal_best row, err: {:?}",
+                    "[ScroeFromDatabase]: Failed to get scores_count_in_table row, err: {:?}",
                     err
                 );
                 0
