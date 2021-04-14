@@ -55,12 +55,12 @@ CREATE FUNCTION game_scores.scores_trigger() RETURNS trigger
 		NEW.update_time = CURRENT_TIMESTAMP;
 		IF TG_OP = 'INSERT' THEN
 			IF NEW.status = 1 THEN
-				EXECUTE 'SELECT id, performance_v2 FROM '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
+				EXECUTE 'SELECT id, pp_v2 FROM '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
 				' WHERE user_id = '||NEW.user_id||
 				' AND map_md5 = '''||NEW.map_md5||
 				''' AND status = 2' INTO sid, pp;
 				IF sid > 0 THEN
-					IF NEW.performance_v2 >= pp THEN
+					IF NEW.pp_v2 >= pp THEN
 						NEW.status = 2;
 						EXECUTE 'UPDATE '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
 						' SET status = 1 WHERE id = '||sid;
@@ -377,10 +377,11 @@ CREATE TABLE game_scores.catch (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -395,10 +396,14 @@ CREATE TABLE game_scores.catch (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -406,8 +411,8 @@ CREATE TABLE game_scores.catch (
 COMMENT ON COLUMN game_scores.catch.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.catch.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.catch.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.catch.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.catch.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.catch.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.catch.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.catch.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.catch.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.catch.perfect IS 'this score is full combo or not';
@@ -428,10 +433,11 @@ CREATE TABLE game_scores.catch_rx (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -446,10 +452,14 @@ CREATE TABLE game_scores.catch_rx (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -457,8 +467,8 @@ CREATE TABLE game_scores.catch_rx (
 COMMENT ON COLUMN game_scores.catch_rx.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.catch_rx.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.catch_rx.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.catch_rx.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.catch_rx.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.catch_rx.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.catch_rx.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.catch_rx.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.catch_rx.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.catch_rx.perfect IS 'this score is full combo or not';
@@ -479,10 +489,11 @@ CREATE TABLE game_scores.mania (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -497,10 +508,14 @@ CREATE TABLE game_scores.mania (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -508,8 +523,8 @@ CREATE TABLE game_scores.mania (
 COMMENT ON COLUMN game_scores.mania.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.mania.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.mania.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.mania.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.mania.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.mania.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.mania.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.mania.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.mania.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.mania.perfect IS 'this score is full combo or not';
@@ -530,10 +545,11 @@ CREATE TABLE game_scores.std (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -548,10 +564,14 @@ CREATE TABLE game_scores.std (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -559,8 +579,8 @@ CREATE TABLE game_scores.std (
 COMMENT ON COLUMN game_scores.std.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.std.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.std.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.std.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.std.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.std.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.std.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.std.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.std.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.std.perfect IS 'this score is full combo or not';
@@ -574,10 +594,11 @@ CREATE TABLE game_scores.std_ap (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -592,10 +613,14 @@ CREATE TABLE game_scores.std_ap (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -603,8 +628,8 @@ CREATE TABLE game_scores.std_ap (
 COMMENT ON COLUMN game_scores.std_ap.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.std_ap.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.std_ap.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.std_ap.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.std_ap.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.std_ap.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.std_ap.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.std_ap.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.std_ap.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.std_ap.perfect IS 'this score is full combo or not';
@@ -632,10 +657,11 @@ CREATE TABLE game_scores.std_rx (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -650,10 +676,14 @@ CREATE TABLE game_scores.std_rx (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -661,8 +691,8 @@ CREATE TABLE game_scores.std_rx (
 COMMENT ON COLUMN game_scores.std_rx.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.std_rx.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.std_rx.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.std_rx.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.std_rx.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.std_rx.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.std_rx.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.std_rx.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.std_rx.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.std_rx.perfect IS 'this score is full combo or not';
@@ -683,10 +713,11 @@ CREATE TABLE game_scores.std_scv2 (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -701,10 +732,14 @@ CREATE TABLE game_scores.std_scv2 (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -712,8 +747,8 @@ CREATE TABLE game_scores.std_scv2 (
 COMMENT ON COLUMN game_scores.std_scv2.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.std_scv2.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.std_scv2.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.std_scv2.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.std_scv2.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.std_scv2.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.std_scv2.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.std_scv2.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.std_scv2.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.std_scv2.perfect IS 'this score is full combo or not';
@@ -747,10 +782,11 @@ CREATE TABLE game_scores.taiko (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -765,10 +801,14 @@ CREATE TABLE game_scores.taiko (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -776,8 +816,8 @@ CREATE TABLE game_scores.taiko (
 COMMENT ON COLUMN game_scores.taiko.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.taiko.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.taiko.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.taiko.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.taiko.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.taiko.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.taiko.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.taiko.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.taiko.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.taiko.perfect IS 'this score is full combo or not';
@@ -798,10 +838,11 @@ CREATE TABLE game_scores.taiko_rx (
     user_id integer NOT NULL,
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
-    performance_v1 integer,
-    performance_v2 integer,
-    performance_v2_raw jsonb,
-    performance_v3 integer,
+    pp_v1 real,
+    pp_v2 real,
+    pp_v2_raw jsonb,
+    pp_v3 real,
+    stars real,
     accuracy real NOT NULL,
     combo integer NOT NULL,
     mods integer NOT NULL,
@@ -816,10 +857,14 @@ CREATE TABLE game_scores.taiko_rx (
     status smallint DEFAULT 0 NOT NULL,
     grade character varying(4) DEFAULT 'N'::character varying NOT NULL,
     client_flags integer DEFAULT 0 NOT NULL,
-    client_version character varying(64) NOT NULL,
+    client_version integer NOT NULL,
     confidence smallint DEFAULT 100 NOT NULL,
     verified boolean DEFAULT false NOT NULL,
     checked boolean DEFAULT false NOT NULL,
+    validation boolean DEFAULT true NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    md5 character varying(32) NOT NULL,
+    rep_md5 character varying(32),
     check_time timestamp(6) with time zone,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -827,8 +872,8 @@ CREATE TABLE game_scores.taiko_rx (
 COMMENT ON COLUMN game_scores.taiko_rx.id IS 'score''s unique id';
 COMMENT ON COLUMN game_scores.taiko_rx.user_id IS 'user''s unique id';
 COMMENT ON COLUMN game_scores.taiko_rx.map_md5 IS 'beatmap''s md5';
-COMMENT ON COLUMN game_scores.taiko_rx.performance_v1 IS 'ppv1';
-COMMENT ON COLUMN game_scores.taiko_rx.performance_v2 IS 'ppv2';
+COMMENT ON COLUMN game_scores.taiko_rx.pp_v1 IS 'ppv1';
+COMMENT ON COLUMN game_scores.taiko_rx.pp_v2 IS 'ppv2';
 COMMENT ON COLUMN game_scores.taiko_rx.mods IS 'play mods';
 COMMENT ON COLUMN game_scores.taiko_rx.playtime IS 'play time (seconds)';
 COMMENT ON COLUMN game_scores.taiko_rx.perfect IS 'this score is full combo or not';
@@ -850,10 +895,10 @@ CREATE TABLE game_stats.catch (
     ranked_score bigint DEFAULT 0 NOT NULL,
     total_score_rx bigint DEFAULT 0 NOT NULL,
     ranked_score_rx bigint DEFAULT 0 NOT NULL,
-    performance_v1 smallint DEFAULT 0 NOT NULL,
-    performance_v2 smallint DEFAULT 0 NOT NULL,
-    performance_v1_rx smallint DEFAULT 0 NOT NULL,
-    performance_v2_rx smallint DEFAULT 0 NOT NULL,
+    pp_v1 smallint DEFAULT 0 NOT NULL,
+    pp_v2 smallint DEFAULT 0 NOT NULL,
+    pp_v1_rx smallint DEFAULT 0 NOT NULL,
+    pp_v2_rx smallint DEFAULT 0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
@@ -872,8 +917,8 @@ CREATE TABLE game_stats.mania (
     id integer NOT NULL,
     total_score bigint DEFAULT 0 NOT NULL,
     ranked_score bigint DEFAULT 0 NOT NULL,
-    performance_v1 smallint DEFAULT 0 NOT NULL,
-    performance_v2 smallint DEFAULT 0 NOT NULL,
+    pp_v1 smallint DEFAULT 0 NOT NULL,
+    pp_v2 smallint DEFAULT 0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
     accuracy real DEFAULT 0.0 NOT NULL,
@@ -893,13 +938,13 @@ CREATE TABLE game_stats.std (
     ranked_score_ap bigint DEFAULT 0 NOT NULL,
     total_score_scv2 bigint DEFAULT 0 NOT NULL,
     ranked_score_scv2 bigint DEFAULT 0 NOT NULL,
-    performance_v1 smallint DEFAULT 0 NOT NULL,
-    performance_v2 smallint DEFAULT 0 NOT NULL,
-    performance_v1_rx smallint DEFAULT 0 NOT NULL,
-    performance_v2_rx smallint DEFAULT 0 NOT NULL,
-    performance_v1_ap smallint DEFAULT 0 NOT NULL,
-    performance_v2_ap smallint DEFAULT 0 NOT NULL,
-    performance_v2_scv2 smallint DEFAULT 0 NOT NULL,
+    pp_v1 smallint DEFAULT 0 NOT NULL,
+    pp_v2 smallint DEFAULT 0 NOT NULL,
+    pp_v1_rx smallint DEFAULT 0 NOT NULL,
+    pp_v2_rx smallint DEFAULT 0 NOT NULL,
+    pp_v1_ap smallint DEFAULT 0 NOT NULL,
+    pp_v2_ap smallint DEFAULT 0 NOT NULL,
+    pp_v2_scv2 smallint DEFAULT 0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     playcount_ap integer DEFAULT 0 NOT NULL,
@@ -930,10 +975,10 @@ CREATE TABLE game_stats.taiko (
     ranked_score bigint DEFAULT 0 NOT NULL,
     total_score_rx bigint DEFAULT 0 NOT NULL,
     ranked_score_rx bigint DEFAULT 0 NOT NULL,
-    performance_v1 smallint DEFAULT 0 NOT NULL,
-    performance_v2 smallint DEFAULT 0 NOT NULL,
-    performance_v1_rx smallint DEFAULT 0 NOT NULL,
-    performance_v2_rx smallint DEFAULT 0 NOT NULL,
+    pp_v1 smallint DEFAULT 0 NOT NULL,
+    pp_v2 smallint DEFAULT 0 NOT NULL,
+    pp_v1_rx smallint DEFAULT 0 NOT NULL,
+    pp_v2_rx smallint DEFAULT 0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
@@ -1195,18 +1240,18 @@ INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, 
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (3, '#announce', 'Exemplary performance and public announcements.', 1, 4, true, '2020-12-09 04:21:35.551317+08', '2021-01-04 21:29:59.518299+08');
 INSERT INTO bancho.channels (id, name, title, read_priv, write_priv, auto_join, create_time, update_time) VALUES (5, '#开发', 'development', 1, 2, true, '2021-02-15 22:28:01.031559+08', '2021-02-15 22:28:37.085566+08');
 INSERT INTO bancho.config (name, comment, enabled, update_time, osu_api_keys, free_direct, ip_blacklist, display_clan_name, sensitive_words, menu_icon, seasonal_backgrounds, server_front_url, server_name, server_owner, server_email, client_check, client_whitelist, client_blacklist, client_min_version, client_max_version, beatmaps_loved_give_pp, beatmaps_unranked_give_pp, maintenance_enabled, maintenance_notification, login_enabled, login_notifications, login_retry_max_count, login_retry_expire_seconds, timeout_player_session, timeout_beatmap_cache, timeout_osu_updates_cache, online_users_limit, online_users_max, message_frequency_limit, message_per_minutes_max, message_base_limit_seconds, message_length_max, muti_accounts_allowed, muti_accounts_max, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp_std, auto_ban_pp_taiko, auto_ban_pp_catch, auto_ban_pp_mania, auto_ban_pp_rx_std, auto_ban_pp_rx_taiko, auto_ban_pp_rx_catch, auto_ban_pp_ap_std, registration_enabled, registration_disallowed_ip, registration_disallowed_emails, registration_disallowed_usernames, registration_disallowed_passwords, login_disallowed_ip, login_disallowed_id, login_disallowed_usernames, login_disallowed_hardware_hashes, login_disallowed_disk_hashes, login_disallowed_adapters_hashes, client_only_whitelist, all_beatmaps_not_submitted, all_players_have_supporter, client_update_enabled, client_update_expires, session_recycle_check_interval, allow_unicode_username, all_beatmaps_have_scoreboard) VALUES ('test', NULL, true, '2021-03-29 06:44:02.197919+08', '{}', true, '{}', true, '{}', NULL, NULL, 'http://peace', 'Peace', 'PurePeace', 'peace@email.com', false, '{}', '{}', NULL, NULL, false, false, false, 'Server is maintenance now!', true, '{}', 4, 300, 90, 3600, 3600, false, 300, true, 40, 10, 1000, true, 3, false, '{}', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', false, false, true, true, 86400, 60, true, true);
-INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
-INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
-INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
-INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
-INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
-INSERT INTO game_stats.mania (id, total_score, ranked_score, performance_v1, performance_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
-INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
-INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
-INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, performance_v1_ap, performance_v2_ap, performance_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-04-01 16:24:23.015206+08');
-INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
-INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
-INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, performance_v1, performance_v2, performance_v1_rx, performance_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
+INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
+INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
+INSERT INTO game_stats.catch (id, total_score, ranked_score, total_score_rx, ranked_score_rx, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
+INSERT INTO game_stats.mania (id, total_score, ranked_score, pp_v1, pp_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
+INSERT INTO game_stats.mania (id, total_score, ranked_score, pp_v1, pp_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
+INSERT INTO game_stats.mania (id, total_score, ranked_score, pp_v1, pp_v2, playcount, total_hits, accuracy, max_combo, playtime, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, pp_v1_ap, pp_v2_ap, pp_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, pp_v1_ap, pp_v2_ap, pp_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
+INSERT INTO game_stats.std (id, total_score, ranked_score, total_score_rx, ranked_score_rx, total_score_ap, ranked_score_ap, total_score_scv2, ranked_score_scv2, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, pp_v1_ap, pp_v2_ap, pp_v2_scv2, playcount, playcount_rx, playcount_ap, playcount_scv2, total_hits, total_hits_rx, total_hits_ap, total_hits_scv2, accuracy, accuracy_rx, accuracy_ap, accuracy_scv2, max_combo, max_combo_rx, max_combo_ap, max_combo_scv2, playtime, playtime_rx, playtime_ap, playtime_scv2, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-04-01 16:24:23.015206+08');
+INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
+INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.115553+08');
+INSERT INTO game_stats.taiko (id, total_score, ranked_score, total_score_rx, ranked_score_rx, pp_v1, pp_v2, pp_v1_rx, pp_v2_rx, playcount, playcount_rx, total_hits, total_hits_rx, accuracy, accuracy_rx, max_combo, max_combo_rx, playtime, playtime_rx, update_time) VALUES (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.0', 'PurePeace', NULL, 'initial', '2020-12-15 01:15:37.586205+08', '2020-12-20 01:13:47.84393+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.3', 'PurePeace', NULL, 'add game_scores, game_stats, modify some column', '2020-12-15 01:15:37.586205+08', '2020-12-15 01:15:52.635208+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.1.4', 'PurePeace', NULL, 'now, score v2 be as a standalone model', '2021-01-04 21:31:45.010709+08', '2021-01-04 21:31:45.010709+08');
@@ -1215,7 +1260,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.3.0', 'PurePeace', NULL, 'add beatmaps schema', '2021-03-16 04:17:59.07646+08', '2021-03-16 04:18:06.626569+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.4.0', 'PurePeace', NULL, 'add bancho.config 2 fields', '2021-03-25 22:38:16.399964+08', '2021-03-25 22:38:16.399964+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.4.1', 'PurePeace', NULL, 'modify user''s id start: 50 -> 100', '2021-03-25 22:39:18.328389+08', '2021-03-25 22:39:18.328389+08');
-INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.5.0', 'PurePeace', NULL, 'game_scores add fields performance_v3; modify performance fields type from float -> jsonb', '2021-03-25 22:40:45.95958+08', '2021-03-25 22:40:45.95958+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.5.0', 'PurePeace', NULL, 'game_scores add fields pp_v3; modify performance fields type from float -> jsonb', '2021-03-25 22:40:45.95958+08', '2021-03-25 22:40:45.95958+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.5.1', 'PurePeace', NULL, 'user.status -> user.info, modify user.settings', '2021-03-25 23:29:29.129352+08', '2021-03-25 23:29:53.324655+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.0', 'PurePeace', NULL, 'add auto insert triggers for user info, settings', '2021-03-26 00:39:55.096726+08', '2021-03-26 00:40:06.3158+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.6.1', 'PurePeace', NULL, 'modify user.info, user.notes', '2021-03-26 17:47:27.434628+08', '2021-03-26 17:47:27.434628+08');
@@ -1229,6 +1274,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.0', 'PurePeace', NULL, 'game_scores all table add status, grade, client_flags', '2021-03-31 13:26:41.955093+08', '2021-03-31 13:26:41.955093+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.1', 'PurePeace', NULL, 'modify game_scores performance fields type', '2021-04-01 15:40:18.993189+08', '2021-04-01 15:40:18.993189+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.5', 'PurePeace', NULL, 'add score_triggers', '2021-04-02 03:27:14.388894+08', '2021-04-02 03:27:19.582632+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.0', 'PurePeace', NULL, 'add score validation, md5, rep_md5 and keys', '2021-04-14 17:19:53.277091+08', '2021-04-14 17:19:53.277091+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1248,6 +1294,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.2', 'PurePeace', '0.8.0', '++++', '2021-03-31 15:26:49.524224+08', '2021-03-31 15:26:57.541795+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.3', 'PurePeace', '0.8.1', 'done get scoreboard', '2021-04-01 15:40:51.160652+08', '2021-04-01 15:40:51.160652+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.4', 'PurePeace', '0.8.5', 'auto personal best flag triggers', '2021-04-02 03:27:44.1726+08', '2021-04-02 03:27:44.1726+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.0', 'PurePeace', '0.9.0', '++ score submit', '2021-04-14 17:20:09.80058+08', '2021-04-14 17:20:09.80058+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
@@ -1291,20 +1338,56 @@ ALTER TABLE ONLY beatmaps.ratings
     ADD CONSTRAINT ratings_pkey PRIMARY KEY (user_id, map_md5);
 ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT statistic_pkey PRIMARY KEY (server, id);
+ALTER TABLE ONLY game_scores.catch
+    ADD CONSTRAINT catch_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.catch
+    ADD CONSTRAINT catch_rep_md5 UNIQUE (rep_md5);
+ALTER TABLE ONLY game_scores.catch_rx
+    ADD CONSTRAINT catch_rx_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.catch_rx
+    ADD CONSTRAINT catch_rx_rep_md5 UNIQUE (rep_md5);
 ALTER TABLE ONLY game_scores.catch_rx
     ADD CONSTRAINT catch_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.catch
     ADD CONSTRAINT catch_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.mania
+    ADD CONSTRAINT mania_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.mania
+    ADD CONSTRAINT mania_rep_md5 UNIQUE (rep_md5);
+ALTER TABLE ONLY game_scores.mania
     ADD CONSTRAINT mania_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.std_ap
+    ADD CONSTRAINT std_ap_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.std_ap
+    ADD CONSTRAINT std_ap_rep_md5 UNIQUE (rep_md5);
+ALTER TABLE ONLY game_scores.std_ap
     ADD CONSTRAINT std_ap_scores_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY game_scores.std
+    ADD CONSTRAINT std_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.std
+    ADD CONSTRAINT std_rep_md5 UNIQUE (rep_md5);
+ALTER TABLE ONLY game_scores.std_rx
+    ADD CONSTRAINT std_rx_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.std_rx
+    ADD CONSTRAINT std_rx_rep_md5 UNIQUE (rep_md5);
 ALTER TABLE ONLY game_scores.std_rx
     ADD CONSTRAINT std_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.std
     ADD CONSTRAINT std_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.std_scv2
+    ADD CONSTRAINT std_scv2_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.std_scv2
     ADD CONSTRAINT std_scv2_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY game_scores.std_scv2
+    ADD CONSTRAINT std_scv2_rep_md5 UNIQUE (rep_md5);
+ALTER TABLE ONLY game_scores.taiko
+    ADD CONSTRAINT taiko_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.taiko
+    ADD CONSTRAINT taiko_rep_md5 UNIQUE (rep_md5);
+ALTER TABLE ONLY game_scores.taiko_rx
+    ADD CONSTRAINT taiko_rx_md5 UNIQUE (md5);
+ALTER TABLE ONLY game_scores.taiko_rx
+    ADD CONSTRAINT taiko_rx_rep_md5 UNIQUE (rep_md5);
 ALTER TABLE ONLY game_scores.taiko_rx
     ADD CONSTRAINT taiko_rx_scores_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.taiko
