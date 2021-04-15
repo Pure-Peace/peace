@@ -259,8 +259,16 @@ impl ScoreData {
     #[inline(always)]
     pub fn query(&self) -> String {
         let mut query = format!(
-            "md5={}&n300={}&n100={}&n50={}&katu={}&combo={}&miss={}",
-            self.beatmap_md5, self.n300, self.n100, self.n50, self.katu, self.max_combo, self.miss
+            "md5={}&mode={}&mods={}&n300={}&n100={}&n50={}&katu={}&combo={}&miss={}",
+            self.beatmap_md5,
+            self.mode.raw_value(),
+            self.mods.value,
+            self.n300,
+            self.n100,
+            self.n50,
+            self.katu,
+            self.max_combo,
+            self.miss
         );
         if !self.pass {
             query += &format!("&passed_obj={}", self.get_total_obj(false));
