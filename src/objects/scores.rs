@@ -263,10 +263,7 @@ impl ScoreData {
             self.beatmap_md5, self.n300, self.n100, self.n50, self.katu, self.max_combo, self.miss
         );
         if !self.pass {
-            query += &format!(
-                "&passed_obj={}",
-                self.n300 + self.n100 + self.n50 + self.miss
-            );
+            query += &format!("&passed_obj={}", self.get_total_obj(false));
         };
         query
     }
