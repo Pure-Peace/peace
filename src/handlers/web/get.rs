@@ -662,53 +662,15 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         return HttpResponse::Ok().body("0|false");
     };
 
-    let score_type = if pp_board { "pp_v2" } else { "score" };
-    let score_table = data.game_mode.full_name();
-    let temp_table = format!("{}_{}_{}", score_type, score_table, beatmap.md5);
-
-    // Get scoreboard option 1: Use temporary tables for caching
-    // I prefer this option,
-    // It may work better when the number of players on the server becomes larger
-    // Check temp table cache
-    let cache_record = ctx.global_cache.get_temp_table(&temp_table).await;
-    if cache_record.is_none() || (Local::now() - cache_record.unwrap()).num_seconds() > 3600 {
-        // If not temp table exists or its expired, create it
-        // TODO: Change to: create table if not exists,
-        // according to my design, table will also be created when the score is submitted,
-        // so when get scores we may not need to create the table
-        let start = Instant::now();
-        if let Err(err) = ctx
-            .database
-            .pg
-            .batch_execute(&format!(
-                "CREATE TEMP TABLE IF NOT EXISTS \"{0}\" AS (
-    SELECT ROW_NUMBER() OVER () as rank, res.* FROM (
-        SELECT
-            s.id, u.id as user_id, u.name, u.country, INT4(s.{1}) AS any_score,
-            s.combo, s.n50, s.n100, s.n300, s.miss,
-            s.katu, s.geki, s.perfect, s.mods, s.create_time
-        FROM game_scores.{2} s
-            LEFT JOIN \"user\".base u ON u.id = s.user_id
-        WHERE s.map_md5 = '{3}'
-            AND s.status = 2
-            AND u.privileges & 1 > 0
-        ORDER BY any_score DESC) AS res);",
-                temp_table, score_type, score_table, beatmap.md5
-            ))
-            .await
-        {
-            error!(
-                "osu_osz2_get_scores: Failed to create temp table for beatmap {}, err: {:?}",
-                beatmap.md5, err
-            );
-        };
-        debug!(
-            "temp table {} created, time spent: {:?}",
-            temp_table,
-            start.elapsed()
-        );
-        ctx.global_cache.cache_temp_table(temp_table.clone()).await;
-    };
+    let temp_table = Bancho::create_score_table(
+        &beatmap.md5,
+        &data.game_mode.full_name(),
+        pp_board,
+        ctx.database,
+        ctx.global_cache,
+        false,
+    )
+    .await;
 
     // Get scoreboard info
     let start_top_list = Instant::now();
