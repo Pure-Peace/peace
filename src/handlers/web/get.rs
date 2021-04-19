@@ -1,11 +1,10 @@
 #![allow(unused_variables)]
-use crate::objects::ScroeFromDatabase;
+use crate::objects::{Bancho, ScroeFromDatabase};
 use std::time::Instant;
 
 use actix_web::{web::Query, HttpResponse};
 use async_std::fs::File;
 use async_std::prelude::*;
-use chrono::Local;
 use serde::Deserialize;
 use tokio_pg_mapper::FromTokioPostgresRow;
 
@@ -242,6 +241,7 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
 }
 
 #[inline(always)]
+/// GET osu-rate.php
 pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
     let failed = HttpResponse::Unauthorized().body("");
     #[derive(Debug, Deserialize)]
@@ -263,7 +263,6 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
         (p.id, p.name.clone())
     };
 
-    // Data is include vote?
     if let Some(vote) = data.vote {
         // limit rating value in 1 - 10
         let vote = match vote {
@@ -280,7 +279,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
                 r#"INSERT INTO "beatmaps"."ratings" 
                         ("user_id","map_md5","rating") 
                     VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"#,
-                &[&player_id, &player_name, &vote],
+                &[&player_id, &data.beatmap_md5, &vote],
             )
             .await
         {
@@ -299,22 +298,31 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
         };
     } else {
         // Check is already voted?
-        if let Err(_) = ctx
+        match ctx
             .database
             .pg
-            .query_first(
+            .query(
                 r#"SELECT 1 FROM "beatmaps"."ratings" WHERE "user_id" = $1 AND "map_md5" = $2"#,
                 &[&player_id, &data.beatmap_md5],
             )
             .await
         {
-            // Not already, player can vote.
-            return HttpResponse::Ok().body("ok");
+            Ok(rows) => {
+                if rows.len() == 0 {
+                    // Not already, player can vote.
+                    return HttpResponse::Ok().body("ok");
+                }
+            }
+            Err(err) => return HttpResponse::Ok().body("ok"),
         };
     }
 
-    let value = utils::get_beatmap_rating(&data.beatmap_md5, &ctx.database).await;
-    HttpResponse::Ok().body(format!("alreadyvoted\n{}", value.unwrap_or(10.0)))
+    HttpResponse::Ok().body(format!(
+        "{:.2}",
+        utils::get_beatmap_rating(&data.beatmap_md5, &ctx.database)
+            .await
+            .unwrap_or(10.0)
+    ))
 }
 
 #[inline(always)]
