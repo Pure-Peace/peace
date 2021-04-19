@@ -4,9 +4,10 @@ use chrono::{DateTime, Local};
 use derivative::Derivative;
 use pyo3::{types::PyBytes, PyErr, Python};
 use std::time::Instant;
+use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
-use crate::{constants::GameMode, objects::PlayMods};
+use crate::{constants::GameMode, database::Database, objects::PlayMods};
 use crate::{
     constants::SubmissionStatus,
     utils::{self, MultipartData},
@@ -75,7 +76,8 @@ pub struct ScroeFromDatabase {
     pub id: i64,
     pub user_id: i32,
     pub name: String,
-    pub any_score: i32,
+    pub pp_v2: Option<f32>,
+    pub score: i32,
     pub combo: i32,
     pub n50: i32,
     pub n100: i32,
@@ -90,11 +92,13 @@ pub struct ScroeFromDatabase {
 
 impl ScroeFromDatabase {
     #[inline(always)]
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, pp_as_score: bool) -> String {
         format!("{id}|{name}|{score}|{combo}|{n50}|{n100}|{n300}|{miss}|{katu}|{geki}|{perfect}|{mods}|{user_id}|{rank}|{create_time}|{has_replay}",
             id = self.id,
             name = self.name,
-            score = self.any_score,
+            score = if pp_as_score { self.pp() as i32 } else {
+                self.score
+            },
             combo = self.combo,
             n50 = self.n50,
             n100 = self.n100,
@@ -110,26 +114,31 @@ impl ScroeFromDatabase {
             has_replay = "1"
         )
     }
+
+    #[inline(always)]
+    pub fn pp(&self) -> f32 {
+        self.pp_v2.unwrap_or(0.0)
+    }
 }
 
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct SubmitModular {
     pub quit: bool,     // x (quit 0 or 1)
-    pub fail_time: i32, // ft (fail time)
+    pub fail_time: i64, // ft (fail time)
     #[derivative(Debug = "ignore")]
     pub score: Vec<u8>, // score (base64 -> bytes)
     pub fs: String,
     pub beatmap_hash: String, // bmk
     pub c1: String,
-    pub success_time: i32, // st (success time)
+    pub success_time: i64, // st (success time)
     pub password: String,  // pass (password)
     pub osu_version: i32,  // osuver
     // pub s: String, // s (s??) what's that?
     #[derivative(Debug = "ignore")]
     pub iv: Vec<u8>, // iv (initialization vector base64 -> bytes)
     #[derivative(Debug = "ignore")]
-    pub score_data: Bytes, // score (replay file, octet-stream bytes)
+    pub score_file: Option<Bytes>, // score (replay file, octet-stream bytes lzma)
 }
 
 impl SubmitModular {
@@ -153,7 +162,7 @@ impl SubmitModular {
                 Ok(s) => s,
                 Err(_err) => return None,
             },
-            score_data: data.file("score")?,
+            score_file: data.file("score"),
         })
     }
 
@@ -306,8 +315,8 @@ impl ScoreData {
             accuracy: None,
         };
 
-        data.total_obj = Some(data.get_total_obj(false));
-        data.accuracy = Some(data.get_acc(false));
+        data.total_obj = Some(data.total_obj_count(false));
+        data.accuracy = Some(data.calc_acc(false));
 
         Some(data)
     }
@@ -327,13 +336,13 @@ impl ScoreData {
             self.miss
         );
         if !self.pass {
-            query += &format!("&passed_obj={}", self.get_total_obj(false));
+            query += &format!("&passed_obj={}", self.total_obj_count(false));
         };
         query
     }
 
     #[inline(always)]
-    pub fn get_total_obj(&self, recalc: bool) -> i32 {
+    pub fn total_obj_count(&self, recalc: bool) -> i32 {
         if self.total_obj.is_some() && !recalc {
             return self.total_obj.unwrap();
         };
@@ -351,11 +360,11 @@ impl ScoreData {
     }
 
     #[inline(always)]
-    pub fn get_acc(&self, recalc: bool) -> f32 {
+    pub fn calc_acc(&self, recalc: bool) -> f32 {
         if self.accuracy.is_some() && !recalc {
             return self.accuracy.unwrap();
         };
-        let total = self.get_total_obj(recalc);
+        let total = self.total_obj_count(recalc);
         if total == 0 {
             return 0.0;
         };

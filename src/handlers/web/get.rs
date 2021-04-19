@@ -693,7 +693,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         };
         // Not default ranking, should re-order
         if !query.contains(DEFAULT_WHERE) {
-            query += " ORDER BY any_score DESC LIMIT 50";
+            query += " ORDER BY score DESC LIMIT 50";
         };
         match ctx.database.pg.query_simple(&query).await {
             Ok(scores_row) => {
@@ -796,13 +796,13 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     );
     // Line 5 personal best (optional)
     if let Some(personal_best) = personal_best {
-        first_line += &(personal_best.to_string() + "\n");
+        first_line += &(personal_best.to_string(pp_board) + "\n");
     } else {
         first_line += "\n";
     };
     // Line 6 - N (top list)
     for s in &top_list {
-        first_line += &(s.to_string() + "\n");
+        first_line += &(s.to_string(pp_board) + "\n");
     }
     debug!("buid_data time spent: {:?}", start_buid_data.elapsed());
 
