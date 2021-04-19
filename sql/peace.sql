@@ -45,38 +45,19 @@ CREATE FUNCTION beatmaps.beatmaps_map_trigger() RETURNS trigger
 		END IF;
 	RETURN NEW;
 END$$;
+CREATE FUNCTION beatmaps.beatmaps_map_trigger_after() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+		--only for insert
+		IF (TG_OP = 'INSERT') THEN
+			INSERT INTO beatmaps.stats ("server", "id", "md5") VALUES (NEW."server", NEW."id", NEW."md5");
+		END IF;
+	RETURN NEW;
+END$$;
 CREATE FUNCTION game_scores.scores_trigger() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
-	DECLARE 
-		sid BIGINT;
-		pp INTEGER;
-	BEGIN
-		NEW.update_time = CURRENT_TIMESTAMP;
-		IF TG_OP = 'INSERT' THEN
-			IF NEW.status = 1 THEN
-				EXECUTE 'SELECT id, pp_v2 FROM '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
-				' WHERE user_id = '||NEW.user_id||
-				' AND map_md5 = '''||NEW.map_md5||
-				''' AND status = 2' INTO sid, pp;
-				IF sid > 0 THEN
-					IF NEW.pp_v2 >= pp THEN
-						NEW.status = 2;
-						EXECUTE 'UPDATE '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
-						' SET status = 1 WHERE id = '||sid;
-					END IF;
-				ELSE
-					NEW.status = 2;
-				END IF;
-			END IF;
-		ELSEIF TG_OP = 'UPDATE' THEN
-			IF NEW.status = 2 AND OLD.status <> 2 THEN
-				EXECUTE 'UPDATE '||TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME||
-				' SET status = 1 WHERE user_id = '''||NEW.user_id||
-				''' AND map_md5 = '''||NEW.map_md5||
-				''' AND status = 2';
-			END IF;
-		END IF;
+    AS $$BEGIN
+	NEW.update_time = CURRENT_TIMESTAMP;
 	RETURN NEW;
 END$$;
 CREATE FUNCTION public.update_timestamp() RETURNS trigger
@@ -153,6 +134,7 @@ CREATE FUNCTION user_records.increase_login_count() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
 		UPDATE "user"."statistic" SET "login_count" = "login_count" + 1 WHERE "id" = NEW.user_id;
+		UPDATE "user"."address" SET used_times = used_times + 1 WHERE "id" = NEW."id";
 	RETURN NEW;
 END$$;
 CREATE FUNCTION user_records.increase_rename_count() RETURNS trigger
@@ -361,16 +343,15 @@ CREATE TABLE beatmaps.stats (
     id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
     set_id integer DEFAULT nextval('beatmaps.peace_bid'::regclass),
     md5 character varying(32) NOT NULL,
-    plays integer DEFAULT 0 NOT NULL,
-    players integer DEFAULT 0 NOT NULL,
-    pp double precision DEFAULT 0.0 NOT NULL,
+    playcount integer DEFAULT 0 NOT NULL,
     play_time bigint DEFAULT 0 NOT NULL,
     pass integer DEFAULT 0 NOT NULL,
     fail integer DEFAULT 0 NOT NULL,
-    clicked bigint DEFAULT 0 NOT NULL,
-    miss bigint DEFAULT 0 NOT NULL,
+    clicked integer DEFAULT 0 NOT NULL,
+    miss integer DEFAULT 0 NOT NULL,
     pick integer DEFAULT 0 NOT NULL,
-    update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    quit integer DEFAULT 0 NOT NULL,
+    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE TABLE game_scores.catch (
     id bigint NOT NULL,
@@ -378,7 +359,7 @@ CREATE TABLE game_scores.catch (
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
     pp_v1 real,
-    pp_v2 real,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
     pp_v2_raw jsonb,
     pp_v3 real,
     stars real,
@@ -434,7 +415,7 @@ CREATE TABLE game_scores.catch_rx (
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
     pp_v1 real,
-    pp_v2 real,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
     pp_v2_raw jsonb,
     pp_v3 real,
     stars real,
@@ -490,7 +471,7 @@ CREATE TABLE game_scores.mania (
     map_md5 character varying(32) NOT NULL,
     score integer NOT NULL,
     pp_v1 real,
-    pp_v2 real,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
     pp_v2_raw jsonb,
     pp_v3 real,
     stars real,
@@ -756,20 +737,7 @@ COMMENT ON COLUMN game_scores.std_scv2.client_version IS 'the client version use
 COMMENT ON COLUMN game_scores.std_scv2.confidence IS 'credibility of score';
 COMMENT ON COLUMN game_scores.std_scv2.check_time IS 'last check time';
 COMMENT ON COLUMN game_scores.std_scv2.create_time IS 'submission time';
-COMMENT ON COLUMN game_scores.std_scv2.update_time IS 'score''s unique id
-user''s unique id
-beatmap''s md5
-ppv1
-ppv2
-play mods
-play time (seconds)
-this score is full combo or not
-the client version used to submit this score
-credibility of score
-last check time
-submission time
-last update time
-last update time';
+COMMENT ON COLUMN game_scores.std_scv2.update_time IS 'last update time';
 CREATE SEQUENCE game_scores.std_scv2_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -895,10 +863,10 @@ CREATE TABLE game_stats.catch (
     ranked_score bigint DEFAULT 0 NOT NULL,
     total_score_rx bigint DEFAULT 0 NOT NULL,
     ranked_score_rx bigint DEFAULT 0 NOT NULL,
-    pp_v1 smallint DEFAULT 0 NOT NULL,
-    pp_v2 smallint DEFAULT 0 NOT NULL,
-    pp_v1_rx smallint DEFAULT 0 NOT NULL,
-    pp_v2_rx smallint DEFAULT 0 NOT NULL,
+    pp_v1 real DEFAULT 0.0 NOT NULL,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
+    pp_v1_rx real DEFAULT 0.0 NOT NULL,
+    pp_v2_rx real DEFAULT 0.0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
@@ -917,8 +885,8 @@ CREATE TABLE game_stats.mania (
     id integer NOT NULL,
     total_score bigint DEFAULT 0 NOT NULL,
     ranked_score bigint DEFAULT 0 NOT NULL,
-    pp_v1 smallint DEFAULT 0 NOT NULL,
-    pp_v2 smallint DEFAULT 0 NOT NULL,
+    pp_v1 real DEFAULT 0.0 NOT NULL,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
     accuracy real DEFAULT 0.0 NOT NULL,
@@ -938,13 +906,13 @@ CREATE TABLE game_stats.std (
     ranked_score_ap bigint DEFAULT 0 NOT NULL,
     total_score_scv2 bigint DEFAULT 0 NOT NULL,
     ranked_score_scv2 bigint DEFAULT 0 NOT NULL,
-    pp_v1 smallint DEFAULT 0 NOT NULL,
-    pp_v2 smallint DEFAULT 0 NOT NULL,
-    pp_v1_rx smallint DEFAULT 0 NOT NULL,
-    pp_v2_rx smallint DEFAULT 0 NOT NULL,
-    pp_v1_ap smallint DEFAULT 0 NOT NULL,
-    pp_v2_ap smallint DEFAULT 0 NOT NULL,
-    pp_v2_scv2 smallint DEFAULT 0 NOT NULL,
+    pp_v1 real DEFAULT 0.0 NOT NULL,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
+    pp_v1_rx real DEFAULT 0.0 NOT NULL,
+    pp_v2_rx real DEFAULT 0.0 NOT NULL,
+    pp_v1_ap real DEFAULT 0.0 NOT NULL,
+    pp_v2_ap real DEFAULT 0.0 NOT NULL,
+    pp_v2_scv2 real DEFAULT 0.0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     playcount_ap integer DEFAULT 0 NOT NULL,
@@ -975,10 +943,10 @@ CREATE TABLE game_stats.taiko (
     ranked_score bigint DEFAULT 0 NOT NULL,
     total_score_rx bigint DEFAULT 0 NOT NULL,
     ranked_score_rx bigint DEFAULT 0 NOT NULL,
-    pp_v1 smallint DEFAULT 0 NOT NULL,
-    pp_v2 smallint DEFAULT 0 NOT NULL,
-    pp_v1_rx smallint DEFAULT 0 NOT NULL,
-    pp_v2_rx smallint DEFAULT 0 NOT NULL,
+    pp_v1 real DEFAULT 0.0 NOT NULL,
+    pp_v2 real DEFAULT 0.0 NOT NULL,
+    pp_v1_rx real DEFAULT 0.0 NOT NULL,
+    pp_v2_rx real DEFAULT 0.0 NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     playcount_rx integer DEFAULT 0 NOT NULL,
     total_hits integer DEFAULT 0 NOT NULL,
@@ -1026,6 +994,7 @@ CREATE TABLE "user".address (
     adapters_hash character varying(255) NOT NULL,
     uninstall_id character varying(255) NOT NULL,
     disk_id character varying(255) NOT NULL,
+    used_times bigint DEFAULT 0 NOT NULL,
     create_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 COMMENT ON TABLE "user".address IS 'User''s login hardware address';
@@ -1152,6 +1121,7 @@ CREATE TABLE "user".settings (
     language character varying(16) DEFAULT 'en'::character varying NOT NULL,
     in_game_translate boolean DEFAULT true NOT NULL,
     pp_scoreboard boolean DEFAULT false NOT NULL,
+    stealth_mode boolean DEFAULT false NOT NULL,
     update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 COMMENT ON COLUMN "user".settings.id IS 'user''s unique id';
@@ -1275,6 +1245,9 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.1', 'PurePeace', NULL, 'modify game_scores performance fields type', '2021-04-01 15:40:18.993189+08', '2021-04-01 15:40:18.993189+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.8.5', 'PurePeace', NULL, 'add score_triggers', '2021-04-02 03:27:14.388894+08', '2021-04-02 03:27:19.582632+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.0', 'PurePeace', NULL, 'add score validation, md5, rep_md5 and keys', '2021-04-14 17:19:53.277091+08', '2021-04-14 17:19:53.277091+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.1', 'PurePeace', NULL, 'modify score_triggers', '2021-04-19 04:23:59.33877+08', '2021-04-19 04:23:59.33877+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.2', 'PurePeace', NULL, 'Many updates', '2021-04-19 21:56:58.44226+08', '2021-04-19 21:56:58.44226+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.5', 'PurePeace', NULL, 'Many refactors. (stats)', '2021-04-20 04:56:03.104819+08', '2021-04-20 04:56:03.104819+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1295,15 +1268,18 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.3', 'PurePeace', '0.8.1', 'done get scoreboard', '2021-04-01 15:40:51.160652+08', '2021-04-01 15:40:51.160652+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.6.4', 'PurePeace', '0.8.5', 'auto personal best flag triggers', '2021-04-02 03:27:44.1726+08', '2021-04-02 03:27:44.1726+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.0', 'PurePeace', '0.9.0', '++ score submit', '2021-04-14 17:20:09.80058+08', '2021-04-14 17:20:09.80058+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.1', 'PurePeace', '0.9.1', 'modify score trigger', '2021-04-19 04:24:25.391+08', '2021-04-19 04:24:25.391+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.2', 'PurePeace', '0.9.2', '++', '2021-04-19 21:57:13.279349+08', '2021-04-19 21:57:13.279349+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.5', 'PurePeace', '0.9.5', 'score submit almost done!!', '2021-04-20 04:56:37.846606+08', '2021-04-20 04:56:37.846606+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
 INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
 INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (1, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.00705+08');
 INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (5, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.72318+08');
 INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (6, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:48.001861+08');
-INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, update_time) VALUES (6, 0, 'en', true, false, '2021-03-26 00:38:53.110564+08');
-INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, update_time) VALUES (5, 0, 'en', true, false, '2021-03-26 00:38:53.115553+08');
-INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, update_time) VALUES (1, 0, 'en', true, false, '2021-03-26 00:38:53.116908+08');
+INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (6, 0, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
+INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (5, 0, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
+INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (1, 0, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:00:00', 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1, '00:00:00', 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:00:00', 0, 0, 0, 0, '2021-03-28 10:37:15.040571+08');
@@ -1330,6 +1306,8 @@ ALTER TABLE ONLY bancho.channels
     ADD CONSTRAINT channels_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY bancho.config
     ADD CONSTRAINT config_pkey PRIMARY KEY (name);
+ALTER TABLE ONLY beatmaps.stats
+    ADD CONSTRAINT beatmap_md5 UNIQUE (md5);
 ALTER TABLE ONLY beatmaps.maps
     ADD CONSTRAINT hash UNIQUE (md5);
 ALTER TABLE ONLY beatmaps.maps
@@ -1445,6 +1423,7 @@ COMMENT ON TRIGGER auto_update_timestamp ON bancho.config IS 'auto update the up
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.ratings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON beatmaps.stats FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER maps_trigger BEFORE INSERT OR UPDATE ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION beatmaps.beatmaps_map_trigger();
+CREATE TRIGGER maps_trigger_after AFTER INSERT ON beatmaps.maps FOR EACH ROW EXECUTE FUNCTION beatmaps.beatmaps_map_trigger_after();
 CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.catch FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
 CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.catch_rx FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
 CREATE TRIGGER scores_trigger BEFORE INSERT OR UPDATE ON game_scores.mania FOR EACH ROW EXECUTE FUNCTION game_scores.scores_trigger();
@@ -1468,6 +1447,7 @@ CREATE TRIGGER auto_insert_related AFTER INSERT ON "user".base FOR EACH ROW EXEC
 COMMENT ON TRIGGER auto_insert_related ON "user".base IS 'auto insert into related table';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".info FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON "user".info IS 'auto update time';
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".settings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".statistic FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON "user".statistic IS 'auto update the timestamp';
 CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON "user".base FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
@@ -1484,7 +1464,6 @@ CREATE TRIGGER safe_user_info BEFORE INSERT OR UPDATE ON "user".base FOR EACH RO
 COMMENT ON TRIGGER safe_user_info ON "user".base IS 'auto make the user info safety';
 CREATE TRIGGER update_time_auto BEFORE UPDATE ON "user".notes FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER update_time_auto ON "user".notes IS 'auto update the update_time after update note info';
-CREATE TRIGGER "user.id" BEFORE UPDATE ON "user".settings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_login_duration BEFORE UPDATE ON user_records.login FOR EACH ROW EXECUTE FUNCTION user_records.auto_online_duration();
 COMMENT ON TRIGGER auto_login_duration ON user_records.login IS 'auto update the online duration';
 CREATE TRIGGER increase_login_count BEFORE INSERT ON user_records.login FOR EACH ROW EXECUTE FUNCTION user_records.increase_login_count();
