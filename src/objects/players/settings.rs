@@ -14,6 +14,7 @@ set_with_db! {
         pub language: String,
         pub in_game_translate: bool,
         pub pp_scoreboard: bool,
+        pub stealth_mode: bool,
         pub update_time: DateTime<Utc>,
     }
 }
