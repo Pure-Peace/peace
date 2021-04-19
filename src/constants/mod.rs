@@ -302,38 +302,52 @@ impl GameMode {
     }
 
     #[inline(always)]
+    /// Get lowercase name
+    ///
+    /// ```
+    /// GameMode::Std_rx -> "std_rx"
+    /// ```
     pub fn full_name(&self) -> String {
         format!("{:?}", self).to_lowercase()
     }
 
     #[inline(always)]
+    /// Get mode name
+    ///
+    /// ```
+    /// GameMode::Std_rx -> "std"
+    /// ```
     pub fn mode_name(&self) -> String {
         self.full_name().split('_').collect::<Vec<&str>>()[0].to_string()
     }
 
     #[inline(always)]
-    pub fn play_mod_name(&self) -> String {
+    /// Get sub mod name
+    ///
+    /// ```
+    /// GameMode::Std_rx -> "rx"
+    /// ```
+    pub fn sub_mod(&self) -> &str {
         match self.val() {
-            value if value == 8 => String::from("ap"),
-            value if value == 12 => String::from("scv2"),
-            value if value > 3 && value < 8 => String::from("rx"),
-            _ => String::new(),
+            value if value == 8 => "ap",
+            value if value == 12 => "scv2",
+            value if value > 3 && value < 8 => "rx",
+            _ => "",
         }
     }
 
     #[inline(always)]
-    pub fn play_mod_name_table(&self) -> String {
-        match self.play_mod_name() {
-            mut n if n != String::new() => {
-                n.insert(0, '_');
-                n
+    /// Get mode name (database fields with "_")
+    ///
+    /// ```
+    /// GameMode::Std_rx -> "_rx"
+    /// ```
+    pub fn sub_mod_table(&self) -> &str {
+        match self.val() {
+            value if value == 8 => "_ap",
+            value if value == 12 => "_scv2",
+            value if value > 3 && value < 8 => "_rx",
+            _ => "",
             }
-            n => n,
-        }
-    }
-
-    #[inline(always)]
-    pub fn get_table_names(&self) -> (String, String) {
-        (self.play_mod_name_table(), self.mode_name())
     }
 }
