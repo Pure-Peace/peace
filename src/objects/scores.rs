@@ -14,6 +14,62 @@ use crate::{
 
 #[pg_mapper(table = "")]
 #[derive(Debug, PostgresMapper)]
+pub struct MiniScore {
+    pub rank: i64,
+    pub id: i64,
+    pub accuracy: f32,
+    pub pp_v2: Option<f32>,
+    pub score: i32,
+    pub combo: i32,
+}
+
+impl MiniScore {
+    #[inline(always)]
+    pub fn pp(&self) -> f32 {
+        self.pp_v2.unwrap_or(0.0)
+    }
+
+    #[inline(always)]
+    pub async fn from_database(
+        player_id: i32,
+        temp_table: &str,
+        database: &Database,
+    ) -> Option<Self> {
+        match database.pg.query(
+            &format!(r#"SELECT "rank", "id", accuracy, pp_v2, score, combo FROM {} WHERE user_id = $1 LIMIT 1"#, temp_table),
+            &[&player_id],
+        )
+        .await
+    {
+        Ok(mut rows) => {
+            if rows.len() > 0 {
+                match MiniScore::from_row(rows.remove(0)) {
+                    Ok(s) => Some(s),
+                    Err(err) => {
+                        error!(
+                            "[MiniScore]: Failed to parse score, err: {:?}",
+                            err
+                        );
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        },
+        Err(err) => {
+            error!(
+                "[MiniScore]: Failed to get score, player {}, err: {:?};",
+                player_id, err
+            );
+            None
+        }
+    }
+    }
+}
+
+#[pg_mapper(table = "")]
+#[derive(Debug, PostgresMapper)]
 pub struct ScroeFromDatabase {
     pub rank: i64,
     pub id: i64,
