@@ -7,15 +7,13 @@ use serde_json::json;
 use std::str::FromStr;
 
 use crate::{
-    constants::{CountryCodes, GeoData},
+    constants::{CountryCodes, GeoData, CHEAT_DETECTED_DECREASE_CREDIT},
     packets,
     types::Argon2Cache,
     utils,
 };
 
 use super::{depends::*, PlayMods};
-
-const CHEAT_DETECTED_DECREASE_CREDIT: i32 = 200;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -112,6 +110,126 @@ impl Player {
             token: Uuid::new_v4().to_string(),
             last_active_time: now_time,
         }
+    }
+    #[inline(always)]
+    pub async fn recalculate_pp_acc(&mut self, score_table: &str, database: &Database) {
+        // Get bp
+        let score_set = match database
+            .pg
+            .query(
+                &format!(
+                    r#"SELECT s.pp_v2, s.accuracy FROM game_scores.{} s 
+                INNER JOIN beatmaps.maps m ON s.map_md5 = m.md5 
+                WHERE s.user_id = $1 
+                AND s.status = 2 
+                AND s.pp_v2 IS NOT NULL
+                AND m.rank_status IN (1, 2)
+                ORDER BY s.pp_v2 DESC
+                LIMIT 200;"#,
+                    score_table
+                ),
+                &[&self.id],
+            )
+            .await
+        {
+            Ok(rows) => rows,
+            Err(err) => {
+                error!(
+                    "[recalculate_pp_acc] Failed to get Player({})'s score set, err: {:?}",
+                    self.id, err
+                );
+                return;
+            }
+        };
+        let score_count = score_set.len();
+
+        // Calc acc from bp
+        self.stats.accuracy = if score_count == 1 {
+            score_set[0]
+                .try_get::<'_, _, f32>("accuracy")
+                .unwrap_or(100.0)
+        } else {
+            let mut total = 0f32;
+            let mut div = 0f32;
+            for (idx, row) in score_set.iter().enumerate() {
+                if let Ok(acc) = row.try_get::<'_, _, f32>("accuracy") {
+                    let add = (0.95_f32.powi(idx as i32)) * 100.0;
+                    total += acc * add;
+                    div += add;
+                }
+            }
+            total / div
+        } / 100.0f32;
+
+        // Calc pp from bp
+        self.stats.pp_v2 = if score_count == 1 {
+            score_set[0].try_get::<'_, _, f32>("pp_v2").unwrap_or(0.0)
+        } else {
+            let mut total = 0f32;
+            for (idx, row) in score_set.iter().enumerate() {
+                if let Ok(pp) = row.try_get::<'_, _, f32>("pp_v2") {
+                    total += pp * 0.95_f32.powi((idx + 1) as i32);
+                }
+            }
+            total
+        };
+    }
+
+    #[inline(always)]
+    pub async fn save_stats(&self, mode: &GameMode, database: &Database) -> bool {
+        match database
+            .pg
+            .execute(
+                &format!(
+                    r#"UPDATE game_stats.{0} SET 
+            total_hits{1} = $1,
+            total_score{1} = $2, 
+            ranked_score{1} = $3, 
+            playcount{1} = $4, 
+            playtime{1} = $5, 
+            max_combo{1} = $6, 
+            accuracy{1} = $7, 
+            pp_v2{1} = $8 
+            WHERE "id" = $9"#,
+                    mode.mode_name(),
+                    mode.sub_mod_table()
+                ),
+                &[
+                    &self.stats.total_hits,
+                    &self.stats.total_score,
+                    &self.stats.ranked_score,
+                    &self.stats.playcount,
+                    &self.stats.playtime,
+                    &self.stats.max_combo,
+                    &self.stats.accuracy,
+                    &self.stats.pp_v2,
+                    &self.id,
+                ],
+            )
+            .await
+        {
+            Ok(_) => true,
+            Err(err) => {
+                error!("[Player.Stats] Failed to save to database, err: {:?}", err);
+                false
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub async fn recalculate_stats(
+        &mut self,
+        mode: &GameMode,
+        database: &Database,
+        calculate_pp_acc: bool,
+    ) {
+        if calculate_pp_acc {
+            self.recalculate_pp_acc(&mode.full_name(), database).await;
+        };
+        self.save_stats(mode, database).await;
+        self.stats.calc_rank_from_database(mode, database).await;
+        self.cache_stats(&mode);
+        self.enqueue(packets::user_stats(&self).await).await;
     }
 
     #[inline(always)]
@@ -436,14 +554,20 @@ impl Player {
     }
 
     #[inline(always)]
+    pub fn cache_stats(&mut self, mode: &GameMode) {
+        let s = self.stats.clone();
+        self.stats_cache.insert(mode.clone(), s);
+    }
+
+    #[inline(always)]
     pub async fn get_stats_from_database(&self, database: &Database) -> Option<Stats> {
         // Build query string
-        let (play_mod_name, mode_name) = self.status.game_mode.get_table_names();
         let sql = format!(
             r#"SELECT 
                 "pp_v1{0}" as "pp_v1",
                 "pp_v2{0}" as "pp_v2",
                 "accuracy{0}" as "accuracy",
+                "total_hits{0}" as "total_hits",
                 "total_score{0}" as "total_score",
                 "ranked_score{0}" as "ranked_score",
                 "playcount{0}" as "playcount",
@@ -452,7 +576,8 @@ impl Player {
             FROM 
                 "game_stats"."{1}" 
             WHERE "id" = $1;"#,
-            play_mod_name, mode_name
+            self.status.game_mode.sub_mod_table(),
+            self.status.game_mode.mode_name()
         );
 
         // Query from database
@@ -476,7 +601,7 @@ impl Player {
                 );
                 // Calculate rank
                 stats
-                    .recalculate_rank(&play_mod_name, &mode_name, database)
+                    .calc_rank_from_database(&self.status.game_mode, database)
                     .await;
                 // Done
                 return Some(stats);
