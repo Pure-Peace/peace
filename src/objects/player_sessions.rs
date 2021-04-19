@@ -26,7 +26,7 @@ pub struct PlayerSessions {
     pub id_session_map: PlayerIdSessionMap,
     pub name_session_map: PlayerNameSessionMap,
     pub player_count: AtomicI32,
-    database: Database,
+    database: Data<Database>,
 }
 
 impl fmt::Debug for PlayerSessions {
@@ -39,7 +39,7 @@ impl fmt::Debug for PlayerSessions {
 impl PlayerSessions {
     /// Create new PlayerSessions with a default capacity
     /// Automatically expand when capacity is exceeded
-    pub fn new(capacity: usize, database: &Database) -> Self {
+    pub fn new(capacity: usize, database: &Data<Database>) -> Self {
         PlayerSessions {
             /// Key: token, Value: Arc<RwLock<Player>>
             token_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),

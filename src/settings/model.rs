@@ -112,6 +112,7 @@ impl Settings {
 pub struct Server {
     pub host: String,
     pub port: String,
+    pub data_dir: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

@@ -24,10 +24,10 @@ pub struct Bancho {
 }
 
 impl Bancho {
-    pub async fn init(local_config: &LocalConfig, database: &Database) -> Self {
+    pub async fn init(local_config: &LocalConfig, database: &Data<Database>) -> Self {
         // Create...
         let config = lock_wrapper(BanchoConfig::from_database(&database).await.unwrap());
-        let player_sessions = lock_wrapper(PlayerSessions::new(1000, &database));
+        let player_sessions = lock_wrapper(PlayerSessions::new(1000, database));
         let channel_list = lock_wrapper(ChannelListBuilder::new(database, &player_sessions).await);
         let osu_api = lock_wrapper(OsuApi::new(&config).await);
         let pp_calculator = Data::new(PPServerApi::new(&local_config.data));

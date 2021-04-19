@@ -30,7 +30,7 @@ async fn main() -> std::io::Result<()> {
     let local_config = LocalConfig::init();
 
     // Create database object includes postgres and redis pool
-    let database = Database::new(&local_config).await;
+    let database = Data::new(Database::new(&local_config).await);
 
     // Create bancho object
     let bancho = Data::new(Bancho::init(&local_config, &database).await);

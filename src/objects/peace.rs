@@ -23,7 +23,7 @@ pub struct Peace {
     pub addr: String,
     pub bancho: Data<Bancho>,
     pub local_config: LocalConfig,
-    pub database: Database,
+    pub database: Data<Database>,
     pub prometheus: PrometheusMetrics,
     pub counter: IntCounterVec,
     pub geo_db: Data<Option<Reader<Mmap>>>,
@@ -35,7 +35,7 @@ pub struct Peace {
 }
 
 impl Peace {
-    pub fn new(bancho: Data<Bancho>, database: Database) -> Self {
+    pub fn new(bancho: Data<Bancho>, database: Data<Database>) -> Self {
         let local_config = bancho.local_config.clone();
         let sets = &local_config.data;
         let addr = local_config
@@ -97,8 +97,8 @@ impl Peace {
                     .app_data(geo_db.clone())
                     .app_data(global_cache.clone())
                     .app_data(sender.clone())
+                    .app_data(database.clone())
                     .data(counter.clone())
-                    .data(database.clone())
                     .configure(|service_cfg| routes::peace::init(service_cfg, &settings_cloned))
             })
             .shutdown_timeout(2)
