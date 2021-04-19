@@ -1,12 +1,27 @@
 use actix_multipart::Multipart;
 use actix_web::HttpResponse;
+use chrono::Local;
 use serde::Deserialize;
 use std::time::Instant;
-use tokio_pg_mapper::FromTokioPostgresRow;
 
-use crate::objects::{Beatmap, ScoreData, ScroeFromDatabase, SubmitModular};
+use crate::constants::SubmissionStatus;
+use crate::objects::{Bancho, Beatmap, MiniScore, ScoreData, SubmitModular};
+use crate::packets;
 use crate::routes::web::Context;
 use crate::utils;
+
+const NULL: String = String::new();
+
+macro_rules! chart_item {
+    ($name:expr, $before:expr, $after:expr) => {
+        format!(
+            "{name}Before:{before}|{name}After:{after}|",
+            name = $name,
+            before = $before,
+            after = $after
+        );
+    };
+}
 
 #[inline(always)]
 /// Multipart Form-data
@@ -110,7 +125,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     );
     // Parse score data
     let score_parse = Instant::now();
-    let s = match ScoreData::from_submit_modular(&submit_data).await {
+    let mut s = match ScoreData::from_submit_modular(&submit_data).await {
         Some(s) => s,
         None => {
             warn!(
@@ -151,19 +166,20 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     );
 
     // Get configs
-    let (maintenance_enabled, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp) = {
+    let (maintenance_enabled, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp, front_url) = {
         let c = ctx.bancho.config.read().await;
         (
             c.maintenance_enabled,
             c.auto_ban_enabled,
             c.auto_ban_whitelist.clone(),
             c.auto_ban_pp(&s.mode),
+            c.server_front_url.clone(),
         )
     };
 
     let mut player_w = player.write().await;
     let player_id = player_w.id;
-    let pp_board = player_w.settings.pp_scoreboard;
+    let old_stats = player_w.stats.clone();
 
     // Update player's active time
     player_w.update_active();
@@ -225,7 +241,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         }
     };
 
-    let table = s.mode.full_name();
+    let score_table = s.mode.full_name();
 
     // Check duplicate score
     match ctx
@@ -233,8 +249,8 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         .pg
         .query(
             &format!(
-                "SELECT \"id\" FROM \"game_scores\".\"{}\" WHERE md5 = $1",
-                table
+                r#"SELECT "id" FROM "game_scores"."{}" WHERE md5 = $1"#,
+                score_table
             ),
             &[&s.md5],
         )
@@ -263,8 +279,9 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // Calculate pp
     let mut calc_failed = false;
+    let calc_query = s.query();
     let calc_result = if beatmap.is_ranked() {
-        let r = ctx.bancho.pp_calculator.calc(&s.query()).await;
+        let r = ctx.bancho.pp_calculator.calc(&calc_query).await;
         if r.is_none() {
             warn!(
                 "[osu_submit_modular] Failed to calc pp, beatmap md5: {}; player: {}({}); score_data: {:?};",
@@ -277,79 +294,95 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         None
     };
 
-    let (pp, raw_pp, stars) = if let Some(r) = &calc_result {
+    // Try get some value from result
+    let (pp, raw_pp, stars) = if let Some(calc_result) = &calc_result {
         (
-            Some(r.pp),
-            r.raw
+            Some(calc_result.pp),
+            calc_result
+                .raw
                 .as_ref()
                 .map(|raw| serde_json::to_value(raw.clone()).unwrap()),
-            Some(r.stars),
+            Some(calc_result.stars),
         )
     } else {
         (None, None, None)
     };
 
-    // Auto pp ban
-    let auto_ban_enabled =
-        !auto_ban_whitelist.contains(&player_id) && auto_ban_enabled && auto_ban_pp.is_some();
+    // Auto pp ban handle
+    if !calc_failed && calc_result.is_some() {
+        let auto_ban_check =
+            !auto_ban_whitelist.contains(&player_id) && auto_ban_enabled && auto_ban_pp.is_some();
 
-    // if auto_ban_enabled and pp is calculated, do check
-    if auto_ban_enabled {
-        if let (Some(calc_result), Some(auto_ban_pp)) = (&calc_result, auto_ban_pp) {
-            // Check
-            // TODO: if pp >= auto_ban_pp { ban }
-            // TODO: send it
-        }
+        // if we should, do check
+        if auto_ban_check {
+            if let Some(_calc_result) = &calc_result {
+                let _auto_ban_pp = auto_ban_pp.unwrap();
+                // Check
+                // TODO: if pp >= auto_ban_pp { ban }
+                // TODO: send it
+            }
+        };
     };
 
-    // TODO: Get old personal best
-    /* let old_personal_best = match ctx
-        .database
-        .pg
-        .query(
-            &format!(
-                "SELECT * FROM \"game_scores\".\"{}\" WHERE user_id = $1 AND status = '2'",
-                table
-            ),
-            &[&player_id],
-        )
-        .await
-    {
-        Ok(mut rows) => {
-            if rows.len() == 0 {
-                None
-            } else {
-                match ScroeFromDatabase::from_row(rows.remove(0)) {
-                    Ok(s) => Some(s),
-                    Err(err) => {
-                        error!(
-                            "[osu_submit_modular]: Failed to parse personal_best row, err: {:?}",
-                            err
-                        );
-                        None
-                    }
-                }
-            }
+    let pp_is_best = s.mode.pp_is_best();
+    let temp_table = Bancho::create_score_table(
+        &s.beatmap_md5,
+        &s.mode.full_name(),
+        pp_is_best,
+        ctx.database,
+        ctx.global_cache,
+        false,
+    )
+    .await;
+
+    // Get old personal best score
+    let old_s = MiniScore::from_database(player_id, &temp_table, ctx.database).await;
+
+    // Modify submit status
+    if let Some(old_s) = &old_s {
+        if pp.unwrap_or(0.0) > old_s.pp() {
+            s.status = SubmissionStatus::PassedAndTop;
         }
-        Err(err) => {
-            error!(
-                "[osu_submit_modular]: Failed to get personal_best, player {}({}), err: {:?};",
-                player_name, player_id, err
-            );
-            None
-        }
-    }; */
+    } else {
+        s.status = SubmissionStatus::PassedAndTop;
+    };
+
+    if s.status == SubmissionStatus::PassedAndTop {
+        let _ = ctx
+            .database
+            .pg
+            .execute(
+                &format!(
+                    r#"UPDATE game_scores.{} 
+            SET status = 1 
+            WHERE 
+            user_id = $1 
+            AND map_md5 = $2 
+            AND status = 2"#,
+                    score_table
+                ),
+                &[&player_id, &s.beatmap_md5],
+            )
+            .await;
+    };
 
     // Submit this score
-    let query = &format!(
-        "INSERT INTO \"game_scores\".\"{}\" (user_id,map_md5,score,pp_v2,pp_v2_raw,stars,accuracy,combo,mods,n300,n100,n50,miss,geki,katu,playtime,perfect,status,grade,client_flags,client_version,\"md5\") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING \"id\"",
-        table
+    let submit_query = format!(
+        r#"INSERT INTO "game_scores"."{}" (
+            user_id,map_md5,score,pp_v2,pp_v2_raw,
+            stars,accuracy,combo,mods,n300,
+            n100,n50,miss,geki,katu,
+            playtime,perfect,status,grade,client_flags,
+            client_version,"md5"
+        ) VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING "id""#,
+        score_table
     );
     let score_id: i64 = match ctx
         .database
         .pg
         .query_first(
-            &query,
+            &submit_query,
             &[
                 &player_id,
                 &s.beatmap_md5,
@@ -366,7 +399,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
                 &s.miss,
                 &s.geki,
                 &s.katu,
-                &play_time,
+                &(play_time as i32),
                 &s.perfect,
                 &s.status.val(),
                 &s.grade,
@@ -377,13 +410,40 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         )
         .await
     {
-        Ok(row) => row.get("id"),
+        Ok(row) => match row.try_get("id") {
+            Ok(id) => id,
+            Err(err) => {
+                error!("[osu_submit_modular] Failed to submit score(without new score id returns), err: {:?}; data: {:?}; player: {}({})", err, s, player_name, player_id);
+                return failed;
+            }
+        },
         Err(err) => {
-            error!("[osu_submit_modular] Failed to submit score, err: {:?}; data: {:?}; player: {}({})", err, s, player_name, player_id);
+            error!("[osu_submit_modular] Failed to submit score(database error), err: {:?}; data: {:?}; player: {}({})", err, s, player_name, player_id);
             return failed;
         }
     };
 
+    let mut player_w = player.write().await;
+
+    // Update player's stats
+    {
+        player_w.update_active();
+        player_w.stats.playcount += 1;
+        player_w.stats.total_hits += s.total_obj_count(false) - s.miss;
+        player_w.stats.total_score += s.score as i64;
+        player_w.stats.playtime += play_time;
+        if beatmap.is_ranked() {
+            player_w.stats.ranked_score += s.score as i64;
+        };
+        if s.max_combo > player_w.stats.max_combo {
+            player_w.stats.max_combo = s.max_combo
+        };
+        player_w
+            .recalculate_stats(&s.mode, ctx.database, !calc_failed)
+            .await;
+    }
+
+    let new_stats = player_w.stats.clone();
     if calc_failed {
         player_w
             .enqueue(packets::notification(
@@ -412,11 +472,11 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
                 Ok(_) => debug!(
                     "[osu_submit_modular] Replay file {}({:?}) has saved.",
                     score_id, s.mode
-            ),
-            Err(err) => error!(
+                ),
+                Err(err) => error!(
                     "[osu_submit_modular] Failed to save replay {}({:?}), err: {:?}",
                     score_id, s.mode, err
-            ),
+                ),
             };
         } else {
             // TODO: maybe ban someone...
@@ -427,53 +487,143 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         }
     };
 
-    // Create temp talbe
+    // update beatmap's statistic
+    let (play_count, pass_count) = match ctx
+        .database
+        .pg
+        .query_first(
+            &format!(
+                r#"UPDATE beatmaps.stats SET 
+                playcount = playcount + 1,
+                play_time = play_time + $1,
+                clicked = clicked + $2,
+                miss = miss + $3{}{} WHERE "md5" = $4 RETURNING playcount, pass"#,
+                if s.pass {
+                    ",pass = pass + 1"
+                } else {
+                    ",fail = fail + 1"
+                },
+                if submit_data.quit {
+                    ",quit = quit + 1"
+                } else {
+                    ""
+                }
+            ),
+            &[
+                &play_time,
+                &(&s.total_obj_count(false) - s.miss),
+                &s.miss,
+                &s.beatmap_md5,
+            ],
+        )
+        .await
     {
-        let score_type = if pp_board { "pp_v2" } else { "score" };
-        let score_table = s.mode.full_name();
-        let temp_table = format!("{}_{}_{}", score_type, score_table, s.beatmap_md5);
-
-        let start = Instant::now();
-        if let Err(err) = ctx
-            .database
-            .pg
-            .batch_execute(&format!(
-                "DROP TABLE IF EXISTS \"{0}\"; CREATE TEMP TABLE \"{0}\" AS (
-                SELECT ROW_NUMBER() OVER () as rank, res.* FROM (
-                    SELECT
-                        s.id, u.id as user_id, u.name, u.country, s.{1} AS any_score,
-                        s.combo, s.n50, s.n100, s.n300, s.miss,
-                        s.katu, s.geki, s.perfect, s.mods, s.create_time
-                    FROM game_scores.{2} s
-                        LEFT JOIN \"user\".base u ON u.id = s.user_id
-                    WHERE s.map_md5 = '{3}'
-                        AND s.status = 2
-                        AND u.privileges & 1 > 0
-                    ORDER BY any_score DESC) AS res);",
-                temp_table, score_type, score_table, s.beatmap_md5
-            ))
-            .await
-        {
+        Ok(row) => (
+            row.try_get::<'_, _, i32>("playcount").unwrap_or(0),
+            row.try_get::<'_, _, i32>("pass").unwrap_or(0),
+        ),
+        Err(err) => {
             error!(
-                "[osu_submit_modular]: Failed to create temp table for beatmap {}, err: {:?}",
-                s.beatmap_md5, err
+                "[osu_submit_modular] Failed to update beatmap statistic, err: {:?}, beatmap: {:?}",
+                err, beatmap
             );
-        };
-        debug!(
-            "temp table {} created, time spent: {:?}",
-            temp_table,
-            start.elapsed()
-        );
-        ctx.global_cache.cache_temp_table(temp_table).await;
+            (0, 0)
+        }
+    };
+
+    if s.status == SubmissionStatus::PassedAndTop {
+        // TODO: fetch old #1
+        // TODO: send announce if #1 achieved
+        // Create temp talbe
+        let _ = Bancho::create_score_table(
+            &s.beatmap_md5,
+            &score_table,
+            pp_is_best,
+            ctx.database,
+            ctx.global_cache,
+            true,
+        )
+        .await;
+    } else if s.status == SubmissionStatus::Failed || s.mode.val() > 3 {
+        // Submission done, beacuse osu!client will not display chart for these
+        return failed;
     }
 
-    // TODO: update player's status
-    // TODO: fetch old #1
-    // TODO: send announce if #1 achieved
-    // TODO: save replay
-    // TODO: achievements
-    // TODO: charts
-    // TODO: update beatmap's statistic
+    // Fetch new score we submitted
+    let new_s = MiniScore::from_database(player_id, &temp_table, ctx.database).await;
 
-    failed
+    // TODO: achievements
+
+    // Charts
+    let chart_head = |chart_id: &str, chart_name: &str| {
+        format!(
+            "chartId:{}|chartUrl:{}/b/{}|chartName:{}|",
+            chart_id, front_url, beatmap.id, chart_name
+        )
+    };
+
+    let chart_beatmap = {
+        let body = if let Some(o) = old_s {
+            format!(
+                "{}{}{}{}{}{}",
+                &chart_item!("rank", o.rank, new_s.as_ref().map_or(0, |s| s.rank)),
+                &chart_item!("rankedScore", o.score, s.score),
+                &chart_item!("totalScore", o.score, s.score),
+                &chart_item!("maxCombo", o.combo, s.max_combo),
+                &chart_item!("accuracy", o.accuracy, s.calc_acc(false)),
+                &chart_item!("pp", o.pp(), pp.unwrap_or(0.0)),
+            )
+        } else {
+            format!(
+                "{}{}{}{}{}{}",
+                &chart_item!("rank", "", new_s.as_ref().map_or(0, |s| s.rank)),
+                &chart_item!("rankedScore", "", s.score),
+                &chart_item!("totalScore", "", s.score),
+                &chart_item!("maxCombo", "", s.max_combo),
+                &chart_item!("accuracy", "", s.calc_acc(false)),
+                &chart_item!("pp", "", pp.unwrap_or(0.0)),
+            )
+        };
+        format!(
+            "{}{}{}",
+            &chart_head("beatmap", "Beatmap Ranking"),
+            body,
+            &format!("onlineScoreId:{}", score_id),
+        )
+    };
+
+    let chart_overall = format!(
+        "{0}{1}{2}{3}{4}{5}{6}{7}{8}",
+        &chart_head("overall", "Overall Ranking"),
+        &chart_item!("rank", old_stats.rank, new_stats.rank),
+        &chart_item!(
+            "rankedScore",
+            old_stats.ranked_score,
+            new_stats.ranked_score
+        ),
+        &chart_item!("totalScore", old_stats.total_score, new_stats.total_score),
+        &chart_item!("maxCombo", old_stats.max_combo, new_stats.max_combo),
+        &chart_item!(
+            "accuracy",
+            old_stats.accuracy * 100.0,
+            new_stats.accuracy * 100.0
+        ),
+        &chart_item!("pp", old_stats.pp_v2, new_stats.pp_v2),
+        // TODO: achievements
+        "achievements-new:",
+        &format!("|onlineScoreId:{}", score_id),
+    );
+
+    let charts = format!(
+        "beatmapId:{0}|beatmapSetId:{1}|beatmapPlaycount:{2}|beatmapPasscount:{3}|approvedDate:{4}\n{5}\n{6}",
+        beatmap.id,
+        beatmap.set_id,
+        play_count,
+        pass_count,
+        beatmap.last_update.unwrap_or(Local::now()).format("%Y-%m-%d %H:%M:%S").to_string(),
+        chart_beatmap,
+        chart_overall
+    );
+
+    HttpResponse::Ok().body(charts)
 }

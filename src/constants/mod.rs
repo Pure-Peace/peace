@@ -19,6 +19,8 @@ use num_traits::FromPrimitive;
 pub use packets::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
+pub const CHEAT_DETECTED_DECREASE_CREDIT: i32 = 200;
+
 #[derive(Debug, Clone)]
 pub enum RankStatusInServer {
     NotSubmitted    = -1,
@@ -47,7 +49,7 @@ impl RankStatusInServer {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SubmissionStatus {
     Failed          = 0,
     Passed          = 1,
@@ -237,6 +239,15 @@ impl GameMode {
     }
 
     #[inline(always)]
+    pub fn pp_is_best(&self) -> bool {
+        match self {
+            Self::Std_rx => true,
+            Self::Std_ap => true,
+            _ => false,
+        }
+    }
+
+    #[inline(always)]
     pub fn parse_with_playmod(game_mode_u8: u8, playmod_list: &Vec<PlayMod>) -> Option<Self> {
         let game_mode_u8 = GameMode::value_with_playmod(game_mode_u8, playmod_list);
         GameMode::from_u8(game_mode_u8)
@@ -348,6 +359,6 @@ impl GameMode {
             value if value == 12 => "_scv2",
             value if value > 3 && value < 8 => "_rx",
             _ => "",
-            }
+        }
     }
 }
