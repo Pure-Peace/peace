@@ -13,7 +13,7 @@ use hashbrown::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
 
-use async_std::sync::RwLock;
+use async_std::{io, sync::RwLock};
 use chrono::{DateTime, Local};
 use futures::StreamExt;
 use lazy_static::lazy_static;
@@ -24,7 +24,12 @@ use serde::de::{self, Deserialize, Deserializer};
 use serde_qs;
 use tokio_pg_mapper::FromTokioPostgresRow;
 
-use crate::{constants::GeoData, database::Database, objects::PlayerBase, types::Argon2Cache};
+use crate::{
+    constants::{GameMode, GeoData},
+    database::Database,
+    objects::PlayerBase,
+    types::Argon2Cache,
+};
 
 lazy_static! {
     static ref ARGON2_CONFIG: argon2::Config<'static> = argon2::Config {
@@ -591,4 +596,22 @@ pub fn osu_sumit_token_checker(req: &HttpRequest) -> bool {
         };
     };
     false
+}
+
+#[inline(always)]
+pub async fn save_replay(
+    score_file: Bytes,
+    score_id: i64,
+    data_dir: &str,
+    mode: &GameMode,
+) -> io::Result<()> {
+    let dir = format!(
+        "{}/replays/{}/{}",
+        data_dir,
+        mode.mode_name(),
+        mode.sub_mod()
+    );
+    let file_path = format!("{}/{}.osr", dir, score_id);
+    let _ = std::fs::create_dir_all(dir);
+    async_std::fs::write(file_path, score_file).await
 }

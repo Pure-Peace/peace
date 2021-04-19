@@ -386,16 +386,32 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // If calc failed, add it recalculate task to redis
     if calc_failed {
-        let key = format!("calc:{}:{}", table, score_id);
-        match ctx.database.redis.set(&key, 0).await {
-            Ok(_) => info!(
-                "[osu_submit_modular] set pp-recalculate task to redis, key: {}",
-                key
+    // Save replay
+    if s.status != SubmissionStatus::Failed {
+        if let Some(score_file) = submit_data.score_file {
+            match utils::save_replay(
+                score_file,
+                score_id,
+                &ctx.bancho.local_config.data.server.data_dir,
+                &s.mode,
+            )
+            .await
+            {
+                Ok(_) => debug!(
+                    "[osu_submit_modular] Replay file {}({:?}) has saved.",
+                    score_id, s.mode
             ),
             Err(err) => error!(
-                "[osu_submit_modular] Failed to set pp-recalculate task, err: {:?}",
-                err
+                    "[osu_submit_modular] Failed to save replay {}({:?}), err: {:?}",
+                    score_id, s.mode, err
             ),
+            };
+        } else {
+            // TODO: maybe ban someone...
+            warn!(
+                "[osu_submit_modular] Player {}({}) submitted a score without replay, score: {:?}",
+                player_name, player_id, s
+            );
         }
     };
 
