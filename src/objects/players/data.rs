@@ -85,16 +85,16 @@ impl PlayerData {
     #[inline(always)]
     pub async fn get_stats_from_database(
         &self,
-        game_mode: GameMode,
+        game_mode: &GameMode,
         database: &Database,
     ) -> Option<Stats> {
         // Build query string
-        let (play_mod_name, mode_name) = game_mode.get_table_names();
         let sql = format!(
             r#"SELECT 
                 "pp_v1{0}" as "pp_v1",
                 "pp_v2{0}" as "pp_v2",
                 "accuracy{0}" as "accuracy",
+                "total_hits{0}" as "total_hits",
                 "total_score{0}" as "total_score",
                 "ranked_score{0}" as "ranked_score",
                 "playcount{0}" as "playcount",
@@ -103,7 +103,8 @@ impl PlayerData {
             FROM 
                 "game_stats"."{1}" 
             WHERE "id" = $1;"#,
-            play_mod_name, mode_name
+            game_mode.sub_mod_table(),
+            game_mode.mode_name()
         );
 
         // Query from database
@@ -126,9 +127,7 @@ impl PlayerData {
                     self.name, self.id, stats
                 );
                 // Calculate rank
-                stats
-                    .recalculate_rank(&play_mod_name, &mode_name, database)
-                    .await;
+                stats.calc_rank_from_database(game_mode, database).await;
                 // Done
                 return Some(stats);
             }
