@@ -384,8 +384,20 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         }
     };
 
+    if calc_failed {
+        player_w
+            .enqueue(packets::notification(
+                "PP calculation fails, Peace will auto recalculate it later.",
+            ))
+            .await;
+    };
+    drop(player_w);
+
     // If calc failed, add it recalculate task to redis
     if calc_failed {
+        Bancho::pp_recalc_task(&score_table, score_id, player_id, &calc_query, ctx.database).await;
+    };
+
     // Save replay
     if s.status != SubmissionStatus::Failed {
         if let Some(score_file) = submit_data.score_file {
