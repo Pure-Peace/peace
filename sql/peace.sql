@@ -95,7 +95,7 @@ CREATE FUNCTION "user".insert_related_on_base_insert() RETURNS trigger
     AS $$BEGIN
 	INSERT INTO "user"."statistic" ("id") VALUES (NEW.id);
 	
-	INSERT INTO "user"."info" ("id") VALUES (NEW.id);
+	INSERT INTO "user"."status" ("id") VALUES (NEW.id);
 	
 	INSERT INTO "user"."settings" ("id") VALUES (NEW.id);
 	INSERT INTO "game_stats"."std" ("id") VALUES (NEW.id);
@@ -111,12 +111,28 @@ CREATE FUNCTION "user".safe_user_info() RETURNS trigger
 		NEW.email = LOWER(NEW.email);
 		NEW.country = UPPER(NEW.country);
 		NEW.name_safe = REPLACE(LOWER(NEW.name), ' ', '_');
+		perform FROM "user"."base" WHERE u_name_safe = NEW.name_safe AND "id" <> NEW."id";
+		IF FOUND THEN
+			RAISE EXCEPTION 'name conflicts with an existing u_name';
+		END IF;
+		
+		IF NEW.u_name IS NOT NULL THEN
+			NEW.u_name = REPLACE(BTRIM(NEW.u_name), '_', ' ');
+			NEW.u_name_safe = REPLACE(LOWER(NEW.u_name), ' ', '_');
+			perform FROM "user"."base" WHERE name_safe = NEW.u_name_safe AND "id" <> NEW."id";
+			IF FOUND THEN
+				RAISE EXCEPTION 'u_name conflicts with an existing username';
+			END IF;
+		END IF;
+		
 		
 		--only for user base info update
 		IF (TG_OP = 'UPDATE') THEN
 			--if renamed, insert into rename_records
 			IF OLD.name <> NEW.name THEN
 				INSERT INTO "user_records"."rename" ("user_id", "new_name", "old_name") VALUES (NEW.id, NEW.name, OLD.name);
+			ELSIF (NEW.u_name IS NOT NULL) AND (OLD.u_name <> NEW.u_name) THEN
+				INSERT INTO "user_records"."rename" ("user_id", "new_name", "old_name") VALUES (NEW.id, NEW.u_name, OLD.u_name);
 			END IF;
 		END IF;
 	RETURN NEW;
@@ -1019,6 +1035,8 @@ CREATE TABLE "user".base (
     id integer NOT NULL,
     name character varying(64) NOT NULL,
     name_safe character varying(64) NOT NULL,
+    u_name character varying(64),
+    u_name_safe character varying(64),
     password character varying(255) NOT NULL,
     email character varying(255) NOT NULL,
     privileges integer DEFAULT 1 NOT NULL,
@@ -1030,6 +1048,8 @@ COMMENT ON TABLE "user".base IS 'Basic user information, such as user name, pass
 COMMENT ON COLUMN "user".base.id IS 'user_id, int 32, unique';
 COMMENT ON COLUMN "user".base.name IS 'username (unsafe), string, unique';
 COMMENT ON COLUMN "user".base.name_safe IS 'username (safe), string, unique';
+COMMENT ON COLUMN "user".base.u_name IS 'unicode username (unsafe), string, unique';
+COMMENT ON COLUMN "user".base.u_name_safe IS 'unicode username (safe), string, unique';
 COMMENT ON COLUMN "user".base.password IS 'user’s Argon2 crypted password hash';
 COMMENT ON COLUMN "user".base.email IS 'email, string, unique';
 COMMENT ON COLUMN "user".base.privileges IS 'user privileges';
@@ -1065,31 +1085,6 @@ COMMENT ON COLUMN "user".friends.user_id IS 'user_id, int 32';
 COMMENT ON COLUMN "user".friends.friend_id IS 'user_id, int 32';
 COMMENT ON COLUMN "user".friends.remark IS 'friend remark, such as aka';
 COMMENT ON COLUMN "user".friends.create_time IS 'create timestamp, auto';
-CREATE TABLE "user".info (
-    id integer NOT NULL,
-    credit integer DEFAULT 800 NOT NULL,
-    is_bot boolean DEFAULT false NOT NULL,
-    cheat integer DEFAULT 0 NOT NULL,
-    multiaccount integer DEFAULT 0 NOT NULL,
-    donor_start timestamp(6) with time zone,
-    silence_start timestamp(6) with time zone,
-    restrict_start timestamp(6) with time zone,
-    ban_start timestamp(6) with time zone,
-    donor_end timestamp(6) with time zone,
-    silence_end timestamp(6) with time zone,
-    restrict_end timestamp(6) with time zone,
-    ban_end timestamp(6) with time zone,
-    last_login_time timestamp(6) with time zone,
-    discord_verifyed_time timestamp(6) with time zone,
-    qq_verifyed_time timestamp(6) with time zone,
-    official_verifyed_time timestamp(6) with time zone,
-    osu_verifyed_time timestamp(6) with time zone,
-    mail_verifyed_time timestamp(6) with time zone,
-    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-COMMENT ON TABLE "user".info IS 'User''s status info';
-COMMENT ON COLUMN "user".info.id IS 'user_id, int 32, unique';
-COMMENT ON COLUMN "user".info.is_bot IS 'is bot';
 CREATE TABLE "user".notes (
     id integer NOT NULL,
     user_id integer NOT NULL,
@@ -1118,6 +1113,7 @@ ALTER SEQUENCE "user".notes_id_seq OWNED BY "user".notes.id;
 CREATE TABLE "user".settings (
     id integer NOT NULL,
     game_mode smallint DEFAULT 0 NOT NULL,
+    display_u_name boolean DEFAULT true NOT NULL,
     language character varying(16) DEFAULT 'en'::character varying NOT NULL,
     in_game_translate boolean DEFAULT true NOT NULL,
     pp_scoreboard boolean DEFAULT false NOT NULL,
@@ -1142,6 +1138,31 @@ COMMENT ON COLUMN "user".statistic.rename_count IS 'user''s total rename count';
 COMMENT ON COLUMN "user".statistic.friends_count IS 'user''s total friend count';
 COMMENT ON COLUMN "user".statistic.notes_count IS 'user''s total note count';
 COMMENT ON COLUMN "user".statistic.update_time IS 'update time';
+CREATE TABLE "user".status (
+    id integer NOT NULL,
+    credit integer DEFAULT 800 NOT NULL,
+    is_bot boolean DEFAULT false NOT NULL,
+    cheat integer DEFAULT 0 NOT NULL,
+    multiaccount integer DEFAULT 0 NOT NULL,
+    donor_start timestamp(6) with time zone,
+    silence_start timestamp(6) with time zone,
+    restrict_start timestamp(6) with time zone,
+    ban_start timestamp(6) with time zone,
+    donor_end timestamp(6) with time zone,
+    silence_end timestamp(6) with time zone,
+    restrict_end timestamp(6) with time zone,
+    ban_end timestamp(6) with time zone,
+    last_login_time timestamp(6) with time zone,
+    discord_verifyed_time timestamp(6) with time zone,
+    qq_verifyed_time timestamp(6) with time zone,
+    official_verifyed_time timestamp(6) with time zone,
+    osu_verifyed_time timestamp(6) with time zone,
+    mail_verifyed_time timestamp(6) with time zone,
+    update_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+COMMENT ON TABLE "user".status IS 'User''s status info';
+COMMENT ON COLUMN "user".status.id IS 'user_id, int 32, unique';
+COMMENT ON COLUMN "user".status.is_bot IS 'is bot';
 CREATE TABLE user_records.login (
     id bigint NOT NULL,
     user_id integer NOT NULL,
@@ -1248,6 +1269,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.1', 'PurePeace', NULL, 'modify score_triggers', '2021-04-19 04:23:59.33877+08', '2021-04-19 04:23:59.33877+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.2', 'PurePeace', NULL, 'Many updates', '2021-04-19 21:56:58.44226+08', '2021-04-19 21:56:58.44226+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.5', 'PurePeace', NULL, 'Many refactors. (stats)', '2021-04-20 04:56:03.104819+08', '2021-04-20 04:56:03.104819+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.6', 'PurePeace', NULL, 'Add u_name, modify user.info -> user.status', '2021-04-20 09:41:22.083242+08', '2021-04-20 09:41:24.354682+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1271,18 +1293,19 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.1', 'PurePeace', '0.9.1', 'modify score trigger', '2021-04-19 04:24:25.391+08', '2021-04-19 04:24:25.391+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.2', 'PurePeace', '0.9.2', '++', '2021-04-19 21:57:13.279349+08', '2021-04-19 21:57:13.279349+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.5', 'PurePeace', '0.9.5', 'score submit almost done!!', '2021-04-20 04:56:37.846606+08', '2021-04-20 04:56:37.846606+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-01-04 21:54:23.062969+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-01-04 22:35:41.715403+08');
-INSERT INTO "user".base (id, name, name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
-INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (1, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.00705+08');
-INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (5, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.72318+08');
-INSERT INTO "user".info (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (6, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:48.001861+08');
-INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (6, 0, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
-INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (5, 0, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
-INSERT INTO "user".settings (id, game_mode, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (1, 0, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:00:00', 0, 0, 0, 0, '2021-03-26 00:38:53.110564+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.6', 'PurePeace', '0.9.6', 'optional unicode name support', '2021-04-20 09:41:44.570464+08', '2021-04-20 09:41:44.570464+08');
+INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
+INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-04-20 09:39:54.655107+08');
+INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-04-20 09:39:57.277453+08');
+INSERT INTO "user".settings (id, game_mode, display_u_name, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (6, 0, true, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
+INSERT INTO "user".settings (id, game_mode, display_u_name, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (5, 0, true, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
+INSERT INTO "user".settings (id, game_mode, display_u_name, language, in_game_translate, pp_scoreboard, stealth_mode, update_time) VALUES (1, 0, true, 'en', true, false, false, '2021-04-19 21:52:53.398096+08');
 INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (1, '00:00:00', 0, 0, 0, 0, '2021-03-26 00:38:53.116908+08');
-INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:00:00', 0, 0, 0, 0, '2021-03-28 10:37:15.040571+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (6, '00:00:00', 0, 7, 0, 0, '2021-04-20 09:38:02.135604+08');
+INSERT INTO "user".statistic (id, online_duration, login_count, rename_count, friends_count, notes_count, update_time) VALUES (5, '00:00:00', 0, 5, 0, 0, '2021-04-20 09:39:57.277453+08');
+INSERT INTO "user".status (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (1, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.00705+08');
+INSERT INTO "user".status (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (5, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:46.72318+08');
+INSERT INTO "user".status (id, credit, is_bot, cheat, multiaccount, donor_start, silence_start, restrict_start, ban_start, donor_end, silence_end, restrict_end, ban_end, last_login_time, discord_verifyed_time, qq_verifyed_time, official_verifyed_time, osu_verifyed_time, mail_verifyed_time, update_time) VALUES (6, 800, false, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2021-03-26 17:49:48.001861+08');
 SELECT pg_catalog.setval('bancho.channels_id_seq', 5, true);
 SELECT pg_catalog.setval('beatmaps.peace_bid', 1, false);
 SELECT pg_catalog.setval('game_scores.catch_id_seq', 1, true);
@@ -1393,6 +1416,11 @@ ALTER TABLE ONLY "user".base
 ALTER TABLE ONLY "user".base
     ADD CONSTRAINT "Unique - name safe" UNIQUE (name_safe);
 COMMENT ON CONSTRAINT "Unique - name safe" ON "user".base IS 'name safe should be unique';
+ALTER TABLE ONLY "user".base
+    ADD CONSTRAINT "Unique - u_name" UNIQUE (u_name);
+ALTER TABLE ONLY "user".base
+    ADD CONSTRAINT "Unique - u_name safe" UNIQUE (u_name_safe);
+COMMENT ON CONSTRAINT "Unique - u_name safe" ON "user".base IS 'uname safe should be unique';
 ALTER TABLE ONLY "user".address
     ADD CONSTRAINT address_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY "user".base
@@ -1401,7 +1429,7 @@ ALTER TABLE ONLY "user".beatmap_collections
     ADD CONSTRAINT beatmap_collections_pkey PRIMARY KEY (user_id, beatmap_set_id);
 ALTER TABLE ONLY "user".friends
     ADD CONSTRAINT friends_pkey PRIMARY KEY (user_id, friend_id);
-ALTER TABLE ONLY "user".info
+ALTER TABLE ONLY "user".status
     ADD CONSTRAINT info_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY "user".notes
     ADD CONSTRAINT notes_pkey PRIMARY KEY (id, user_id);
@@ -1445,11 +1473,11 @@ CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.db_versions FOR EACH ROW
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON public.versions FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_insert_related AFTER INSERT ON "user".base FOR EACH ROW EXECUTE FUNCTION "user".insert_related_on_base_insert();
 COMMENT ON TRIGGER auto_insert_related ON "user".base IS 'auto insert into related table';
-CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".info FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
-COMMENT ON TRIGGER auto_update_time ON "user".info IS 'auto update time';
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".settings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".statistic FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_time ON "user".statistic IS 'auto update the timestamp';
+CREATE TRIGGER auto_update_time BEFORE UPDATE ON "user".status FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
+COMMENT ON TRIGGER auto_update_time ON "user".status IS 'auto update time';
 CREATE TRIGGER auto_update_timestamp BEFORE UPDATE ON "user".base FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 COMMENT ON TRIGGER auto_update_timestamp ON "user".base IS 'auto update the update_time after update user info';
 CREATE TRIGGER decrease_friend_count AFTER DELETE ON "user".friends FOR EACH ROW EXECUTE FUNCTION "user".decrease_friend_count();
@@ -1521,9 +1549,9 @@ COMMENT ON CONSTRAINT "User.id" ON "user".beatmap_collections IS 'user_id';
 ALTER TABLE ONLY "user".friends
     ADD CONSTRAINT "User.id (friend)" FOREIGN KEY (friend_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "User.id (friend)" ON "user".friends IS 'user_id (friend)';
-ALTER TABLE ONLY "user".info
+ALTER TABLE ONLY "user".status
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
-COMMENT ON CONSTRAINT "user.id" ON "user".info IS 'user''s unique id';
+COMMENT ON CONSTRAINT "user.id" ON "user".status IS 'user''s unique id';
 ALTER TABLE ONLY "user".settings
     ADD CONSTRAINT "user.id" FOREIGN KEY (id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 COMMENT ON CONSTRAINT "user.id" ON "user".settings IS 'user''s unique id';
