@@ -612,7 +612,12 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         };
 
         // Get some info
-        let pp_board = player.settings.pp_scoreboard;
+        // If relax or autopilot, we should always display pp board
+        let pp_board = if data.game_mode.val() > 3 {
+            true
+        } else {
+            player.settings.pp_scoreboard
+        };
         let player_id = player.id;
         let player_country = player.country.clone();
 
