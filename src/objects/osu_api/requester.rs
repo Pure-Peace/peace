@@ -109,8 +109,9 @@ impl OsuApi {
                     tries += 1;
                     continue;
                 }
-                info!(
-                    "[OsuApi] Success, key ({}) request-{} with: {:?}ms;",
+                // TODO: Statistics avg request time
+                debug!(
+                    "[OsuApi] Success get resp, key ({}) request-{} with: {:?}ms;",
                     api_client.key, tries, delay
                 );
                 api_client.success();
@@ -129,9 +130,13 @@ impl OsuApi {
     ) -> Result<T, ApiError> {
         let res = self.get(url, query).await;
         if res.is_none() {
-            return Err(ApiError::NotExists);
+            return Err(ApiError::RequestError);
         };
-        match res.unwrap().json().await {
+        let res = res.unwrap();
+        if !res.status().is_success() {
+            return Err(ApiError::RequestError);
+        };
+        match res.json().await {
             Ok(value) => Ok(value),
             Err(err) => {
                 error!("[OsuApi] Could not parse data to json, err: {:?}", err);
