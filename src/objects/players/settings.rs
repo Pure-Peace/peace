@@ -11,6 +11,7 @@ set_with_db! {
     pub struct PlayerSettings {
         pub id: i32,
         pub game_mode: i16,
+        pub display_u_name: bool,
         pub language: String,
         pub in_game_translate: bool,
         pub pp_scoreboard: bool,

@@ -9,14 +9,15 @@ use std::str::FromStr;
 
 use super::{
     depends::Database,
-    Player,
-    {stats::Stats, game_status::GameStatus},
+    Player, PlayerSettings,
+    {game_status::GameStatus, stats::Stats},
 };
 
 #[derive(Debug)]
 pub struct PlayerData {
     pub id: i32,
     pub name: String,
+    pub u_name: Option<String>,
     pub privileges: i32,
     pub bancho_privileges: i32,
     pub friends: Vec<i32>,
@@ -31,6 +32,7 @@ pub struct PlayerData {
     pub utc_offset: u8,
     pub geo_data: GeoData,
     pub stats: Stats,
+    pub settings: PlayerSettings,
     pub stats_cache: HashMap<GameMode, Stats>,
     pub game_status: GameStatus,
     pub away_message: String,
@@ -49,6 +51,7 @@ impl PlayerData {
         PlayerData {
             id: p.id,
             name: p.name.clone(),
+            u_name: p.u_name.clone(),
             privileges: p.privileges,
             bancho_privileges: p.bancho_privileges,
             friends: p.friends.clone(),
@@ -63,6 +66,7 @@ impl PlayerData {
             utc_offset: p.utc_offset,
             geo_data: p.geo_data.clone(),
             stats: p.stats.clone(),
+            settings: p.settings.clone(),
             stats_cache: p.stats_cache.clone(),
             game_status: p.game_status.clone(),
             away_message: p.away_message.clone(),
@@ -75,6 +79,11 @@ impl PlayerData {
             last_active_time: p.last_active_time,
             data_create_time: Local::now(),
         }
+    }
+
+    #[inline(always)]
+    pub fn try_u_name(&self) -> String {
+        self.u_name.as_ref().unwrap_or(&self.name).clone()
     }
 
     #[inline(always)]

@@ -115,7 +115,7 @@ impl Bancho {
                 r#"{0} AS (
     SELECT ROW_NUMBER() OVER () as rank, res.* FROM (
         SELECT
-            s.id, u.id as user_id, u.name, u.country, s.pp_v2, s.score,
+            s.id, u.id as user_id, u.name, u.u_name, u.country, s.pp_v2, s.score,
             s.accuracy, s.combo, s.n50, s.n100, s.n300, s.miss,
             s.katu, s.geki, s.perfect, s.mods, s.create_time
         FROM game_scores.{1} s

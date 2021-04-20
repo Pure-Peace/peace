@@ -290,11 +290,11 @@ pub fn match_player_skipped(slot_id: i32) -> PacketData {
 /// #83: BANCHO_USER_PRESENCE
 ///
 /// including player stats and presence
-pub async fn user_presence(p: &Player) -> PacketData {
+pub async fn user_presence(p: &Player, using_u_name: bool) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
             write_num(p.id),
-            write_string(&p.name),
+            write_string(&if using_u_name { p.try_u_name() } else { p.name.clone() }),
             write_num(p.utc_offset + 24),
             write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
@@ -309,11 +309,11 @@ pub async fn user_presence(p: &Player) -> PacketData {
 /// #83: BANCHO_USER_PRESENCE
 ///
 /// including player stats and presence
-pub async fn user_presence_from_data(p: &PlayerData) -> PacketData {
+pub async fn user_presence_from_data(p: &PlayerData, using_u_name: bool) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
             write_num(p.id),
-            write_string(&p.name),
+            write_string(&if using_u_name { p.try_u_name() } else { p.name.clone() }),
             write_num(p.utc_offset + 24),
             write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
@@ -431,8 +431,8 @@ pub fn switch_tournament_server(ip: &str) -> PacketData {
 
 #[inline(always)]
 /// #83 + #11: USER_DATA_PACKETDATA
-pub async fn user_data(p: &Player) -> PacketData {
-    PacketBuilder::from_multiple(&mut [user_presence(&p).await, user_stats(&p).await])
+pub async fn user_data(p: &Player, using_u_name: bool) -> PacketData {
+    PacketBuilder::from_multiple(&mut [user_presence(&p, using_u_name).await, user_stats(&p).await])
         .await
         .write_out()
 }

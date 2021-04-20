@@ -50,7 +50,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
 
             // Send message done
             channel
-                .broadcast(ctx.name, ctx.id, &message.content, false)
+                .broadcast(ctx.name, ctx.u_name, ctx.id, &message.content, false)
                 .await;
 
             // Drop locks
@@ -117,6 +117,12 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
             };
             let player = player.as_ref().unwrap().read().await;
 
+            let target_name = if player.settings.display_u_name {
+                target.try_u_name()
+            } else {
+                target.name.clone()
+            };
+
             // Target player only allowed friend's pm
             // Admin are not limited
             if (player.bancho_privileges & Privileges::Admin as i32) == 0
@@ -124,7 +130,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
                 && !target.friends.contains(&player.id)
             {
                 // Blocked
-                player.enqueue(packets::user_dm_blocked(&target.name)).await;
+                player.enqueue(packets::user_dm_blocked(&target_name)).await;
                 warn!(
                     "Player {}({}) try send message to blocked-non-friends player: {}({})",
                     &player.name, player.id, target.name, target.id
@@ -134,7 +140,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
 
             // TODO: target is slienced
             if false {
-                player.enqueue(packets::target_silenced(&target.name)).await;
+                player.enqueue(packets::target_silenced(&target_name)).await;
             }
 
             // TODO: if target is bot, handle it --
@@ -144,7 +150,11 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
             target
                 .enqueue(
                     packets::send_message(
-                        &player.name,
+                        &if target.settings.display_u_name {
+                            player.try_u_name()
+                        } else {
+                            player.name.clone()
+                        },
                         player.id,
                         &message.content,
                         &message.target,

@@ -13,7 +13,7 @@ use crate::{
     packets,
 };
 use crate::{
-    objects::{Player, PlayerAddress, PlayerStatus, PlayerSettings},
+    objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus},
     packets::PacketBuilder,
     utils,
 };
@@ -485,15 +485,30 @@ pub async fn login(
         }
     };
 
+    let using_u_name = player.settings.display_u_name;
+
     // User data packet, including player stats and presence
-    let user_data_packet = packets::user_data(&player).await;
+    let user_stats_packet = packets::user_stats(&player).await;
+    let user_data = PacketBuilder::merge(&mut [
+        user_stats_packet.clone(),
+        packets::user_presence(&player, false).await,
+    ]);
+    let user_data_u = PacketBuilder::merge(&mut [
+        user_stats_packet,
+        packets::user_presence(&player, true).await,
+    ]);
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
         packets::login_reply(constants::LoginSuccess::Verified(player.id)),
         packets::protocol_version(19),
         packets::bancho_privileges(player.bancho_privileges),
-        user_data_packet.clone(),
+        if using_u_name {
+            &user_data_u
+        } else {
+            &user_data
+        }
+        .clone(),
         packets::silence_end(0), // TODO: real silence end
         packets::friends_list(&player.friends).await,
     ])
@@ -536,9 +551,18 @@ pub async fn login(
     for online_player in player_sessions.token_map.read().await.values() {
         let online_player = online_player.read().await;
 
-        online_player.enqueue(user_data_packet.clone()).await;
+        online_player
+            .enqueue(
+                if online_player.settings.display_u_name {
+                    &user_data_u
+                } else {
+                    &user_data
+                }
+                .clone(),
+            )
+            .await;
         // Add online players to this new player
-        resp.add_ref(packets::user_data(&online_player).await);
+        resp.add_ref(packets::user_data(&online_player, using_u_name).await);
     }
 
     // Join player into channel

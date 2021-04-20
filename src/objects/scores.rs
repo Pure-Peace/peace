@@ -76,6 +76,7 @@ pub struct ScroeFromDatabase {
     pub id: i64,
     pub user_id: i32,
     pub name: String,
+    pub u_name: Option<String>,
     pub pp_v2: Option<f32>,
     pub score: i32,
     pub combo: i32,
@@ -92,10 +93,14 @@ pub struct ScroeFromDatabase {
 
 impl ScroeFromDatabase {
     #[inline(always)]
-    pub fn to_string(&self, pp_as_score: bool) -> String {
+    pub fn to_string(&self, pp_as_score: bool, using_u_name: bool) -> String {
         format!("{id}|{name}|{score}|{combo}|{n50}|{n100}|{n300}|{miss}|{katu}|{geki}|{perfect}|{mods}|{user_id}|{rank}|{create_time}|{has_replay}",
             id = self.id,
-            name = self.name,
+            name = if using_u_name {
+                self.u_name.as_ref().unwrap_or(&self.name)
+            } else {
+                &self.name
+            },
             score = if pp_as_score { self.pp() as i32 } else {
                 self.score
             },

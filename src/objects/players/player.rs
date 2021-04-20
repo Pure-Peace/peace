@@ -20,6 +20,7 @@ use super::{depends::*, PlayMods};
 pub struct Player {
     pub id: i32,
     pub name: String,
+    pub u_name: Option<String>,
     #[derivative(Debug = "ignore")]
     _password: String,
     pub privileges: i32,
@@ -66,6 +67,11 @@ impl Player {
         format!("{:?}", self)
     }
 
+    #[inline(always)]
+    pub fn try_u_name(&self) -> String {
+        self.u_name.as_ref().unwrap_or(&self.name).clone()
+    }
+
     pub async fn create(
         base: PlayerBase,
         status: PlayerStatus,
@@ -80,6 +86,7 @@ impl Player {
         Player {
             id: base.id,
             name: base.name,
+            u_name: base.u_name,
             _password: base.password,
             privileges: base.privileges,
             bancho_privileges: Player::bancho_privileges(base.privileges),

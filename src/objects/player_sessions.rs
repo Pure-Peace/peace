@@ -45,7 +45,7 @@ impl PlayerSessions {
             token_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
             /// Key: Player.id, Value: Arc<RwLock<Player>>
             id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
-            /// Key: Player.name Value: Arc<RwLock<Player>>
+            /// Key: Player.name (and Player.u_name) Value: Arc<RwLock<Player>>
             name_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
             player_count: AtomicI32::new(0),
             database: database.clone(),
@@ -57,6 +57,7 @@ impl PlayerSessions {
     pub async fn login(&mut self, player: Player) -> TokenString {
         let token = player.token.clone();
         let player_name = player.name.clone();
+        let player_u_name = player.u_name.clone();
         let player_id = player.id;
 
         {
@@ -72,6 +73,9 @@ impl PlayerSessions {
             token_map.insert(token.clone(), arc_player.clone());
             id_session_map.insert(player_id, arc_player.clone());
             name_session_map.insert(player_name, arc_player.clone());
+            if let Some(u_name) = player_u_name {
+                name_session_map.insert(u_name, arc_player.clone());
+            }
         }
         self.player_count.fetch_add(1, Ordering::SeqCst);
         token
@@ -95,13 +99,21 @@ impl PlayerSessions {
             Some(arc_player) => {
                 // Remove and drop locks
                 let (player_id, player_channels) = {
-                    let (player_id, player_name, player_channels) = {
+                    let (player_id, player_name, player_u_name, player_channels) = {
                         let player = arc_player.read().await;
-                        (player.id, player.name.clone(), player.channels.clone())
+                        (
+                            player.id,
+                            player.name.clone(),
+                            player.u_name.clone(),
+                            player.channels.clone(),
+                        )
                     };
 
                     id_session_map.remove(&player_id);
                     name_session_map.remove(&player_name);
+                    if let Some(u_name) = player_u_name {
+                        name_session_map.remove(&u_name);
+                    };
 
                     drop(token_map);
                     drop(id_session_map);

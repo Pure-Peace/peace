@@ -125,11 +125,12 @@ impl Channel {
     pub async fn broadcast(
         &self,
         sender: &String,
+        sender_u: &Option<String>,
         sender_id: i32,
         msg: &String,
         include_sender: bool,
     ) {
-        let packet_data = packets::send_message(sender, sender_id, msg, &self.display_name()).await;
+        let sender_u = sender_u.as_ref().unwrap_or(sender);
         // For every players in channel
         for (id, player) in self.id_session_map.read().await.iter() {
             // If not include sender, skip sender
@@ -137,7 +138,21 @@ impl Channel {
                 continue;
             }
             // Send them message
-            player.read().await.enqueue(packet_data.clone()).await;
+            let p = player.read().await;
+            p.enqueue(
+                packets::send_message(
+                    if p.settings.display_u_name {
+                        &sender_u
+                    } else {
+                        sender
+                    },
+                    sender_id,
+                    msg,
+                    &self.display_name(),
+                )
+                .await,
+            )
+            .await;
         }
     }
 
@@ -218,7 +233,9 @@ impl Channel {
             self.player_count.fetch_add(1, Ordering::SeqCst);
 
             // Send it to player's client
-            player.enqueue(packets::channel_join(&self.display_name())).await;
+            player
+                .enqueue(packets::channel_join(&self.display_name()))
+                .await;
 
             (player.name.clone(), player.id)
         };
@@ -257,7 +274,9 @@ impl Channel {
 
             player.channels.remove(&self.name);
             // Send it to player's client
-            player.enqueue(packets::channel_kick(&self.display_name())).await;
+            player
+                .enqueue(packets::channel_kick(&self.display_name()))
+                .await;
 
             (player.name.clone(), player.id)
         };

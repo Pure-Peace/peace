@@ -17,6 +17,7 @@ pub struct HandlerContext<'a> {
     pub token: &'a String,
     pub id: i32,
     pub name: &'a String,
+    pub u_name: &'a Option<String>,
     pub data: &'a PlayerData,
     pub weak_player: &'a Weak<RwLock<Player>>,
     pub bancho: &'a Data<Bancho>,

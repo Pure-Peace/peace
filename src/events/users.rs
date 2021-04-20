@@ -92,7 +92,9 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) {
 
         for player_id in &id_list {
             if let Some(player) = id_session_map.get(player_id) {
-                user_presence_packets.push(packets::user_presence(&*player.read().await).await);
+                let others = player.read().await;
+                user_presence_packets
+                    .push(packets::user_presence(&*others, ctx.data.settings.display_u_name).await);
             }
         }
 
@@ -125,7 +127,9 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) {
                 continue;
             }
             // Send presence to self
-            user_presence_packets.push(packets::user_presence(&*player.read().await).await);
+            let others = player.read().await;
+            user_presence_packets
+                .push(packets::user_presence(&*others, ctx.data.settings.display_u_name).await);
         }
 
         drop(id_session_map);
@@ -182,14 +186,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
 
     debug!(
         "Player {}({}) changing action: <a: {:?} i: {} b: {} pm: {:?} gm: {:?} bid: {}>",
-        ctx.name,
-        ctx.id,
-        action,
-        info,
-        beatmap_md5,
-        playmod_list,
-        game_mode,
-        beatmap_id
+        ctx.name, ctx.id, action, info, beatmap_md5, playmod_list, game_mode, beatmap_id
     );
 
     // Update player's status

@@ -420,9 +420,9 @@ pub async fn get_player_base(username: &String, database: &Database) -> Option<P
         .pg
         .query_first(
             r#"SELECT 
-                    "id", "name", "privileges", "country", "password"
+                    "id", "name", "u_name", "privileges", "country", "password"
                     FROM "user"."base" WHERE 
-                    "name_safe" = $1;"#,
+                    "name_safe" = $1 OR "u_name_safe" = $1;"#,
             &[&username_safe],
         )
         .await

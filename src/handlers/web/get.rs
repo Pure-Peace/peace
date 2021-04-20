@@ -586,7 +586,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Player handlers
     // try update user stats, get some info, etc.
-    let (pp_board, player_id, player_country) = {
+    let (pp_board, player_id, player_country, using_u_name) = {
         let mut player = player.write().await;
 
         // Hack detected
@@ -620,6 +620,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         };
         let player_id = player.id;
         let player_country = player.country.clone();
+        let using_u_name = player.settings.display_u_name;
 
         // Release player write lock
         drop(player);
@@ -634,7 +635,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
                 .await;
         }
 
-        (pp_board, player_id, player_country)
+        (pp_board, player_id, player_country, using_u_name)
     };
 
     // server is currently not allowed get scores
@@ -809,13 +810,13 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     );
     // Line 5 personal best (optional)
     if let Some(personal_best) = personal_best {
-        first_line += &(personal_best.to_string(pp_board) + "\n");
+        first_line += &(personal_best.to_string(pp_board, using_u_name) + "\n");
     } else {
         first_line += "\n";
     };
     // Line 6 - N (top list)
     for s in &top_list {
-        first_line += &(s.to_string(pp_board) + "\n");
+        first_line += &(s.to_string(pp_board, using_u_name) + "\n");
     }
     debug!("buid_data time spent: {:?}", start_buid_data.elapsed());
 

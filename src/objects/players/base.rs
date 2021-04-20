@@ -6,6 +6,8 @@ pub struct PlayerBase {
     pub id: i32,
     /// Player's unique name
     pub name: String,
+    /// Player's unique unicode name
+    pub u_name: Option<String>,
     /// Argon2 crypted password md5
     pub password: String,
     pub privileges: i32,

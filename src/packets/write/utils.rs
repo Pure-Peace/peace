@@ -40,6 +40,15 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
+    pub fn merge(packets: &mut [PacketData]) -> PacketData {
+        let mut packet = empty();
+        for i in packets.iter_mut() {
+            packet.append(i)
+        }
+        packet
+    }
+
+    #[inline(always)]
     pub async fn add_multiple_ref(&mut self, packets: &mut [PacketData]) {
         for i in packets.iter_mut() {
             self.content.append(i)

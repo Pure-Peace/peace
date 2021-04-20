@@ -26,6 +26,7 @@ impl id {
         // Data shorthand
         let player_id = data.id;
         let player_name = &data.name;
+        let player_u_name = &data.u_name;
 
         match payload {
             // Payload not exists handlers
@@ -35,6 +36,7 @@ impl id {
                     token,
                     id: player_id,
                     name: player_name,
+                    u_name: player_u_name,
                     data,
                     weak_player,
                     bancho,
@@ -66,6 +68,7 @@ impl id {
                     token,
                     id: player_id,
                     name: player_name,
+                    u_name: player_u_name,
                     data,
                     weak_player,
                     bancho,
