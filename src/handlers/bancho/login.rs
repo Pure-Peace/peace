@@ -13,7 +13,7 @@ use crate::{
     packets,
 };
 use crate::{
-    objects::{Player, PlayerAddress, PlayerInfo, PlayerSettings},
+    objects::{Player, PlayerAddress, PlayerStatus, PlayerSettings},
     packets::PacketBuilder,
     utils,
 };
@@ -295,11 +295,11 @@ pub async fn login(
         player_addresses.len()
     );
 
-    let player_info = match PlayerInfo::from_database(user_id, &database).await {
-        Some(player_info) => player_info,
+    let player_status = match PlayerStatus::from_database(user_id, &database).await {
+        Some(player_status) => player_status,
         None => {
             error!(
-                "login failed, could not get PlayerInfo ({}); ip: {}; osu version: {}",
+                "login failed, could not get PlayerStatus ({}); ip: {}; osu version: {}",
                 username, request_ip, osu_version
             );
             return Err(("invalid_credentials", None));
@@ -448,7 +448,7 @@ pub async fn login(
     // Create player object
     let mut player = Player::create(
         player_base,
-        player_info,
+        player_status,
         player_settings,
         client_info,
         request_ip.clone(),

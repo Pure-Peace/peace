@@ -1,15 +1,15 @@
 mod address;
 mod base;
 mod data;
-mod info;
+mod status;
 mod play_mods;
 mod player;
 mod settings;
 mod stats;
-mod status;
+mod game_status;
 
 mod depends {
-    pub use super::{stats::Stats, status::GameStatus, PlayerBase};
+    pub use super::{stats::Stats, game_status::GameStatus, PlayerBase};
 
     pub use crate::{
         constants::{Action, ClientInfo, GameMode, PlayMod, PresenceFilter},
@@ -36,7 +36,7 @@ mod depends {
 pub use address::PlayerAddress;
 pub use base::PlayerBase;
 pub use data::PlayerData;
-pub use info::PlayerInfo;
+pub use status::PlayerStatus;
 pub use play_mods::PlayMods;
 pub use player::Player;
 pub use settings::PlayerSettings;

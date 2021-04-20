@@ -1,7 +1,7 @@
 use maxminddb::Reader;
 use memmap::Mmap;
 
-use crate::objects::{PlayerInfo, PlayerSettings};
+use crate::objects::{PlayerSettings, PlayerStatus};
 use derivative::Derivative;
 use serde_json::json;
 use std::str::FromStr;
@@ -35,7 +35,7 @@ pub struct Player {
     pub osu_version: String,
     pub utc_offset: u8,
     pub geo_data: GeoData,
-    pub info: PlayerInfo,
+    pub status: PlayerStatus,
     pub settings: PlayerSettings,
     pub stats: Stats,
     pub stats_cache: HashMap<GameMode, Stats>,
@@ -68,7 +68,7 @@ impl Player {
 
     pub async fn create(
         base: PlayerBase,
-        info: PlayerInfo,
+        status: PlayerStatus,
         settings: PlayerSettings,
         client_info: ClientInfo,
         ip: String,
@@ -94,7 +94,7 @@ impl Player {
             osu_version: client_info.osu_version,
             utc_offset: client_info.utc_offset as u8,
             geo_data: GeoData::new(ip),
-            info,
+            status,
             settings,
             stats: Stats::new(),
             stats_cache: HashMap::with_capacity(4),
@@ -383,7 +383,7 @@ impl Player {
 
         if self.flag_cache.contains_key(&key) {
             debug!("Hack ({:?}) dected from {} but already added: player {}({}), login_record_id: {}, credit: {}, cheat count: {}.",
-            hack_id, detect_from, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat);
+            hack_id, detect_from, self.name, self.id, self.login_record_id, self.status.credit, self.status.cheat);
             return;
         }
 
@@ -396,7 +396,7 @@ impl Player {
                     "hack_id": hack_id,
                     "detect_from": detect_from,
                     "login_record_id": self.login_record_id,
-                    "credit": self.info.credit
+                    "credit": self.status.credit
                 })
             )),
             Some("peace"),
@@ -406,12 +406,15 @@ impl Player {
 
         self.flag_cache.insert(key, Some(hack_id.to_string()));
 
-        // Update info and sync with DB
-        self.info
-            .set_cheat_with_db(self.info.cheat + 1, database)
+        // Update status and sync with DB
+        self.status
+            .set_cheat_with_db(self.status.cheat + 1, database)
             .await;
-        self.info
-            .set_credit_with_db(self.info.credit - CHEAT_DETECTED_DECREASE_CREDIT, database)
+        self.status
+            .set_credit_with_db(
+                self.status.credit - CHEAT_DETECTED_DECREASE_CREDIT,
+                database,
+            )
             .await;
 
         // If have, sent notification to player
@@ -421,7 +424,7 @@ impl Player {
 
         warn!(
             "Hack ({:?}) detected warning from {}: player {}({}), login_record_id: {}, credit: {}, cheat: {}.",
-            hack_id, detect_from, self.name, self.id, self.login_record_id, self.info.credit, self.info.cheat
+            hack_id, detect_from, self.name, self.id, self.login_record_id, self.status.credit, self.status.cheat
         );
     }
 

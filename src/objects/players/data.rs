@@ -10,7 +10,7 @@ use std::str::FromStr;
 use super::{
     depends::Database,
     Player,
-    {stats::Stats, status::GameStatus},
+    {stats::Stats, game_status::GameStatus},
 };
 
 #[derive(Debug)]
