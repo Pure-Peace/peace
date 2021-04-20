@@ -280,30 +280,33 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     // Calculate pp
     let mut calc_failed = false;
     let calc_query = s.query();
-    let calc_result = if beatmap.is_ranked() {
-        let r = ctx.bancho.pp_calculator.calc(&calc_query).await;
-        if r.is_none() {
+    let calc_result = {
+        let rs = ctx.bancho.pp_calculator.calc(&calc_query).await;
+        if rs.is_none() {
             warn!(
                 "[osu_submit_modular] Failed to calc pp, beatmap md5: {}; player: {}({}); score_data: {:?};",
                 s.md5, player_name, player_id, s
             );
             calc_failed = true;
         };
-        r
-    } else {
-        None
+        rs
     };
 
     // Try get some value from result
     let (pp, raw_pp, stars) = if let Some(calc_result) = &calc_result {
-        (
-            Some(calc_result.pp),
-            calc_result
-                .raw
-                .as_ref()
-                .map(|raw| serde_json::to_value(raw.clone()).unwrap()),
-            Some(calc_result.stars),
-        )
+        // If pp is too small, it does not make sense
+        if calc_result.pp < 1.0 {
+            (Some(0.0), None, Some(calc_result.stars))
+        } else {
+            (
+                Some(calc_result.pp),
+                calc_result
+                    .raw
+                    .as_ref()
+                    .map(|raw| serde_json::to_value(raw.clone()).unwrap()),
+                Some(calc_result.stars),
+            )
+        }
     } else {
         (None, None, None)
     };
@@ -339,14 +342,17 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     let old_s = MiniScore::from_database(player_id, &temp_table, ctx.database).await;
 
     // Modify submit status
-    if let Some(old_s) = &old_s {
-        if pp.unwrap_or(0.0) > old_s.pp() {
+    if s.pass {
+        if let Some(old_s) = &old_s {
+            if pp.unwrap_or(0.0) > old_s.pp() {
+                s.status = SubmissionStatus::PassedAndTop;
+            }
+        } else {
             s.status = SubmissionStatus::PassedAndTop;
-        }
-    } else {
-        s.status = SubmissionStatus::PassedAndTop;
-    };
+        };
+    }
 
+    // TODO: ...
     if s.status == SubmissionStatus::PassedAndTop {
         let _ = ctx
             .database
@@ -603,11 +609,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         ),
         &chart_item!("totalScore", old_stats.total_score, new_stats.total_score),
         &chart_item!("maxCombo", old_stats.max_combo, new_stats.max_combo),
-        &chart_item!(
-            "accuracy",
-            old_stats.accuracy * 100.0,
-            new_stats.accuracy * 100.0
-        ),
+        &chart_item!("accuracy", old_stats.accuracy, new_stats.accuracy),
         &chart_item!("pp", old_stats.pp_v2, new_stats.pp_v2),
         // TODO: achievements
         "achievements-new:",

@@ -125,7 +125,7 @@ impl Player {
                 AND s.pp_v2 IS NOT NULL
                 AND m.rank_status IN (1, 2)
                 ORDER BY s.pp_v2 DESC
-                LIMIT 200;"#,
+                LIMIT 100;"#,
                     score_table
                 ),
                 &[&self.id],
@@ -147,7 +147,7 @@ impl Player {
         self.stats.accuracy = if score_count == 1 {
             score_set[0]
                 .try_get::<'_, _, f32>("accuracy")
-                .unwrap_or(100.0)
+                .unwrap_or(1.0)
         } else {
             let mut total = 0f32;
             let mut div = 0f32;
@@ -159,16 +159,14 @@ impl Player {
                 }
             }
             total / div
-        } / 100.0f32;
+        };
 
         // Calc pp from bp
-        self.stats.pp_v2 = if score_count == 1 {
-            score_set[0].try_get::<'_, _, f32>("pp_v2").unwrap_or(0.0)
-        } else {
+        self.stats.pp_v2 = {
             let mut total = 0f32;
             for (idx, row) in score_set.iter().enumerate() {
                 if let Ok(pp) = row.try_get::<'_, _, f32>("pp_v2") {
-                    total += pp * 0.95_f32.powi((idx + 1) as i32);
+                    total += pp * 0.95_f32.powi(idx as i32);
                 }
             }
             total
