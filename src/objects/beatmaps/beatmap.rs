@@ -4,7 +4,6 @@ use crate::{constants::RankStatusInServer, objects::errors::ApiError, utils};
 #[pg_mapper(table = "beatmaps.maps")]
 #[derive(Debug, FieldNames, Clone, FromSql, ToSql, PostgresMapper)]
 pub struct Beatmap {
-    pub server: String,
     pub id: i32,
     pub set_id: i32,
     pub md5: String,
@@ -272,7 +271,6 @@ impl Beatmap {
 impl From<BeatmapFromApi> for Beatmap {
     fn from(f: BeatmapFromApi) -> Self {
         Self {
-            server: "ppy".to_string(),
             id: f.id,
             set_id: f.set_id,
             md5: f.md5,

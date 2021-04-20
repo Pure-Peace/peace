@@ -30,9 +30,9 @@ CREATE FUNCTION beatmaps.beatmaps_map_trigger() RETURNS trigger
 		--only for insert
 		IF (TG_OP = 'INSERT') THEN
 			--if beatmap already exists and new has modifyed, we should delete old.
-			perform FROM "beatmaps"."maps" WHERE "server" = NEW."server" AND "id" = NEW."id" AND "md5" <> NEW."md5";
+			perform FROM "beatmaps"."maps" WHERE "id" = NEW."id" AND "md5" <> NEW."md5";
 			IF FOUND THEN
-				DELETE FROM "beatmaps"."maps" WHERE "server" = NEW."server" AND "id" = NEW."id";
+				DELETE FROM "beatmaps"."maps" WHERE "id" = NEW."id";
 			END IF;
 			--fixed rank status
 			IF (NEW.fixed_rank_status IS NULL) THEN
@@ -50,7 +50,7 @@ CREATE FUNCTION beatmaps.beatmaps_map_trigger_after() RETURNS trigger
     AS $$BEGIN
 		--only for insert
 		IF (TG_OP = 'INSERT') THEN
-			INSERT INTO beatmaps.stats ("server", "id", "md5") VALUES (NEW."server", NEW."id", NEW."md5");
+			INSERT INTO beatmaps.stats ("id", "md5") VALUES (NEW."id", NEW."md5");
 		END IF;
 	RETURN NEW;
 END$$;
@@ -297,7 +297,6 @@ CREATE SEQUENCE beatmaps.peace_bid
     MAXVALUE 2147483647
     CACHE 1;
 CREATE TABLE beatmaps.maps (
-    server character varying(32) DEFAULT 'ppy'::character varying NOT NULL,
     id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
     set_id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
     md5 character varying(32) NOT NULL,
@@ -340,7 +339,6 @@ CREATE TABLE beatmaps.maps (
     submit_time timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     approved_time timestamp(6) with time zone
 );
-COMMENT ON COLUMN beatmaps.maps.server IS 'ppy, peace, etc.';
 COMMENT ON COLUMN beatmaps.maps.id IS 'beatmap id';
 COMMENT ON COLUMN beatmaps.maps.set_id IS 'beatmapset id';
 COMMENT ON COLUMN beatmaps.maps.fixed_rank_status IS 'is the beatmap rank status fixed';
@@ -355,9 +353,7 @@ CREATE TABLE beatmaps.ratings (
     update_time timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE TABLE beatmaps.stats (
-    server character varying(32) DEFAULT 'ppy'::character varying NOT NULL,
-    id integer DEFAULT nextval('beatmaps.peace_bid'::regclass) NOT NULL,
-    set_id integer DEFAULT nextval('beatmaps.peace_bid'::regclass),
+    id integer NOT NULL,
     md5 character varying(32) NOT NULL,
     playcount integer DEFAULT 0 NOT NULL,
     play_time bigint DEFAULT 0 NOT NULL,
@@ -1270,6 +1266,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.2', 'PurePeace', NULL, 'Many updates', '2021-04-19 21:56:58.44226+08', '2021-04-19 21:56:58.44226+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.5', 'PurePeace', NULL, 'Many refactors. (stats)', '2021-04-20 04:56:03.104819+08', '2021-04-20 04:56:03.104819+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.6', 'PurePeace', NULL, 'Add u_name, modify user.info -> user.status', '2021-04-20 09:41:22.083242+08', '2021-04-20 09:41:24.354682+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.7', 'PurePeace', NULL, 'Modify beatmaps: remove server', '2021-04-21 03:29:58.900138+08', '2021-04-21 03:29:58.900138+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1294,6 +1291,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.2', 'PurePeace', '0.9.2', '++', '2021-04-19 21:57:13.279349+08', '2021-04-19 21:57:13.279349+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.5', 'PurePeace', '0.9.5', 'score submit almost done!!', '2021-04-20 04:56:37.846606+08', '2021-04-20 04:56:37.846606+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.6', 'PurePeace', '0.9.6', 'optional unicode name support', '2021-04-20 09:41:44.570464+08', '2021-04-20 09:41:44.570464+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.7', 'PurePeace', '0.9.7', 'beatmaps edit', '2021-04-21 03:30:28.41399+08', '2021-04-21 03:30:28.41399+08');
 INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
 INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-04-20 09:39:54.655107+08');
 INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-04-20 09:39:57.277453+08');
@@ -1334,11 +1332,11 @@ ALTER TABLE ONLY beatmaps.stats
 ALTER TABLE ONLY beatmaps.maps
     ADD CONSTRAINT hash UNIQUE (md5);
 ALTER TABLE ONLY beatmaps.maps
-    ADD CONSTRAINT maps_pkey PRIMARY KEY (server, id);
+    ADD CONSTRAINT maps_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY beatmaps.ratings
     ADD CONSTRAINT ratings_pkey PRIMARY KEY (user_id, map_md5);
 ALTER TABLE ONLY beatmaps.stats
-    ADD CONSTRAINT statistic_pkey PRIMARY KEY (server, id);
+    ADD CONSTRAINT statistic_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY game_scores.catch
     ADD CONSTRAINT catch_md5 UNIQUE (md5);
 ALTER TABLE ONLY game_scores.catch
@@ -1503,8 +1501,6 @@ ALTER TABLE ONLY beatmaps.ratings
 COMMENT ON CONSTRAINT "User.id" ON beatmaps.ratings IS 'user''s unique id';
 ALTER TABLE ONLY beatmaps.stats
     ADD CONSTRAINT beatmap_hash FOREIGN KEY (md5) REFERENCES beatmaps.maps(md5) ON UPDATE CASCADE ON DELETE CASCADE;
-ALTER TABLE ONLY beatmaps.stats
-    ADD CONSTRAINT ids FOREIGN KEY (server, id) REFERENCES beatmaps.maps(server, id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_scores.catch
     ADD CONSTRAINT "user.id" FOREIGN KEY (user_id) REFERENCES "user".base(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE ONLY game_scores.catch_rx
