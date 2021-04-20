@@ -149,7 +149,7 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) {
 pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
     // Read the packet
     let mut reader = PayloadReader::new(ctx.payload);
-    let (action, info, playing_beatmap_md5, play_mods_value, game_mode_u8, playing_beatmap_id) = (
+    let (action, info, beatmap_md5, play_mods_value, game_mode_u8, beatmap_id) = (
         reader.read_integer::<u8>().await,
         reader.read_string().await,
         reader.read_string().await,
@@ -186,10 +186,10 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
         ctx.id,
         action,
         info,
-        playing_beatmap_md5,
+        beatmap_md5,
         playmod_list,
         game_mode,
-        playing_beatmap_id
+        beatmap_id
     );
 
     // Update player's status
@@ -198,8 +198,8 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) {
         player.update_status(
             action,
             info,
-            playing_beatmap_md5,
-            playing_beatmap_id,
+            beatmap_md5,
+            beatmap_id,
             play_mods_value,
             game_mode,
         );

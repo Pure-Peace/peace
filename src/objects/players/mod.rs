@@ -9,7 +9,7 @@ mod stats;
 mod status;
 
 mod depends {
-    pub use super::{stats::Stats, status::Status, PlayerBase};
+    pub use super::{stats::Stats, status::GameStatus, PlayerBase};
 
     pub use crate::{
         constants::{Action, ClientInfo, GameMode, PlayMod, PresenceFilter},

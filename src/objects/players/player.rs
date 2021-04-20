@@ -39,7 +39,7 @@ pub struct Player {
     pub settings: PlayerSettings,
     pub stats: Stats,
     pub stats_cache: HashMap<GameMode, Stats>,
-    pub status: Status,
+    pub game_status: GameStatus,
     pub away_message: String,
     pub flag_cache: HashMap<String, Option<String>>,
     pub queue: Mutex<Queue<PacketData>>,
@@ -98,7 +98,7 @@ impl Player {
             settings,
             stats: Stats::new(),
             stats_cache: HashMap::with_capacity(4),
-            status: Status::new(),
+            game_status: GameStatus::new(),
             away_message: String::new(),
             flag_cache: HashMap::new(),
             queue: Mutex::new(Queue::new()),
@@ -235,18 +235,18 @@ impl Player {
         &mut self,
         action: Action,
         info: String,
-        playing_beatmap_md5: String,
-        playing_beatmap_id: i32,
+        beatmap_md5: String,
+        beatmap_id: i32,
         play_mods_value: u32,
-        game_mode: GameMode,
+        mode: GameMode,
     ) {
-        self.status.action = action;
-        self.status.info = info;
-        self.status.playing_beatmap_md5 = playing_beatmap_md5;
-        self.status.playing_beatmap_id = playing_beatmap_id;
-        self.status.play_mods.update(play_mods_value);
-        self.status.game_mode = game_mode;
-        self.status.update_time = Local::now();
+        self.game_status.action = action;
+        self.game_status.info = info;
+        self.game_status.beatmap_md5 = beatmap_md5;
+        self.game_status.beatmap_id = beatmap_id;
+        self.game_status.mods.update(play_mods_value);
+        self.game_status.mode = mode;
+        self.game_status.update_time = Local::now();
     }
 
     #[inline(always)]
@@ -268,14 +268,10 @@ impl Player {
     }
 
     #[inline(always)]
-    pub async fn update_mods(
-        &mut self,
-        game_mode: &GameMode,
-        play_mods: &PlayMods,
-    ) -> Option<PacketData> {
-        if &self.status.game_mode != game_mode || self.status.play_mods.value != play_mods.value {
-            self.status.game_mode = game_mode.clone();
-            self.status.play_mods = play_mods.clone();
+    pub async fn update_mods(&mut self, mode: &GameMode, mods: &PlayMods) -> Option<PacketData> {
+        if &self.game_status.mode != mode || self.game_status.mods.value != mods.value {
+            self.game_status.mode = mode.clone();
+            self.game_status.mods = mods.clone();
             return Some(packets::user_stats(&self).await);
         }
         None
@@ -511,18 +507,18 @@ impl Player {
 
     #[inline(always)]
     pub async fn update_stats(&mut self, database: &Database) {
-        match self.stats_cache.get(&self.status.game_mode) {
+        match self.stats_cache.get(&self.game_status.mode) {
             Some(stats) => {
                 // Cache expired, update from database
                 if Local::now().timestamp() > stats.update_time.timestamp() + 120 {
                     debug!(
                         "Player {}({}) stats cache expired! will get new... game mode: {:?}",
-                        self.name, self.id, self.status.game_mode
+                        self.name, self.id, self.game_status.mode
                     );
 
                     if let Some(stats) = self.get_stats_from_database(database).await {
                         self.stats_cache
-                            .insert(self.status.game_mode, stats.clone());
+                            .insert(self.game_status.mode, stats.clone());
                         self.stats = stats;
                         return;
                     }
@@ -530,7 +526,7 @@ impl Player {
 
                 debug!(
                     "Player {}({}) stats cache hitted! game mode: {:?}",
-                    self.name, self.id, self.status.game_mode
+                    self.name, self.id, self.game_status.mode
                 );
                 // Not expired, return cache
                 self.stats = stats.clone();
@@ -539,12 +535,12 @@ impl Player {
             None => {
                 debug!(
                     "Player {}({}) stats cache not hitted! will get new... game mode: {:?}",
-                    self.name, self.id, self.status.game_mode
+                    self.name, self.id, self.game_status.mode
                 );
 
                 if let Some(stats) = self.get_stats_from_database(database).await {
                     self.stats_cache
-                        .insert(self.status.game_mode, stats.clone());
+                        .insert(self.game_status.mode, stats.clone());
                     self.stats = stats;
                 }
             }
@@ -574,8 +570,8 @@ impl Player {
             FROM 
                 "game_stats"."{1}" 
             WHERE "id" = $1;"#,
-            self.status.game_mode.sub_mod_table(),
-            self.status.game_mode.mode_name()
+            self.game_status.mode.sub_mod_table(),
+            self.game_status.mode.mode_name()
         );
 
         // Query from database
@@ -599,7 +595,7 @@ impl Player {
                 );
                 // Calculate rank
                 stats
-                    .calc_rank_from_database(&self.status.game_mode, database)
+                    .calc_rank_from_database(&self.game_status.mode, database)
                     .await;
                 // Done
                 return Some(stats);

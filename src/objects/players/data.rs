@@ -10,7 +10,7 @@ use std::str::FromStr;
 use super::{
     depends::Database,
     Player,
-    {stats::Stats, status::Status},
+    {stats::Stats, status::GameStatus},
 };
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ pub struct PlayerData {
     pub geo_data: GeoData,
     pub stats: Stats,
     pub stats_cache: HashMap<GameMode, Stats>,
-    pub status: Status,
+    pub game_status: GameStatus,
     pub away_message: String,
     pub channels: Vec<String>,
     pub spectators: Vec<i32>,
@@ -64,7 +64,7 @@ impl PlayerData {
             geo_data: p.geo_data.clone(),
             stats: p.stats.clone(),
             stats_cache: p.stats_cache.clone(),
-            status: p.status.clone(),
+            game_status: p.game_status.clone(),
             away_message: p.away_message.clone(),
             channels: p.channels.iter().map(|s| s.to_string()).collect(),
             spectators: p.spectators.iter().map(|s| *s).collect(),
