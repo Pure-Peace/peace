@@ -25,6 +25,7 @@ Cargo.lock
 # avatar
 **/.data/avatars/*
 !**/.data/avatars/default.*
+**/.data/replays/*
 
 # geo-ip database
 *.mmdb
