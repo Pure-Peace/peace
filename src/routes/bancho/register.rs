@@ -95,7 +95,7 @@ pub async fn osu_register(
 
     // Check username 1
     if !constants::regexes::USERNAME_REGEX.is_match(&form_data.username) {
-        username_errors.push("The length of the user name is 2-16 (alphanumeric as well as ][-_); if you use Chinese or non-English characters, the length is 1-10.");
+        username_errors.push("The length of the user name is 2-16 (alphanumeric as well as ][-_); 请使用英文注册，然后在网站设置中文名。");
     }
 
     // Check username 2
