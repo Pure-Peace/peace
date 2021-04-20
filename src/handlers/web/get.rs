@@ -263,6 +263,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
         (p.id, p.name.clone())
     };
 
+    let mut voted = false;
     if let Some(vote) = data.vote {
         // limit rating value in 1 - 10
         let vote = match vote {
@@ -288,6 +289,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
                     "player {}({}) voted beatmap {}, rating: {}",
                     player_name, player_id, data.beatmap_md5, vote
                 );
+                voted = true;
             }
             Err(err) => {
                 error!(
@@ -311,6 +313,8 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
                 if rows.len() == 0 {
                     // Not already, player can vote.
                     return HttpResponse::Ok().body("ok");
+                } else {
+                    voted = true;
                 }
             }
             Err(err) => return HttpResponse::Ok().body("ok"),
@@ -318,7 +322,8 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
     }
 
     HttpResponse::Ok().body(format!(
-        "{:.2}",
+        "{}{:.2}",
+        if voted { "alreadyvoted\n" } else { "" },
         utils::get_beatmap_rating(&data.beatmap_md5, &ctx.database)
             .await
             .unwrap_or(10.0)
