@@ -15,10 +15,10 @@ pub struct OsuApi {
 
 impl OsuApi {
     pub async fn new(bancho_config: &Arc<RwLock<BanchoConfig>>) -> Self {
-        let api_keys = &bancho_config.read().await.osu_api_keys;
+        let api_keys = &bancho_config.read().await.data.server.osu_api_keys;
 
         if api_keys.is_empty() {
-            warn!("[OsuApi] No osu! apikeys has been added, please add it to the bancho.config of the database! Otherwise, the osu!api request cannot be used.");
+            warn!("[OsuApi] No osu! apikeys has been added, please add it to the bancho.config of the database, then reload peace! Otherwise, the osu!api request cannot be used.");
         }
 
         let api_clients = api_keys
@@ -48,7 +48,14 @@ impl OsuApi {
     }
 
     pub async fn reload_clients(&mut self) {
-        let new_keys = self._bancho_config.read().await.osu_api_keys.clone();
+        let new_keys = self
+            ._bancho_config
+            .read()
+            .await
+            .data
+            .server
+            .osu_api_keys
+            .clone();
 
         // Remove client if not exists in new keys
         let mut should_remove = vec![];

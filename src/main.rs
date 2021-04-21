@@ -22,7 +22,7 @@ use actix_web::web::Data;
 use objects::{Bancho, Peace};
 
 use crate::database::Database;
-use crate::settings::model::LocalConfig;
+use crate::settings::local::LocalConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

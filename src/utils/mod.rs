@@ -529,11 +529,11 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
         "SELECT {} FROM \"{}\".\"{}\" WHERE \"{}\" = $1;",
         fields, table, schema, query_by
     );
-    debug!("struct_from_database query: {}", query);
+    debug!("[struct_from_database] query: {}", query);
     let row = database.pg.query_first(&query, &[param]).await;
     if let Err(err) = row {
         debug!(
-            "Failed to get {} {:?} from database table {}.{} error: {:?}",
+            "[struct_from_database] Failed to get {} {:?} from database table {}.{} error: {:?}",
             type_name, param, table, schema, err
         );
         return None;
@@ -544,7 +544,7 @@ pub async fn struct_from_database<T: FromTokioPostgresRow>(
         Ok(result) => Some(result),
         Err(err) => {
             error!(
-                "Failed to deserialize {} from pg-row! error: {:?}",
+                "[struct_from_database] Failed to deserialize {} from pg-row! error: {:?}",
                 type_name, err
             );
             None

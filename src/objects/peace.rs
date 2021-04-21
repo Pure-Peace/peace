@@ -17,7 +17,7 @@ use prometheus::{opts, IntCounterVec};
 use crate::handlers::bancho;
 use crate::objects::Caches;
 
-use crate::settings::model::{LocalConfig, Settings};
+use crate::settings::local::{LocalConfig, Settings};
 
 pub struct Peace {
     pub addr: String,
@@ -196,7 +196,13 @@ impl Peace {
         #[inline(always)]
         async fn handle_session_recycle(bancho: Data<Bancho>) {
             loop {
-                let interval = bancho.config.read().await.session_recycle_check_interval as u64;
+                let interval = bancho
+                    .config
+                    .read()
+                    .await
+                    .data
+                    .session_recycle
+                    .check_interval as u64;
                 // Sleep interval
                 async_std::task::sleep(std::time::Duration::from_secs(interval)).await;
                 // Check recycle

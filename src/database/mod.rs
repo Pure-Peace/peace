@@ -2,7 +2,7 @@ pub mod connectors;
 
 use crate::{
     constants::{DB_VERSION, PEACE_VERSION},
-    settings::model::LocalConfig,
+    settings::local::LocalConfig,
 };
 use colored::Colorize;
 

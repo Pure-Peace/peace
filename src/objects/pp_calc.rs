@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use crate::settings::model::Settings;
+use crate::settings::local::Settings;
 
 #[derive(Derivative)]
 #[derivative(Debug)]

@@ -167,13 +167,14 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // Get configs
     let (maintenance_enabled, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp, front_url) = {
-        let c = ctx.bancho.config.read().await;
+        let cfg_r = ctx.bancho.config.read().await;
+        let c = &cfg_r.data;
         (
-            c.maintenance_enabled,
-            c.auto_ban_enabled,
-            c.auto_ban_whitelist.clone(),
-            c.auto_ban_pp(&s.mode),
-            c.server_front_url.clone(),
+            c.maintenance.enabled,
+            c.auto_ban.enabled,
+            c.auto_ban.id_whitelist.clone(),
+            c.auto_ban.pp(&s.mode),
+            c.server_info.front_url.clone(),
         )
     };
 

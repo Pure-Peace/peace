@@ -82,7 +82,7 @@ impl Beatmap {
         cache: &Caches,
         try_from_cache: bool,
     ) -> Option<Self> {
-        let expire = bancho.config.read().await.timeout_beatmap_cache;
+        let expire = bancho.config.read().await.data.beatmaps.cache_expires;
         let mut backup_beatmap = None;
         // MD5 Available
         if let Some(md5) = md5 {

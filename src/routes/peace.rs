@@ -1,7 +1,7 @@
 use actix_web::web::{get, post, scope, ServiceConfig};
 use actix_web::{dev::HttpServiceFactory, guard};
 
-use crate::settings::model::Settings;
+use crate::settings::local::Settings;
 
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes

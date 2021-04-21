@@ -168,7 +168,7 @@ impl BeatmapFromApi {
                     r#"INSERT INTO "beatmaps"."maps" ("{}") VALUES ({}) 
                         ON CONFLICT ("md5") DO UPDATE SET 
                             rank_status = EXCLUDED.rank_status,
-                            approved_time = EXCLUDED.approved_time;"#,
+                            approved_time = EXCLUDED.approved_time"#,
                     BeatmapFromApi::FIELDS.join(r#"",""#),
                     utils::build_s(BeatmapFromApi::FIELDS.len())
                 )

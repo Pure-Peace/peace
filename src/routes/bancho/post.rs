@@ -28,6 +28,8 @@ pub async fn handler(
         .config
         .read()
         .await
+        .data
+        .server
         .ip_blacklist
         .contains(&request_ip)
     {

@@ -19,9 +19,11 @@ pub async fn osu_register(
     bancho: Data<Bancho>,
     global_cache: Data<Caches>,
 ) -> HttpResponse {
-    let bancho_config = bancho.config.read().await;
+    let cfg_r = bancho.config.read().await;
+    let cfg = &cfg_r.data;
+    let r = &cfg.in_game_registration;
     // Register closed
-    if !bancho_config.registration_enabled {
+    if !r.enabled {
         return HttpResponse::BadRequest().body(json!({
             "form_error": {
                 "user": {
@@ -41,11 +43,7 @@ pub async fn osu_register(
     let request_ip = request_ip.unwrap();
 
     // IP disallowed
-    if bancho_config.ip_blacklist.contains(&request_ip)
-        || bancho_config
-            .registration_disallowed_ip
-            .contains(&request_ip)
-    {
+    if cfg.server.ip_blacklist.contains(&request_ip) || r.disallowed_ip.contains(&request_ip) {
         error!("Disallowed ip finded, ip: {}", request_ip);
         return HttpResponse::InternalServerError().body("Server Error");
     }
@@ -104,15 +102,12 @@ pub async fn osu_register(
     }
 
     // disallowed names check
-    if bancho_config
-        .registration_disallowed_usernames
-        .contains(&form_data.username)
-    {
+    if r.disallowed_usernames.contains(&form_data.username) {
         username_errors.push("This is a username that is not allowed, please change it.")
     }
 
     // sensitive word check
-    for s_word in &bancho_config.sensitive_words {
+    for s_word in &cfg.server.sensitive_words {
         if form_data.username.contains(s_word) {
             username_errors.push("The username contains sensitive words, please change.");
             break;
@@ -138,10 +133,7 @@ pub async fn osu_register(
     }
 
     // Check email 2
-    if bancho_config
-        .registration_disallowed_emails
-        .contains(&form_data.email)
-    {
+    if r.disallowed_emails.contains(&form_data.email) {
         email_errors.push("Email that is not allowed, please change")
     }
 
@@ -164,10 +156,7 @@ pub async fn osu_register(
     }
 
     // Check password 2
-    if bancho_config
-        .registration_disallowed_passwords
-        .contains(&form_data.password)
-    {
+    if r.disallowed_passwords.contains(&form_data.password) {
         password_errors
             .push("Don't use weak passwords, this is dangerous. Please change the password.")
     }

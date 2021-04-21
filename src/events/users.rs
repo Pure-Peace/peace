@@ -452,10 +452,11 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) {
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) {
     let mut message = PayloadReader::new(ctx.payload).read_message().await;
 
-    let bancho_config = ctx.bancho.config.read().await;
+    let cfg_r = ctx.bancho.config.read().await;
+    let cfg = &cfg_r.data;
 
     // Limit the length of message content
-    if let Some(max_len) = bancho_config.message_length_max {
+    if let Some(max_len) = cfg.message.max_length {
         let max_len = max_len as usize;
         if message.content.len() > max_len {
             message.content = message.content[0..max_len].to_string();
@@ -463,7 +464,7 @@ pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) {
     };
 
     // sensitive words replace
-    for i in &bancho_config.sensitive_words {
+    for i in &cfg.server.sensitive_words {
         message.content = message.content.replace(i, "**")
     }
 

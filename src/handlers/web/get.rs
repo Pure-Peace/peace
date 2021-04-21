@@ -80,8 +80,11 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Read config
     let (update_enabled, update_expires) = {
-        let temp = ctx.bancho.config.read().await;
-        (temp.client_update_enabled, temp.client_update_expires)
+        let c = ctx.bancho.config.read().await;
+        (
+            c.data.client_update.enabled,
+            c.data.client_update.cache_expires,
+        )
     };
 
     // Check should we update?
@@ -468,7 +471,15 @@ pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///
 /// String Array
 pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
-    if let Some(background_images) = &ctx.bancho.config.read().await.seasonal_backgrounds {
+    if let Some(background_images) = &ctx
+        .bancho
+        .config
+        .read()
+        .await
+        .data
+        .server
+        .seasonal_backgrounds
+    {
         return HttpResponse::Ok().json(background_images);
     };
 
@@ -586,7 +597,10 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     debug!("osu_osz2_get_scores, data: {:?}", data);
     let (all_beatmaps_not_submitted, all_beatmaps_have_scoreboard) = {
         let c = ctx.bancho.config.read().await;
-        (c.all_beatmaps_not_submitted, c.all_beatmaps_have_scoreboard)
+        (
+            c.data.beatmaps.all_not_submitted,
+            c.data.beatmaps.all_have_scoreboard,
+        )
     };
 
     // Player handlers

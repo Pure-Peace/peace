@@ -5,12 +5,19 @@ use crate::objects::Bancho;
 /// Auto PlayerSession recycle
 #[inline(always)]
 pub async fn recycle_handler(bancho: &Data<Bancho>) {
+    let session_timeout = bancho
+        .config
+        .read()
+        .await
+        .data
+        .session_recycle
+        .session_timeout;
     // Get deactive user token list
     let deactive_list = bancho
         .player_sessions
         .read()
         .await
-        .deactive_token_list(bancho.config.read().await.timeout_player_session)
+        .deactive_token_list(session_timeout)
         .await;
 
     // If not any deactive sessions, just break
@@ -19,7 +26,7 @@ pub async fn recycle_handler(bancho: &Data<Bancho>) {
     };
 
     debug!("recycle_handler: session recycle task start!");
-    let mut recycled_sessions_count = 0;
+    let mut recycled_sessions_count = 0i32;
     let session_recycle_start = std::time::Instant::now();
 
     // Logout each deactive sessions

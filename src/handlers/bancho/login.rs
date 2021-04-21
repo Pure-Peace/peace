@@ -5,7 +5,6 @@ use actix_web::HttpRequest;
 use log::warn;
 use std::net::{IpAddr, Ipv4Addr};
 
-use crate::types::PacketData;
 use crate::{
     constants,
     database::Database,
@@ -17,6 +16,7 @@ use crate::{
     packets::PacketBuilder,
     utils,
 };
+use crate::{settings::bancho::model::BanchoConfigData, types::PacketData};
 
 use super::parser;
 use constants::{BanchoPrivileges, LoginFailed, Privileges};
@@ -42,9 +42,9 @@ pub async fn login(
     global_cache: &Data<Caches>,
     counter: &Data<IntCounterVec>,
     geo_db: &Data<Option<Reader<Mmap>>>,
+    cfg: &BanchoConfigData,
 ) -> Result<(PacketData, String), (&'static str, Option<PacketBuilder>)> {
     let login_start = Instant::now();
-    let bcfg = bancho.config.read().await;
     counter
         .with_label_values(&["/bancho", "post", "login.start"])
         .inc();
@@ -73,75 +73,78 @@ pub async fn login(
     );
 
     // Client check
-    if bcfg.client_check && !bcfg.client_whitelist.contains(&osu_version) {
-        if bcfg.client_only_whitelist {
-            warn!(
-                "login refused, not allowed osu version: {} username: {}, ip: {}",
-                osu_version, username, request_ip
-            );
-            return Err((
-                "not_allowed",
-                Some(resp.add(packets::notification("Not allowed osu! version."))),
-            ));
-        }
-
-        // Version digits
-        let version_captures = constants::regexes::OSU_VERSION_REGEX.captures(&osu_version);
-        if version_captures.is_none() {
-            warn!(
-                "login refused, invalid osu version: {} username: {}, ip: {}",
-                osu_version, username, request_ip
-            );
-            return Err((
-                "not_allowed",
-                Some(resp.add(packets::notification("Invalid osu! version."))),
-            ));
-        }
-        let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
-
-        // Black list check
-        if bcfg.client_blacklist.contains(&osu_version) {
-            warn!(
-                "login refused, not allowed osu version: {}; username: {}, ip: {}",
-                osu_version, username, request_ip
-            );
-            return Err((
-                "not_allowed",
-                Some(resp.add(packets::notification("Not allowed osu! version."))),
-            ));
-        }
-
-        // Max version check
-        if let Some(max_version) = &bcfg.client_max_version {
-            if &version_captures > max_version {
+    {
+        let c = &cfg.client_check;
+        if c.enabled && !c.client_whitelist.contains(&osu_version) {
+            if c.only_whitelist {
                 warn!(
-                    "login refused, over than max osu version: {}({} max); username: {}, ip: {}",
-                    osu_version, max_version, username, request_ip
+                    "login refused, not allowed osu version: {} username: {}, ip: {}",
+                    osu_version, username, request_ip
                 );
                 return Err((
                     "not_allowed",
                     Some(resp.add(packets::notification("Not allowed osu! version."))),
                 ));
             }
-        }
 
-        // Min version check
-        if let Some(min_version) = &bcfg.client_min_version {
-            if &version_captures < min_version {
+            // Version digits
+            let version_captures = constants::regexes::OSU_VERSION_REGEX.captures(&osu_version);
+            if version_captures.is_none() {
                 warn!(
-                    "login refused, lower than min osu version: {}({} min); username: {}, ip: {}",
-                    osu_version, min_version, username, request_ip
+                    "login refused, invalid osu version: {} username: {}, ip: {}",
+                    osu_version, username, request_ip
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(packets::notification("osu! version too old."))),
+                    Some(resp.add(packets::notification("Invalid osu! version."))),
                 ));
+            }
+            let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
+
+            // Black list check
+            if c.client_blacklist.contains(&osu_version) {
+                warn!(
+                    "login refused, not allowed osu version: {}; username: {}, ip: {}",
+                    osu_version, username, request_ip
+                );
+                return Err((
+                    "not_allowed",
+                    Some(resp.add(packets::notification("Not allowed osu! version."))),
+                ));
+            }
+
+            // Max version check
+            if let Some(max_version) = c.max_version {
+                if version_captures > max_version {
+                    warn!(
+                        "login refused, over than max osu version: {}({} max); username: {}, ip: {}",
+                        osu_version, max_version, username, request_ip
+                    );
+                    return Err((
+                        "not_allowed",
+                        Some(resp.add(packets::notification("Not allowed osu! version."))),
+                    ));
+                }
+            }
+
+            // Min version check
+            if let Some(min_version) = c.min_version {
+                if version_captures < min_version {
+                    warn!(
+                        "login refused, lower than min osu version: {}({} min); username: {}, ip: {}",
+                        osu_version, min_version, username, request_ip
+                    );
+                    return Err((
+                        "not_allowed",
+                        Some(resp.add(packets::notification("osu! version too old."))),
+                    ));
+                }
             }
         }
     }
 
     // Not allowed username
-    if bcfg.login_disallowed_usernames.contains(&username) {
+    if cfg.login.disallowed_usernames.contains(&username) {
         warn!(
             "login refused, not allowed username: {}; ip: {}",
             username, request_ip
@@ -151,8 +154,9 @@ pub async fn login(
 
     // Not allow hashes 1
     let hardware_hashes = client_hashes.adapters_hash.clone() + &client_hashes.disk_id;
-    if bcfg
-        .login_disallowed_hardware_hashes
+    if cfg
+        .login
+        .disallowed_hardware_hashes
         .contains(&format!("{:x}", md5::compute(&hardware_hashes)))
     {
         warn!(
@@ -163,8 +167,9 @@ pub async fn login(
     }
 
     // Not allow hashes 2
-    if bcfg
-        .login_disallowed_disk_hashes
+    if cfg
+        .login
+        .disallowed_disk_hashes
         .contains(&client_hashes.disk_id)
     {
         warn!(
@@ -175,8 +180,9 @@ pub async fn login(
     }
 
     // Not allow hashes 3
-    if bcfg
-        .login_disallowed_adapters_hashes
+    if cfg
+        .login
+        .disallowed_adapters_hashes
         .contains(&client_hashes.adapters_hash)
     {
         warn!(
@@ -206,7 +212,7 @@ pub async fn login(
         username, user_id, select_base_duration
     );
     // Not allowed id
-    if bcfg.login_disallowed_id.contains(&user_id) {
+    if cfg.login.disallowed_id.contains(&user_id) {
         warn!(
             "login refused, not allowed user id: {}; username: {}, ip: {}",
             user_id, username, request_ip
@@ -239,11 +245,11 @@ pub async fn login(
     }
 
     // Maintenance mode
-    if bcfg.maintenance_enabled && Privileges::Admin.not_enough(player_base.privileges) {
+    if cfg.maintenance.enabled && Privileges::Admin.not_enough(player_base.privileges) {
         return Err((
             "maintenance",
             Some(
-                resp.add(packets::notification(&bcfg.maintenance_notification))
+                resp.add(packets::notification(&cfg.maintenance.notification))
                     .add(packets::login_reply(LoginFailed::ServerError)),
             ),
         ));
@@ -403,7 +409,7 @@ pub async fn login(
             }
 
             // TODO: ban muti account?
-            if !bcfg.muti_accounts_allowed {}
+            if !cfg.mutiaccounts.enabled {}
 
             // Create new login record for exists address
             /*  */
@@ -459,7 +465,7 @@ pub async fn login(
 
     // all players have in-game "supporter"
     // if config "all_players_have_supporter" is enabled
-    if bcfg.all_players_have_supporter {
+    if cfg.server.all_players_have_supporter {
         player.bancho_privileges |= BanchoPrivileges::Supporter as i32;
     }
 
@@ -515,12 +521,12 @@ pub async fn login(
     .await;
 
     // Notifications
-    for n in &bcfg.login_notifications {
+    for n in &cfg.login.notifications {
         resp.add_ref(packets::notification(n));
     }
 
     // Menu icon
-    if let Some(menu_icon) = &bcfg.menu_icon {
+    if let Some(menu_icon) = &cfg.menu_icon.get() {
         resp.add_ref(packets::main_menu_icon(menu_icon));
     };
 

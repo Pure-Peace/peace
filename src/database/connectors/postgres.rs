@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::settings::model::Settings;
+use crate::settings::local::Settings;
 
 use colored::Colorize;
 use deadpool_postgres::{Client, Pool};

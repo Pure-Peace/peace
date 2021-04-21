@@ -1,0 +1,151 @@
+{
+    "document": {
+        "server_info": {
+            "[self]": "Server information",
+            "front_url": "Website address",
+            "name": "Server name"
+        },
+        "server": {
+            "[self]": "Server configuration",
+            "osu_api_keys": "Required. Need at least one: http://old.ppy.sh/p/api",
+            "all_players_have_supporter": "All players get an in-game supporter (view friends and country rankings, osu!dircet)",
+            "free_direct": "Does osu!direct require *Real supporter permissions?",
+            "display_clan_name": "If enabled, in-game scoreboard will display the clan name",
+            "sensitive_words": "Impact: Registered user name; in-game chat (Will be replaced by *)",
+            "seasonal_backgrounds": "List of image urls. The osu! client will download and display these pictures"
+        },
+        "online_user_limit": {
+            "[self]": "The number of users allowed to be online at the same time. If it exceeds, login is not allowed"
+        },
+        "menu_icon": {
+            "[self]": "If enabled, osu! will display an icon in the main menu."
+        },
+        "maintenance": {
+            "[self]": "If maintenance, players will not be able to submit scores, and create new mutiplay rooms."
+        },
+        "mutiaccounts": {
+            "[self]": "Whether to allow a player to have multiple accounts. If not allowed, the player may be banned."
+        },
+        "auto_ban": {
+            "[self]": "When pp is too high (unverified player), it will be automatically banned"
+        },
+        "in_game_registration": {
+            "[self]": "In-game registration settings (different from website registration)"
+        },
+        "login": {
+            "[self]": "Client login settings",
+            "notifications": "Send notifications after successful login",
+            "retry_max": "Allow login error retries in expires (seconds)"
+        },
+        "client_check": {
+            "[self]": "Check the player''s osu! client version when logging in"
+        },
+        "message": {
+            "[self]": "In-game chat settings",
+            "max_length": "*Nullable. Message content exceeding this length will be trimmed"
+        },
+        "client_update": {
+            "[self]": "If enabled, the server will respond to osu!client''s check-updates request"
+        },
+        "beatmaps": {
+            "[self]": "Beatmaps related settings"
+        },
+        "session_recycle": {
+            "[self]": "Server will automatically logout timeout players at regular intervals. If you don''t understand, please don''t set it at will."
+        }
+
+    },
+    "server_info": {
+        "front_url": "https://prpr.fun",
+        "name": "Peace",
+        "owner": "PurePeace",
+        "email": "940857703@qq.com"
+    },
+    "server": {
+        "osu_api_keys": [],
+        "all_players_have_supporter": true,
+        "free_direct": true,
+        "display_clan_name": true,
+        "sensitive_words": [],
+        "seasonal_backgrounds": [],
+        "ip_blacklist": []
+    },
+    "online_user_limit": {
+        "enabled": false,
+        "online_max": 300
+    },
+    "menu_icon": {
+        "enabled": false,
+        "image_url": "",
+        "click_url": ""
+    },
+    "maintenance": {
+        "enabled": false,
+        "notification": "Server is maintenance now!"
+    },
+    "mutiaccounts": {
+        "enabled": false,
+        "max_accounts": 3
+    },
+    "auto_ban": {
+        "enabled": true,
+        "id_whitelist": [],
+        "std": null,
+        "taiko": null,
+        "catch": null,
+        "mania": null,
+        "std_rx": null,
+        "std_ap": null,
+        "taiko_rx": null,
+        "catch_rx": null
+    },
+    "in_game_registration": {
+        "enabled": true,
+        "disallowed_ip": [],
+        "disallowed_emails": [],
+        "disallowed_usernames": [],
+        "disallowed_passwords": []
+    },
+    "login": {
+        "enabled": true,
+        "notifications": [],
+        "retry_max": 4,
+        "retry_expire": 300,
+        "disallowed_ip": [],
+        "disallowed_id": [],
+        "disallowed_usernames": [],
+        "disallowed_hardware_hashes": [],
+        "disallowed_disk_hashes": [],
+        "disallowed_adapters_hashes": []
+    },
+    "client_check": {
+        "enabled": false,
+        "only_whitelist": false,
+        "id_whitelist": [],
+        "client_whitelist": [],
+        "client_blacklist": [],
+        "min_version": null,
+        "max_version": null
+    },
+    "message": {
+        "frequency_limit_enabled": false,
+        "max_per_minutes": 40,
+        "base_mute_time": 10,
+        "max_length": 1000
+    },
+    "client_update": {
+        "enabled": true,
+        "cache_expires": 3600
+    },
+    "beatmaps": {
+        "cache_expires": 3600,
+        "loved_give_pp": false,
+        "unranked_give_pp": false,
+        "all_not_submitted": false,
+        "all_have_scoreboard": true
+    },
+    "session_recycle": {
+        "check_interval": 90,
+        "session_timeout": 300
+    }
+}

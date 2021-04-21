@@ -16,10 +16,11 @@ pub async fn handler(
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
-    let bcfg = bancho.config.read().await.clone();
+    let cfg_r = bancho.config.read().await;
+    let cfg = &cfg_r.data;
 
     // Login is currently disabled
-    if !bcfg.login_enabled {
+    if !cfg.login.enabled {
         return HttpResponse::Ok()
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
@@ -30,7 +31,7 @@ pub async fn handler(
     }
 
     // Blocked ip
-    if bcfg.login_disallowed_ip.contains(&request_ip) {
+    if cfg.login.disallowed_ip.contains(&request_ip) {
         return HttpResponse::Ok()
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
@@ -42,7 +43,7 @@ pub async fn handler(
     }
 
     // Online user limit check
-    if bcfg.online_users_limit {
+    if cfg.online_user_limit.enabled {
         // Get online players
         let online_users = bancho
             .player_sessions
@@ -51,7 +52,7 @@ pub async fn handler(
             .player_count
             .load(Ordering::SeqCst);
 
-        if online_users >= bcfg.online_users_max {
+        if online_users >= cfg.online_user_limit.online_max {
             return HttpResponse::Ok()
                 .set_header("cho-token", "login_refused")
                 .set_header("cho-protocol", "19")
@@ -65,16 +66,13 @@ pub async fn handler(
         };
     };
 
-    let expire_secs = bcfg.login_retry_expire_seconds;
-    let max_failed_count = bcfg.login_retry_max_count;
-
     let failed_key = format!("{}-bancho_login_failed", &request_ip);
     let failed_count = database.redis.get(&failed_key).await.unwrap_or(0);
     // Too many failed in 300s, refuse login
-    if failed_count > max_failed_count {
+    if failed_count > cfg.login.retry_max {
         warn!(
             "ip: {} login refused, beacuse too many login failed_count({}) in {}s;",
-            request_ip, failed_count, expire_secs
+            request_ip, failed_count, cfg.login.retry_expire
         );
         return HttpResponse::Ok()
             .set_header("cho-token", "login_refused")
@@ -99,6 +97,7 @@ pub async fn handler(
         &global_cache,
         &counter,
         &geo_db,
+        cfg,
     )
     .await
     {
@@ -117,14 +116,17 @@ pub async fn handler(
                 .inc();
             // Increase failed count for this ip
             let failed_count: i32 = database.redis.query("INCR", &[&failed_key]).await;
-            let _ = database.redis.expire(&failed_key, expire_secs).await;
+            let _ = database
+                .redis
+                .expire(&failed_key, cfg.login.retry_expire)
+                .await;
 
             // Add notification string
             failed_notification.push_str(&format!("Login failed {} times!!\n", failed_count));
 
             // If reached the retires limit
-            if failed_count > max_failed_count {
-                failed_notification.push_str(&format!("Your login retries have reached the upper limit! \nPlease try again in {} seconds.", expire_secs));
+            if failed_count > cfg.login.retry_max {
+                failed_notification.push_str(&format!("Your login retries have reached the upper limit! \nPlease try again in {} seconds.", cfg.login.retry_expire));
                 warn!(
                     "ip: {} login failed, count: {}, will temporarily restrict their login",
                     &request_ip, failed_count
@@ -132,7 +134,7 @@ pub async fn handler(
             } else {
                 failed_notification.push_str(&format!(
                     "You can try {} more times.\n",
-                    max_failed_count - failed_count + 1
+                    cfg.login.retry_max - failed_count + 1
                 ))
             };
 
