@@ -71,7 +71,7 @@ pub async fn handler(
     // Too many failed in 300s, refuse login
     if failed_count > cfg.login.retry_max {
         warn!(
-            "ip: {} login refused, beacuse too many login failed_count({}) in {}s;",
+            "[LoginHandler] ip: {} login refused, beacuse too many login failed_count({}) in {}s;",
             request_ip, failed_count, cfg.login.retry_expire
         );
         return HttpResponse::Ok()
@@ -115,7 +115,16 @@ pub async fn handler(
                 .with_label_values(&["/bancho", "post", &format!("login.failed.{}", error_str)])
                 .inc();
             // Increase failed count for this ip
-            let failed_count: i32 = database.redis.query("INCR", &[&failed_key]).await;
+            let failed_count: i32 = match database.redis.query("INCR", &[&failed_key]).await {
+                Ok(i) => i,
+                Err(err) => {
+                    error!(
+                        "[LoginHandler] Failed to INCR failed count for ip {}, err: {:?}",
+                        request_ip, err
+                    );
+                    0
+                }
+            };
             let _ = database
                 .redis
                 .expire(&failed_key, cfg.login.retry_expire)
@@ -128,7 +137,7 @@ pub async fn handler(
             if failed_count > cfg.login.retry_max {
                 failed_notification.push_str(&format!("Your login retries have reached the upper limit! \nPlease try again in {} seconds.", cfg.login.retry_expire));
                 warn!(
-                    "ip: {} login failed, count: {}, will temporarily restrict their login",
+                    "[LoginHandler] ip: {} login failed, count: {}, will temporarily restrict their login",
                     &request_ip, failed_count
                 );
             } else {

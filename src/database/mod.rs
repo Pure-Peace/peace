@@ -1,9 +1,6 @@
 pub mod connectors;
 
-use crate::{
-    constants::{DB_VERSION, PEACE_VERSION},
-    settings::local::LocalConfig,
-};
+use crate::constants::{DB_VERSION, PEACE_VERSION};
 use colored::Colorize;
 
 use connectors::*;
@@ -18,14 +15,18 @@ pub struct Database {
 }
 
 impl Database {
-    pub async fn new(local_config: &LocalConfig) -> Self {
-        let settings = &local_config.data;
+    pub async fn new(
+        postgres_cfg: &deadpool_postgres::Config,
+        redis_cfg: &deadpool_redis::Config,
+        check_db_version: bool,
+        check_connect: bool,
+    ) -> Self {
         println!(
             "> {}",
             "Initializing database connections...".bright_purple()
         );
-        let pg = Postgres::new(settings).await;
-        let redis = Redis::new(settings).await;
+        let pg = Postgres::new(postgres_cfg, check_connect).await;
+        let redis = Redis::new(redis_cfg, check_connect).await;
         println!(
             "> {}",
             "Database connection initialization successfully!\n"
@@ -33,7 +34,7 @@ impl Database {
                 .bright_purple()
         );
         let database = Database { pg, redis };
-        if settings.check_db_version_on_created {
+        if check_db_version {
             database.check_version().await;
         }
 

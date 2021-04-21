@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
-use crate::settings::local::Settings;
 use colored::Colorize;
-
-use deadpool_redis::redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs};
-use deadpool_redis::{cmd as _cmd, Cmd, Connection, Pool};
+use deadpool_redis::{cmd as _cmd, redis::ErrorKind, Cmd, Connection, Pool};
+use deadpool_redis::{
+    redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs},
+    PoolError,
+};
+use std::convert::From;
 use std::marker::Send;
 
 /// Redis object
@@ -39,14 +41,6 @@ impl Redis {
     ///
     /// The redis object including a dead connection pool
     ///
-    /// # Examples:
-    ///
-    /// ```
-    /// use crate::settings::Settings;
-    ///
-    /// let settings = Settings::new();
-    /// let redis = Redis::new(settings: Settings);
-    /// ```
     ///
     /// # Try it:
     ///
@@ -66,15 +60,15 @@ impl Redis {
     /// ```
     /// let _ = set("key", &["value", "XX"]).await;
     /// ```
-    /// if check_pools_on_created is true, will test usability when creating connection pool
-    pub async fn new(settings: &Settings) -> Self {
+    /// if check_connect is true, will test usability when creating connection pool
+    pub async fn new(config: &deadpool_redis::Config, check_connect: bool) -> Self {
         // Create pool
         print!("> {}", "Creating redis connection pool...".bright_purple());
-        let pool = settings.redis.create_pool().unwrap();
+        let pool = config.create_pool().unwrap();
         let pool_status = format!("Max size: {}", pool.status().max_size).green();
         println!(" {} -> {}", "OK".green(), pool_status);
         // Check connection, it will panic if failed
-        if settings.check_pools_on_created == true {
+        if check_connect {
             print!("> {}", "Check redis connection...".bright_purple());
             pool.get()
                 .await
@@ -101,11 +95,11 @@ impl Redis {
     /// ```
     /// let conn<deadpool_redis:Connection> = get_conn().await;
     /// ```
-    pub async fn get_conn(&self) -> Connection {
-        self.pool
-            .get()
-            .await
-            .expect("Unable to get redis connection!")
+    pub async fn get_conn(&self) -> RedisResult<Connection> {
+        self.pool.get().await.map_err(|e| match e {
+            PoolError::Backend(e) => e,
+            _ => RedisError::from((ErrorKind::IoError, "PoolError", format!("{:?}", e))),
+        })
     }
 
     /// Redis command
@@ -138,9 +132,9 @@ impl Redis {
         &self,
         name: &str,
         arg: ARG,
-    ) -> T {
-        let mut conn = self.get_conn().await;
-        _cmd(name).arg(arg).query_async(&mut conn).await.unwrap()
+    ) -> RedisResult<T> {
+        let mut conn = self.get_conn().await?;
+        _cmd(name).arg(arg).query_async(&mut conn).await
     }
 
     /// Execute a raw cmd
@@ -151,7 +145,7 @@ impl Redis {
     /// let _ = execute("set", &["key", "value"])
     /// ```
     pub async fn execute<T: ToRedisArgs>(&self, name: &str, arg: T) -> RedisResult<()> {
-        let mut conn = self.get_conn().await;
+        let mut conn = self.get_conn().await?;
         _cmd(name).arg(arg).execute_async(&mut conn).await
     }
 
@@ -163,9 +157,9 @@ impl Redis {
     /// let cmd_object = cmd("set").arg(&["key", "value"]);
     /// let _ = query_cmd(cmd_object).await;
     /// ```
-    pub async fn query_cmd<T: Send + FromRedisValue>(&self, cmd: &mut Cmd) -> T {
-        let mut conn = self.get_conn().await;
-        cmd.query_async(&mut conn).await.unwrap()
+    pub async fn query_cmd<T: Send + FromRedisValue>(&self, cmd: &mut Cmd) -> RedisResult<T> {
+        let mut conn = self.get_conn().await?;
+        cmd.query_async(&mut conn).await
     }
 
     /// Execute a Cmd object
@@ -177,7 +171,7 @@ impl Redis {
     /// let _ = execute_cmd(cmd_object).await;
     /// ```
     pub async fn execute_cmd(&self, cmd: &Cmd) -> RedisResult<()> {
-        let mut conn = self.get_conn().await;
+        let mut conn = self.get_conn().await?;
         cmd.execute_async(&mut conn).await
     }
 
@@ -202,7 +196,7 @@ impl Redis {
     /// let _ = set("key", &["value", "XX"]).await;
     /// ```
     pub async fn set<T: ToRedisArgs>(&self, key: &str, value: T) -> RedisResult<()> {
-        let mut conn = self.get_conn().await;
+        let mut conn = self.get_conn().await?;
         _cmd("SET")
             .arg(key)
             .arg(value)
@@ -223,14 +217,13 @@ impl Redis {
         &self,
         key: &str,
         value: T,
-    ) -> F {
-        let mut conn = self.get_conn().await;
+    ) -> RedisResult<F> {
+        let mut conn = self.get_conn().await?;
         _cmd("GETSET")
             .arg(key)
             .arg(value)
             .query_async(&mut conn)
             .await
-            .unwrap()
     }
 
     /// Set multiple keys and values (MSET)
@@ -247,7 +240,7 @@ impl Redis {
         &self,
         items: &'a [(K, V)],
     ) -> RedisResult<()> {
-        let mut conn = self.get_conn().await;
+        let mut conn = self.get_conn().await?;
         _cmd("MSET").arg(items).execute_async(&mut conn).await
     }
 
@@ -261,9 +254,12 @@ impl Redis {
     /// println!("{:?}", results);
     /// ```
     ///
-    pub async fn get_all<T: ToRedisArgs, F: Send + FromRedisValue>(&self, args: T) -> F {
-        let mut conn = self.get_conn().await;
-        _cmd("MGET").arg(args).query_async(&mut conn).await.unwrap()
+    pub async fn get_all<T: ToRedisArgs, F: Send + FromRedisValue>(
+        &self,
+        args: T,
+    ) -> RedisResult<F> {
+        let mut conn = self.get_conn().await?;
+        _cmd("MGET").arg(args).query_async(&mut conn).await
     }
 
     /// Delete a key or multiple keys
@@ -276,9 +272,9 @@ impl Redis {
     /// let count: u32 = del("key1").await; // delete one key
     /// ```
     ///
-    pub async fn del<T: ToRedisArgs>(&self, keys: T) -> u32 {
-        let mut conn = self.get_conn().await;
-        _cmd("DEL").arg(keys).query_async(&mut conn).await.unwrap()
+    pub async fn del<T: ToRedisArgs>(&self, keys: T) -> RedisResult<u32> {
+        let mut conn = self.get_conn().await?;
+        _cmd("DEL").arg(keys).query_async(&mut conn).await
     }
 
     /// Set expire time to a key (seconds)
@@ -292,7 +288,7 @@ impl Redis {
     /// ```
     ///
     pub async fn expire<T: ToRedisArgs>(&self, key: T, expire: i32) -> RedisResult<()> {
-        let mut conn = self.get_conn().await;
+        let mut conn = self.get_conn().await?;
         _cmd("EXPIRE")
             .arg(key)
             .arg(expire)
@@ -316,8 +312,11 @@ impl Redis {
     ///     "default".to_string()
     /// });
     /// ```
-    pub async fn get<T: Send + FromRedisValue, A: ToRedisArgs>(&self, key: A) -> Result<T, RedisError> {
-        let mut conn = self.get_conn().await;
+    pub async fn get<T: Send + FromRedisValue, A: ToRedisArgs>(
+        &self,
+        key: A,
+    ) -> Result<T, RedisError> {
+        let mut conn = self.get_conn().await?;
         match _cmd("GET").arg(key).query_async(&mut conn).await {
             Ok(res) => Ok(res),
             Err(e) => Err(e),

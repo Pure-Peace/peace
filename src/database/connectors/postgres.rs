@@ -1,10 +1,39 @@
 #![allow(dead_code)]
 
-use crate::settings::local::Settings;
-
+use std::fmt;
 use colored::Colorize;
-use deadpool_postgres::{Client, Pool};
+use deadpool_postgres::{Client, Pool, PoolError};
 use tokio_postgres::{types::ToSql, Error, NoTls, Row, Statement};
+
+pub enum PostgresError {
+    PoolError,
+    DbError(Error),
+}
+
+impl PostgresError {
+    #[inline(always)]
+    pub fn from_pg_err(pg_error: Error) -> Self {
+        Self::DbError(pg_error)
+    }
+}
+
+impl fmt::Debug for PostgresError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PoolError => fmt.write_str("PoolError"),
+            Self::DbError(err) => fmt.write_fmt(format_args!("{:?}", err)),
+        }
+    }
+}
+
+impl fmt::Display for PostgresError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PoolError => fmt.write_str("PoolError"),
+            Self::DbError(err) => fmt.write_fmt(format_args!("{}", err)),
+        }
+    }
+}
 
 /// Postgres object
 #[derive(Clone)]
@@ -17,26 +46,18 @@ impl Postgres {
     ///
     /// The postgres object including a dead connection pool
     ///
-    /// # Examples:
-    ///
-    /// ```
-    /// use crate::settings::Settings;
-    ///
-    /// let settings = Settings::new();
-    /// let postgres = Postgres::new(settings: Settings);
-    /// ```
-    /// if check_pools_on_created is true, will test usability when creating connection pool
-    pub async fn new(settings: &Settings) -> Self {
+    /// if check_connect is true, will test usability when creating connection pool
+    pub async fn new(config: &deadpool_postgres::Config, check_connect: bool) -> Self {
         // Create pool
         print!(
             "> {}",
             "Creating postgres connection pool...".bright_purple()
         );
-        let pool = settings.postgres.create_pool(NoTls).unwrap();
+        let pool = config.create_pool(NoTls).unwrap();
         let pool_status = format!("Max size: {}", pool.status().max_size).green();
         println!(" {} -> {}", "OK".green(), pool_status);
         // Check connection, it will panic if failed
-        if settings.check_pools_on_created == true {
+        if check_connect {
             print!("> {}", "Check postgres connection...".bright_purple());
             pool.get()
                 .await
@@ -66,10 +87,13 @@ impl Postgres {
     /// let (client, statment) = get_ready("YOUR SQL");
     /// let result = client.query(statment, ["params $1-$n", ...]);
     /// ```
-    pub async fn get_ready(&self, query: &str) -> (Client, Statement) {
-        let client = self.get_client().await;
-        let statement = client.prepare(query).await.unwrap();
-        (client, statement)
+    pub async fn get_ready(&self, query: &str) -> Result<(Client, Statement), PostgresError> {
+        let client = self.get_client().await?;
+        let statement = client
+            .prepare(query)
+            .await
+            .map_err(PostgresError::from_pg_err)?;
+        Ok((client, statement))
     }
 
     #[inline(always)]
@@ -80,17 +104,19 @@ impl Postgres {
     /// ```
     /// let client<deadpool_postgres:Client> = get_client();
     /// ```
-    pub async fn get_client(&self) -> Client {
-        self.pool
-            .get()
-            .await
-            .expect("Unable to get postgres client!")
+    pub async fn get_client(&self) -> Result<Client, PostgresError> {
+        self.pool.get().await.map_err(|e| match e {
+            PoolError::Backend(e) => PostgresError::from_pg_err(e),
+            _ => PostgresError::PoolError,
+        })
     }
 
     #[inline(always)]
-    pub async fn batch_execute(&self, query: &str) -> Result<(), Error> {
-        let c = self.get_client().await;
-        c.batch_execute(query).await
+    pub async fn batch_execute(&self, query: &str) -> Result<(), PostgresError> {
+        let c = self.get_client().await?;
+        c.batch_execute(query)
+            .await
+            .map_err(PostgresError::from_pg_err)
     }
 
     #[inline(always)]
@@ -105,9 +131,11 @@ impl Postgres {
         &self,
         query: &str,
         params: &[&(dyn ToSql + Sync)],
-    ) -> Result<Vec<Row>, Error> {
-        let (c, s) = self.get_ready(query).await;
-        c.query(&s, params).await
+    ) -> Result<Vec<Row>, PostgresError> {
+        let (c, s) = self.get_ready(query).await?;
+        c.query(&s, params)
+            .await
+            .map_err(PostgresError::from_pg_err)
     }
 
     #[inline(always)]
@@ -124,9 +152,11 @@ impl Postgres {
         &self,
         query: &str,
         params: &[&(dyn ToSql + Sync)],
-    ) -> Result<Row, Error> {
-        let (c, s) = self.get_ready(query).await;
-        c.query_one(&s, params).await
+    ) -> Result<Row, PostgresError> {
+        let (c, s) = self.get_ready(query).await?;
+        c.query_one(&s, params)
+            .await
+            .map_err(PostgresError::from_pg_err)
     }
 
     #[inline(always)]
@@ -137,7 +167,7 @@ impl Postgres {
     /// ```
     /// let row: Row = query_first_simple("YOUR SQL");
     /// ```
-    pub async fn query_first_simple(&self, query: &str) -> Result<Row, Error> {
+    pub async fn query_first_simple(&self, query: &str) -> Result<Row, PostgresError> {
         self.query_first(query, &[]).await
     }
 
@@ -149,7 +179,7 @@ impl Postgres {
     /// ```
     /// let row: Vec<Row> = query_simple("YOUR SQL");
     /// ```
-    pub async fn query_simple(&self, query: &str) -> Result<Vec<Row>, Error> {
+    pub async fn query_simple(&self, query: &str) -> Result<Vec<Row>, PostgresError> {
         self.query(query, &[]).await
     }
 
@@ -165,9 +195,11 @@ impl Postgres {
         &self,
         query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + std::marker::Sync)],
-    ) -> Result<u64, Error> {
-        let (c, s) = self.get_ready(query).await;
-        c.execute(&s, params).await
+    ) -> Result<u64, PostgresError> {
+        let (c, s) = self.get_ready(query).await?;
+        c.execute(&s, params)
+            .await
+            .map_err(PostgresError::from_pg_err)
     }
 
     #[inline(always)]
@@ -178,7 +210,7 @@ impl Postgres {
     /// ```
     /// let size: u64 = execute_simple("YOUR SQL");
     /// ```
-    pub async fn execute_simple(&self, query: &str) -> Result<u64, Error> {
+    pub async fn execute_simple(&self, query: &str) -> Result<u64, PostgresError> {
         self.execute(query, &[]).await
     }
 }

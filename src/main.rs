@@ -27,13 +27,21 @@ use crate::settings::local::LocalConfig;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Create local settings
-    let local_config = LocalConfig::init();
+    let cfg = LocalConfig::init();
 
     // Create database object includes postgres and redis pool
-    let database = Data::new(Database::new(&local_config).await);
+    let database = Data::new(
+        Database::new(
+            &cfg.data.postgres,
+            &cfg.data.redis,
+            cfg.data.check_db_version_on_created,
+            cfg.data.check_pools_on_created,
+        )
+        .await,
+    );
 
     // Create bancho object
-    let bancho = Data::new(Bancho::init(&local_config, &database).await);
+    let bancho = Data::new(Bancho::init(&cfg, &database).await);
 
     // Create and start
     let mut peace = Peace::new(bancho.clone(), database);
