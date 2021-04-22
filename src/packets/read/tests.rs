@@ -43,7 +43,7 @@ async fn test_mutiple_headers() {
 
 #[test]
 fn test_read_uleb128() {
-    assert_eq!(read_uleb128(&[0xE5, 0x8E, 0x26]), (624485, 3));
+    assert_eq!(read_uleb128(&[0xE5, 0x8E, 0x26]), Some((624485, 3)));
 }
 
 #[actix_rt::test]
@@ -59,7 +59,7 @@ async fn test_read_payload() {
     let mut payload_reader = PayloadReader::new(payload.unwrap());
     let str_data = payload_reader.read_string().await;
 
-    println!("{:?}: {}", id, str_data);
+    println!("{:?}: {:?}", id, str_data);
 }
 
 #[actix_rt::test]
@@ -77,7 +77,7 @@ async fn test_read_mutiple_packet_and_payloads() {
             None => println!("Non-payload"),
             Some(payload) => {
                 let mut payload_reader = PayloadReader::new(payload);
-                println!("{}", payload_reader.read_string().await);
+                println!("{:?}", payload_reader.read_string().await);
             }
         }
     }
@@ -92,7 +92,7 @@ async fn test_read_integer() {
     let mut payload_reader = PayloadReader::new(payload.unwrap());
     let int_data = payload_reader.read_integer::<u32>().await;
 
-    println!("{:?}: {}", id, int_data);
+    println!("{:?}: {:?}", id, int_data);
 }
 
 #[actix_rt::test]

@@ -122,12 +122,14 @@ pub async fn create_specate_channel_if_not_exists(
 #[inline(always)]
 /// #16: OSU_SPECTATE_START
 ///
-pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
-    let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>().await;
+pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
+    let target_id = PayloadReader::new(ctx.payload)
+        .read_integer::<i32>()
+        .await?;
 
     // -1 is BanchoBot, not exists
     if target_id == -1 {
-        return;
+        return None;
     }
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
@@ -140,7 +142,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
                 "Player {}({}) tries to spectate an offline user {}.",
                 ctx.name, ctx.id, target_id
             );
-            return;
+            return None;
         }
     };
 
@@ -172,14 +174,14 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
         let channel = channel_list.get(&channel_name);
         if channel.is_none() {
             warn!("Failed to create spectate channel {}.", channel_name);
-            return;
+            return None;
         }
         if !channel.unwrap().join(ctx.id, Some(&*player_sessions)).await {
             warn!(
                 "Player {}({}) failed to join spectate channel {}.",
                 ctx.name, ctx.id, channel_name
             );
-            return;
+            return None;
         }
     }
 
@@ -191,7 +193,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
         let id_session_map = player_sessions.id_session_map.read().await;
         let (target, player) = (id_session_map.get(&target_id), ctx.weak_player.upgrade());
         if target.is_none() || player.is_none() {
-            return;
+            return None;
         }
 
         let mut target = target.unwrap().write().await;
@@ -212,34 +214,32 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) {
             "Player {}({}) is specating {}({}) now.",
             ctx.name, ctx.id, target.name, target.id
         );
-    }
+    };
+    Some(())
 }
 
 #[inline(always)]
 /// #17: OSU_SPECTATE_STOP (non-payload)
 ///
-pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) {
-    if ctx.data.spectating.is_none() {
-        return;
-    }
-
+pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let player_sessions = ctx.bancho.player_sessions.read().await;
 
     try_remove_spectator(
         ctx.id,
         &ctx.name,
         ctx.weak_player,
-        ctx.data.spectating.unwrap(),
+        ctx.data.spectating?,
         &ctx.bancho.channel_list,
         &player_sessions,
     )
     .await;
+    Some(())
 }
 
 #[inline(always)]
 /// #18: OSU_SPECTATE_FRAMES
 ///
-pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
+pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let data = packets::spectator_frames(ctx.payload.to_vec());
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
@@ -251,18 +251,15 @@ pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) {
             spectator.read().await.enqueue(data.clone()).await;
         }
     }
+    Some(())
 }
 
 #[inline(always)]
 /// #21: OSU_SPECTATE_CANT (non-payload)
 ///
-pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
-    if ctx.data.spectating.is_none() {
-        return;
-    }
-
+pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let data = packets::spectator_cant_spectate(ctx.id);
-    let spectate_target_id = ctx.data.spectating.unwrap();
+    let spectate_target_id = ctx.data.spectating?;
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
@@ -278,5 +275,6 @@ pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) {
                 spectator.read().await.enqueue(data.clone()).await;
             }
         }
-    }
+    };
+    Some(())
 }

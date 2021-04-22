@@ -4,11 +4,11 @@ use super::depends::*;
 
 #[inline(always)]
 /// #1: OSU_SEND_PUBLIC_MESSAGE
-pub async fn public<'a>(ctx: &HandlerContext<'a>) {
+pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let mut message = payload.read_message().await;
+    let mut message = payload.read_message().await?;
 
     let channel_name = match message.target.as_str() {
         "#spectator" => {
@@ -17,7 +17,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
             } else if ctx.data.spectators.len() > 0 {
                 format!("#spec_{}", ctx.id)
             } else {
-                return;
+                return None;
             }
         }
         "#multiplayer" => {
@@ -68,20 +68,21 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) {
                 ctx.name, ctx.id, channel_name
             );
         }
-    }
+    };
+    Some(())
 }
 
 #[inline(always)]
 /// #24: OSU_SEND_PRIVATE_MESSAGE
-pub async fn private<'a>(ctx: &HandlerContext<'a>) {
+pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let mut message = payload.read_message().await;
+    let mut message = payload.read_message().await?;
 
     // BanchoBot? current not exists
     if message.target == "BanchoBot" {
-        return;
+        return None;
     }
 
     let cfg_r = ctx.bancho.config.read().await;
@@ -115,7 +116,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
                     "Failed to send private messages, player {}({}) has logout!",
                     ctx.name, ctx.id
                 );
-                return;
+                return None;
             };
             let player = player.as_ref().unwrap().read().await;
 
@@ -137,7 +138,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
                     "Player {}({}) try send message to blocked-non-friends player: {}({})",
                     &player.name, player.id, target.name, target.id
                 );
-                return;
+                return None;
             }
 
             // TODO: target is slienced
@@ -177,5 +178,6 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) {
                 ctx.name, ctx.id, message.target
             );
         }
-    }
+    };
+    Some(())
 }

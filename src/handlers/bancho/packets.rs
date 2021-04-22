@@ -45,7 +45,7 @@ pub async fn read_handle<'a>(
                 payload: &[],
             };
             match packet_id {
-                id::OSU_PING => {}
+                id::OSU_PING => None,
                 id::OSU_USER_REQUEST_STATUS_UPDATE => {
                     events::users::request_status_update(&build_ctx()).await
                 }
@@ -59,6 +59,7 @@ pub async fn read_handle<'a>(
                         "Unhandled packet (Non-payload): {:?}; user: {}({});",
                         packet_id, player_name, player_id
                     );
+                    None
                 }
             };
         }
@@ -106,6 +107,7 @@ pub async fn read_handle<'a>(
                         player_id,
                         payload.len()
                     );
+                    None
                 }
             };
         }

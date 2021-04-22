@@ -24,8 +24,8 @@ pub struct HandlerContext<'a> {
 }
 
 pub trait ReadInteger<T> {
-    fn from_le_bytes(data: &[u8]) -> T;
-    fn from_be_bytes(data: &[u8]) -> T;
+    fn from_le_bytes(data: &[u8]) -> Option<T>;
+    fn from_be_bytes(data: &[u8]) -> Option<T>;
     fn as_usize(self) -> usize;
 }
 
@@ -33,12 +33,22 @@ macro_rules! impl_read_integer {
     ($($t:ty),+) => {
         $(impl ReadInteger<$t> for $t {
             #[inline(always)]
-            fn from_le_bytes(data: &[u8]) -> $t {
-                <$t>::from_le_bytes(data.try_into().unwrap())
+            fn from_le_bytes(data: &[u8]) -> Option<$t> {
+                Some(<$t>::from_le_bytes(match data.try_into() {
+                    Ok(d) => d,
+                    Err(_) => {
+                        return None;
+                    }
+                }))
             }
             #[inline(always)]
-            fn from_be_bytes(data: &[u8]) -> $t {
-                <$t>::from_be_bytes(data.try_into().unwrap())
+            fn from_be_bytes(data: &[u8]) -> Option<$t> {
+                Some(<$t>::from_be_bytes(match data.try_into() {
+                    Ok(d) => d,
+                    Err(_) => {
+                        return None;
+                    }
+                }))
             }
             #[inline(always)]
             fn as_usize(self) -> usize {
@@ -69,60 +79,69 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    fn read(&mut self, length: usize) -> &[u8] {
-        let data = &self.payload[self.index..self.index + length];
+    fn read(&mut self, length: usize) -> Option<&[u8]> {
+        let data = self.payload.get(self.index..self.index + length)?;
         self.index += length;
-        data
+        Some(data)
     }
 
     #[inline(always)]
-    pub async fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Integer {
-        let data = self.read(std::mem::size_of::<Integer>());
+    pub async fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Option<Integer> {
+        let data = self.read(std::mem::size_of::<Integer>())?;
         Integer::from_le_bytes(data)
     }
 
     #[inline(always)]
-    pub async fn read_i32_list<IntLength: ReadInteger<IntLength>>(&mut self) -> Vec<i32> {
-        let length_data = self.read(std::mem::size_of::<IntLength>());
-        let int_count = IntLength::from_le_bytes(length_data).as_usize();
+    pub async fn read_i32_list<IntLength: ReadInteger<IntLength>>(&mut self) -> Option<Vec<i32>> {
+        let length_data = self.read(std::mem::size_of::<IntLength>())?;
+        let int_count = IntLength::from_le_bytes(length_data)?.as_usize();
 
         let mut data: Vec<i32> = Vec::with_capacity(int_count);
         for _ in 0..int_count {
-            data.push(i32::from_le_bytes(self.read(4).try_into().unwrap()));
+            data.push(i32::from_le_bytes(match self.read(4)?.try_into() {
+                Ok(u) => u,
+                Err(_) => return None,
+            }));
         }
-        data
+        Some(data)
     }
 
     #[inline(always)]
-    pub async fn read_message(&mut self) -> Message {
-        Message {
-            sender: self.read_string().await,
-            content: self.read_string().await,
-            target: self.read_string().await,
-            sender_id: self.read_integer().await,
-        }
+    pub async fn read_message(&mut self) -> Option<Message> {
+        Some(Message {
+            sender: self.read_string().await?,
+            content: self.read_string().await?,
+            target: self.read_string().await?,
+            sender_id: self.read_integer().await?,
+        })
     }
 
     #[inline(always)]
-    pub async fn read_string(&mut self) -> String {
-        if self.payload[self.index] != 11 {
-            return String::new();
+    pub async fn read_string(&mut self) -> Option<String> {
+        if self.payload.get(self.index)? != &11u8 {
+            return None;
         }
         self.index += 1;
-        let data_length = self.read_uleb128() as usize;
+        let data_length = self.read_uleb128()? as usize;
 
         let cur = self.index;
         self.index += data_length;
-        let data = &self.payload[cur..self.index];
+        let data = self.payload.get(cur..self.index)?;
 
-        str::from_utf8(data).unwrap_or("").to_string()
+        Some(
+            match str::from_utf8(data) {
+                Ok(s) => s,
+                Err(_) => return None,
+            }
+            .to_string(),
+        )
     }
 
     #[inline(always)]
-    pub fn read_uleb128(&mut self) -> u32 {
-        let (val, length) = read_uleb128(&self.payload[self.index..]);
+    pub fn read_uleb128(&mut self) -> Option<u32> {
+        let (val, length) = read_uleb128(&self.payload.get(self.index..)?)?;
         self.index += length;
-        val
+        Some(val)
     }
 }
 
@@ -212,20 +231,25 @@ impl PacketReader {
         let header = &body[..7];
         Some((
             id::from_u8(header[0]).unwrap_or(id::OSU_UNKNOWN_PACKET),
-            u32::from_le_bytes(header[3..=6].try_into().unwrap()),
+            u32::from_le_bytes(match header[3..=6].try_into() {
+                Ok(b) => b,
+                Err(_) => {
+                    return None;
+                }
+            }),
         ))
     }
 }
 
 #[inline(always)]
-pub fn read_uleb128(slice: &[u8]) -> (u32, usize) {
+pub fn read_uleb128(slice: &[u8]) -> Option<(u32, usize)> {
     let (mut val, mut shift, mut index) = (0, 0, 0);
     loop {
-        let byte = slice[index];
+        let byte = slice.get(index)?;
         index += 1;
         if (byte & 0x80) == 0 {
-            val |= (byte as u32) << shift;
-            return (val, index);
+            val |= (*byte as u32) << shift;
+            return Some((val, index));
         }
         val |= ((byte & 0x7f) as u32) << shift;
         shift += 7;
