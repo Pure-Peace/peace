@@ -179,7 +179,10 @@ impl PacketReader {
             println!("[PacketReader]: unknown packet id({})", header[0]);
             id::OSU_UNKNOWN_PACKET
         });
-        let length = u32::from_le_bytes(header[3..=6].try_into().unwrap());
+        let length = u32::from_le_bytes(match header[3..=6].try_into() {
+            Ok(b) => b,
+            Err(_) => return Some((packet_id, None)),
+        });
 
         self.packet_count += 1;
         self.current_packet = packet_id.clone();
@@ -192,7 +195,7 @@ impl PacketReader {
                 self.payload_length = length as usize;
                 // Skip this payload at next call
                 self.index += self.payload_length;
-                Some(&self.buf[self.index - self.payload_length..self.index])
+                self.buf.get(self.index - self.payload_length..self.index)
             }
         };
 
