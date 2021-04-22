@@ -489,13 +489,10 @@ pub async fn login(
     let using_u_name = player.settings.display_u_name;
 
     // User data packet, including player stats and presence
-    let user_stats_packet = player.stats_packet().await;
-    let user_data = PacketBuilder::merge(&mut [
-        user_stats_packet.clone(),
-        player.presence_packet(false).await,
-    ]);
-    let user_data_u =
-        PacketBuilder::merge(&mut [user_stats_packet, player.presence_packet(true).await]);
+    let user_stats_packet = player.stats_packet();
+    let user_data =
+        PacketBuilder::merge(&mut [user_stats_packet.clone(), player.presence_packet(false)]);
+    let user_data_u = PacketBuilder::merge(&mut [user_stats_packet, player.presence_packet(true)]);
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
@@ -509,9 +506,8 @@ pub async fn login(
         }
         .clone(),
         peace_packets::silence_end(0), // TODO: real silence end
-        peace_packets::friends_list(&player.friends).await,
-    ])
-    .await;
+        peace_packets::friends_list(&player.friends),
+    ]);
 
     // Notifications
     for n in &cfg.login.notifications {
@@ -561,7 +557,7 @@ pub async fn login(
             )
             .await;
         // Add online players to this new player
-        resp.add_ref(online_player.user_data_packet(using_u_name).await);
+        resp.add_ref(online_player.user_data_packet(using_u_name));
     }
 
     // Join player into channel

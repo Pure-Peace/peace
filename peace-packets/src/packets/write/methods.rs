@@ -12,9 +12,9 @@ pub fn login_reply(reply: impl LoginReply) -> Vec<u8> {
 
 #[inline(always)]
 /// #7: BANCHO_SEND_MESSAGE
-pub async fn send_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
+pub fn send_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     PacketBuilder::with(id::BANCHO_SEND_MESSAGE)
-        .add(write_message(sender, sender_id, content, target).await)
+        .add(write_message(sender, sender_id, content, target))
         .pack()
 }
 
@@ -37,7 +37,7 @@ pub fn change_username(username_old: &str, username_new: &str) -> Vec<u8> {
 
 #[inline(always)]
 /// #11: BANCHO_USER_STATS
-pub async fn user_stats(
+pub fn user_stats(
     user_id: i32,
     action: u8,
     info: &str,
@@ -68,7 +68,6 @@ pub async fn user_stats(
             write_num(rank),
             write_num(pp),
         ])
-        .await
         .pack()
 }
 
@@ -273,9 +272,9 @@ pub fn bancho_privileges(privileges: i32) -> Vec<u8> {
 
 #[inline(always)]
 /// #72: BANCHO_FRIENDS_LIST
-pub async fn friends_list(friends: &Vec<i32>) -> Vec<u8> {
+pub fn friends_list(friends: &Vec<i32>) -> Vec<u8> {
     PacketBuilder::with(id::BANCHO_FRIENDS_LIST)
-        .add(write_int_list(friends).await)
+        .add(write_int_list(friends))
         .pack()
 }
 
@@ -313,7 +312,7 @@ pub fn match_player_skipped(slot_id: i32) -> Vec<u8> {
 /// #83: BANCHO_USER_PRESENCE
 ///
 /// including player stats and presence
-pub async fn user_presence(
+pub fn user_presence(
     user_id: i32,
     username: &str,
     utc_offset: u8,
@@ -334,7 +333,6 @@ pub async fn user_presence(
             write_num(latitude),
             write_num(rank),
         ])
-        .await
         .pack()
 }
 
@@ -393,9 +391,9 @@ pub fn user_presence_single(user_id: i32) -> Vec<u8> {
 #[inline(always)]
 /// #96: BANCHO_USER_PRESENCE_BUNDLE
 /// UNUSED
-pub async fn user_presence_bundle(player_id_list: &Vec<i32>) -> Vec<u8> {
+pub fn user_presence_bundle(player_id_list: &Vec<i32>) -> Vec<u8> {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE_BUNDLE)
-        .add(write_int_list(player_id_list).await)
+        .add(write_int_list(player_id_list))
         .pack()
 }
 

@@ -1,6 +1,5 @@
 #![allow(unused_imports)]
 use peace_constants::{LoginFailed, LoginSuccess};
-use tokio;
 
 use super::*;
 
@@ -20,10 +19,10 @@ fn test_login_notfication() {
     )
 }
 
-#[tokio::test]
-async fn test_send_message() {
+#[test]
+fn test_send_message() {
     assert_eq!(
-        send_message("PurePeace", 1001, "hello", "osu").await,
+        send_message("PurePeace", 1001, "hello", "osu"),
         vec![
             7, 0, 0, 27, 0, 0, 0, 11, 9, 80, 117, 114, 101, 80, 101, 97, 99, 101, 11, 5, 104, 101,
             108, 108, 111, 11, 3, 111, 115, 117, 233, 3, 0, 0
@@ -75,10 +74,10 @@ fn test_login() {
     )
 }
 
-#[tokio::test]
-async fn test_write_i32_list() {
-    //let list = utils::write_int_list(&vec![1001, 1002, 1003]).await;
-    let list = user_presence_bundle(&vec![1001, 1002, 1003]).await;
+#[test]
+fn test_write_i32_list() {
+    //let list = utils::write_int_list(&vec![1001, 1002, 1003]);
+    let list = user_presence_bundle(&vec![1001, 1002, 1003]);
     println!("{:?}", list);
 }
 

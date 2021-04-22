@@ -29,7 +29,7 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub async fn from_multiple(packets: &mut [Vec<u8>]) -> PacketBuilder {
+    pub fn from_multiple(packets: &mut [Vec<u8>]) -> PacketBuilder {
         let mut packet = empty();
         for i in packets.iter_mut() {
             packet.append(i)
@@ -47,14 +47,14 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub async fn add_multiple_ref(&mut self, packets: &mut [Vec<u8>]) {
+    pub fn add_multiple_ref(&mut self, packets: &mut [Vec<u8>]) {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
     }
 
     #[inline(always)]
-    pub async fn add_multiple(mut self, packets: &mut [Vec<u8>]) -> PacketBuilder {
+    pub fn add_multiple(mut self, packets: &mut [Vec<u8>]) -> PacketBuilder {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
@@ -171,8 +171,8 @@ pub fn write_string(string: &str) -> Vec<u8> {
 }
 
 #[inline(always)]
-/// Write string packet async
-pub async fn write_string_async(string: &str) -> Vec<u8> {
+/// Write string packet
+pub fn write_string_async(string: &str) -> Vec<u8> {
     let byte_length = string.len();
     let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
     if byte_length > 0 {
@@ -213,10 +213,10 @@ pub async fn write_string_async(string: &str) -> Vec<u8> {
 /// ```
 /// now impl
 /// ```
-pub async fn write_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
+pub fn write_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     let mut data: Vec<u8> = Vec::with_capacity(30);
     data.extend(write_string(sender));
-    data.extend(write_string_async(content).await);
+    data.extend(write_string_async(content));
     data.extend(write_string(target));
     data.extend(write_num(sender_id));
     data
@@ -249,7 +249,7 @@ pub fn write_channel(name: &str, title: &str, player_count: i16) -> Vec<u8> {
 
 #[inline(always)]
 /// Write int list packet
-pub async fn write_int_list<N: Number>(integer_list: &Vec<N>) -> Vec<u8> {
+pub fn write_int_list<N: Number>(integer_list: &Vec<N>) -> Vec<u8> {
     let mut ret = Vec::from((integer_list.len() as u16).to_le_bytes());
     for int in integer_list {
         ret.extend(int.to_bytes());

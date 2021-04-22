@@ -121,9 +121,7 @@ pub async fn create_specate_channel_if_not_exists(
 /// #16: OSU_SPECTATE_START
 ///
 pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let target_id = PayloadReader::new(ctx.payload)
-        .read_integer::<i32>()
-        .await?;
+    let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
 
     // -1 is BanchoBot, not exists
     if target_id == -1 {

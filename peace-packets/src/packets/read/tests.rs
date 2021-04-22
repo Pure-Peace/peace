@@ -1,40 +1,38 @@
 mod test_read {
     use crate::*;
-    use tokio;
 
-    #[tokio::test]
-    async fn test_read_header() {
+    #[test]
+    fn test_read_header() {
         println!(
             "p1: {:?}\np2: {:?}",
-            PacketReader::read_header(vec![4, 0, 0, 0, 0, 0, 0]).await,
+            PacketReader::read_header(vec![4, 0, 0, 0, 0, 0, 0]),
             PacketReader::read_header(vec![24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111])
-                .await
         );
     }
 
-    #[tokio::test]
-    async fn test_header() {
+    #[test]
+    fn test_header() {
         let mut p1 = PacketReader::from_vec(vec![4, 0, 0, 0, 0, 0, 0]);
         let mut p2 =
             PacketReader::from_vec(vec![24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111]);
 
-        print!("p1: {:?}; ", p1.next().await);
+        print!("p1: {:?}; ", p1.next());
         println!("idx: {:?}", p1.index);
-        print!("p2: {:?}; ", p2.next().await);
+        print!("p2: {:?}; ", p2.next());
         println!("idx: {:?}", p2.index);
     }
 
-    #[tokio::test]
-    async fn test_mutiple_headers() {
+    #[test]
+    fn test_mutiple_headers() {
         // Mutiple packet headers read
         let mut p3 = PacketReader::from_vec(vec![
             24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111, 4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 7,
             0, 0, 0, 11, 5, 104, 101, 108, 108, 111,
         ]);
-        println!("p3 0: {:?}", p3.next().await);
-        println!("p3 1: {:?}", p3.next().await);
-        println!("p3 2: {:?}", p3.next().await);
-        println!("p3 3 (outside): {:?}", p3.next().await);
+        println!("p3 0: {:?}", p3.next());
+        println!("p3 1: {:?}", p3.next());
+        println!("p3 2: {:?}", p3.next());
+        println!("p3 3 (outside): {:?}", p3.next());
         println!(
             "finish: {}; packet count: {}; payload count: {}",
             p3.finish, p3.packet_count, p3.payload_count
@@ -46,24 +44,24 @@ mod test_read {
         assert_eq!(read_uleb128(&[0xE5, 0x8E, 0x26]), Some((624485, 3)));
     }
 
-    #[tokio::test]
-    async fn test_read_payload() {
+    #[test]
+    fn test_read_payload() {
         // It's a notification packet, content: Hello, World!💖
         let packet = vec![
             24, 0, 0, 19, 0, 0, 0, 11, 17, 72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100,
             33, 240, 159, 146, 150,
         ];
         let mut reader = PacketReader::from_vec(packet);
-        let (id, payload) = reader.next().await.unwrap();
+        let (id, payload) = reader.next().unwrap();
 
         let mut payload_reader = PayloadReader::new(payload.unwrap());
-        let str_data = payload_reader.read_string().await;
+        let str_data = payload_reader.read_string();
 
         println!("{:?}: {:?}", id, str_data);
     }
 
-    #[tokio::test]
-    async fn test_read_mutiple_packet_and_payloads() {
+    #[test]
+    fn test_read_mutiple_packet_and_payloads() {
         let mut reader = PacketReader::from_vec(vec![
             4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 19, 0, 0, 0, 11, 17, 72, 101, 108, 108, 111, 44, 32, 87,
             111, 114, 108, 100, 33, 240, 159, 146, 150, 4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 18, 0, 0, 0,
@@ -71,47 +69,47 @@ mod test_read {
             104, 0, 0, 0, 0, 0, 0, 24, 0, 0, 23, 0, 0, 0, 11, 21, 232, 175, 187, 229, 143, 150,
             229, 174, 140, 228, 186, 134, 239, 188, 129, 239, 188, 129, 226, 156, 168,
         ]);
-        while let Some((packet_id, payload)) = reader.next().await {
+        while let Some((packet_id, payload)) = reader.next() {
             print!("{:?}: ", packet_id);
             match payload {
                 None => println!("Non-payload"),
                 Some(payload) => {
                     let mut payload_reader = PayloadReader::new(payload);
-                    println!("{:?}", payload_reader.read_string().await);
+                    println!("{:?}", payload_reader.read_string());
                 }
             }
         }
     }
 
-    #[tokio::test]
-    async fn test_read_integer() {
+    #[test]
+    fn test_read_integer() {
         let packet = vec![103, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0];
         let mut reader = PacketReader::from_vec(packet);
-        let (id, payload) = reader.next().await.unwrap();
+        let (id, payload) = reader.next().unwrap();
 
         let mut payload_reader = PayloadReader::new(payload.unwrap());
-        let int_data = payload_reader.read_integer::<u32>().await;
+        let int_data = payload_reader.read_integer::<u32>();
 
         println!("{:?}: {:?}", id, int_data);
     }
 
-    #[tokio::test]
-    async fn test_read_message() {
+    #[test]
+    fn test_read_message() {
         let packet = vec![
             1, 0, 0, 20, 0, 0, 0, 11, 0, 11, 6, 228, 189, 160, 229, 165, 189, 11, 4, 35, 111, 115,
             117, 0, 0, 0, 0,
         ];
         let mut reader = PacketReader::from_vec(packet);
-        let (id, payload) = reader.next().await.unwrap();
+        let (id, payload) = reader.next().unwrap();
 
         let mut payload_reader = PayloadReader::new(payload.unwrap());
-        let message = payload_reader.read_message().await;
+        let message = payload_reader.read_message();
 
         println!("{:?}: {:?}", id, message);
     }
 
-    #[tokio::test]
-    async fn test_super_mutiple_packets() {
+    #[test]
+    fn test_super_mutiple_packets() {
         let packet = vec![
             24, 0, 0, 32, 0, 0, 0, 11, 30, 230, 172, 162, 232, 191, 142, 230, 130, 168, 239, 188,
             140, 233, 171, 152, 232, 180, 181, 231, 154, 132, 230, 146, 146, 230, 179, 188, 231,
@@ -153,17 +151,17 @@ mod test_read {
             97, 99, 101, 32, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
         ];
         let mut reader = PacketReader::from_vec(packet);
-        while let Some((packet_id, payload)) = reader.next().await {
+        while let Some((packet_id, payload)) = reader.next() {
             println!("{:?}: {:?}", packet_id, payload.unwrap_or(&[]));
         }
     }
 
-    #[tokio::test]
-    async fn test_read_i32_list() {
+    #[test]
+    fn test_read_i32_list() {
         let payload = vec![4, 0, 233, 3, 0, 0, 234, 3, 0, 0, 235, 3, 0, 0, 236, 3, 0, 0];
         let mut payload_reader = PayloadReader::new(&payload);
         // read i32 list with i16 length
-        let int_list = payload_reader.read_i32_list::<i16>().await;
+        let int_list = payload_reader.read_i32_list::<i16>();
 
         println!("{:?}", int_list);
     }

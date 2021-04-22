@@ -138,19 +138,16 @@ impl Channel {
             }
             // Send them message
             let p = player.read().await;
-            p.enqueue(
-                peace_packets::send_message(
-                    if p.settings.display_u_name {
-                        &sender_u
-                    } else {
-                        sender
-                    },
-                    sender_id,
-                    msg,
-                    &self.display_name(),
-                )
-                .await,
-            )
+            p.enqueue(peace_packets::send_message(
+                if p.settings.display_u_name {
+                    &sender_u
+                } else {
+                    sender
+                },
+                sender_id,
+                msg,
+                &self.display_name(),
+            ))
             .await;
         }
     }

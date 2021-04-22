@@ -29,9 +29,7 @@ pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Update player's presence_filter
 pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let filter_val = PayloadReader::new(ctx.payload)
-        .read_integer::<i32>()
-        .await?;
+    let filter_val = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
     let filter: Option<PresenceFilter> = PresenceFilter::from_i32(filter_val);
 
     if filter.is_none() {
@@ -52,7 +50,7 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     if let Some(player) = ctx.weak_player.upgrade() {
         let player = player.read().await;
-        player.enqueue(player.stats_packet().await).await;
+        player.enqueue(player.stats_packet()).await;
     };
     Some(())
 }
@@ -62,9 +60,7 @@ pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Send other's stats to self
 pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let id_list = PayloadReader::new(ctx.payload)
-        .read_i32_list::<i16>()
-        .await?;
+    let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>()?;
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
@@ -79,7 +75,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             }
 
             if let Some(player) = id_session_map.get(player_id) {
-                let p = player.read().await.stats_packet().await;
+                let p = player.read().await.stats_packet();
                 ctx_player.enqueue(p).await;
             }
         }
@@ -92,9 +88,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Send other's presence to self (list)
 pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let id_list = PayloadReader::new(ctx.payload)
-        .read_i32_list::<i16>()
-        .await?;
+    let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>()?;
     let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_list.len());
 
     {
@@ -104,11 +98,8 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         for player_id in &id_list {
             if let Some(player) = id_session_map.get(player_id) {
                 let others = player.read().await;
-                user_presence_packets.push(
-                    others
-                        .presence_packet(ctx.data.settings.display_u_name)
-                        .await,
-                );
+                user_presence_packets
+                    .push(others.presence_packet(ctx.data.settings.display_u_name));
             }
         }
 
@@ -143,11 +134,7 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             }
             // Send presence to self
             let others = player.read().await;
-            user_presence_packets.push(
-                others
-                    .presence_packet(ctx.data.settings.display_u_name)
-                    .await,
-            );
+            user_presence_packets.push(others.presence_packet(ctx.data.settings.display_u_name));
         }
 
         drop(id_session_map);
@@ -173,12 +160,12 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // Read the packet
     let mut reader = PayloadReader::new(ctx.payload);
     let (action, info, beatmap_md5, play_mods_value, game_mode_u8, beatmap_id) = (
-        reader.read_integer::<u8>().await?,
-        reader.read_string().await?,
-        reader.read_string().await?,
-        reader.read_integer::<u32>().await?,
-        reader.read_integer::<u8>().await?,
-        reader.read_integer::<i32>().await?,
+        reader.read_integer::<u8>()?,
+        reader.read_string()?,
+        reader.read_string()?,
+        reader.read_integer::<u32>()?,
+        reader.read_integer::<u8>()?,
+        reader.read_integer::<i32>()?,
     );
 
     let action = match Action::from_u8(action) {
@@ -220,7 +207,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             game_mode,
         );
         player.update_stats(ctx.database).await;
-        player.stats_packet().await
+        player.stats_packet()
     } else {
         error!(
             "Failed to update player {}({})'s status! <OSU_CHANGE_ACTION>",
@@ -244,9 +231,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Add a player to friends
 pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let target_id = PayloadReader::new(ctx.payload)
-        .read_integer::<i32>()
-        .await?;
+    let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
 
     // -1 is BanchoBot, not exists
     if target_id == -1 {
@@ -325,9 +310,7 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) -> 
 ///
 /// Remove a player from friends
 pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let target = PayloadReader::new(ctx.payload)
-        .read_integer::<i32>()
-        .await?;
+    let target = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
 
     // -1 is BanchoBot, not exists
     if target == -1 {
@@ -406,9 +389,7 @@ pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) -> 
 ///
 /// Player toggle block-non-friend-dms with a value
 pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let value = PayloadReader::new(ctx.payload)
-        .read_integer::<i32>()
-        .await?;
+    let value = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
 
     if let Some(player) = ctx.weak_player.upgrade() {
         player.write().await.only_friend_pm_allowed = value == 1;
@@ -425,7 +406,7 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option
 ///
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let channel_name = PayloadReader::new(ctx.payload).read_string().await?;
+    let channel_name = PayloadReader::new(ctx.payload).read_string()?;
     match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
             if channel.auto_close {
@@ -451,7 +432,7 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Player leave from a channel
 pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let channel_name = PayloadReader::new(ctx.payload).read_string().await?;
+    let channel_name = PayloadReader::new(ctx.payload).read_string()?;
     match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
             if channel.auto_close {
@@ -476,7 +457,7 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// #82: OSU_USER_SET_AWAY_MESSAGE
 ///
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let mut message = PayloadReader::new(ctx.payload).read_message().await?;
+    let mut message = PayloadReader::new(ctx.payload).read_message()?;
 
     let cfg_r = ctx.bancho.config.read().await;
     let cfg = &cfg_r.data;

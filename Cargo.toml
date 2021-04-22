@@ -3,7 +3,7 @@ members = ["peace-database", "peace-constants", "peace-packets"]
 
 [package]
 name = "peace"
-version = "0.8.7"
+version = "0.8.8"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"

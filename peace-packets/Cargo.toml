@@ -1,6 +1,6 @@
 [package]
 name = "peace-packets"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -13,10 +13,9 @@ num-traits = "0.2"
 peace-constants = { path = "../peace-constants" }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["rt", "macros"] }
 criterion = "0.3"
 
 
 [[bench]]
-name = "packet_write"
+name = "packet_bench"
 harness = false

@@ -7,7 +7,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let mut message = payload.read_message().await?;
+    let mut message = payload.read_message()?;
 
     let channel_name = match message.target.as_str() {
         "#spectator" => {
@@ -77,7 +77,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let mut message = payload.read_message().await?;
+    let mut message = payload.read_message()?;
 
     // BanchoBot? current not exists
     if message.target == "BanchoBot" {
@@ -154,19 +154,16 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             // TODO: Limit the length of message content?
             // Send message done
             target
-                .enqueue(
-                    peace_packets::send_message(
-                        &if target.settings.display_u_name {
-                            player.try_u_name()
-                        } else {
-                            player.name.clone()
-                        },
-                        player.id,
-                        &message.content,
-                        &message.target,
-                    )
-                    .await,
-                )
+                .enqueue(peace_packets::send_message(
+                    &if target.settings.display_u_name {
+                        player.try_u_name()
+                    } else {
+                        player.name.clone()
+                    },
+                    player.id,
+                    &message.content,
+                    &message.target,
+                ))
                 .await;
 
             info!(

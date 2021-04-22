@@ -94,7 +94,7 @@ pub async fn handler(
 
     // Read & handle client packets
     let mut reader = PacketReader::from_vec(body.to_vec());
-    while let Some((packet_id, payload)) = reader.next().await {
+    while let Some((packet_id, payload)) = reader.next() {
         // osu_ping need not handle
         if packet_id == peace_constants::id::OSU_PING {
             continue;

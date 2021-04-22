@@ -68,13 +68,13 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    pub async fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Option<Integer> {
+    pub fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Option<Integer> {
         let data = self.read(std::mem::size_of::<Integer>())?;
         Integer::from_le_bytes(data)
     }
 
     #[inline(always)]
-    pub async fn read_i32_list<IntLength: ReadInteger<IntLength>>(&mut self) -> Option<Vec<i32>> {
+    pub fn read_i32_list<IntLength: ReadInteger<IntLength>>(&mut self) -> Option<Vec<i32>> {
         let length_data = self.read(std::mem::size_of::<IntLength>())?;
         let int_count = IntLength::from_le_bytes(length_data)?.as_usize();
 
@@ -89,17 +89,17 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    pub async fn read_message(&mut self) -> Option<Message> {
+    pub fn read_message(&mut self) -> Option<Message> {
         Some(Message {
-            sender: self.read_string().await?,
-            content: self.read_string().await?,
-            target: self.read_string().await?,
-            sender_id: self.read_integer().await?,
+            sender: self.read_string()?,
+            content: self.read_string()?,
+            target: self.read_string()?,
+            sender_id: self.read_integer()?,
         })
     }
 
     #[inline(always)]
-    pub async fn read_string(&mut self) -> Option<String> {
+    pub fn read_string(&mut self) -> Option<String> {
         if self.payload.get(self.index)? != &11u8 {
             return None;
         }
@@ -164,7 +164,7 @@ impl PacketReader {
 
     #[inline(always)]
     /// Read the osu!client packet: (packet id, payload)
-    pub async fn next(&mut self) -> Option<(id, Option<&[u8]>)> {
+    pub fn next(&mut self) -> Option<(id, Option<&[u8]>)> {
         if (self.buf.len() - self.index) < 7 {
             self.finish = true;
             return None;
@@ -204,7 +204,7 @@ impl PacketReader {
 
     #[inline(always)]
     /// Read packet header: (type, length)
-    pub async fn read_header(body: Vec<u8>) -> Option<(id, u32)> {
+    pub fn read_header(body: Vec<u8>) -> Option<(id, u32)> {
         if body.len() < 7 {
             return None;
         }
