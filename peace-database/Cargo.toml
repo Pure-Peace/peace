@@ -1,0 +1,21 @@
+[package]
+name = "peace-database"
+version = "0.2.0"
+authors = ["PurePeace <940857703@qq.com>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace/peace-database"
+
+[features]
+default = []
+with_peace = ["peace-constants"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+colored = "2.0"
+deadpool-postgres = "0.5"
+deadpool-redis = "0.6"
+tokio-postgres = { version = "0.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
+
+peace-constants = { path = "../peace-constants", optional = true }

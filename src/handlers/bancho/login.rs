@@ -5,9 +5,9 @@ use actix_web::HttpRequest;
 use log::warn;
 use std::net::{IpAddr, Ipv4Addr};
 
+use peace_database::Database;
+
 use crate::{
-    constants,
-    database::Database,
     objects::{Bancho, Caches},
     packets,
 };
@@ -19,7 +19,7 @@ use crate::{
 use crate::{settings::bancho::model::BanchoConfigData, types::PacketData};
 
 use super::parser;
-use constants::{BanchoPrivileges, LoginFailed, Privileges};
+use peace_constants::{BanchoPrivileges, LoginFailed, Privileges};
 use prometheus::IntCounterVec;
 use std::time::Instant;
 
@@ -88,7 +88,8 @@ pub async fn login(
             }
 
             // Version digits
-            let version_captures = constants::regexes::OSU_VERSION_REGEX.captures(&osu_version);
+            let version_captures =
+                peace_constants::regexes::OSU_VERSION_REGEX.captures(&osu_version);
             if version_captures.is_none() {
                 warn!(
                     "login refused, invalid osu version: {} username: {}, ip: {}",
@@ -506,7 +507,7 @@ pub async fn login(
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
-        packets::login_reply(constants::LoginSuccess::Verified(player.id)),
+        packets::login_reply(peace_constants::LoginSuccess::Verified(player.id)),
         packets::protocol_version(19),
         packets::bancho_privileges(player.bancho_privileges),
         if using_u_name {

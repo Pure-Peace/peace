@@ -2,6 +2,7 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
+use peace_database::Database;
 use std::{
     fmt,
     sync::{
@@ -11,7 +12,6 @@ use std::{
 };
 
 use crate::{
-    database::Database,
     packets,
     types::{
         Argon2Cache, ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap,

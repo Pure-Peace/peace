@@ -7,7 +7,7 @@ use colored::Colorize;
 use serde_json::Value;
 
 use self::model::BanchoConfigData;
-use crate::database::Database;
+use peace_database::Database;
 
 const TIPS: &str = "[BanchoConfig] Please check for errors.";
 const DEFAULT_CONFIG_PATH: &str = "./peace-config/bancho/default.json";

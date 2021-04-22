@@ -10,6 +10,7 @@ mod depends {
     pub use async_std::sync::RwLock;
     pub use maxminddb::Reader;
     pub use memmap::Mmap;
+    pub use peace_database::Database;
     pub use prometheus::IntCounterVec;
     pub use std::sync::{atomic::Ordering, Arc};
 
@@ -21,8 +22,6 @@ mod depends {
 
     use crate::objects::{Bancho, Caches};
     pub use crate::{
-        constants::{id, LoginFailed},
-        database::Database,
         handlers::bancho,
         objects::{Player, PlayerData, PlayerSessions},
         packets::{PacketBuilder, PacketReader},

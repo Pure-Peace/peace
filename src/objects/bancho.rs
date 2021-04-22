@@ -1,14 +1,12 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
+use peace_database::Database;
 use std::time::Instant;
 
 use super::{Caches, ChannelListBuilder, OsuApi};
+use crate::settings::{bancho::BanchoConfig, local::LocalConfig};
 use crate::utils::lock_wrapper;
-use crate::{
-    database::Database,
-    settings::{bancho::BanchoConfig, local::LocalConfig},
-};
 use crate::{
     objects::{PPServerApi, PlayerSessions},
     renders::BanchoGet,

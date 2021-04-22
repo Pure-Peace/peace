@@ -1,0 +1,19 @@
+[package]
+name = "peace-constants"
+version = "0.3.0"
+authors = ["PurePeace <940857703@qq.com>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace/peace-constants"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+strum = "0.20"
+strum_macros = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+regex = "1.4"
+enum-primitive-derive = "0.2"
+num-traits = "0.2"
+lazy_static = "1.4"
+serde_json = "1.0"

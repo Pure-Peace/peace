@@ -1,6 +1,9 @@
+[workspace]
+members = ["peace-database", "peace-constants"]
+
 [package]
 name = "peace"
-version = "0.8.0"
+version = "0.8.5"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -59,6 +62,9 @@ tokio-pg-mapper = "0.1.8"
 tokio-pg-mapper-derive = "0.1.5"
 tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
 uuid = { version = "0.8.1", features = ["v4"] }
+
+peace-constants = { path = "peace-constants" }
+peace-database = { path = "peace-database", features = ["with_peace"] }
 
 [dev-dependencies]
 criterion = "0.3.4"

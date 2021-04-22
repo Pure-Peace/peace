@@ -1,5 +1,5 @@
 use super::depends::*;
-use crate::{packets, utils};
+use crate::{handlers, packets, utils};
 
 pub async fn handler(
     req: HttpRequest,
@@ -96,21 +96,21 @@ pub async fn handler(
     let mut reader = PacketReader::from_bytes(body);
     while let Some((packet_id, payload)) = reader.next().await {
         // osu_ping need not handle
-        if packet_id == id::OSU_PING {
+        if packet_id == peace_constants::id::OSU_PING {
             continue;
         };
 
-        packet_id
-            .read_handle(
-                &request_ip,
-                &token,
-                &player_data,
-                &weak_player,
-                &bancho,
-                &database,
-                payload,
-            )
-            .await;
+        handlers::bancho::packets::read_handle(
+            &packet_id,
+            &request_ip,
+            &token,
+            &player_data,
+            &weak_player,
+            &bancho,
+            &database,
+            payload,
+        )
+        .await;
     }
 
     // Push player's packets to the response

@@ -1,9 +1,10 @@
 pub mod connectors;
+use connectors::*;
 
-use crate::constants::{DB_VERSION, PEACE_VERSION};
 use colored::Colorize;
 
-use connectors::*;
+#[cfg(feature = "with_peace")]
+use peace_constants::{DB_VERSION, PEACE_VERSION};
 
 /// Database object
 ///
@@ -18,7 +19,7 @@ impl Database {
     pub async fn new(
         postgres_cfg: &deadpool_postgres::Config,
         redis_cfg: &deadpool_redis::Config,
-        check_db_version: bool,
+        #[cfg(feature = "with_peace")] check_db_version: bool,
         check_connect: bool,
     ) -> Self {
         println!(
@@ -34,6 +35,7 @@ impl Database {
                 .bright_purple()
         );
         let database = Database { pg, redis };
+        #[cfg(feature = "with_peace")]
         if check_db_version {
             database.check_version().await;
         }
@@ -41,6 +43,7 @@ impl Database {
         database
     }
 
+    #[cfg(feature = "with_peace")]
     pub async fn check_version(&self) {
         println!("> {}", "Checking Database version...".bright_purple());
         match self

@@ -1,6 +1,6 @@
-use crate::set_with_db;
-use crate::{database::Database, utils};
+use crate::{set_with_db, utils};
 use chrono::{DateTime, Utc};
+use peace_database::Database;
 use tokio_pg_mapper_derive::PostgresMapper;
 
 set_with_db! {

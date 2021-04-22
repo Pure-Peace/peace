@@ -4,7 +4,7 @@ use dotenv::dotenv;
 use serde::Deserialize;
 use std::env;
 
-use crate::constants::PEACE_BANNER;
+use peace_constants::PEACE_BANNER;
 
 #[derive(Debug, Clone)]
 pub struct LocalConfig {

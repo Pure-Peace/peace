@@ -1,4 +1,5 @@
 use super::{depends::*, PlayMods};
+use peace_constants::{Action, GameMode, PlayMod};
 
 #[derive(Debug, Clone)]
 pub struct GameStatus {

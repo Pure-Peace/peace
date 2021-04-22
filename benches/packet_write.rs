@@ -8,10 +8,6 @@ extern crate log;
 extern crate config;
 extern crate serde;
 
-#[path = "../src/constants/mod.rs"]
-mod constants;
-#[path = "../src/database/mod.rs"]
-mod database;
 #[path = "../src/events/mod.rs"]
 mod events;
 #[path = "../src/handlers/mod.rs"]
@@ -46,7 +42,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| packets::notification("hello"))
     });
     c.bench_function("login_reply packet", |b| {
-        b.iter(|| packets::login_reply(constants::LoginFailed::InvalidCredentials))
+        b.iter(|| packets::login_reply(peace_constants::LoginFailed::InvalidCredentials))
     });
     /* c.bench_function("send massage packet", |b| {
         b.iter(|| packets::send_message("PurePeace", 1001, "hello", "osu"))
@@ -54,12 +50,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             packets::PacketBuilder::new()
-                .add(packets::login_reply(constants::LoginSuccess::Verified(
-                    1009,
-                )))
+                .add(packets::login_reply(
+                    peace_constants::LoginSuccess::Verified(1009),
+                ))
                 .add(packets::protocol_version(19))
                 .add(packets::notification("Welcome to Peace!"))
-                .add(packets::main_menu_icon("https://i.kafuu.pro/welcome.png|https://www.baidu.com"))
+                .add(packets::main_menu_icon(
+                    "https://i.kafuu.pro/welcome.png|https://www.baidu.com",
+                ))
                 .add(packets::silence_end(0))
                 .add(packets::channel_info_end())
                 .write_out()

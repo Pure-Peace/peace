@@ -1,5 +1,6 @@
 use super::{depends::*, BeatmapFromApi, GetBeatmapMethod};
-use crate::{constants::RankStatusInServer, objects::errors::ApiError, utils};
+use crate::{objects::errors::ApiError, utils};
+use peace_constants::RankStatusInServer;
 
 #[pg_mapper(table = "beatmaps.maps")]
 #[derive(Debug, FieldNames, Clone, FromSql, ToSql, PostgresMapper)]

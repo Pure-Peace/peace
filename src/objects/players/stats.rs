@@ -1,3 +1,5 @@
+use peace_constants::GameMode;
+
 use super::depends::*;
 #[derive(Debug, Clone, Deserialize)]
 pub struct Stats {

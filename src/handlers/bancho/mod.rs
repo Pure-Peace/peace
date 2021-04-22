@@ -1,6 +1,6 @@
 mod login;
-mod packets;
-mod parser;
+pub mod packets;
+pub mod parser;
 pub mod sessions;
 
 pub use login::login;

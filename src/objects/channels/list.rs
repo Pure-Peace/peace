@@ -4,8 +4,9 @@ use async_std::sync::RwLock;
 use hashbrown::HashMap;
 
 use colored::Colorize;
+use peace_database::Database;
 
-use crate::{database::Database, objects::PlayerSessions, types::ChannelList};
+use crate::{objects::PlayerSessions, types::ChannelList};
 
 use super::{base::ChannelBase, Channel};
 

@@ -1,3 +1,4 @@
+use peace_constants::id;
 use std::str;
 use std::{convert::TryInto, sync::Weak};
 
@@ -5,12 +6,9 @@ use actix_web::web::{Bytes, Data};
 use async_std::sync::RwLock;
 
 use num_traits::FromPrimitive;
+use peace_database::Database;
 
-use crate::{
-    constants::id,
-    database::Database,
-    objects::{Bancho, Player, PlayerData},
-};
+use crate::objects::{Bancho, Player, PlayerData};
 
 pub struct HandlerContext<'a> {
     pub request_ip: &'a String,

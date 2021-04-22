@@ -1,5 +1,6 @@
+use peace_constants::{id, LoginReply};
+
 use crate::{
-    constants::{id, LoginReply},
     objects::{Player, PlayerData},
     types::PacketData,
 };
@@ -294,7 +295,11 @@ pub async fn user_presence(p: &Player, using_u_name: bool) -> PacketData {
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
             write_num(p.id),
-            write_string(&if using_u_name { p.try_u_name() } else { p.name.clone() }),
+            write_string(&if using_u_name {
+                p.try_u_name()
+            } else {
+                p.name.clone()
+            }),
             write_num(p.utc_offset + 24),
             write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),
@@ -313,7 +318,11 @@ pub async fn user_presence_from_data(p: &PlayerData, using_u_name: bool) -> Pack
     PacketBuilder::with(id::BANCHO_USER_PRESENCE)
         .add_multiple(&mut [
             write_num(p.id),
-            write_string(&if using_u_name { p.try_u_name() } else { p.name.clone() }),
+            write_string(&if using_u_name {
+                p.try_u_name()
+            } else {
+                p.name.clone()
+            }),
             write_num(p.utc_offset + 24),
             write_num(p.get_country_code()),
             write_num((p.bancho_privileges | 0) as u8),

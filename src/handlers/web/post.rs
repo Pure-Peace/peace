@@ -4,11 +4,12 @@ use chrono::Local;
 use serde::Deserialize;
 use std::time::Instant;
 
-use crate::constants::SubmissionStatus;
 use crate::objects::{Bancho, Beatmap, MiniScore, ScoreData, SubmitModular};
 use crate::packets;
 use crate::routes::web::Context;
 use crate::utils;
+
+use peace_constants::SubmissionStatus;
 
 const NULL: String = String::new();
 

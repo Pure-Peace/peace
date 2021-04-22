@@ -1,5 +1,5 @@
+use crate::objects::Bancho;
 use crate::utils;
-use crate::{database::Database, objects::Bancho};
 
 use actix_web::{
     dev::Server,
@@ -9,6 +9,7 @@ use actix_web::{get, HttpResponse, Responder};
 use async_std::channel::Sender;
 use maxminddb::Reader;
 use memmap::Mmap;
+use peace_database::Database;
 
 use std::time::Instant;
 

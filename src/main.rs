@@ -6,8 +6,6 @@ extern crate serde;
 #[macro_use]
 extern crate log;
 
-pub mod constants;
-pub mod database;
 pub mod events;
 pub mod handlers;
 pub mod objects;
@@ -21,7 +19,6 @@ pub mod utils;
 use actix_web::web::Data;
 use objects::{Bancho, Peace};
 
-use crate::database::Database;
 use crate::settings::local::LocalConfig;
 
 #[actix_web::main]
@@ -31,7 +28,7 @@ async fn main() -> std::io::Result<()> {
 
     // Create database object includes postgres and redis pool
     let database = Data::new(
-        Database::new(
+        peace_database::Database::new(
             &cfg.data.postgres,
             &cfg.data.redis,
             cfg.data.check_db_version_on_created,

@@ -1,22 +1,19 @@
-use crate::routes;
-use crate::{database::Database, objects::Bancho};
-
 use actix_cors::Cors;
 use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
+use actix_web_prom::PrometheusMetrics;
 use async_std::channel::{unbounded, Receiver, Sender};
+use colored::Colorize;
+use maxminddb::{self, Reader};
 use memmap::Mmap;
+use peace_database::Database;
+use prometheus::{opts, IntCounterVec};
 use pyo3::Python;
 use std::time::Instant;
 
-use colored::Colorize;
-
-use actix_web_prom::PrometheusMetrics;
-use maxminddb::{self, Reader};
-use prometheus::{opts, IntCounterVec};
-
 use crate::handlers::bancho;
+use crate::objects::Bancho;
 use crate::objects::Caches;
-
+use crate::routes;
 use crate::settings::local::{LocalConfig, Settings};
 
 pub struct Peace {

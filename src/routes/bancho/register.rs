@@ -1,5 +1,5 @@
 use super::depends::*;
-use crate::{constants, utils};
+use crate::utils;
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterForm {
@@ -92,7 +92,7 @@ pub async fn osu_register(
     let mut password_errors = Vec::new();
 
     // Check username 1
-    if !constants::regexes::USERNAME_REGEX.is_match(&form_data.username) {
+    if !peace_constants::regexes::USERNAME_REGEX.is_match(&form_data.username) {
         username_errors.push("The length of the user name is 2-16 (alphanumeric as well as ][-_); 请使用英文注册，然后在网站设置中文名。");
     }
 
@@ -128,7 +128,7 @@ pub async fn osu_register(
     }
 
     // Check email 1
-    if !constants::regexes::EMAIL_REGEX.is_match(&form_data.email) {
+    if !peace_constants::regexes::EMAIL_REGEX.is_match(&form_data.email) {
         email_errors.push("Invalid email address.");
     }
 

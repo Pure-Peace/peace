@@ -1,8 +1,8 @@
 #![allow(unused_imports)]
-use super::*;
-use crate::constants::{LoginFailed, LoginSuccess};
-
 use actix_rt;
+use peace_constants::{LoginFailed, LoginSuccess};
+
+use super::*;
 
 #[test]
 fn test_login_reply() {

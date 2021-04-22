@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::constants::GameMode;
+use peace_constants::GameMode;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BanchoConfigData {
