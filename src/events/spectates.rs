@@ -1,11 +1,9 @@
 use std::sync::{atomic::Ordering, Weak};
 
 use async_std::sync::RwLockReadGuard;
+use peace_packets::PayloadReader;
 
-use crate::{
-    objects::{Channel, Player},
-    packets,
-};
+use crate::objects::{Channel, Player};
 
 use super::depends::*;
 
@@ -49,7 +47,7 @@ pub async fn try_remove_spectator<'a>(
                     .leave(spectating_id, Some(&*player_sessions))
                     .await;
             } else {
-                let fellow_data = packets::fellow_spectator_left(player_id);
+                let fellow_data = peace_packets::fellow_spectator_left(player_id);
                 let channel_info = spectating_channel.channel_info_packet();
 
                 if let Some(spectating_target) = id_session_map.get(&spectating_id) {
@@ -78,7 +76,7 @@ pub async fn try_remove_spectator<'a>(
 
     if let Some(spectating_target) = id_session_map.get(&spectating_id) {
         let t = spectating_target.read().await;
-        t.enqueue(packets::spectator_left(player_id)).await;
+        t.enqueue(peace_packets::spectator_left(player_id)).await;
         debug!(
             "Player {}({}) is no longer watching {}({}).",
             t.name, t.id, player_name, player_id
@@ -187,8 +185,8 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
     // Ready to send packet
     {
-        let i_was_joined = packets::fellow_spectator_joined(ctx.id);
-        let i_was_joined2 = packets::spectator_joined(ctx.id);
+        let i_was_joined = peace_packets::fellow_spectator_joined(ctx.id);
+        let i_was_joined2 = peace_packets::spectator_joined(ctx.id);
 
         let id_session_map = player_sessions.id_session_map.read().await;
         let (target, player) = (id_session_map.get(&target_id), ctx.weak_player.upgrade());
@@ -203,7 +201,9 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             if let Some(spectator) = id_session_map.get(&spectator_id) {
                 let s = spectator.read().await;
                 s.enqueue(i_was_joined.clone()).await;
-                player.enqueue(packets::fellow_spectator_joined(s.id)).await;
+                player
+                    .enqueue(peace_packets::fellow_spectator_joined(s.id))
+                    .await;
             }
         }
         target.spectators.insert(ctx.id);
@@ -240,7 +240,7 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// #18: OSU_SPECTATE_FRAMES
 ///
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let data = packets::spectator_frames(ctx.payload.to_vec());
+    let data = peace_packets::spectator_frames(ctx.payload.to_vec());
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
     let id_session_map = player_sessions.id_session_map.read().await;
@@ -258,7 +258,7 @@ pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()
 /// #21: OSU_SPECTATE_CANT (non-payload)
 ///
 pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let data = packets::spectator_cant_spectate(ctx.id);
+    let data = peace_packets::spectator_cant_spectate(ctx.id);
     let spectate_target_id = ctx.data.spectating?;
 
     let player_sessions = ctx.bancho.player_sessions.read().await;

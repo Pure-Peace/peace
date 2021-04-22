@@ -11,12 +11,9 @@ use std::{
     },
 };
 
-use crate::{
-    packets,
-    types::{
-        Argon2Cache, ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap,
-        PlayerSessionMap, TokenString, UserId,
-    },
+use crate::types::{
+    Argon2Cache, ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap,
+    PlayerSessionMap, TokenString, UserId,
 };
 
 use super::{Player, PlayerData};
@@ -124,7 +121,8 @@ impl PlayerSessions {
                 self.player_count.fetch_sub(1, Ordering::SeqCst);
 
                 // Enqueue logout packet to all players
-                self.enqueue_all(&packets::user_logout(player_id)).await;
+                self.enqueue_all(&peace_packets::user_logout(player_id))
+                    .await;
 
                 if channel_list.is_some() {
                     for channel in channel_list.unwrap().read().await.values() {

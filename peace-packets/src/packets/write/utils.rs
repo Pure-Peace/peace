@@ -1,11 +1,8 @@
 #![allow(dead_code)]
-
 use peace_constants::id;
 
-use crate::types::PacketData;
-
 pub struct PacketBuilder {
-    content: PacketData,
+    content: Vec<u8>,
 }
 
 impl PacketBuilder {
@@ -27,12 +24,12 @@ impl PacketBuilder {
 
     #[inline(always)]
     /// Initial from packet data
-    pub fn from(packet: PacketData) -> PacketBuilder {
+    pub fn from(packet: Vec<u8>) -> PacketBuilder {
         PacketBuilder { content: packet }
     }
 
     #[inline(always)]
-    pub async fn from_multiple(packets: &mut [PacketData]) -> PacketBuilder {
+    pub async fn from_multiple(packets: &mut [Vec<u8>]) -> PacketBuilder {
         let mut packet = empty();
         for i in packets.iter_mut() {
             packet.append(i)
@@ -41,7 +38,7 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub fn merge(packets: &mut [PacketData]) -> PacketData {
+    pub fn merge(packets: &mut [Vec<u8>]) -> Vec<u8> {
         let mut packet = empty();
         for i in packets.iter_mut() {
             packet.append(i)
@@ -50,14 +47,14 @@ impl PacketBuilder {
     }
 
     #[inline(always)]
-    pub async fn add_multiple_ref(&mut self, packets: &mut [PacketData]) {
+    pub async fn add_multiple_ref(&mut self, packets: &mut [Vec<u8>]) {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
     }
 
     #[inline(always)]
-    pub async fn add_multiple(mut self, packets: &mut [PacketData]) -> PacketBuilder {
+    pub async fn add_multiple(mut self, packets: &mut [Vec<u8>]) -> PacketBuilder {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
@@ -66,21 +63,21 @@ impl PacketBuilder {
 
     #[inline(always)]
     /// Add packet data
-    pub fn add(mut self, packet: PacketData) -> PacketBuilder {
+    pub fn add(mut self, packet: Vec<u8>) -> PacketBuilder {
         self.content.extend(packet);
         self
     }
 
     #[inline(always)]
     /// Add packet data
-    pub fn add_ref(&mut self, packet: PacketData) -> &PacketBuilder {
+    pub fn add_ref(&mut self, packet: Vec<u8>) -> &PacketBuilder {
         self.content.extend(packet);
         self
     }
 
     #[inline(always)]
     /// Write out the packet
-    pub fn write_out(self) -> PacketData {
+    pub fn write_out(self) -> Vec<u8> {
         self.content
     }
 
@@ -88,20 +85,20 @@ impl PacketBuilder {
     /// Pack the packet
     ///
     /// !Note: Packet length will be added
-    pub fn pack(self) -> PacketData {
+    pub fn pack(self) -> Vec<u8> {
         output(self.content)
     }
 }
 
 pub trait Number {
-    fn to_bytes(&self) -> PacketData;
+    fn to_bytes(&self) -> Vec<u8>;
 }
 
 macro_rules! impl_number {
     ($($t:ty),+) => {
         $(impl Number for $t {
             #[inline(always)]
-            fn to_bytes(&self) -> PacketData {
+            fn to_bytes(&self) -> Vec<u8> {
                 Vec::from(self.to_le_bytes())
             }
         })+
@@ -112,7 +109,7 @@ impl_number!(u8, i16, i32, u32, i64, f32);
 
 #[inline(always)]
 /// Create a empty packets
-pub fn empty() -> PacketData {
+pub fn empty() -> Vec<u8> {
     Vec::with_capacity(11)
 }
 
@@ -137,7 +134,7 @@ pub fn empty() -> PacketData {
 ///
 /// so I think it is sufficient to insert the packet_id in the first position
 ///
-pub fn new(packet_id: id) -> PacketData {
+pub fn new(packet_id: id) -> Vec<u8> {
     vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
 
@@ -145,13 +142,13 @@ pub fn new(packet_id: id) -> PacketData {
 /// Simple packaging for output(new(packet_id))
 ///
 /// !Note: Packet length is included
-pub fn simple_pack(packet_id: id) -> PacketData {
+pub fn simple_pack(packet_id: id) -> Vec<u8> {
     output(new(packet_id))
 }
 
 #[inline(always)]
 /// Add packet length and write out
-pub fn output(mut packet: PacketData) -> PacketData {
+pub fn output(mut packet: Vec<u8>) -> Vec<u8> {
     for (index, value) in ((packet.len() - 7) as i32).to_le_bytes().iter().enumerate() {
         packet[3 + index] = *value;
     }
@@ -160,9 +157,9 @@ pub fn output(mut packet: PacketData) -> PacketData {
 
 #[inline(always)]
 /// Write string packet
-pub fn write_string(string: &str) -> PacketData {
+pub fn write_string(string: &str) -> Vec<u8> {
     let byte_length = string.len();
-    let mut data: PacketData = Vec::with_capacity(byte_length + 3);
+    let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
     if byte_length > 0 {
         data.push(11); // 0x0b, means not empty
         data.extend(write_uleb128(byte_length as u32));
@@ -175,9 +172,9 @@ pub fn write_string(string: &str) -> PacketData {
 
 #[inline(always)]
 /// Write string packet async
-pub async fn write_string_async(string: &str) -> PacketData {
+pub async fn write_string_async(string: &str) -> Vec<u8> {
     let byte_length = string.len();
-    let mut data: PacketData = Vec::with_capacity(byte_length + 3);
+    let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
     if byte_length > 0 {
         data.push(11); // 0x0b, means not empty
         data.extend(write_uleb128(byte_length as u32));
@@ -216,13 +213,8 @@ pub async fn write_string_async(string: &str) -> PacketData {
 /// ```
 /// now impl
 /// ```
-pub async fn write_message(
-    sender: &str,
-    sender_id: i32,
-    content: &str,
-    target: &str,
-) -> PacketData {
-    let mut data: PacketData = Vec::with_capacity(30);
+pub async fn write_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
+    let mut data: Vec<u8> = Vec::with_capacity(30);
     data.extend(write_string(sender));
     data.extend(write_string_async(content).await);
     data.extend(write_string(target));
@@ -231,8 +223,8 @@ pub async fn write_message(
 }
 
 #[inline(always)]
-pub fn write_message_sync(sender: &str, sender_id: i32, content: &str, target: &str) -> PacketData {
-    let mut data: PacketData = Vec::with_capacity(30);
+pub fn write_message_sync(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
+    let mut data: Vec<u8> = Vec::with_capacity(30);
     data.extend(write_string(sender));
     data.extend(write_string(content));
     data.extend(write_string(target));
@@ -242,13 +234,13 @@ pub fn write_message_sync(sender: &str, sender_id: i32, content: &str, target: &
 
 #[inline(always)]
 /// Write integer packet
-pub fn write_num<N: Number>(num: N) -> PacketData {
+pub fn write_num<N: Number>(num: N) -> Vec<u8> {
     num.to_bytes()
 }
 
 #[inline(always)]
-pub fn write_channel(name: &str, title: &str, player_count: i16) -> PacketData {
-    let mut data: PacketData = Vec::with_capacity(30);
+pub fn write_channel(name: &str, title: &str, player_count: i16) -> Vec<u8> {
+    let mut data: Vec<u8> = Vec::with_capacity(30);
     data.extend(write_string(name));
     data.extend(write_string(title));
     data.extend(write_num(player_count));
@@ -257,7 +249,7 @@ pub fn write_channel(name: &str, title: &str, player_count: i16) -> PacketData {
 
 #[inline(always)]
 /// Write int list packet
-pub async fn write_int_list<N: Number>(integer_list: &Vec<N>) -> PacketData {
+pub async fn write_int_list<N: Number>(integer_list: &Vec<N>) -> Vec<u8> {
     let mut ret = Vec::from((integer_list.len() as u16).to_le_bytes());
     for int in integer_list {
         ret.extend(int.to_bytes());
@@ -267,8 +259,8 @@ pub async fn write_int_list<N: Number>(integer_list: &Vec<N>) -> PacketData {
 
 #[inline(always)]
 /// Unsigned to uleb128
-pub fn write_uleb128(mut unsigned: u32) -> PacketData {
-    let mut data: PacketData = Vec::with_capacity(2);
+pub fn write_uleb128(mut unsigned: u32) -> Vec<u8> {
+    let mut data: Vec<u8> = Vec::with_capacity(2);
     while unsigned >= 0x80 {
         data.push(((unsigned & 0x7f) | 0x80) as u8);
         unsigned >>= 7;

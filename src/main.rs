@@ -9,7 +9,6 @@ extern crate log;
 pub mod events;
 pub mod handlers;
 pub mod objects;
-pub mod packets;
 pub mod renders;
 pub mod routes;
 pub mod settings;

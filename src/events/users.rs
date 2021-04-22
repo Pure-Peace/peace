@@ -2,8 +2,9 @@ use super::depends::*;
 use chrono::Local;
 use num_traits::FromPrimitive;
 use peace_constants::PresenceFilter;
+use peace_packets::PayloadReader;
 
-use crate::{objects::PlayMods, packets};
+use crate::objects::PlayMods;
 
 #[inline(always)]
 /// #2: OSU_USER_LOGOUT
@@ -51,7 +52,7 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     if let Some(player) = ctx.weak_player.upgrade() {
         let player = player.read().await;
-        player.enqueue(packets::user_stats(&player).await).await;
+        player.enqueue(player.stats_packet().await).await;
     };
     Some(())
 }
@@ -78,9 +79,8 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             }
 
             if let Some(player) = id_session_map.get(player_id) {
-                ctx_player
-                    .enqueue(packets::user_stats(&*player.read().await).await)
-                    .await;
+                let p = player.read().await.stats_packet().await;
+                ctx_player.enqueue(p).await;
             }
         }
     };
@@ -104,8 +104,11 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         for player_id in &id_list {
             if let Some(player) = id_session_map.get(player_id) {
                 let others = player.read().await;
-                user_presence_packets
-                    .push(packets::user_presence(&*others, ctx.data.settings.display_u_name).await);
+                user_presence_packets.push(
+                    others
+                        .presence_packet(ctx.data.settings.display_u_name)
+                        .await,
+                );
             }
         }
 
@@ -140,8 +143,11 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             }
             // Send presence to self
             let others = player.read().await;
-            user_presence_packets
-                .push(packets::user_presence(&*others, ctx.data.settings.display_u_name).await);
+            user_presence_packets.push(
+                others
+                    .presence_packet(ctx.data.settings.display_u_name)
+                    .await,
+            );
         }
 
         drop(id_session_map);
@@ -214,8 +220,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             game_mode,
         );
         player.update_stats(ctx.database).await;
-
-        packets::user_stats(&player).await
+        player.stats_packet().await
     } else {
         error!(
             "Failed to update player {}({})'s status! <OSU_CHANGE_ACTION>",

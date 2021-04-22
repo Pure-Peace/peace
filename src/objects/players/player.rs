@@ -11,7 +11,7 @@ use derivative::Derivative;
 use serde_json::json;
 use std::str::FromStr;
 
-use crate::{packets, types::Argon2Cache, utils};
+use crate::{types::Argon2Cache, utils};
 
 use super::{depends::*, PlayMods};
 
@@ -118,6 +118,16 @@ impl Player {
             last_active_time: now_time,
         }
     }
+
+    #[inline(always)]
+    pub fn get_name(&self, use_u_name: bool) -> String {
+        if use_u_name {
+            self.try_u_name()
+        } else {
+            self.name.clone()
+        }
+    }
+
     #[inline(always)]
     pub async fn recalculate_pp_acc(&mut self, score_table: &str, database: &Database) {
         // Get bp
@@ -234,7 +244,51 @@ impl Player {
         self.save_stats(mode, database).await;
         self.stats.calc_rank_from_database(mode, database).await;
         self.cache_stats(&mode);
-        self.enqueue(packets::user_stats(&self).await).await;
+        self.enqueue(self.stats_packet().await).await;
+    }
+
+    #[inline(always)]
+    pub async fn stats_packet(&self) -> PacketData {
+        peace_packets::user_stats(
+            self.id,
+            self.game_status.action.val(),
+            &self.game_status.info,
+            &self.game_status.beatmap_md5,
+            self.game_status.mods.value,
+            self.game_status.mode.raw_value(),
+            self.game_status.beatmap_id,
+            self.stats.ranked_score,
+            self.stats.accuracy,
+            self.stats.playcount,
+            self.stats.total_score,
+            self.stats.rank,
+            self.stats.pp_v2 as i16,
+        )
+        .await
+    }
+
+    #[inline(always)]
+    pub async fn presence_packet(&self, using_u_name: bool) -> PacketData {
+        peace_packets::user_presence(
+            self.id,
+            &self.get_name(using_u_name),
+            self.utc_offset,
+            self.get_country_code(),
+            self.bancho_privileges,
+            self.geo_data.longitude as f32,
+            self.geo_data.latitude as f32,
+            self.stats.rank,
+        )
+        .await
+    }
+
+    #[inline(always)]
+    /// presence_packet + stats_packet
+    pub async fn user_data_packet(&self, using_u_name: bool) -> PacketData {
+        peace_packets::PacketBuilder::merge(&mut [
+            self.presence_packet(using_u_name).await,
+            self.stats_packet().await,
+        ])
     }
 
     #[inline(always)]
@@ -279,7 +333,7 @@ impl Player {
         if &self.game_status.mode != mode || self.game_status.mods.value != mods.value {
             self.game_status.mode = mode.clone();
             self.game_status.mods = mods.clone();
-            return Some(packets::user_stats(&self).await);
+            return Some(self.stats_packet().await);
         }
         None
     }
@@ -426,7 +480,8 @@ impl Player {
 
         // If have, sent notification to player
         if let Some(notification) = notification {
-            self.enqueue(packets::notification(notification)).await;
+            self.enqueue(peace_packets::notification(notification))
+                .await;
         }
 
         warn!(
@@ -624,7 +679,8 @@ impl Player {
     pub async fn once_notification(&mut self, key: &str, notification: &str) {
         if !self.flag_cache.contains_key(key) {
             // send notification to this player once
-            self.enqueue(packets::notification(notification)).await;
+            self.enqueue(peace_packets::notification(notification))
+                .await;
             self.flag_cache.insert(key.to_owned(), None);
         };
     }

@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
-use actix_rt;
 use peace_constants::{LoginFailed, LoginSuccess};
+use tokio;
 
 use super::*;
 
@@ -20,7 +20,7 @@ fn test_login_notfication() {
     )
 }
 
-#[actix_rt::test]
+#[tokio::test]
 async fn test_send_message() {
     assert_eq!(
         send_message("PurePeace", 1001, "hello", "osu").await,
@@ -75,7 +75,7 @@ fn test_login() {
     )
 }
 
-#[actix_rt::test]
+#[tokio::test]
 async fn test_write_i32_list() {
     //let list = utils::write_int_list(&vec![1001, 1002, 1003]).await;
     let list = user_presence_bundle(&vec![1001, 1002, 1003]).await;
@@ -84,8 +84,8 @@ async fn test_write_i32_list() {
 
 #[test]
 fn test_write_u32_i32() {
-    let int_u32 = utils::write_num(536870912 as u32);
-    let int_i32 = utils::write_num(536870912);
+    let int_u32 = super::utils::write_num(536870912 as u32);
+    let int_i32 = super::utils::write_num(536870912);
 
     println!("{:?} {:?}", int_u32, int_i32);
 }

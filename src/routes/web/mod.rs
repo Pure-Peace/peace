@@ -24,7 +24,6 @@ mod depends {
     pub use crate::{
         handlers::bancho,
         objects::{Player, PlayerData, PlayerSessions},
-        packets::{PacketBuilder, PacketReader},
         renders::BanchoGet,
         settings::bancho::BanchoConfig,
         types::{Argon2Cache, ChannelList},

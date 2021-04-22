@@ -1,27 +1,8 @@
 use peace_constants::id;
+use std::convert::TryInto;
 use std::str;
-use std::{convert::TryInto, sync::Weak};
-
-use actix_web::web::{Bytes, Data};
-use async_std::sync::RwLock;
 
 use num_traits::FromPrimitive;
-use peace_database::Database;
-
-use crate::objects::{Bancho, Player, PlayerData};
-
-pub struct HandlerContext<'a> {
-    pub request_ip: &'a String,
-    pub token: &'a String,
-    pub id: i32,
-    pub name: &'a String,
-    pub u_name: &'a Option<String>,
-    pub data: &'a PlayerData,
-    pub weak_player: &'a Weak<RwLock<Player>>,
-    pub bancho: &'a Data<Bancho>,
-    pub database: &'a Data<Database>,
-    pub payload: &'a [u8],
-}
 
 pub trait ReadInteger<T> {
     fn from_le_bytes(data: &[u8]) -> Option<T>;
@@ -74,6 +55,7 @@ pub struct PayloadReader<'a> {
 }
 
 impl<'a> PayloadReader<'a> {
+    #[inline(always)]
     pub fn new(payload: &'a [u8]) -> Self {
         PayloadReader { payload, index: 0 }
     }
@@ -157,11 +139,6 @@ pub struct PacketReader {
 
 impl PacketReader {
     #[inline(always)]
-    pub fn from_bytes(body: Bytes) -> Self {
-        PacketReader::from_vec(body.to_vec())
-    }
-
-    #[inline(always)]
     pub fn from_vec(body: Vec<u8>) -> Self {
         PacketReader {
             buf: body,
@@ -199,7 +176,7 @@ impl PacketReader {
 
         // Get packet id and payload length
         let packet_id = id::from_u8(header[0]).unwrap_or_else(|| {
-            warn!("PacketReader: unknown packet id({})", header[0]);
+            println!("[PacketReader]: unknown packet id({})", header[0]);
             id::OSU_UNKNOWN_PACKET
         });
         let length = u32::from_le_bytes(header[3..=6].try_into().unwrap());

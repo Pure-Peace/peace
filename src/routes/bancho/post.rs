@@ -1,5 +1,5 @@
 use super::depends::*;
-use crate::{handlers, packets, utils};
+use crate::{handlers, utils};
 
 pub async fn handler(
     req: HttpRequest,
@@ -66,7 +66,7 @@ pub async fn handler(
         Err(err) => {
             error!("Failed to get osu-token, error: {:?}", err);
             return HttpResponse::Ok().body(
-                resp.add(packets::login_reply(LoginFailed::ServerError))
+                resp.add(peace_packets::login_reply(LoginFailed::ServerError))
                     .write_out(),
             );
         }
@@ -83,8 +83,8 @@ pub async fn handler(
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
                 .body(
-                    resp.add(packets::notification("Welcome back!"))
-                        .add(packets::bancho_restart(0))
+                    resp.add(peace_packets::notification("Welcome back!"))
+                        .add(peace_packets::bancho_restart(0))
                         .write_out(),
                 );
         }
@@ -93,7 +93,7 @@ pub async fn handler(
     drop(player_sessions_r);
 
     // Read & handle client packets
-    let mut reader = PacketReader::from_bytes(body);
+    let mut reader = PacketReader::from_vec(body.to_vec());
     while let Some((packet_id, payload)) = reader.next().await {
         // osu_ping need not handle
         if packet_id == peace_constants::id::OSU_PING {

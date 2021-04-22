@@ -6,11 +6,12 @@ use async_std::sync::RwLock;
 use crate::{
     events,
     objects::{Bancho, Player, PlayerData},
-    packets::HandlerContext,
 };
 
 use peace_constants::id;
 use peace_database::Database;
+
+use super::HandlerContext;
 
 /// osu!Bancho packet read handle
 #[inline(always)]

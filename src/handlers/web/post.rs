@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::time::Instant;
 
 use crate::objects::{Bancho, Beatmap, MiniScore, ScoreData, SubmitModular};
-use crate::packets;
+
 use crate::routes::web::Context;
 use crate::utils;
 
@@ -454,7 +454,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     let new_stats = player_w.stats.clone();
     if calc_failed {
         player_w
-            .enqueue(packets::notification(
+            .enqueue(peace_packets::notification(
                 "PP calculation fails, Peace will auto recalculate it later.",
             ))
             .await;

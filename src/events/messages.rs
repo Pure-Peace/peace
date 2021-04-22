@@ -1,6 +1,5 @@
-use crate::packets;
-
 use super::depends::*;
+use peace_packets::PayloadReader;
 
 #[inline(always)]
 /// #1: OSU_SEND_PUBLIC_MESSAGE
@@ -133,7 +132,9 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
                 && !target.friends.contains(&player.id)
             {
                 // Blocked
-                player.enqueue(packets::user_dm_blocked(&target_name)).await;
+                player
+                    .enqueue(peace_packets::user_dm_blocked(&target_name))
+                    .await;
                 warn!(
                     "Player {}({}) try send message to blocked-non-friends player: {}({})",
                     &player.name, player.id, target.name, target.id
@@ -143,7 +144,9 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
             // TODO: target is slienced
             if false {
-                player.enqueue(packets::target_silenced(&target_name)).await;
+                player
+                    .enqueue(peace_packets::target_silenced(&target_name))
+                    .await;
             }
 
             // TODO: if target is bot, handle it --
@@ -152,7 +155,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             // Send message done
             target
                 .enqueue(
-                    packets::send_message(
+                    peace_packets::send_message(
                         &if target.settings.display_u_name {
                             player.try_u_name()
                         } else {

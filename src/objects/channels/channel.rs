@@ -12,7 +12,6 @@ use hashbrown::HashMap;
 
 use crate::{
     objects::{Player, PlayerSessions},
-    packets,
     types::{PacketData, PlayerIdSessionMap},
 };
 
@@ -140,7 +139,7 @@ impl Channel {
             // Send them message
             let p = player.read().await;
             p.enqueue(
-                packets::send_message(
+                peace_packets::send_message(
                     if p.settings.display_u_name {
                         &sender_u
                     } else {
@@ -158,7 +157,7 @@ impl Channel {
 
     #[inline(always)]
     pub fn channel_info_packet(&self) -> PacketData {
-        packets::channel_info(
+        peace_packets::channel_info(
             &self.display_name(),
             &self.title,
             self.player_count.load(Ordering::SeqCst),
@@ -234,7 +233,7 @@ impl Channel {
 
             // Send it to player's client
             player
-                .enqueue(packets::channel_join(&self.display_name()))
+                .enqueue(peace_packets::channel_join(&self.display_name()))
                 .await;
 
             (player.name.clone(), player.id)
@@ -275,7 +274,7 @@ impl Channel {
             player.channels.remove(&self.name);
             // Send it to player's client
             player
-                .enqueue(packets::channel_kick(&self.display_name()))
+                .enqueue(peace_packets::channel_kick(&self.display_name()))
                 .await;
 
             (player.name.clone(), player.id)

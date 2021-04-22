@@ -1,30 +1,24 @@
 #![allow(unused_variables)]
-
 use actix_web::web::{Bytes, Data};
 use actix_web::HttpRequest;
-use log::warn;
+use maxminddb::Reader;
+use memmap::Mmap;
+use prometheus::IntCounterVec;
 use std::net::{IpAddr, Ipv4Addr};
+use std::time::Instant;
 
+use peace_constants::{BanchoPrivileges, LoginFailed, Privileges};
 use peace_database::Database;
+use peace_packets::PacketBuilder;
 
-use crate::{
-    objects::{Bancho, Caches},
-    packets,
-};
+use crate::objects::{Bancho, Caches};
 use crate::{
     objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus},
-    packets::PacketBuilder,
     utils,
 };
 use crate::{settings::bancho::model::BanchoConfigData, types::PacketData};
 
 use super::parser;
-use peace_constants::{BanchoPrivileges, LoginFailed, Privileges};
-use prometheus::IntCounterVec;
-use std::time::Instant;
-
-use maxminddb::Reader;
-use memmap::Mmap;
 
 lazy_static::lazy_static! {
     static ref DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
@@ -83,7 +77,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(packets::notification("Not allowed osu! version."))),
+                    Some(resp.add(peace_packets::notification("Not allowed osu! version."))),
                 ));
             }
 
@@ -97,7 +91,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(packets::notification("Invalid osu! version."))),
+                    Some(resp.add(peace_packets::notification("Invalid osu! version."))),
                 ));
             }
             let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
@@ -110,7 +104,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(packets::notification("Not allowed osu! version."))),
+                    Some(resp.add(peace_packets::notification("Not allowed osu! version."))),
                 ));
             }
 
@@ -123,7 +117,7 @@ pub async fn login(
                     );
                     return Err((
                         "not_allowed",
-                        Some(resp.add(packets::notification("Not allowed osu! version."))),
+                        Some(resp.add(peace_packets::notification("Not allowed osu! version."))),
                     ));
                 }
             }
@@ -137,7 +131,7 @@ pub async fn login(
                     );
                     return Err((
                         "not_allowed",
-                        Some(resp.add(packets::notification("osu! version too old."))),
+                        Some(resp.add(peace_packets::notification("osu! version too old."))),
                     ));
                 }
             }
@@ -239,8 +233,8 @@ pub async fn login(
         return Err((
             "user_banned",
             Some(
-                resp.add(packets::notification("you have been slained."))
-                    .add(packets::login_reply(LoginFailed::UserBanned)),
+                resp.add(peace_packets::notification("you have been slained."))
+                    .add(peace_packets::login_reply(LoginFailed::UserBanned)),
             ),
         ));
     }
@@ -250,8 +244,8 @@ pub async fn login(
         return Err((
             "maintenance",
             Some(
-                resp.add(packets::notification(&cfg.maintenance.notification))
-                    .add(packets::login_reply(LoginFailed::ServerError)),
+                resp.add(peace_packets::notification(&cfg.maintenance.notification))
+                    .add(peace_packets::login_reply(LoginFailed::ServerError)),
             ),
         ));
     }
@@ -495,40 +489,38 @@ pub async fn login(
     let using_u_name = player.settings.display_u_name;
 
     // User data packet, including player stats and presence
-    let user_stats_packet = packets::user_stats(&player).await;
+    let user_stats_packet = player.stats_packet().await;
     let user_data = PacketBuilder::merge(&mut [
         user_stats_packet.clone(),
-        packets::user_presence(&player, false).await,
+        player.presence_packet(false).await,
     ]);
-    let user_data_u = PacketBuilder::merge(&mut [
-        user_stats_packet,
-        packets::user_presence(&player, true).await,
-    ]);
+    let user_data_u =
+        PacketBuilder::merge(&mut [user_stats_packet, player.presence_packet(true).await]);
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
-        packets::login_reply(peace_constants::LoginSuccess::Verified(player.id)),
-        packets::protocol_version(19),
-        packets::bancho_privileges(player.bancho_privileges),
+        peace_packets::login_reply(peace_constants::LoginSuccess::Verified(player.id)),
+        peace_packets::protocol_version(19),
+        peace_packets::bancho_privileges(player.bancho_privileges),
         if using_u_name {
             &user_data_u
         } else {
             &user_data
         }
         .clone(),
-        packets::silence_end(0), // TODO: real silence end
-        packets::friends_list(&player.friends).await,
+        peace_packets::silence_end(0), // TODO: real silence end
+        peace_packets::friends_list(&player.friends).await,
     ])
     .await;
 
     // Notifications
     for n in &cfg.login.notifications {
-        resp.add_ref(packets::notification(n));
+        resp.add_ref(peace_packets::notification(n));
     }
 
     // Menu icon
     if let Some(menu_icon) = &cfg.menu_icon.get() {
-        resp.add_ref(packets::main_menu_icon(menu_icon));
+        resp.add_ref(peace_packets::main_menu_icon(menu_icon));
     };
 
     let player_id = player.id;
@@ -546,7 +538,7 @@ pub async fn login(
             .logout_with_id(user_id, Some(&bancho.channel_list))
             .await;
         // Send notification to current session
-        resp.add_ref(packets::notification(
+        resp.add_ref(peace_packets::notification(
             "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
         ));
     }
@@ -569,7 +561,7 @@ pub async fn login(
             )
             .await;
         // Add online players to this new player
-        resp.add_ref(packets::user_data(&online_player, using_u_name).await);
+        resp.add_ref(online_player.user_data_packet(using_u_name).await);
     }
 
     // Join player into channel
@@ -582,7 +574,7 @@ pub async fn login(
         // Join player into channel
         if channel.auto_join {
             channel.join(player_id, Some(&*player_sessions)).await;
-            resp.add_ref(packets::channel_join(&channel.display_name()));
+            resp.add_ref(peace_packets::channel_join(&channel.display_name()));
         }
 
         // Send channel info to client
@@ -591,7 +583,7 @@ pub async fn login(
     // Release lock
     drop(player_sessions);
 
-    resp.add_ref(packets::channel_info_end());
+    resp.add_ref(peace_packets::channel_info_end());
 
     let login_end = login_start.elapsed();
     info!(

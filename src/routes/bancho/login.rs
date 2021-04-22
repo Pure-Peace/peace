@@ -1,5 +1,4 @@
 use super::depends::*;
-use crate::packets;
 
 const DEFAULT_TOKEN: &str = "login_failed";
 
@@ -25,7 +24,7 @@ pub async fn handler(
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
             .body(
-                resp.add(packets::notification("The server currently does not allow login, please wait or contact the administrator."))
+                resp.add(peace_packets::notification("The server currently does not allow login, please wait or contact the administrator."))
                     .write_out(),
             );
     }
@@ -36,8 +35,8 @@ pub async fn handler(
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
             .body(
-                resp.add(packets::login_reply(LoginFailed::InvalidCredentials))
-                    .add(packets::notification("You are not allowed to login!"))
+                resp.add(peace_packets::login_reply(LoginFailed::InvalidCredentials))
+                    .add(peace_packets::notification("You are not allowed to login!"))
                     .write_out(),
             );
     }
@@ -57,7 +56,7 @@ pub async fn handler(
                 .set_header("cho-token", "login_refused")
                 .set_header("cho-protocol", "19")
                 .body(
-                    resp.add(packets::notification(&format!(
+                    resp.add(peace_packets::notification(&format!(
                         "The current server allows up to {} people to be online, please wait...",
                         online_users
                     )))
@@ -78,8 +77,8 @@ pub async fn handler(
             .set_header("cho-token", "login_refused")
             .set_header("cho-protocol", "19")
             .body(
-                resp.add(packets::login_reply(LoginFailed::ServerError))
-                    .add(packets::notification(
+                resp.add(peace_packets::login_reply(LoginFailed::ServerError))
+                    .add(peace_packets::notification(
                         "You are not allowed to login now, please wait!",
                     ))
                     .write_out(),
@@ -108,7 +107,7 @@ pub async fn handler(
 
             // Default failed login reply is InvalidCredentials
             let packet_builder = packet_builder
-                .unwrap_or(resp.add(packets::login_reply(LoginFailed::InvalidCredentials)));
+                .unwrap_or(resp.add(peace_packets::login_reply(LoginFailed::InvalidCredentials)));
 
             // Record login failed
             counter
@@ -150,7 +149,7 @@ pub async fn handler(
             // Returns
             (
                 packet_builder
-                    .add(packets::notification(&failed_notification))
+                    .add(peace_packets::notification(&failed_notification))
                     .write_out(),
                 DEFAULT_TOKEN.to_string(),
             )

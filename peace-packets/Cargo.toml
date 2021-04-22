@@ -1,0 +1,22 @@
+[package]
+name = "peace-packets"
+version = "0.6.0"
+authors = ["PurePeace <940857703@qq.com>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace/peace-packets"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num-traits = "0.2"
+peace-constants = { path = "../peace-constants" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }
+criterion = "0.3"
+
+
+[[bench]]
+name = "packet_write"
+harness = false

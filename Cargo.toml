@@ -1,9 +1,9 @@
 [workspace]
-members = ["peace-database", "peace-constants"]
+members = ["peace-database", "peace-constants", "peace-packets"]
 
 [package]
 name = "peace"
-version = "0.8.6"
+version = "0.8.7"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -65,13 +65,7 @@ uuid = { version = "0.8.1", features = ["v4"] }
 
 peace-constants = { path = "peace-constants" }
 peace-database = { path = "peace-database", features = ["with_peace"] }
-
-[dev-dependencies]
-criterion = "0.3.4"
-
-[[bench]]
-name = "packet_write"
-harness = false
+peace-packets = { path = "peace-packets" }
 
 
 # link-time-optimization
