@@ -1,7 +1,7 @@
 use colored::Colorize;
 use config::{Config, ConfigError /* Environment, */};
 
-use peace_constants::{PEACE_BANNER, PEACE_LOCAL_CONFIG_DIR};
+use peace_constants::{PEACE_BANNER, PEACE_LOCAL_CONFIG_DIR, PEACE_VERSION};
 
 use super::LocalConfigData;
 
@@ -18,6 +18,7 @@ impl LocalConfig {
         println!("{}", PEACE_BANNER.green());
 
         // Start loading
+        println!("<Peace> version: {}. Taking off\n", PEACE_VERSION.green());
         println!("{}", "> Start loading local config!".green());
         let env = super::utils::load_env();
         let cfg = super::utils::load_settings(env.clone(), PEACE_LOCAL_CONFIG_DIR)?;

@@ -1,3 +1,4 @@
+#[cfg(feature = "async_trait")]
 use async_std::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
@@ -97,12 +98,16 @@ impl BeatmapCache {
 pub type CommonBeatmapCaches = GenericBeatmapCaches<BeatmapCache>;
 
 pub struct GenericBeatmapCaches<T> {
+    #[cfg(feature = "async_trait")]
     pub md5: RwLock<HashMap<String, T>>,
+    #[cfg(feature = "async_trait")]
     pub bid: RwLock<HashMap<i32, T>>,
+    #[cfg(feature = "async_trait")]
     pub sid: RwLock<HashMap<String, T>>,
     pub length: AtomicI32,
 }
 
+#[cfg(feature = "async_trait")]
 #[async_trait]
 impl<
         B: Sync + std::marker::Send + Clone,
