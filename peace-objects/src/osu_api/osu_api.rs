@@ -3,6 +3,9 @@ use reqwest::Response;
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[cfg(feature = "osu_file_downloader")]
+use peace_performance::Beatmap as PPbeatmap;
+
 use super::client::OsuApiClient;
 
 const NOT_API_KEYS: &'static str = "[OsuApi] Api keys not added, could not send requests.";
@@ -10,6 +13,8 @@ const NOT_API_KEYS: &'static str = "[OsuApi] Api keys not added, could not send 
 #[derive(Debug)]
 pub struct OsuApi {
     pub clients: Vec<OsuApiClient>,
+    #[cfg(feature = "osu_file_downloader")]
+    pub beatmap_downloader: OsuApiClient,
     pub delay: AtomicUsize,
     pub success_count: AtomicUsize,
     pub failed_count: AtomicUsize,
@@ -28,6 +33,8 @@ impl OsuApi {
 
         OsuApi {
             clients,
+            #[cfg(feature = "osu_file_downloader")]
+            beatmap_downloader: OsuApiClient::new(String::new()),
             delay: AtomicUsize::new(0),
             success_count: AtomicUsize::new(0),
             failed_count: AtomicUsize::new(0),
@@ -141,6 +148,42 @@ impl OsuApi {
                 Err(ApiError::ParseError)
             }
         }
+    }
+
+    #[cfg(feature = "osu_file_downloader")]
+    #[inline(always)]
+    pub async fn get_pp_beatmap(
+        &self,
+        bid: i32,
+    ) -> Result<(PPbeatmap, String, bytes::Bytes), ApiError> {
+        use md5::Digest;
+        let resp = self
+            .beatmap_downloader
+            .requester
+            .get(format!("{}{}", peace_constants::api::OSU_FILE_DOWNLOAD_URL, bid).as_str())
+            .send()
+            .await;
+        if resp.is_err() {
+            return Err(ApiError::RequestError);
+        };
+
+        let bytes = resp.unwrap().bytes().await;
+        if bytes.is_err() {
+            return Err(ApiError::ParseError);
+        };
+
+        let bytes = bytes.unwrap();
+        let b = match PPbeatmap::parse(async_std::io::Cursor::new(bytes.clone())).await {
+            Ok(b) => b,
+            Err(err) => {
+                error!(
+                    "[OsuApi] Failed to parse .osu files from requests, err: {:?}",
+                    err
+                );
+                return Err(ApiError::ParseError);
+            }
+        };
+        Ok((b, format!("{:x}", md5::Md5::digest(&bytes)), bytes))
     }
 
     pub async fn test_all(&self) -> String {

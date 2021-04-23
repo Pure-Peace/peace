@@ -1,3 +1,5 @@
+pub const OSU_FILE_DOWNLOAD_URL: &str = "https://old.ppy.sh/osu/";
+
 #[derive(Debug)]
 pub enum GetBeatmapMethod {
     Md5,
