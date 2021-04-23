@@ -87,7 +87,7 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
 }
 
 #[cfg(feature = "actix_web")]
-use actix_web::{web::Data, HttpRequest};
+use actix_web::{middleware::Logger, web::Data, HttpRequest};
 #[cfg(feature = "actix_web")]
 use async_std::sync::RwLock;
 
@@ -148,4 +148,25 @@ pub fn osu_sumit_token_checker(req: &HttpRequest) -> bool {
         };
     };
     false
+}
+
+#[cfg(feature = "actix_web")]
+pub fn make_logger(
+    log_format: &str,
+    exclude_target_endpoint: bool,
+    target_endpoint: &str,
+    exclude_endpoints: &Vec<String>,
+    exclude_endpoints_regex: &Vec<String>,
+) -> Logger {
+    let mut logger = match exclude_target_endpoint {
+        true => Logger::new(log_format).exclude(target_endpoint),
+        false => Logger::new(log_format),
+    };
+    for i in exclude_endpoints.iter() {
+        logger = logger.exclude(i as &str);
+    }
+    for i in exclude_endpoints_regex.iter() {
+        logger = logger.exclude_regex(i as &str);
+    }
+    logger
 }
