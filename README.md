@@ -11,6 +11,8 @@ However, I actually have a lot of ideas for the osu server and will try to imple
 
 - ### Some features i think
 
+  - **Very high speed of rust language**
+  - **Difficult syntax for rust language**
   - **Unique database design**
     - I designed it myself haphazardly.
   - **Unique and modern front-end website.**
