@@ -10,7 +10,7 @@ members = [
 
 [package]
 name = "peace"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -62,7 +62,7 @@ peace-constants = { path = "peace-constants" }
 peace-database = { path = "peace-database", features = ["with_peace"] }
 peace-packets = { path = "peace-packets" }
 peace-objects = { path = "peace-objects", features = ["with_peace"] }
-peace-utils = { path = "peace-utils", features = ["all"] }
+peace-utils = { path = "peace-utils", features = ["with_peace"] }
 peace-settings = { path = "peace-settings" }
 
 # link-time-optimization

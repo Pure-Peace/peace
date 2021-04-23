@@ -1,3 +1,5 @@
+#[cfg(feature = "async_file")]
+pub mod async_file;
 #[cfg(feature = "bancho")]
 pub mod bancho;
 pub mod common;
