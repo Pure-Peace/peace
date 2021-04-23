@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicI32, Ordering};
 #[cfg(feature = "async_trait")]
 use async_trait::async_trait;
 use peace_constants::api::{ApiError, GetBeatmapMethod};
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use peace_database::Database;
 
 use super::traits::{BeatmapCacheStorage, MyBeatmapCache};
@@ -63,7 +63,7 @@ impl BeatmapCache {
         self.beatmap.is_none()
     }
 
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub async fn from_database(method: &GetBeatmapMethod, database: &Database) -> Option<Self> {
         let beatmap = Beatmap::from_database(method, database).await?;
@@ -81,13 +81,13 @@ impl BeatmapCache {
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &OsuApi,
-        #[cfg(feature = "with_peace")] database: &Database,
+        #[cfg(all(not(feature = "no_database"), feature = "with_peace"))] database: &Database,
     ) -> Result<Self, ApiError> {
         Ok(BeatmapFromApi::from_osu_api(
             method,
             file_name,
             osu_api,
-            #[cfg(feature = "with_peace")]
+            #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
             database,
         )
         .await?

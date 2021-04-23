@@ -2,17 +2,17 @@ use chrono::{DateTime, Local};
 use serde::Deserialize;
 use serde_str;
 
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use field_names::FieldNames;
 use peace_constants::api::{ApiError, GetBeatmapMethod};
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use peace_database::Database;
 use peace_utils::serdes::{from_str_bool, from_str_optional, serde_time};
 
 use super::{cache::BeatmapCache, Beatmap};
 use crate::osu_api::OsuApi;
 
-#[cfg_attr(feature = "with_peace", derive(FieldNames))]
+#[cfg_attr(all(not(feature = "no_database"), feature = "with_peace"), derive(FieldNames))]
 #[derive(Debug, Deserialize, Clone)]
 pub struct BeatmapFromApi {
     #[serde(rename = "beatmap_id", with = "serde_str")]
@@ -111,7 +111,7 @@ impl BeatmapFromApi {
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &OsuApi,
-        #[cfg(feature = "with_peace")] database: &Database,
+        #[cfg(all(not(feature = "no_database"), feature = "with_peace"))] database: &Database,
     ) -> Result<Self, ApiError> {
         let b = match method {
             GetBeatmapMethod::Md5(md5) => osu_api.fetch_beatmap_by_md5(md5).await,
@@ -154,12 +154,12 @@ impl BeatmapFromApi {
             "[BeatmapFromApi] Success get with Method({:?}): {:?}",
             method, b
         );
-        #[cfg(feature = "with_peace")]
+        #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
         b.save_to_database(database).await;
         Ok(b)
     }
 
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub async fn save_to_database(&self, database: &Database) -> bool {
         match database
