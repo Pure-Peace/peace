@@ -1,12 +1,12 @@
 use super::depends::*;
-use crate::{handlers, utils};
+use crate::handlers;
 
 pub async fn handler(
     req: HttpRequest,
     body: Bytes,
     bancho: Data<Bancho>,
     database: Data<Database>,
-    global_cache: Data<Caches>,
+    caches: Data<Caches>,
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
@@ -16,7 +16,7 @@ pub async fn handler(
         .inc();
 
     // Get real request ip
-    let request_ip = match utils::get_realip(&req).await {
+    let request_ip = match peace_utils::web::get_realip(&req).await {
         Ok(ip) => ip,
         Err(_) => {
             return HttpResponse::BadRequest().body("bad requests");
@@ -41,7 +41,7 @@ pub async fn handler(
     let headers = req.headers();
 
     // Get osu ver
-    let osu_version = utils::get_osuver(&req).await;
+    let osu_version = peace_utils::web::get_osuver(&req).await;
 
     // If not login
     if !headers.contains_key("osu-token") {
@@ -53,7 +53,7 @@ pub async fn handler(
             osu_version,
             bancho,
             database,
-            global_cache,
+            caches,
             counter,
             geo_db,
         )

@@ -1,5 +1,9 @@
-use super::requester::OsuApi;
-use super::{depends::*, errors::ApiError};
+use peace_constants::api::ApiError;
+use serde::Serialize;
+
+use crate::beatmaps::BeatmapFromApi;
+
+use super::osu_api::OsuApi;
 
 impl OsuApi {
     #[inline(always)]
@@ -37,7 +41,7 @@ impl OsuApi {
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_sid(
+    pub async fn fetch_beatmaps_by_sid(
         &self,
         beatmap_set_id: i32,
     ) -> Result<Vec<BeatmapFromApi>, ApiError> {
@@ -45,7 +49,7 @@ impl OsuApi {
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by(
+    pub async fn fetch_beatmaps_by(
         &self,
         key: &str,
         value: &String,
@@ -54,7 +58,7 @@ impl OsuApi {
     }
 
     #[inline(always)]
-    pub async fn fetch_beatmap_by_uid(
+    pub async fn fetch_beatmaps_by_uid(
         &self,
         user_id: i32,
     ) -> Result<Vec<BeatmapFromApi>, ApiError> {

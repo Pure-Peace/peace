@@ -21,7 +21,6 @@ mod depends {
 
     pub use actix_multipart::Multipart;
     pub use futures::StreamExt;
-    pub use regex::Regex;
     pub use serde::Deserialize;
     pub use serde_json::json;
 

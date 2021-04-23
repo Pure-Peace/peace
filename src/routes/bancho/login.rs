@@ -11,7 +11,7 @@ pub async fn handler(
     osu_version: String,
     bancho: Data<Bancho>,
     database: Data<Database>,
-    global_cache: Data<Caches>,
+    caches: Data<Caches>,
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
@@ -93,7 +93,7 @@ pub async fn handler(
         osu_version,
         &database,
         &bancho,
-        &global_cache,
+        &caches,
         &counter,
         &geo_db,
         cfg,

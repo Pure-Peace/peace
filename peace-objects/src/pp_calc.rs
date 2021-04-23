@@ -1,12 +1,9 @@
+use peace_constants::PPCalcResult;
 use derivative::Derivative;
-use postgres_types::ToSql;
-use serde::{Deserialize, Serialize};
 use std::{
     sync::atomic::{AtomicUsize, Ordering},
     time::Duration,
 };
-
-use crate::settings::local::Settings;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -21,15 +18,15 @@ pub struct PPServerApi {
 
 impl PPServerApi {
     #[inline(always)]
-    pub fn new(settings: &Settings) -> Self {
+    pub fn new(url: String, pp_calc_timeout: u64) -> Self {
         let client = reqwest::Client::builder()
             .connection_verbose(false)
-            .timeout(Duration::from_secs(settings.pp_server.pp_calc_timeout))
+            .timeout(Duration::from_secs(pp_calc_timeout))
             .pool_idle_timeout(Some(Duration::from_secs(300)))
             .build()
             .unwrap();
         Self {
-            url: settings.pp_server.url.clone(),
+            url,
             client,
             delay: AtomicUsize::new(0),
             success_count: AtomicUsize::new(0),
@@ -89,33 +86,4 @@ impl PPServerApi {
         self.failed_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);
     }
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSql)]
-pub struct PPRaw {
-    pub acc: Option<f32>,
-    pub aim: Option<f32>,
-    pub spd: Option<f32>,
-    pub str: Option<f32>,
-    pub total: f32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PPAcclist {
-    pub a95: f32,
-    pub a98: f32,
-    pub a99: f32,
-    pub a100: f32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PPCalcResult {
-    pub message: String,
-    pub status: i32,
-    pub mode: u8,
-    pub mods: u32,
-    pub pp: f32,
-    pub stars: f32,
-    pub raw: Option<PPRaw>,
-    pub acc_list: Option<PPAcclist>,
 }

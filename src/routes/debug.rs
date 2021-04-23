@@ -1,5 +1,4 @@
 use crate::objects::Bancho;
-use crate::utils;
 
 use actix_web::{
     dev::Server,
@@ -194,7 +193,7 @@ pub async fn test_geo_ip(
     ip_address: Path<String>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> impl Responder {
-    match utils::geo_ip_info(&ip_address.to_string(), &geo_db.get_ref()).await {
+    match peace_utils::geoip::geo_ip_info(&ip_address.to_string(), &geo_db.get_ref()).await {
         Ok(json_success) => HttpResponse::Ok()
             .content_type("application/json; charset=utf-8")
             .body(json_success),
@@ -239,7 +238,8 @@ pub async fn osu_api_all(bancho: Data<Bancho>) -> impl Responder {
 #[get("/osu_api_reload")]
 pub async fn osu_api_reload(bancho: Data<Bancho>) -> impl Responder {
     let start = Instant::now();
-    bancho.osu_api.write().await.reload_clients().await;
+    let api_keys = bancho.config.read().await.data.server.osu_api_keys.clone();
+    bancho.osu_api.write().await.reload_clients(api_keys).await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("done in: {:?}", end))
 }

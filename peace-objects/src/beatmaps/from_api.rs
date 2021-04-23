@@ -1,8 +1,20 @@
-use super::{depends::*, Beatmap, BeatmapCache, GetBeatmapMethod};
-use crate::objects::osu_api::errors::ApiError;
-use crate::utils;
+use chrono::{DateTime, Local};
+use serde::Deserialize;
+use serde_str;
+use std::{any::Any, fmt::Display};
 
-#[derive(Debug, FieldNames, ToSql, Deserialize, Clone)]
+#[cfg(feature = "with_peace")]
+use field_names::FieldNames;
+use peace_constants::api::{ApiError, GetBeatmapMethod};
+#[cfg(feature = "with_peace")]
+use peace_database::Database;
+use peace_utils::serdes::{from_str_bool, from_str_optional, serde_time};
+
+use super::{cache::BeatmapCache, Beatmap};
+use crate::osu_api::OsuApi;
+
+#[cfg_attr(feature = "with_peace", derive(FieldNames))]
+#[derive(Debug, Deserialize, Clone)]
 pub struct BeatmapFromApi {
     #[serde(rename = "beatmap_id", with = "serde_str")]
     pub id: i32,
@@ -62,11 +74,11 @@ pub struct BeatmapFromApi {
     pub spd: Option<f32>,
     #[serde(rename = "difficultyrating", with = "serde_str")]
     pub stars: f32,
-    #[serde(rename = "submit_date", with = "my_serde")]
+    #[serde(rename = "submit_date", with = "serde_time")]
     pub submit_time: Option<DateTime<Local>>,
-    #[serde(rename = "approved_date", with = "my_serde")]
+    #[serde(rename = "approved_date", with = "serde_time")]
     pub approved_time: Option<DateTime<Local>>,
-    #[serde(with = "my_serde")]
+    #[serde(with = "serde_time")]
     pub last_update: Option<DateTime<Local>>,
 }
 
@@ -86,7 +98,7 @@ impl BeatmapFromApi {
 
     #[inline(always)]
     pub fn file_name(&self) -> String {
-        utils::safe_file_name(format!(
+        peace_utils::common::safe_file_name(format!(
             "{artist} - {title} ({mapper}) [{diff_name}].osu",
             artist = self.artist,
             title = self.title,
@@ -100,30 +112,26 @@ impl BeatmapFromApi {
         key: &T,
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
-        osu_api: &Data<RwLock<OsuApi>>,
-        database: &Database,
+        osu_api: &OsuApi,
+        #[cfg(feature = "with_peace")] database: &Database,
     ) -> Result<Self, ApiError> {
-        let v = key as &dyn Any;
-        let osu_api = osu_api.read().await;
         let b = match method {
             &GetBeatmapMethod::Md5 => {
-                osu_api
-                    .fetch_beatmap_by_md5(v.downcast_ref().unwrap())
-                    .await
+                let v = (key as &dyn Any).downcast_ref().unwrap();
+                osu_api.fetch_beatmap_by_md5(v).await
             }
             &GetBeatmapMethod::Bid => {
-                osu_api
-                    .fetch_beatmap_by_bid(*v.downcast_ref().unwrap())
-                    .await
+                let v = *(key as &dyn Any).downcast_ref().unwrap();
+                osu_api.fetch_beatmap_by_bid(v).await
             }
             &GetBeatmapMethod::Sid => {
                 if let Some(file_name) = file_name {
-                    let beatmap_list = osu_api
-                        .fetch_beatmap_by_sid(*v.downcast_ref().unwrap())
-                        .await?;
+                    let v = *(key as &dyn Any).downcast_ref().unwrap();
+                    let beatmap_list = osu_api.fetch_beatmaps_by_sid(v).await?;
                     // Sid will get a list
                     let mut target = None;
                     for b in beatmap_list {
+                        #[cfg(feature = "peace")]
                         // Cache them
                         b.save_to_database(database).await;
                         // Try find target
@@ -155,10 +163,12 @@ impl BeatmapFromApi {
             "[BeatmapFromApi] Success get with Method({:?}): {:?}",
             method, b
         );
+        #[cfg(feature = "with_peace")]
         b.save_to_database(database).await;
         Ok(b)
     }
 
+    #[cfg(feature = "with_peace")]
     #[inline(always)]
     pub async fn save_to_database(&self, database: &Database) -> bool {
         match database
@@ -170,7 +180,7 @@ impl BeatmapFromApi {
                             rank_status = EXCLUDED.rank_status,
                             approved_time = EXCLUDED.approved_time"#,
                     BeatmapFromApi::FIELDS.join(r#"",""#),
-                    utils::build_s(BeatmapFromApi::FIELDS.len())
+                    peace_utils::common::build_s(BeatmapFromApi::FIELDS.len())
                 )
                 .as_str(),
                 &[
@@ -227,49 +237,6 @@ impl BeatmapFromApi {
                 );
                 false
             }
-        }
-    }
-}
-
-mod my_serde {
-    use chrono::{DateTime, Local, TimeZone};
-    use serde::{self, Deserialize, Deserializer, Serializer};
-
-    const FORMAT: &'static str = "%Y-%m-%d %H:%M:%S";
-
-    // The signature of a serialize_with function must follow the pattern:
-    //
-    //    fn serialize<S>(&T, S) -> Result<S::Ok, S::Error>
-    //    where
-    //        S: Serializer
-    //
-    // although it may also be generic over the input types T.
-    pub fn serialize<S>(date: &Option<DateTime<Local>>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{}", date.unwrap().format(FORMAT));
-        serializer.serialize_str(&s)
-    }
-
-    // The signature of a deserialize_with function must follow the pattern:
-    //
-    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
-    //    where
-    //        D: Deserializer<'de>
-    //
-    // although it may also be generic over the output types T.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Local>>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer);
-        if s.is_err() {
-            return Ok(None);
-        };
-        match Local.datetime_from_str(&s.unwrap(), FORMAT) {
-            Ok(t) => Ok(Some(t)),
-            Err(_err) => Ok(None),
         }
     }
 }

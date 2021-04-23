@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
-use std::fmt;
 use colored::Colorize;
 use deadpool_postgres::{Client, Pool, PoolError};
+use std::fmt;
+use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_postgres::{types::ToSql, Error, NoTls, Row, Statement};
 
 pub enum PostgresError {
@@ -212,5 +213,95 @@ impl Postgres {
     /// ```
     pub async fn execute_simple(&self, query: &str) -> Result<u64, PostgresError> {
         self.execute(query, &[]).await
+    }
+
+    #[inline(always)]
+    pub async fn struct_from_database<T: FromTokioPostgresRow>(
+        &self,
+        query: &str,
+        param: &[&(dyn ToSql + Sync)],
+    ) -> Option<T> {
+        let row = self.query_first(query, param).await;
+        if let Err(err) = row {
+            debug!(
+                "[struct_from_database] Failed to get row from database, error: {:?}",
+                err
+            );
+            return None;
+        }
+
+        let row = row.unwrap();
+        match <T>::from_row(row) {
+            Ok(result) => Some(result),
+            Err(err) => {
+                let type_name = std::any::type_name::<T>();
+                error!(
+                    "[struct_from_database] Failed to deserialize {} from pg-row! error: {:?}",
+                    type_name, err
+                );
+                None
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub async fn struct_from_database_simple<T: FromTokioPostgresRow>(
+        &self,
+        table: &str,
+        schema: &str,
+        query_by: &str,
+        fields: &str,
+        param: &(dyn tokio_postgres::types::ToSql + Sync),
+    ) -> Option<T> {
+        let query = format!(
+            "SELECT {} FROM \"{}\".\"{}\" WHERE \"{}\" = $1;",
+            fields, table, schema, query_by
+        );
+        debug!("[struct_from_database] query: {}", query);
+        self.struct_from_database(&query, &[param]).await
+    }
+}
+
+#[macro_export]
+macro_rules! set_with_db {
+    (
+        table=$table:expr;
+        schema=$schema:expr;
+        $(#[$meta:meta])*
+        $vis:vis struct $struct_name:ident {
+            $(
+                $(#[$field_meta:meta])*
+                $field_vis:vis $field_name:ident : $field_type:ty
+            ),*$(,)+
+        }
+    ) => {
+        $(#[$meta])*
+        $vis struct $struct_name{
+            $(
+                $(#[$field_meta:meta])*
+                $field_vis $field_name: $field_type,
+            )*
+        }
+        paste::paste! {
+            impl $struct_name {
+                $(
+                    pub async fn [<set_ $field_name _with_db>](&mut self, value: $field_type, database: &Database) -> bool {
+                        let query = concat!(r#"UPDATE "#, stringify!($table), r#"."#, stringify!($schema), r#" SET ""#, stringify!($field_name), r#"" = $1 WHERE "id" = $2"#);
+                        let res = match database.pg.execute(query, &[&value, &self.id]).await {
+                            Ok(_) => true,
+                            Err(err) => {
+                                warn!(
+                                    stringify!("[set_with_db] Failed to set "$struct_name"."$field_name" to table "$table", err: ""{:?}"),
+                                    err
+                                );
+                                false
+                            }
+                        };
+                        self.$field_name = value;
+                        res
+                    }
+                )*
+            }
+        }
     }
 }

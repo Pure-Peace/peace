@@ -1,9 +1,8 @@
 use maxminddb::Reader;
 use memmap::Mmap;
-use peace_constants::Action;
-use peace_constants::CHEAT_DETECTED_DECREASE_CREDIT;
 use peace_constants::{
-    BanchoPrivileges, ClientInfo, CountryCodes, GameMode, GeoData, PresenceFilter, Privileges,
+    Action, BanchoPrivileges, ClientInfo, CountryCodes, GameMode, GeoData, PresenceFilter,
+    Privileges, CHEAT_DETECTED_DECREASE_CREDIT,
 };
 
 use crate::objects::{PlayerSettings, PlayerStatus};
@@ -11,7 +10,7 @@ use derivative::Derivative;
 use serde_json::json;
 use std::str::FromStr;
 
-use crate::{types::Argon2Cache, utils};
+use crate::types::Argon2Cache;
 
 use super::{depends::*, PlayMods};
 
@@ -314,7 +313,7 @@ impl Player {
         self.ip = ip_address.clone();
         // Try update geo ip data
         if let Some(geo_db) = geo_db {
-            match utils::get_geo_ip_data(&ip_address, geo_db) {
+            match peace_utils::geoip::get_geo_ip_data(&ip_address, geo_db) {
                 Ok(geo_data) => self.geo_data = geo_data,
                 Err(_) => {}
             }
@@ -351,7 +350,8 @@ impl Player {
             return &cached_password_hash == password_hash;
         }
 
-        let verify_result = utils::argon2_verify(&self._password, password_hash).await;
+        let verify_result =
+            peace_utils::passwords::argon2_verify(&self._password, password_hash).await;
         if verify_result {
             // If password is correct, cache it
             // key = argon2 cipher, value = password hash

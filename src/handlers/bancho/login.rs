@@ -12,10 +12,7 @@ use peace_database::Database;
 use peace_packets::PacketBuilder;
 
 use crate::objects::{Bancho, Caches};
-use crate::{
-    objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus},
-    utils,
-};
+use crate::objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus};
 use crate::{settings::bancho::model::BanchoConfigData, types::PacketData};
 
 use super::parser;
@@ -33,7 +30,7 @@ pub async fn login(
     osu_version: String,
     database: &Data<Database>,
     bancho: &Data<Bancho>,
-    global_cache: &Data<Caches>,
+    caches: &Data<Caches>,
     counter: &Data<IntCounterVec>,
     geo_db: &Data<Option<Reader<Mmap>>>,
     cfg: &BanchoConfigData,
@@ -189,7 +186,7 @@ pub async fn login(
 
     // Select user base info from database ----------
     let select_base_start = Instant::now();
-    let mut player_base = match utils::get_player_base(&username, &database).await {
+    let mut player_base = match super::get_player_base(&username, &database).await {
         Some(p) => p,
         None => {
             warn!(
@@ -216,7 +213,7 @@ pub async fn login(
     }
 
     // Checking password
-    if !utils::checking_password(&player_base, &password_hash, &global_cache.argon2_cache).await {
+    if !super::checking_password(&player_base, &password_hash, &caches.argon2_cache).await {
         warn!(
             "login refused, failed to checking password; username: {}, ip: {}",
             username, request_ip
@@ -475,7 +472,7 @@ pub async fn login(
 
     // update player's location (ip geo)
     if let Some(geo_db) = geo_db.get_ref() {
-        match utils::get_geo_ip_data(request_ip, geo_db) {
+        match peace_utils::geoip::get_geo_ip_data(request_ip, geo_db) {
             Ok(geo_data) => player.geo_data = geo_data,
             Err(_) => {
                 warn!(

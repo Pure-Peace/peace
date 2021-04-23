@@ -2,15 +2,14 @@ use base64::decode;
 use bytes::Bytes;
 use chrono::{DateTime, Local};
 use derivative::Derivative;
-use peace_constants::{GameMode, SubmissionStatus};
-use peace_database::Database;
-use pyo3::{types::PyBytes, PyErr, Python};
-use std::time::Instant;
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
+use peace_constants::{GameMode, SubmissionStatus};
+use peace_database::Database;
+use peace_utils::web::MultipartData;
+
 use crate::objects::PlayMods;
-use crate::utils::{self, MultipartData};
 
 #[pg_mapper(table = "")]
 #[derive(Debug, PostgresMapper)]
@@ -169,34 +168,6 @@ impl SubmitModular {
             score_file: data.file("score"),
         })
     }
-
-    #[inline(always)]
-    /// Because Rust does not have an implementation of the rijndael algorithm,
-    /// it is temporarily solved with the built-in python3 interpreter.
-    pub fn python_decrypt(&self) -> Result<Vec<String>, PyErr> {
-        debug!("[SubmitModular] Python decrypt start");
-        let start = Instant::now();
-        let gil = Python::acquire_gil();
-        let python = gil.python();
-        let module = python.import("__main__")?;
-
-        let decryp_result = module
-            .call_method1(
-                "rijndael_cbc_decrypt",
-                (
-                    format!("osu!-scoreburgr---------{}", self.osu_version),
-                    PyBytes::new(python, &self.iv),
-                    PyBytes::new(python, &self.score),
-                ),
-            )?
-            .extract()?;
-        let end = start.elapsed();
-        debug!(
-            "[SubmitModular] Python decrypt success, time spent: {:?}",
-            end
-        );
-        return Ok(decryp_result);
-    }
 }
 
 #[derive(Debug)]
@@ -227,8 +198,12 @@ pub struct ScoreData {
 impl ScoreData {
     #[inline(always)]
     pub async fn from_submit_modular(submit_data: &SubmitModular) -> Option<Self> {
-        use utils::try_parse;
-        let data = match submit_data.python_decrypt() {
+        use peace_utils::serdes::try_parse;
+        let data = match peace_utils::python::submit_modular_decrypt(
+            submit_data.osu_version,
+            &submit_data.iv,
+            &submit_data.score,
+        ) {
             Ok(d) => d,
             Err(err) => {
                 warn!("[SubmitModular] Python decrypt failed, err: {:?}", err);

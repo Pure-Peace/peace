@@ -1,6 +1,5 @@
-use crate::{set_with_db, utils};
 use chrono::{DateTime, Utc};
-use peace_database::Database;
+use peace_database::{set_with_db, Database};
 use tokio_pg_mapper_derive::PostgresMapper;
 
 set_with_db! {
@@ -36,7 +35,10 @@ impl PlayerStatus {
     #[inline(always)]
     /// Initial pleyer info from database
     pub async fn from_database(user_id: i32, database: &Database) -> Option<PlayerStatus> {
-        utils::struct_from_database("user", "status", "id", "*", &user_id, database).await
+        database
+            .pg
+            .struct_from_database_simple("user", "status", "id", "*", &user_id)
+            .await
     }
 
     #[inline(always)]

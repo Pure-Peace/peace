@@ -7,7 +7,6 @@ use maxminddb::{self, Reader};
 use memmap::Mmap;
 use peace_database::Database;
 use prometheus::{opts, IntCounterVec};
-use pyo3::Python;
 use std::time::Instant;
 
 use crate::handlers::bancho;
@@ -24,7 +23,7 @@ pub struct Peace {
     pub prometheus: PrometheusMetrics,
     pub counter: IntCounterVec,
     pub geo_db: Data<Option<Reader<Mmap>>>,
-    pub global_cache: Data<Caches>,
+    pub caches: Data<Caches>,
     pub server: Option<Server>,
     pub sender: Sender<Option<Server>>,
     pub receiver: Receiver<Option<Server>>,
@@ -45,7 +44,7 @@ impl Peace {
         // Geo mmdb
         let geo_db = Data::new(Self::mmdb_init(sets));
         // Global cache
-        let global_cache = Data::new(Caches::new());
+        let caches = Data::new(Caches::new());
 
         let (sender, receiver) = unbounded();
 
@@ -57,7 +56,7 @@ impl Peace {
             prometheus,
             counter,
             geo_db,
-            global_cache,
+            caches,
             server: None,
             sender,
             receiver,
@@ -74,7 +73,7 @@ impl Peace {
             let prom = self.prometheus.clone();
             let bancho = self.bancho.clone();
             let geo_db = self.geo_db.clone();
-            let global_cache = self.global_cache.clone();
+            let caches = self.caches.clone();
             let counter = self.counter.clone();
             let database = self.database.clone();
             let sender = Data::new(self.sender.clone());
@@ -92,7 +91,7 @@ impl Peace {
                     )
                     .app_data(bancho.clone())
                     .app_data(geo_db.clone())
-                    .app_data(global_cache.clone())
+                    .app_data(caches.clone())
                     .app_data(sender.clone())
                     .app_data(database.clone())
                     .data(counter.clone())
@@ -109,7 +108,7 @@ impl Peace {
     }
 
     pub async fn start(&mut self) -> std::io::Result<()> {
-        self.python_init();
+        peace_utils::python::python_rijndael_init();
 
         self.session_recycle().await;
 
@@ -118,24 +117,6 @@ impl Peace {
 
         // Wait for stopped
         self.stopped().await
-    }
-
-    #[inline(always)]
-    /// Initialize some methods into the global python interpreter
-    ///
-    /// NOTE: This is a temporary solution.
-    /// Some problems cannot be solved temporarily.
-    /// When the problem is solved, Python may be removed..
-    ///
-    pub fn python_init(&self) {
-        info!("{}", "Initialing Python3...".bold().bright_blue());
-        let code = include_str!("../utils/rijndael.py");
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        if let Err(err) = py.run(code, None, None) {
-            error!("[Python] Failed to initial python3, err: {:?}", err);
-            panic!()
-        };
     }
 
     /// Server started

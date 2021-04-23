@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 use crate::objects::{Bancho, ScroeFromDatabase};
+use peace_objects::beatmaps::Beatmap;
 use std::time::Instant;
 
 use actix_web::{web::Query, HttpResponse};
@@ -10,11 +11,7 @@ use tokio_pg_mapper::FromTokioPostgresRow;
 
 pub use peace_constants::{GameMode, ScoreboardType};
 
-use crate::{
-    objects::{Beatmap, PlayMods},
-    routes::web::Context,
-    utils,
-};
+use crate::{objects::PlayMods, routes::web::Context};
 
 macro_rules! get_login {
     ($ctx:ident, $data:ident, $failed:ident) => {
@@ -26,7 +23,7 @@ macro_rules! get_login {
             .get_login_by_name(
                 &$data.username,
                 &$data.password_hash,
-                &$ctx.global_cache.argon2_cache,
+                &$ctx.caches.argon2_cache,
             )
             .await
         {
@@ -328,7 +325,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body(format!(
         "{}{:.2}",
         if voted { "alreadyvoted\n" } else { "" },
-        utils::get_beatmap_rating(&data.beatmap_md5, &ctx.database)
+        peace_utils::bancho::get_beatmap_rating(&data.beatmap_md5, &ctx.database)
             .await
             .unwrap_or(10.0)
     ))
@@ -668,14 +665,18 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         // Try get beatmap with MD5, Setid and filename,
         // from local cache, database cache, and osu!api.
         // if get a beatmap, will auto cache it.
+        let expires = ctx.bancho.config.read().await.data.beatmaps.cache_expires;
+        let osu_api = ctx.bancho.osu_api.read().await;
         let b = Beatmap::get(
             Some(&data.beatmap_hash),
+            None,
             Some(data.beatmap_set_id),
             Some(&data.file_name),
-            &ctx.bancho,
+            &osu_api,
             &ctx.database,
-            &ctx.global_cache,
             true,
+            &ctx.caches.beatmap_cache,
+            expires,
         )
         .await;
         // If cannot get beatmap anyway, return it not submit.
@@ -701,7 +702,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         &data.game_mode.full_name(),
         pp_board,
         ctx.database,
-        ctx.global_cache,
+        ctx.caches,
         false,
     )
     .await;

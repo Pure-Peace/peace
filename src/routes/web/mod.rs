@@ -15,8 +15,6 @@ mod depends {
     pub use std::sync::{atomic::Ordering, Arc};
 
     pub use actix_multipart::Multipart;
-    pub use futures::StreamExt;
-    pub use regex::Regex;
     pub use serde::Deserialize;
     pub use serde_json::json;
 
@@ -35,7 +33,7 @@ mod depends {
         pub bancho: &'a Data<Bancho>,
         pub database: &'a Data<Database>,
         pub geo_db: &'a Data<Option<Reader<Mmap>>>,
-        pub global_cache: &'a Data<Caches>,
+        pub caches: &'a Data<Caches>,
     }
 }
 

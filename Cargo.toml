@@ -1,9 +1,15 @@
 [workspace]
-members = ["peace-database", "peace-constants", "peace-packets"]
+members = [
+    "peace-database",
+    "peace-constants",
+    "peace-packets",
+    "peace-objects",
+    "peace-utils",
+]
 
 [package]
 name = "peace"
-version = "0.8.8"
+version = "0.9.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -15,7 +21,6 @@ default-run = "peace"
 [dependencies]
 actix-cors = "0.5.4"
 actix-multipart = "0.3"
-actix-rt = "1.1.1"
 actix-web = "3.1.0"
 actix-web-prom = "0.5.1"
 askama = "0.10.5"
@@ -31,9 +36,7 @@ derivative = "2.2.0"
 dotenv = "0.15.0"
 enum-primitive-derive = "0.2.1"
 env_logger = "0.8.3"
-pyo3 = { version = "0.13.2", features = ["auto-initialize"] }
-field_names = "0.1.1"
-futures = "0.3.12"
+futures = "0.3"
 hashbrown = "0.9.1"
 json = "0.12.4"
 lazy_static = "1.4.0"
@@ -41,32 +44,28 @@ log = "0.4.14"
 maxminddb = { version = "0.17.2", features = ["mmap"] }
 md5 = "0.7.0"
 memmap = "0.7.0"
-num-traits = "0.2.14"
-paste = "1.0.5"
-postgres-types = { version = "0.1.2", features = ["derive", "with-chrono-0_4", "with-serde_json-1"] }
+num-traits = "0.2"
 prometheus = { version = "0.11.0", features = ["process"] }
 queue = "0.3.1"
-rand = "0.8.3"
-regex = "1.4.3"
 reqwest = { version = "0.10.10", features = ["rustls-tls", "json"], default-features = false }
-rust-argon2 = "0.8.3"
 serde = { version = "1.0.123", features = ["derive"] }
-serde_derive = "1.0.123"
 serde_json = "1.0.62"
 serde_postgres = "0.2.0"
 serde_qs = "0.8.2"
-serde_str = "0.1.0"
 strum = "0.20"
 strum_macros = "0.20"
 tokio-pg-mapper = "0.1.8"
 tokio-pg-mapper-derive = "0.1.5"
 tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
-uuid = { version = "0.8.1", features = ["v4"] }
+uuid = { version = "0.8", features = ["v4"] }
+paste = "1.0"
+
 
 peace-constants = { path = "peace-constants" }
 peace-database = { path = "peace-database", features = ["with_peace"] }
 peace-packets = { path = "peace-packets" }
-
+peace-objects = { path = "peace-objects", features = ["with_peace"] }
+peace-utils = { path = "peace-utils", features = ["all"] }
 
 # link-time-optimization
 # Enabling makes the compiled program size smaller and higher performance, 

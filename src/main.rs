@@ -13,7 +13,6 @@ pub mod renders;
 pub mod routes;
 pub mod settings;
 pub mod types;
-pub mod utils;
 
 use actix_web::web::Data;
 use objects::{Bancho, Peace};

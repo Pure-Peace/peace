@@ -14,8 +14,10 @@ with_peace = ["peace-constants"]
 
 [dependencies]
 colored = "2.0"
+log = "0.4"
 deadpool-postgres = "0.5"
 deadpool-redis = "0.6"
 tokio-postgres = { version = "0.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
+tokio-pg-mapper = "0.1"
 
 peace-constants = { path = "../peace-constants", optional = true }

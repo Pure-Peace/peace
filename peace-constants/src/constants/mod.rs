@@ -1,9 +1,11 @@
 #![allow(non_camel_case_types)]
+pub mod api;
 mod client_data;
 mod common;
 mod country;
 mod geoip;
 mod packets;
+mod pp_calc;
 mod privileges;
 pub mod regexes;
 
@@ -17,6 +19,7 @@ pub use country::*;
 pub use geoip::*;
 use num_traits::FromPrimitive;
 pub use packets::*;
+pub use pp_calc::*;
 pub use privileges::{BanchoPrivileges, Privileges};
 
 pub const CHEAT_DETECTED_DECREASE_CREDIT: i32 = 200;
@@ -107,8 +110,8 @@ impl ScoreboardType {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
 pub enum PresenceFilter {
     // A class to represent the update scope the client wishes to receive
-    None    = 0,
-    All     = 1,
+    None = 0,
+    All = 1,
     Friends = 2,
 }
 

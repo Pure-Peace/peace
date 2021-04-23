@@ -1,13 +1,14 @@
+use std::sync::atomic::AtomicI32;
+
 use async_std::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
+use peace_objects::beatmaps::CommonBeatmapCaches;
 
-use crate::types::{Argon2Cache, BeatmapsCache, TempTableCache};
-
-use super::{Beatmap, BeatmapCache};
+use crate::types::{Argon2Cache, TempTableCache};
 
 pub struct Caches {
-    pub beatmaps_cache: RwLock<BeatmapsCache>,
+    pub beatmap_cache: CommonBeatmapCaches,
     pub argon2_cache: RwLock<Argon2Cache>,
     pub temp_table_cache: RwLock<TempTableCache>,
 }
@@ -15,7 +16,12 @@ pub struct Caches {
 impl Caches {
     pub fn new() -> Self {
         Caches {
-            beatmaps_cache: RwLock::new(HashMap::with_capacity(2000)),
+            beatmap_cache: CommonBeatmapCaches {
+                md5: RwLock::new(HashMap::with_capacity(500)),
+                bid: RwLock::new(HashMap::with_capacity(500)),
+                sid: RwLock::new(HashMap::with_capacity(500)),
+                length: AtomicI32::new(0),
+            },
             argon2_cache: RwLock::new(HashMap::with_capacity(1000)),
             temp_table_cache: RwLock::new(HashMap::with_capacity(1000)),
         }
@@ -27,23 +33,6 @@ impl Caches {
             .write()
             .await
             .insert(table_name, Local::now())
-    }
-
-    #[inline(always)]
-    pub async fn cache_beatmap(
-        &self,
-        beatmap_md5: String,
-        beatmap: Option<&Beatmap>,
-    ) -> Option<BeatmapCache> {
-        self.beatmaps_cache
-            .write()
-            .await
-            .insert(beatmap_md5, BeatmapCache::new(beatmap.cloned()))
-    }
-
-    #[inline(always)]
-    pub async fn get_beatmap(&self, beatmap_md5: &String) -> Option<BeatmapCache> {
-        self.beatmaps_cache.read().await.get(beatmap_md5).cloned()
     }
 
     #[inline(always)]

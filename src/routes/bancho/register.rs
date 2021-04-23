@@ -1,5 +1,4 @@
 use super::depends::*;
-use crate::utils;
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterForm {
@@ -17,7 +16,7 @@ pub async fn osu_register(
     database: Data<Database>,
     geo_db: Data<Option<Reader<Mmap>>>,
     bancho: Data<Bancho>,
-    global_cache: Data<Caches>,
+    caches: Data<Caches>,
 ) -> HttpResponse {
     let cfg_r = bancho.config.read().await;
     let cfg = &cfg_r.data;
@@ -35,7 +34,7 @@ pub async fn osu_register(
         }));
     };
 
-    let request_ip = utils::get_realip(&req).await;
+    let request_ip = peace_utils::web::get_realip(&req).await;
     if request_ip.is_err() {
         error!("Failed to get real ip");
         return HttpResponse::InternalServerError().body("Server Error");
@@ -180,7 +179,7 @@ pub async fn osu_register(
             .as_ref()
             .as_ref()
             .and_then(
-                |geo_db| match utils::get_geo_ip_data(&request_ip, &geo_db) {
+                |geo_db| match peace_utils::geoip::get_geo_ip_data(&request_ip, &geo_db) {
                     Ok(data) => data.country_code,
                     Err(_) => None,
                 },
@@ -189,10 +188,10 @@ pub async fn osu_register(
 
         // Get password md5, argon2
         let password_md5 = format!("{:x}", md5::compute(form_data.password));
-        let password_argon2 = utils::argon2_encode(password_md5.as_bytes()).await;
+        let password_argon2 = peace_utils::passwords::argon2_encode(password_md5.as_bytes()).await;
 
         // Cache it
-        global_cache
+        caches
             .argon2_cache
             .write()
             .await

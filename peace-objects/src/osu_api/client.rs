@@ -1,4 +1,9 @@
-use super::depends::*;
+use std::{
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
+};
+
+use derivative::Derivative;
 
 #[derive(Derivative)]
 #[derivative(Debug)]

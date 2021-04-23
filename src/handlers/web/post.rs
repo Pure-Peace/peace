@@ -1,13 +1,13 @@
 use actix_multipart::Multipart;
 use actix_web::HttpResponse;
 use chrono::Local;
+use peace_objects::beatmaps::Beatmap;
 use serde::Deserialize;
 use std::time::Instant;
 
-use crate::objects::{Bancho, Beatmap, MiniScore, ScoreData, SubmitModular};
+use crate::objects::{Bancho, MiniScore, ScoreData, SubmitModular};
 
 use crate::routes::web::Context;
-use crate::utils;
 
 use peace_constants::SubmissionStatus;
 
@@ -88,7 +88,7 @@ pub async fn osu_error<'a>(_ctx: &Context<'a>, _payload: Multipart) -> HttpRespo
 #[inline(always)]
 pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> HttpResponse {
     let failed = HttpResponse::Ok().body("error: no");
-    let request_ip = match utils::get_realip(&ctx.req).await {
+    let request_ip = match peace_utils::web::get_realip(&ctx.req).await {
         Ok(ip) => ip,
         Err(_) => {
             error!("[osu_submit_modular] Failed to get submit ip address, refused.");
@@ -100,7 +100,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         request_ip
     );
     // Check Token
-    if !utils::osu_sumit_token_checker(&ctx.req) {
+    if !peace_utils::web::osu_sumit_token_checker(&ctx.req) {
         // TODO: maybe ban someone.
         warn!(
             "[osu_submit_modular] Invalid submit token, ip: {}",
@@ -110,16 +110,17 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     };
     // Parse submit mutipart data
     let submit_parse = Instant::now();
-    let submit_data = match SubmitModular::from_mutipart(utils::get_mutipart_data(payload).await) {
-        Some(d) => d,
-        None => {
-            warn!(
-                "[osu_submit_modular] Failed to parse mutipart data, ip: {}",
-                request_ip
-            );
-            return failed;
-        }
-    };
+    let submit_data =
+        match SubmitModular::from_mutipart(peace_utils::web::get_mutipart_data(payload).await) {
+            Some(d) => d,
+            None => {
+                warn!(
+                    "[osu_submit_modular] Failed to parse mutipart data, ip: {}",
+                    request_ip
+                );
+                return failed;
+            }
+        };
     debug!(
         "[osu_submit_modular] submit data parse done, time spent: {:?}",
         submit_parse.elapsed()
@@ -148,11 +149,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         .player_sessions
         .read()
         .await
-        .get_login_by_name(
-            player_name,
-            &submit_data.password,
-            &ctx.global_cache.argon2_cache,
-        )
+        .get_login_by_name(player_name, &submit_data.password, &ctx.caches.argon2_cache)
         .await
     {
         Some(p) => p,
@@ -222,24 +219,30 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     }
 
     // Get beatmap
-    let beatmap = match Beatmap::get(
-        Some(&s.beatmap_md5),
-        None,
-        None,
-        &ctx.bancho,
-        &ctx.database,
-        &ctx.global_cache,
-        true,
-    )
-    .await
-    {
-        Some(b) => b,
-        None => {
-            warn!(
-                "[osu_submit_modular] Failed to get beatmap, beatmap_md5: {}; player: {}({})",
-                s.beatmap_md5, player_name, player_id
-            );
-            return failed;
+    let beatmap = {
+        let expires = ctx.bancho.config.read().await.data.beatmaps.cache_expires;
+        let osu_api = ctx.bancho.osu_api.read().await;
+        match Beatmap::get(
+            Some(&s.beatmap_md5),
+            None,
+            None,
+            None,
+            &osu_api,
+            &ctx.database,
+            true,
+            &ctx.caches.beatmap_cache,
+            expires,
+        )
+        .await
+        {
+            Some(b) => b,
+            None => {
+                warn!(
+                    "[osu_submit_modular] Failed to get beatmap, beatmap_md5: {}; player: {}({})",
+                    s.beatmap_md5, player_name, player_id
+                );
+                return failed;
+            }
         }
     };
 
@@ -335,7 +338,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         &s.mode.full_name(),
         pp_is_best,
         ctx.database,
-        ctx.global_cache,
+        ctx.caches,
         false,
     )
     .await;
@@ -469,7 +472,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     // Save replay
     if s.status != SubmissionStatus::Failed {
         if let Some(score_file) = submit_data.score_file {
-            match utils::save_replay(
+            match peace_utils::bancho::save_replay(
                 score_file,
                 score_id,
                 &ctx.bancho.local_config.data.server.data_dir,
@@ -548,7 +551,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
             &score_table,
             pp_is_best,
             ctx.database,
-            ctx.global_cache,
+            ctx.caches,
             true,
         )
         .await;

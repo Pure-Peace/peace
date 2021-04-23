@@ -1,5 +1,4 @@
 use super::depends::*;
-use crate::utils;
 use crate::{
     handlers::web::get,
     objects::{Bancho, Caches},
@@ -13,12 +12,12 @@ pub async fn handler(
     counter: Data<IntCounterVec>,
     database: Data<Database>,
     geo_db: Data<Option<Reader<Mmap>>>,
-    global_cache: Data<Caches>,
+    caches: Data<Caches>,
     bancho: Data<Bancho>,
 ) -> HttpResponse {
     counter.with_label_values(&["/web", "get", "start"]).inc();
     // Get real request ip
-    let request_ip = match utils::get_realip(&req).await {
+    let request_ip = match peace_utils::web::get_realip(&req).await {
         Ok(ip) => ip,
         Err(_) => {
             return HttpResponse::BadRequest().body("bad requests");
@@ -31,7 +30,7 @@ pub async fn handler(
         bancho: &bancho,
         database: &database,
         geo_db: &geo_db,
-        global_cache: &global_cache,
+        caches: &caches,
     };
 
     debug!("{} Path: <{}>; ip: {}", BASE, path, request_ip);

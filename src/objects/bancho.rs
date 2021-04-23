@@ -1,17 +1,14 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
-use peace_database::Database;
 use std::time::Instant;
 
-use super::{Caches, ChannelListBuilder, OsuApi};
+use peace_database::Database;
+use peace_objects::{osu_api::OsuApi, pp_calc::PPServerApi};
+
+use super::{Caches, ChannelListBuilder};
 use crate::settings::{bancho::BanchoConfig, local::LocalConfig};
-use crate::utils::lock_wrapper;
-use crate::{
-    objects::{PPServerApi, PlayerSessions},
-    renders::BanchoGet,
-    types::ChannelList,
-};
+use crate::{objects::PlayerSessions, renders::BanchoGet, types::ChannelList};
 
 pub struct Bancho {
     pub player_sessions: Data<RwLock<PlayerSessions>>,
@@ -24,18 +21,23 @@ pub struct Bancho {
 }
 
 impl Bancho {
-    pub async fn init(local_config: &LocalConfig, database: &Data<Database>) -> Self {
+    pub async fn init(cfg: &LocalConfig, database: &Data<Database>) -> Self {
+        use peace_utils::web::lock_wrapper as lw;
         // Create...
-        let config = lock_wrapper(
-            BanchoConfig::create(&database)
-                .await
-                .expect("Failed to create BanchoConfig, could not be initialized."),
-        );
-        let player_sessions = lock_wrapper(PlayerSessions::new(1000, database));
-        let channel_list = lock_wrapper(ChannelListBuilder::new(database, &player_sessions).await);
-        let osu_api = lock_wrapper(OsuApi::new(&config).await);
-        let pp_calculator = Data::new(PPServerApi::new(&local_config.data));
-        let render_get = lock_wrapper(BanchoGet::new(&config).await);
+        let config = BanchoConfig::create(&database)
+            .await
+            .expect("Failed to create BanchoConfig, could not be initialized.");
+        let osu_api_keys = config.data.server.osu_api_keys.clone();
+
+        let config = lw(config);
+        let player_sessions = lw(PlayerSessions::new(1000, database));
+        let channel_list = lw(ChannelListBuilder::new(database, &player_sessions).await);
+        let osu_api = lw(OsuApi::new(osu_api_keys).await);
+        let pp_calculator = Data::new(PPServerApi::new(
+            cfg.data.pp_server.url.clone(),
+            cfg.data.pp_server.pp_calc_timeout,
+        ));
+        let render_get = lw(BanchoGet::new(&config).await);
 
         Bancho {
             player_sessions,
@@ -44,7 +46,7 @@ impl Bancho {
             pp_calculator,
             render_get,
             config,
-            local_config: local_config.clone(),
+            local_config: cfg.clone(),
         }
     }
 
@@ -81,7 +83,7 @@ impl Bancho {
         score_table: &str,
         pp_board: bool,
         database: &Database,
-        global_cache: &Caches,
+        caches: &Caches,
         recreate: bool,
     ) -> String {
         let score_type = if pp_board { "pp_v2" } else { "score" };
@@ -92,7 +94,7 @@ impl Bancho {
         // It may work better when the number of players on the server becomes larger
         // Check temp table cache
         if !recreate {
-            let cache_record = global_cache.get_temp_table(&temp_table).await;
+            let cache_record = caches.get_temp_table(&temp_table).await;
             if cache_record.is_some() && (Local::now() - cache_record.unwrap()).num_seconds() < 40 {
                 return temp_table;
             };
@@ -140,7 +142,7 @@ impl Bancho {
             temp_table,
             start.elapsed()
         );
-        global_cache.cache_temp_table(temp_table.clone()).await;
+        caches.cache_temp_table(temp_table.clone()).await;
         temp_table
     }
 }
