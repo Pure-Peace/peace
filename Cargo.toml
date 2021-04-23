@@ -59,12 +59,12 @@ tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde
 uuid = { version = "0.8", features = ["v4"] }
 
 
-peace-constants = { path = "peace-constants" }
-peace-database = { path = "peace-database", features = ["with_peace"] }
-peace-packets = { path = "peace-packets" }
-peace-objects = { path = "peace-objects", features = ["with_peace"] }
-peace-utils = { path = "peace-utils", features = ["with_peace"] }
-peace-settings = { path = "peace-settings" }
+peace-constants = { path = "peace-constants", version = "*" }
+peace-database = { path = "peace-database", features = ["with_peace"], version = "*" }
+peace-packets = { path = "peace-packets", version = "*" }
+peace-objects = { path = "peace-objects", features = ["with_peace"], version = "*" }
+peace-utils = { path = "peace-utils", features = ["with_peace"], version = "*" }
+peace-settings = { path = "peace-settings", version = "*" }
 
 # link-time-optimization
 # Enabling makes the compiled program size smaller and higher performance, 
