@@ -4,13 +4,13 @@ use peace_constants::{
     RankStatusInServer,
 };
 
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use field_names::FieldNames;
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use peace_database::Database;
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use postgres_types::{FromSql, ToSql};
-#[cfg(feature = "with_peace")]
+#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
 use tokio_pg_mapper_derive::PostgresMapper;
 
 use crate::beatmaps::traits::MyBeatmapCache;
@@ -19,9 +19,12 @@ use crate::osu_api::OsuApi;
 
 use super::{cache::BeatmapCache, traits::BeatmapCacheStorage};
 
-#[cfg_attr(feature = "with_peace", pg_mapper(table = ""))]
 #[cfg_attr(
-    feature = "with_peace",
+    all(not(feature = "no_database"), feature = "with_peace"),
+    pg_mapper(table = "")
+)]
+#[cfg_attr(
+    all(not(feature = "no_database"), feature = "with_peace"),
     derive(FromSql, FieldNames, ToSql, PostgresMapper)
 )]
 #[derive(Debug, Clone)]
@@ -46,7 +49,7 @@ pub struct Beatmap {
 }
 
 impl Beatmap {
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub fn query_fields() -> String {
         format!("\"{}\"", Beatmap::FIELDS.join("\",\""))
@@ -102,7 +105,7 @@ impl Beatmap {
         sid: Option<i32>,
         file_name: Option<&String>,
         osu_api: &OsuApi,
-        #[cfg(feature = "with_peace")] database: &Database,
+        #[cfg(all(not(feature = "no_database"), feature = "with_peace"))] database: &Database,
         try_from_cache: bool,
         cache: &C,
         cache_expires: i64,
@@ -124,7 +127,7 @@ impl Beatmap {
                 backup_beatmap = c.beatmap.clone();
             };
 
-            #[cfg(feature = "with_peace")]
+            #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
             // Local cache expired or not founded, then
             // Try get beatmap from database
             // If get, will auto cache it to local.
@@ -152,7 +155,7 @@ impl Beatmap {
                     backup_beatmap = Some(b);
                 };
             };
-            #[cfg(feature = "with_peace")]
+            #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
             if let Some(bid) = bid {
                 if let Some(b) = Self::from_database(&GetBeatmapMethod::Bid(bid), database).await {
                     // If not expired, cache it locally and returns it.
@@ -186,7 +189,7 @@ impl Beatmap {
                 &GetBeatmapMethod::Md5(md5.to_string()),
                 None,
                 &osu_api,
-                #[cfg(feature = "with_peace")]
+                #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
                 database,
             )
             .await
@@ -221,7 +224,7 @@ impl Beatmap {
                 &GetBeatmapMethod::Bid(bid),
                 None,
                 &osu_api,
-                #[cfg(feature = "with_peace")]
+                #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
                 database,
             )
             .await
@@ -256,7 +259,7 @@ impl Beatmap {
                 &GetBeatmapMethod::Sid(sid),
                 Some(file_name),
                 &osu_api,
-                #[cfg(feature = "with_peace")]
+                #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
                 database,
             )
             .await
@@ -329,13 +332,13 @@ impl Beatmap {
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &OsuApi,
-        #[cfg(feature = "with_peace")] database: &Database,
+        #[cfg(all(not(feature = "no_database"), feature = "with_peace"))] database: &Database,
     ) -> Result<Self, ApiError> {
         Ok(BeatmapFromApi::from_osu_api(
             method,
             file_name,
             osu_api,
-            #[cfg(feature = "with_peace")]
+            #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
             database,
         )
         .await?
@@ -351,7 +354,7 @@ impl Beatmap {
         (Local::now() - self.update_time).num_seconds() > expires
     }
 
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub async fn from_database(method: &GetBeatmapMethod, database: &Database) -> Option<Self> {
         let key = method.to_string();
@@ -371,19 +374,19 @@ impl Beatmap {
             .await
     }
 
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub async fn from_database_by_bid(bid: i32, database: &Database) -> Option<Self> {
         Self::from_database(&GetBeatmapMethod::Bid(bid), database).await
     }
 
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub async fn from_database_by_sid(sid: i32, database: &Database) -> Option<Self> {
         Self::from_database(&GetBeatmapMethod::Sid(sid), database).await
     }
 
-    #[cfg(feature = "with_peace")]
+    #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
     #[inline(always)]
     pub async fn from_database_by_md5(md5: &String, database: &Database) -> Option<Self> {
         Self::from_database(&GetBeatmapMethod::Md5(md5.to_string()), database).await
