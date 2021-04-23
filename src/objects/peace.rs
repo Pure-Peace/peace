@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_web::{dev::Server, middleware::Logger, web::Data, App, HttpServer};
+use actix_web::{dev::Server, web::Data, App, HttpServer};
 use actix_web_prom::PrometheusMetrics;
 use async_std::channel::{unbounded, Receiver, Sender};
 use colored::Colorize;
@@ -70,7 +70,7 @@ impl Peace {
         // Run server
         info!("{}", "Starting http server...".bold().bright_blue());
         let server = {
-            let settings_cloned = self.local_config.data.clone();
+            let s = self.local_config.data.clone();
             let prom = self.prometheus.clone();
             let bancho = self.bancho.clone();
             let geo_db = self.geo_db.clone();
@@ -81,7 +81,13 @@ impl Peace {
             HttpServer::new(move || {
                 // App
                 App::new()
-                    .wrap(Self::make_logger(&settings_cloned))
+                    .wrap(peace_utils::web::make_logger(
+                        &s.logger.actix_log_format,
+                        s.prom.exclude_endpoint_log,
+                        &s.prom.endpoint,
+                        &s.logger.exclude_endpoints,
+                        &s.logger.exclude_endpoints_regex,
+                    ))
                     .wrap(prom.clone())
                     .wrap(
                         Cors::default()
@@ -96,7 +102,7 @@ impl Peace {
                     .app_data(sender.clone())
                     .app_data(database.clone())
                     .data(counter.clone())
-                    .configure(|service_cfg| routes::peace::init(service_cfg, &settings_cloned))
+                    .configure(|service_cfg| routes::peace::init(service_cfg, &s))
             })
             .shutdown_timeout(2)
             .keep_alive(120)
@@ -152,21 +158,6 @@ impl Peace {
         .bright_blue();
         warn!("{} \n\n {}", title, time_string);
         err
-    }
-
-    pub fn make_logger(s: &LocalConfigData) -> Logger {
-        let format = &s.logger.actix_log_format;
-        let mut logger = match s.prom.exclude_endpoint_log {
-            true => Logger::new(format).exclude(&s.prom.endpoint),
-            false => Logger::new(format),
-        };
-        for i in s.logger.exclude_endpoints.iter() {
-            logger = logger.exclude(i as &str);
-        }
-        for i in s.logger.exclude_endpoints_regex.iter() {
-            logger = logger.exclude_regex(i as &str);
-        }
-        logger
     }
 
     /// Start auto recycle task,
