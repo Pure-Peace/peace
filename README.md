@@ -22,14 +22,14 @@ However, I actually have a lot of ideas for the osu server and will try to imple
   - **Multi-username** (Currently achieved)
     - A user can have two usernames, and one of them supports unicode, which means that Chinese, Japanese, Russian, etc. can be used as usernames, even emoji (though the osu client doesn't seem to support emoji very well). Also, the user can choose what name should be displayed in game: English name? or unicode name.
   - **Special PP/ranking?**
-    - Maybe I can make ppv1, ppv2 run on the server at the same time and let the players choose which one to base their ranking on. Or even make an algorithm like pp+, or event elo (tournament or mp).
+    - Maybe I can make ppv1, ppv2 run on the server at the same time and let the players choose which one to base their ranking on. Or even make an algorithm like pp+, or even elo system (tournament or mp).
   - **Season Ranking / Season System**
     - A season mode like League of Legends or something? lol
   - **Submit a beatmap?**
     - Of course there may be some risks associated with this? Or we can use a decentralized way to store beatmap.
   - **Reincarnation system?**
     - Feel this is very interesting. Life can start all over again
-  - **pp fram multiplayer game**
+  - **pp farm multiplayer game**
     - Use pp as ranking for multiplayer games
   - **A bot that supports multiple languages?**
     - I am not good at English, lol
