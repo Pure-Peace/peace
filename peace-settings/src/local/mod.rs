@@ -1,6 +1,7 @@
+mod local_config;
 mod logger;
 mod model;
-mod local_config;
+pub mod utils;
 
 pub use local_config::*;
 pub use model::*;
