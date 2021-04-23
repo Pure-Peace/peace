@@ -10,9 +10,11 @@ mod depends {
     pub use async_std::sync::RwLock;
     pub use maxminddb::Reader;
     pub use memmap::Mmap;
-    pub use peace_database::Database;
     pub use prometheus::IntCounterVec;
     pub use std::sync::{atomic::Ordering, Arc};
+
+    pub use peace_database::Database;
+    pub use peace_settings::bancho::BanchoConfig;
 
     pub use actix_multipart::Multipart;
     pub use serde::Deserialize;
@@ -23,7 +25,6 @@ mod depends {
         handlers::bancho,
         objects::{Player, PlayerData, PlayerSessions},
         renders::BanchoGet,
-        settings::bancho::BanchoConfig,
         types::{Argon2Cache, ChannelList},
     };
 

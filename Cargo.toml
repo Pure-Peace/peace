@@ -5,11 +5,12 @@ members = [
     "peace-packets",
     "peace-objects",
     "peace-utils",
+    "peace-settings",
 ]
 
 [package]
 name = "peace"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -29,11 +30,7 @@ base64 = "0.13.0"
 bytes = "0.5.6"
 chrono = "0.4.19"
 colored = "2.0.0"
-config = "0.10.1"
-deadpool-postgres = "0.5.6"
-deadpool-redis = "0.6.1"
 derivative = "2.2.0"
-dotenv = "0.15.0"
 enum-primitive-derive = "0.2.1"
 env_logger = "0.8.3"
 futures = "0.3"
@@ -45,6 +42,7 @@ maxminddb = { version = "0.17.2", features = ["mmap"] }
 md5 = "0.7.0"
 memmap = "0.7.0"
 num-traits = "0.2"
+paste = "1.0"
 prometheus = { version = "0.11.0", features = ["process"] }
 queue = "0.3.1"
 reqwest = { version = "0.10.10", features = ["rustls-tls", "json"], default-features = false }
@@ -58,7 +56,6 @@ tokio-pg-mapper = "0.1.8"
 tokio-pg-mapper-derive = "0.1.5"
 tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
 uuid = { version = "0.8", features = ["v4"] }
-paste = "1.0"
 
 
 peace-constants = { path = "peace-constants" }
@@ -66,6 +63,7 @@ peace-database = { path = "peace-database", features = ["with_peace"] }
 peace-packets = { path = "peace-packets" }
 peace-objects = { path = "peace-objects", features = ["with_peace"] }
 peace-utils = { path = "peace-utils", features = ["all"] }
+peace-settings = { path = "peace-settings" }
 
 # link-time-optimization
 # Enabling makes the compiled program size smaller and higher performance, 

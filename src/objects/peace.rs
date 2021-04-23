@@ -13,7 +13,8 @@ use crate::handlers::bancho;
 use crate::objects::Bancho;
 use crate::objects::Caches;
 use crate::routes;
-use crate::settings::local::{LocalConfig, Settings};
+
+use peace_settings::local::{LocalConfig, LocalConfigData};
 
 pub struct Peace {
     pub addr: String,
@@ -153,7 +154,7 @@ impl Peace {
         err
     }
 
-    pub fn make_logger(s: &Settings) -> Logger {
+    pub fn make_logger(s: &LocalConfigData) -> Logger {
         let format = &s.logger.actix_log_format;
         let mut logger = match s.prom.exclude_endpoint_log {
             true => Logger::new(format).exclude(&s.prom.endpoint),
@@ -191,7 +192,7 @@ impl Peace {
         async_std::task::spawn(handle_session_recycle(self.bancho.clone()));
     }
 
-    pub fn prom_init(addr: &String, sets: &Settings) -> (PrometheusMetrics, IntCounterVec) {
+    pub fn prom_init(addr: &String, sets: &LocalConfigData) -> (PrometheusMetrics, IntCounterVec) {
         // Ready prometheus
         println!(
             "> {}",
@@ -233,7 +234,7 @@ impl Peace {
         (prometheus, counter)
     }
 
-    pub fn mmdb_init(sets: &Settings) -> Option<Reader<Mmap>> {
+    pub fn mmdb_init(sets: &LocalConfigData) -> Option<Reader<Mmap>> {
         match sets.geoip.enabled {
             true => match maxminddb::Reader::open_mmap(&sets.geoip.mmdb_path) {
                 Ok(reader) => Some(reader),

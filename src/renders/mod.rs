@@ -3,7 +3,7 @@ use std::sync::Arc;
 use askama::Template;
 use async_std::sync::RwLock;
 
-use crate::settings::bancho::BanchoConfig;
+use peace_settings::bancho::BanchoConfig;
 
 #[derive(Template, Clone)]
 #[template(path = "bancho_get.html")]

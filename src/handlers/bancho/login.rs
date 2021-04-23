@@ -10,10 +10,11 @@ use std::time::Instant;
 use peace_constants::{BanchoPrivileges, LoginFailed, Privileges};
 use peace_database::Database;
 use peace_packets::PacketBuilder;
+use peace_settings::bancho::model::BanchoConfigData;
 
 use crate::objects::{Bancho, Caches};
 use crate::objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus};
-use crate::{settings::bancho::model::BanchoConfigData, types::PacketData};
+use crate::types::PacketData;
 
 use super::parser;
 

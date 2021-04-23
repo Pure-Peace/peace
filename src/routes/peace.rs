@@ -1,23 +1,21 @@
 use actix_web::web::{get, post, scope, ServiceConfig};
 use actix_web::{dev::HttpServiceFactory, guard};
 
-use crate::settings::local::Settings;
-
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes
-pub fn init(cfg: &mut ServiceConfig, settings: &Settings) {
+pub fn init(cfg: &mut ServiceConfig, config_data: &peace_settings::local::LocalConfigData) {
     init_default(cfg);
     cfg.service(init_bancho());
     cfg.service(init_web());
     cfg.service(init_api_v1());
     cfg.service(init_api_v2());
 
-    if settings.geoip.web_api {
+    if config_data.geoip.web_api {
         cfg.service(init_geoip());
     };
 
     // !warning: only debug!
-    if settings.debug == true {
+    if config_data.debug == true {
         init_debug(cfg)
     }
 }

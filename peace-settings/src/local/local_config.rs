@@ -1,16 +1,17 @@
 use colored::Colorize;
 use config::{Config, ConfigError, /* Environment, */ File};
 use dotenv::dotenv;
-use serde::Deserialize;
+use peace_constants::{PEACE_BANNER, PEACE_LOCAL_CONFIG_DIR};
 use std::env;
 
-use peace_constants::PEACE_BANNER;
+use super::LocalConfigData;
+use super::Logger;
 
 #[derive(Debug, Clone)]
 pub struct LocalConfig {
     pub env: String,
     pub cfg: Config,
-    pub data: Settings,
+    pub data: LocalConfigData,
 }
 
 impl LocalConfig {
@@ -19,10 +20,10 @@ impl LocalConfig {
         println!("{}", PEACE_BANNER.green());
 
         // Start loading
-        println!("{}", "> Start loading settings!".green());
-        let env = Settings::load_env();
-        let cfg = Settings::load_settings(env.clone())?;
-        let data: Settings = cfg.clone().try_into()?;
+        println!("{}", "> Start loading local config!".green());
+        let env = Self::load_env();
+        let cfg = Self::load_settings(env.clone())?;
+        let data: LocalConfigData = cfg.clone().try_into()?;
         println!(
             "{}",
             "> Configuration loaded successfully!\n".bold().green()
@@ -39,26 +40,7 @@ impl LocalConfig {
         }
         cfg.unwrap()
     }
-}
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Settings {
-    pub postgres: deadpool_postgres::Config,
-    pub redis: deadpool_redis::Config,
-    pub check_pools_on_created: bool,
-    pub check_db_version_on_created: bool,
-
-    pub env: String,
-    pub debug: bool,
-    pub server: Server,
-    pub pp_server: PpServer,
-    pub geoip: Geoip,
-    pub logger: Logger,
-    #[serde(rename = "prometheus")]
-    pub prom: Prometheus,
-}
-
-impl Settings {
     pub fn load_env() -> String {
         // Load .env
         dotenv().ok();
@@ -81,15 +63,22 @@ impl Settings {
 
         // Set the env
         cfg.set("env", env.clone())?;
-        println!("{}", "> Loading user settings...".green());
+        println!("{}", "> Loading local config file...".green());
 
         // The "default" configuration file
-        cfg.merge(File::with_name("peace-config/default"))?;
+        cfg.merge(File::with_name(&format!(
+            "{}/default",
+            PEACE_LOCAL_CONFIG_DIR
+        )))
+        .expect(&format!(
+            "could not findout default config file, path: {}/default",
+            PEACE_LOCAL_CONFIG_DIR
+        ));
 
         // Add in the current environment file
-        cfg.merge(File::with_name(&format!("peace-config/{}", env)).required(true))
+        cfg.merge(File::with_name(&format!("{}/{}", PEACE_LOCAL_CONFIG_DIR, env)).required(true))
             .expect(
-                "Please make sure that the configuration file of the current environment exists in ./peace-config",
+                &format!("Please make sure that the configuration file of the current environment exists in ./{}/{}", PEACE_LOCAL_CONFIG_DIR, env),
             );
 
         // Initial logger
@@ -106,48 +95,4 @@ impl Settings {
 
         Ok(cfg)
     }
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Server {
-    pub host: String,
-    pub port: String,
-    pub data_dir: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct PpServer {
-    pub url: String,
-    pub pp_calc_timeout: u64,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct LoggerMode {
-    debug: String,
-    error: String,
-    warn: String,
-    info: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Logger {
-    pub level: String,
-    pub mode: LoggerMode,
-    pub actix_log_format: String,
-    pub exclude_endpoints: Vec<String>,
-    pub exclude_endpoints_regex: Vec<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Geoip {
-    pub enabled: bool,
-    pub mmdb_path: String,
-    pub web_api: bool,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Prometheus {
-    pub namespace: String,
-    pub endpoint: String,
-    pub exclude_endpoint_log: bool,
 }

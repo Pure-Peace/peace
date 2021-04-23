@@ -1,16 +1,15 @@
-pub mod model;
-
 use std::io::Read;
 
 use chrono::{DateTime, Local};
 use colored::Colorize;
 use serde_json::Value;
 
-use self::model::BanchoConfigData;
+use peace_constants::DEFAULT_BANCHO_CONFIG_PATH;
 use peace_database::Database;
 
+use super::model::BanchoConfigData;
+
 const TIPS: &str = "[BanchoConfig] Please check for errors.";
-const DEFAULT_CONFIG_PATH: &str = "./peace-config/bancho/default.json";
 
 #[derive(Debug, Clone)]
 pub struct BanchoConfig {
@@ -86,7 +85,8 @@ impl BanchoConfig {
     #[inline(always)]
     pub async fn config_not_found(database: &Database) -> Option<Self> {
         let mut input = String::new();
-        println!("\n{}\n", format!("**WARNING**: \n[BanchoConfig] Cannot found enabled config in database! You can manually set enable in the database table (bancho.config), or let us load the default config in \"{}\".", DEFAULT_CONFIG_PATH).yellow());
+        println!("\n{}\n", format!("**WARNING**: \n[BanchoConfig] Cannot found enabled config in database! 
+You can manually set enable in the database table (bancho.config), or let us load the default config in \"{}\".", DEFAULT_BANCHO_CONFIG_PATH).yellow());
         println!("> load the default config? (y/n):");
         std::io::stdin()
             .read_line(&mut input)
@@ -142,11 +142,11 @@ impl BanchoConfig {
         let error = |e| {
             error!(
                 "[BanchoConfig] Failed to read default config file: {}, err: {:?}",
-                DEFAULT_CONFIG_PATH, e
+                DEFAULT_BANCHO_CONFIG_PATH, e
             );
             None
         };
-        let mut file = match std::fs::File::open(DEFAULT_CONFIG_PATH) {
+        let mut file = match std::fs::File::open(DEFAULT_BANCHO_CONFIG_PATH) {
             Ok(f) => f,
             Err(err) => return error(format!("{:?}", err)),
         };

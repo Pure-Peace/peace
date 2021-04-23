@@ -6,12 +6,9 @@ use serde::Deserialize;
 use std::time::Instant;
 
 use crate::objects::{Bancho, MiniScore, ScoreData, SubmitModular};
-
 use crate::routes::web::Context;
 
 use peace_constants::SubmissionStatus;
-
-const NULL: String = String::new();
 
 macro_rules! chart_item {
     ($name:expr, $before:expr, $after:expr) => {

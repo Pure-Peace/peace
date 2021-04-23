@@ -5,9 +5,9 @@ use std::time::Instant;
 
 use peace_database::Database;
 use peace_objects::{osu_api::OsuApi, pp_calc::PPServerApi};
+use peace_settings::{bancho::BanchoConfig, local::LocalConfig};
 
 use super::{Caches, ChannelListBuilder};
-use crate::settings::{bancho::BanchoConfig, local::LocalConfig};
 use crate::{objects::PlayerSessions, renders::BanchoGet, types::ChannelList};
 
 pub struct Bancho {

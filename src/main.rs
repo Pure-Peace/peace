@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-extern crate config;
 extern crate derivative;
 extern crate serde;
 
@@ -11,18 +9,15 @@ pub mod handlers;
 pub mod objects;
 pub mod renders;
 pub mod routes;
-pub mod settings;
 pub mod types;
 
 use actix_web::web::Data;
 use objects::{Bancho, Peace};
 
-use crate::settings::local::LocalConfig;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Create local settings
-    let cfg = LocalConfig::init();
+    let cfg = peace_settings::local::LocalConfig::init();
 
     // Create database object includes postgres and redis pool
     let database = Data::new(
