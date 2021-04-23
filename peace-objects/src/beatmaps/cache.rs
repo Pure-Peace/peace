@@ -1,7 +1,5 @@
 use async_std::sync::RwLock;
 use chrono::{DateTime, Local};
-use core::any::Any;
-use core::fmt::Display;
 use hashbrown::HashMap;
 use std::sync::atomic::{AtomicI32, Ordering};
 
@@ -66,34 +64,25 @@ impl BeatmapCache {
 
     #[cfg(feature = "with_peace")]
     #[inline(always)]
-    pub async fn from_database<T: Any + Display>(
-        key: &T,
-        method: &GetBeatmapMethod,
-        database: &Database,
-    ) -> Option<Self> {
-        let beatmap = Beatmap::from_database(key, &method, database).await?;
+    pub async fn from_database(method: &GetBeatmapMethod, database: &Database) -> Option<Self> {
+        let beatmap = Beatmap::from_database(method, database).await?;
         let create_time = beatmap.update_time.clone();
         let new = Self {
             beatmap: Some(beatmap),
             create_time,
         };
-        info!(
-            "[BeatmapCache] get from database with Method({:?}): {}",
-            method, key
-        );
+        info!("[BeatmapCache] get from database with {:?}", method);
         Some(new)
     }
 
     #[inline(always)]
-    pub async fn from_osu_api<T: Any + Display>(
-        key: &T,
+    pub async fn from_osu_api(
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &OsuApi,
         #[cfg(feature = "with_peace")] database: &Database,
     ) -> Result<Self, ApiError> {
         Ok(BeatmapFromApi::from_osu_api(
-            key,
             method,
             file_name,
             osu_api,

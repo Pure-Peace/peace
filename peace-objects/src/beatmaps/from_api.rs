@@ -1,7 +1,6 @@
 use chrono::{DateTime, Local};
 use serde::Deserialize;
 use serde_str;
-use std::{any::Any, fmt::Display};
 
 #[cfg(feature = "with_peace")]
 use field_names::FieldNames;
@@ -108,26 +107,18 @@ impl BeatmapFromApi {
     }
 
     #[inline(always)]
-    pub async fn from_osu_api<T: Any + Display>(
-        key: &T,
+    pub async fn from_osu_api(
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &OsuApi,
         #[cfg(feature = "with_peace")] database: &Database,
     ) -> Result<Self, ApiError> {
         let b = match method {
-            &GetBeatmapMethod::Md5 => {
-                let v = (key as &dyn Any).downcast_ref().unwrap();
-                osu_api.fetch_beatmap_by_md5(v).await
-            }
-            &GetBeatmapMethod::Bid => {
-                let v = *(key as &dyn Any).downcast_ref().unwrap();
-                osu_api.fetch_beatmap_by_bid(v).await
-            }
-            &GetBeatmapMethod::Sid => {
+            GetBeatmapMethod::Md5(md5) => osu_api.fetch_beatmap_by_md5(md5).await,
+            &GetBeatmapMethod::Bid(bid) => osu_api.fetch_beatmap_by_bid(bid).await,
+            &GetBeatmapMethod::Sid(sid) => {
                 if let Some(file_name) = file_name {
-                    let v = *(key as &dyn Any).downcast_ref().unwrap();
-                    let beatmap_list = osu_api.fetch_beatmaps_by_sid(v).await?;
+                    let beatmap_list = osu_api.fetch_beatmaps_by_sid(sid).await?;
                     // Sid will get a list
                     let mut target = None;
                     for b in beatmap_list {
@@ -152,7 +143,7 @@ impl BeatmapFromApi {
                 } else {
                     warn!(
                         "[BeatmapFromApi] Try get a beatmap by sid: {}, but no file_name provided.",
-                        key
+                        sid
                     );
                 }
                 return Err(ApiError::NotExists);

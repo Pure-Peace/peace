@@ -1,6 +1,4 @@
 use chrono::{DateTime, Local};
-use core::any::Any;
-use core::fmt::Display;
 use peace_constants::{
     api::{ApiError, GetBeatmapMethod},
     RankStatusInServer,
@@ -131,7 +129,9 @@ impl Beatmap {
             // Try get beatmap from database
             // If get, will auto cache it to local.
             if let Some(md5) = md5 {
-                if let Some(b) = Self::from_database(md5, &GetBeatmapMethod::Md5, database).await {
+                if let Some(b) =
+                    Self::from_database(&GetBeatmapMethod::Md5(md5.to_string()), database).await
+                {
                     // If not expired, cache it locally and returns it.
                     if !b.is_expired(cache_expires) {
                         cache
@@ -154,7 +154,7 @@ impl Beatmap {
             };
             #[cfg(feature = "with_peace")]
             if let Some(bid) = bid {
-                if let Some(b) = Self::from_database(&bid, &GetBeatmapMethod::Bid, database).await {
+                if let Some(b) = Self::from_database(&GetBeatmapMethod::Bid(bid), database).await {
                     // If not expired, cache it locally and returns it.
                     if !b.is_expired(cache_expires) {
                         cache
@@ -183,8 +183,7 @@ impl Beatmap {
             // Try get beatmap from osu!api (try with md5)
             // If get, will auto cache it to local and database.
             match Self::from_osu_api(
-                md5,
-                &GetBeatmapMethod::Md5,
+                &GetBeatmapMethod::Md5(md5.to_string()),
                 None,
                 &osu_api,
                 #[cfg(feature = "with_peace")]
@@ -195,7 +194,7 @@ impl Beatmap {
                 Ok(b) => {
                     cache
                         .cache(
-                            Some(&md5),
+                            Some(md5),
                             Some(b.id),
                             Some(b.set_id),
                             Some(&b.file_name()),
@@ -208,7 +207,7 @@ impl Beatmap {
                     // If request error, we will not cache it.
                     debug!("[Beatmap] Failed to get beatmap ({}), err: {:?};", md5, err);
                     if err == ApiError::NotExists {
-                        cache.cache_with_md5(&md5, None).await;
+                        cache.cache_with_md5(md5, None).await;
                     };
                 }
             };
@@ -219,8 +218,7 @@ impl Beatmap {
         // Try get beatmap from osu!api (try with sid and file name)
         if let Some(bid) = bid {
             match Self::from_osu_api(
-                &bid,
-                &GetBeatmapMethod::Bid,
+                &GetBeatmapMethod::Bid(bid),
                 None,
                 &osu_api,
                 #[cfg(feature = "with_peace")]
@@ -255,8 +253,7 @@ impl Beatmap {
         // Try get beatmap from osu!api (try with sid and file name)
         if let (Some(sid), Some(file_name)) = (sid, file_name) {
             match Self::from_osu_api(
-                &sid,
-                &GetBeatmapMethod::Sid,
+                &GetBeatmapMethod::Sid(sid),
                 Some(file_name),
                 &osu_api,
                 #[cfg(feature = "with_peace")]
@@ -328,15 +325,13 @@ impl Beatmap {
     }
 
     #[inline(always)]
-    pub async fn from_osu_api<T: Any + Display>(
-        key: &T,
+    pub async fn from_osu_api(
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
         osu_api: &OsuApi,
         #[cfg(feature = "with_peace")] database: &Database,
     ) -> Result<Self, ApiError> {
         Ok(BeatmapFromApi::from_osu_api(
-            key,
             method,
             file_name,
             osu_api,
@@ -358,14 +353,10 @@ impl Beatmap {
 
     #[cfg(feature = "with_peace")]
     #[inline(always)]
-    pub async fn from_database<T: Any + Display>(
-        key: &T,
-        method: &GetBeatmapMethod,
-        database: &Database,
-    ) -> Option<Self> {
-        let v = key as &dyn Any;
+    pub async fn from_database(method: &GetBeatmapMethod, database: &Database) -> Option<Self> {
+        let key = method.to_string();
         debug!(
-            "[Beatmap] Try get with Method({:?}) {} from database...",
+            "[Beatmap] Try get with Method({:?}) {:?} from database...",
             method, key
         );
         database
@@ -375,7 +366,7 @@ impl Beatmap {
                 "maps",
                 method.db_column_name().as_str(),
                 Self::query_fields().as_str(),
-                v.downcast_ref::<String>().unwrap(),
+                &key,
             )
             .await
     }
@@ -383,19 +374,19 @@ impl Beatmap {
     #[cfg(feature = "with_peace")]
     #[inline(always)]
     pub async fn from_database_by_bid(bid: i32, database: &Database) -> Option<Self> {
-        Self::from_database(&bid, &GetBeatmapMethod::Bid, database).await
+        Self::from_database(&GetBeatmapMethod::Bid(bid), database).await
     }
 
     #[cfg(feature = "with_peace")]
     #[inline(always)]
     pub async fn from_database_by_sid(sid: i32, database: &Database) -> Option<Self> {
-        Self::from_database(&sid, &GetBeatmapMethod::Sid, database).await
+        Self::from_database(&GetBeatmapMethod::Sid(sid), database).await
     }
 
     #[cfg(feature = "with_peace")]
     #[inline(always)]
     pub async fn from_database_by_md5(md5: &String, database: &Database) -> Option<Self> {
-        Self::from_database(md5, &GetBeatmapMethod::Md5, database).await
+        Self::from_database(&GetBeatmapMethod::Md5(md5.to_string()), database).await
     }
 }
 
