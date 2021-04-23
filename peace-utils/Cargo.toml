@@ -5,6 +5,7 @@ authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace/peace-utils"
+description = "Utilities. Password encryption, calculation of file MD5, processing request (multipart), etc."
 
 [features]
 default = []
