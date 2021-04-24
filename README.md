@@ -85,9 +85,9 @@ Whew, so tired... I have so many ideas, maybe I'm better suited as a product man
 - **Web templates** support... (html will be compiled into the binary file)
 - **Geo-ip** Local geo-ip service (or api), fast and available for your other applications!
 
-### Schedules WIP
+### Schedules
 
-- ...
+- Waiting for v1.0.0...
 
 ### Database design (WIP...)
 
