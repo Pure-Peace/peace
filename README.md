@@ -7,7 +7,7 @@
 #### Fully asynchronous, high concurrency, high performance, and high security
 
 I'm new to rust and this is my first rust project. I first learned about the rust language and was very excited by its language features, then I read the documentation for about a few days and started the project. It was just for fun, and the feeling of learning and completing the project at the same time made me feel happy... Although rust language is not very easy to learn and often brings me a lot of difficulties ...... (lol).
-However, I actually have a lot of ideas for the osu server and will try to implement something different and interesting on PEACE. I also hope I can finish the frontend of pace independently, although I don't know when it will be done, looooool! Just for fun.
+However, I actually have a lot of ideas for the osu server and will try to implement something different and interesting on PEACE. I also hope I can finish the frontend of PEACE independently, although I don't know when it will be done, looooool! Just for fun.
 
 - ### Some features i think
 
