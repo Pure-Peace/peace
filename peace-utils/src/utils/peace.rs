@@ -143,3 +143,30 @@ pub async fn player_get_pp_acc(
         }
     }
 }
+
+#[inline(always)]
+pub async fn pp_recalc_task(
+    score_table: &str,
+    score_id: i64,
+    player_id: i32,
+    calc_query: &str,
+    database: &Database,
+) -> bool {
+    let key = format!("calc:{}:{}:{}", score_table, score_id, player_id);
+    match database.redis.set(&key, format!("0:{}", calc_query)).await {
+        Ok(_) => {
+            info!(
+                "[osu_submit_modular] set pp-recalculate task to redis, key: {}",
+                key
+            );
+            true
+        }
+        Err(err) => {
+            error!(
+                "[osu_submit_modular] Failed to set pp-recalculate task, err: {:?}",
+                err
+            );
+            false
+        }
+    }
+}

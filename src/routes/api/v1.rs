@@ -1,15 +1,16 @@
 use actix_web::{
-    error, get, http::Method, web::BytesMut, web::Data, web::Payload, Error, HttpRequest,
-    HttpResponse,
+    error, get, http::Method, web::BytesMut, web::Data, web::Path, web::Payload, Error,
+    HttpRequest, HttpResponse,
 };
 use futures::StreamExt;
 use num_traits::FromPrimitive;
 use peace_constants::{api::UpdateUserTask, GameMode};
 use peace_database::Database;
+use serde::Deserialize;
 
 use serde_json::json;
 
-use crate::objects::Bancho;
+use crate::objects::{Bancho, Caches};
 
 const PAYLOAD_MAX_SIZE: usize = 262_144;
 
@@ -60,6 +61,47 @@ pub async fn ci_trigger() -> HttpResponse {
 pub async fn bot_message() -> HttpResponse {
     let contents = "Hello api v1!";
     HttpResponse::Ok().body(contents)
+}
+
+#[derive(Deserialize)]
+pub struct ReCreateScoreTable {
+    pub map_md5: String,
+    pub mode: u8,
+}
+
+/// GET "/api/v1/recreate_score_table"
+#[get("/recreate_score_table/{map_md5}/{mode}")]
+pub async fn recreate_score_table(
+    req: HttpRequest,
+    data: Path<ReCreateScoreTable>,
+    bancho: Data<Bancho>,
+    database: Data<Database>,
+    caches: Data<Caches>,
+) -> Result<HttpResponse, Error> {
+    if !peace_utils::web::header_checker(
+        &req,
+        "peace_key",
+        &bancho.local_config.data.pp_server.peace_key,
+    ) {
+        return Err(error::ErrorUnauthorized("peace_key is invalid"));
+    }
+
+    let mode = match GameMode::from_u8(data.mode) {
+        Some(m) => m,
+        None => return Err(error::ErrorNotFound("mode is invalid")),
+    };
+
+    let _temp_table = Bancho::create_score_table(
+        &data.map_md5,
+        &mode.full_name(),
+        mode.pp_is_best(),
+        &database,
+        &caches,
+        true,
+    )
+    .await;
+
+    return Ok(HttpResponse::Ok().body("ok"));
 }
 
 /// Update user(multiple or single)'s stats in game

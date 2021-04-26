@@ -91,6 +91,7 @@ fn init_api_v1() -> impl HttpServiceFactory {
         .service(bot_message)
         .route("/update_user_stats", get().to(update_user_stats))
         .route("/update_user_stats", post().to(update_user_stats))
+        .service(recreate_score_table)
 }
 
 /// Routes for api_v2

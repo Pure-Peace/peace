@@ -1,6 +1,6 @@
 [package]
 name = "peace-utils"
-version = "0.5.3"
+version = "0.5.4"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -35,7 +35,7 @@ serdes = ["chrono", "serde"]
 passwords = ["lazy_static", "rand", "rust-argon2"]
 geoip = ["maxminddb", "memmap", "serde_json", "peace-constants"]
 bancho = ["async-std", "bytes", "peace-database", "peace-constants"]
-web = ["serde_qs", "hashbrown", "actix-multipart", "futures", "bytes"]
+web = ["serde_qs", "serde", "hashbrown", "actix-multipart", "futures", "bytes"]
 actix_web = ["actix-web", "async-std"]
 python3 = ["pyo3"]
 async_file = ["async-std", "md-5"]

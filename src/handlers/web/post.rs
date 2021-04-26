@@ -452,7 +452,9 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     }
 
     let new_stats = player_w.stats.clone();
-    if calc_failed {
+    // If score is passed, and pp calc was failed,
+    // we should send notification to user
+    if s.pass && calc_failed {
         player_w
             .enqueue(peace_packets::notification(
                 "PP calculation fails, Peace will auto recalculate it later.",
@@ -463,7 +465,14 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // If calc failed, add it recalculate task to redis
     if calc_failed {
-        Bancho::pp_recalc_task(&score_table, score_id, player_id, &calc_query, ctx.database).await;
+        peace_utils::peace::pp_recalc_task(
+            &score_table,
+            score_id,
+            player_id,
+            &calc_query,
+            ctx.database,
+        )
+        .await;
     };
 
     // Save replay
