@@ -89,6 +89,7 @@ fn init_api_v1() -> impl HttpServiceFactory {
         .service(verified_status)
         .service(ci_trigger)
         .service(bot_message)
+        .service(update_user_stats)
 }
 
 /// Routes for api_v2
