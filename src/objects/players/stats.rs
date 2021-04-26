@@ -43,8 +43,11 @@ impl Stats {
     }
 
     #[inline(always)]
+    /// calc rank by pp v2
+    /// 
+    /// TODO: Support for ppv1!!!!! current default is ppv2!~!!!
+    /// 
     pub async fn calc_rank_from_database(&mut self, mode: &GameMode, database: &Database) {
-        // TODO: Support for ppv1!!!!! current default is ppv2!~!!!
         let recalculate_start = Instant::now();
         let default_performance = format!("pp_v2{}", mode.sub_mod_table());
         let sql = format!(

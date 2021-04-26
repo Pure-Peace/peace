@@ -14,6 +14,8 @@ use crate::types::Argon2Cache;
 
 use super::{depends::*, PlayMods};
 
+const PLAYER_STATS_CACHE_TIMEOUT: i64 = 1800;
+
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Player {
@@ -129,64 +131,14 @@ impl Player {
 
     #[inline(always)]
     pub async fn recalculate_pp_acc(&mut self, score_table: &str, database: &Database) {
-        // Get bp
-        let score_set = match database
-            .pg
-            .query(
-                &format!(
-                    r#"SELECT s.pp_v2, s.accuracy FROM game_scores.{} s 
-                INNER JOIN beatmaps.maps m ON s.map_md5 = m.md5 
-                WHERE s.user_id = $1 
-                AND s.status = 2 
-                AND s.pp_v2 IS NOT NULL
-                AND m.rank_status IN (1, 2)
-                ORDER BY s.pp_v2 DESC
-                LIMIT 100;"#,
-                    score_table
-                ),
-                &[&self.id],
-            )
-            .await
-        {
-            Ok(rows) => rows,
-            Err(err) => {
-                error!(
-                    "[recalculate_pp_acc] Failed to get Player({})'s score set, err: {:?}",
-                    self.id, err
-                );
-                return;
-            }
-        };
-        let score_count = score_set.len();
-
-        // Calc acc from bp
-        self.stats.accuracy = if score_count == 1 {
-            score_set[0]
-                .try_get::<'_, _, f32>("accuracy")
-                .unwrap_or(1.0)
-        } else {
-            let mut total = 0f32;
-            let mut div = 0f32;
-            for (idx, row) in score_set.iter().enumerate() {
-                if let Ok(acc) = row.try_get::<'_, _, f32>("accuracy") {
-                    let add = (0.95_f32.powi(idx as i32)) * 100.0;
-                    total += acc * add;
-                    div += add;
-                }
-            }
-            total / div
-        };
-
-        // Calc pp from bp
-        self.stats.pp_v2 = {
-            let mut total = 0f32;
-            for (idx, row) in score_set.iter().enumerate() {
-                if let Ok(pp) = row.try_get::<'_, _, f32>("pp_v2") {
-                    total += pp * 0.95_f32.powi(idx as i32);
-                }
-            }
-            total
-        };
+        let calc_result =
+            peace_utils::peace::player_calculate_pp_acc(self.id, score_table, database).await;
+        if let Some((acc, pp)) = calc_result {
+            // Calc acc from bp
+            self.stats.accuracy = acc;
+            // Calc pp from bp
+            self.stats.pp_v2 = pp;
+        }
     }
 
     #[inline(always)]
@@ -573,7 +525,9 @@ impl Player {
         match self.stats_cache.get(&self.game_status.mode) {
             Some(stats) => {
                 // Cache expired, update from database
-                if Local::now().timestamp() > stats.update_time.timestamp() + 120 {
+                if Local::now().timestamp()
+                    > stats.update_time.timestamp() + PLAYER_STATS_CACHE_TIMEOUT
+                {
                     debug!(
                         "Player {}({}) stats cache expired! will get new... game mode: {:?}",
                         self.name, self.id, self.game_status.mode
