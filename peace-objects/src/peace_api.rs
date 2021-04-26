@@ -69,12 +69,12 @@ impl PeaceApi {
 
     #[inline(always)]
     pub async fn post<T: Serialize + ?Sized>(&self, path: &str, json: &T) -> Option<Response> {
-        self.request_wrapper(self.client.post(self.full_url(path)).json(json)).await
+        self.request_wrapper(self.client.post(&self.full_url(path)).json(json)).await
     }
 
     #[inline(always)]
     pub async fn get<T: Serialize + ?Sized>(&self, path: &str, query: &T) -> Option<Response> {
-        self.request_wrapper(self.client.get(self.full_url(path)).query(query))
+        self.request_wrapper(self.client.get(&self.full_url(path)).query(query))
             .await
     }
 
