@@ -1,6 +1,6 @@
 [package]
 name = "peace-objects"
-version = "0.5.2"
+version = "0.6.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -20,7 +20,10 @@ with_peace = [
     "field_names",
     "async_trait",
     "async-std",
+    "pp_server_api",
 ]
+pp_server_api = []
+peace_api = []
 no_database = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
