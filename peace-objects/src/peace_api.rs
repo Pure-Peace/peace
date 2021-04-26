@@ -68,33 +68,25 @@ impl PeaceApi {
     }
 
     #[inline(always)]
-    pub async fn post<T: Serialize + ?Sized>(&self, path: &str, json: Option<&T>) -> Option<Response> {
-        let b = self.client.post(&self.full_url(path));
-        let b = if let Some(json) = json {
-            b.json(json)
-        } else {
-            b
-        };
-        self.request_wrapper(b).await
+    pub async fn post<T: Serialize + ?Sized>(&self, path: &str, json: &T) -> Option<Response> {
+        self.request_wrapper(self.client.post(&self.full_url(path)).json(json)).await
     }
 
     #[inline(always)]
-    pub async fn get<T: Serialize + ?Sized>(&self, path: &str, query: Option<&T>) -> Option<Response> {
-        let b = self.client.get(&self.full_url(path));
-        let b = if let Some(query) = query {
-            b.query(query)
-        } else {
-            b
-        };
-        self.request_wrapper(b)
-            .await
+    pub async fn get<T: Serialize + ?Sized>(&self, path: &str, query: &T) -> Option<Response> {
+        self.request_wrapper(self.client.get(&self.full_url(path)).query(query)).await
+    }
+
+    #[inline(always)]
+    pub async fn simple_get(&self, path: &str) -> Option<Response> {
+        self.request_wrapper(self.client.get(&self.full_url(path))).await
     }
 
     #[inline(always)]
     pub async fn get_json<Q: Serialize + ?Sized, T: DeserializeOwned>(
         &self,
         path: &str,
-        query: Option<&Q>,
+        query: &Q,
     ) -> Result<T, ApiError> {
         let res = match self.get(path, query).await {
             Some(r) => {
