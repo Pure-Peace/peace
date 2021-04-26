@@ -1,11 +1,17 @@
-use actix_web::{get, post, web::Data, web::Json, HttpRequest, HttpResponse};
+use actix_web::{
+    error, get, http::Method, web::BytesMut, web::Data, web::Payload, Error, HttpRequest,
+    HttpResponse,
+};
+use futures::StreamExt;
 use num_traits::FromPrimitive;
-use peace_constants::GameMode;
+use peace_constants::{api::UpdateUserTask, GameMode};
 use peace_database::Database;
-use serde::Deserialize;
+
 use serde_json::json;
 
 use crate::objects::Bancho;
+
+const PAYLOAD_MAX_SIZE: usize = 262_144;
 
 /// GET "/api/v1"
 #[get("")]
@@ -56,48 +62,57 @@ pub async fn bot_message() -> HttpResponse {
     HttpResponse::Ok().body(contents)
 }
 
-#[derive(Deserialize)]
-pub struct UpdateUserTasks {
-    // player_id, mode_val
-    pub player_and_mode: Vec<(i32, u8)>,
-}
-
-#[inline(always)]
-pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
-    let v = req.headers().get(key);
-    if v.is_none() {
-        return false;
-    }
-    let v = v.unwrap().to_str();
-    if v.is_err() {
-        return false;
-    }
-    if v.unwrap() != value {
-        return false;
-    }
-    true
-}
-
+/// Update user(multiple or single)'s stats in game
+///
+/// GET "/api/v1/update_user_stats?player_id={player_id}&mode={game_mode_value}&recalc={true/false}"
+///
 /// POST "/api/v1/update_user_stats"
+///
 /// TODO: maybe we should broadcast stats packet to all users
-#[post("/update_user_stats")]
 pub async fn update_user_stats(
     req: HttpRequest,
-    data: Json<UpdateUserTasks>,
+    mut payload: Payload,
     bancho: Data<Bancho>,
     database: Data<Database>,
-) -> HttpResponse {
-    if !header_checker(
+) -> Result<HttpResponse, Error> {
+    if !peace_utils::web::header_checker(
         &req,
         "peace_key",
         &bancho.local_config.data.pp_server.peace_key,
     ) {
-        return HttpResponse::NonAuthoritativeInformation().body("0");
+        return Err(error::ErrorUnauthorized("peace_key is invalid"));
     }
-    let mut success = 0;
-    let mut failed = 0;
+
+    let tasks = match req.method() {
+        &Method::GET => {
+            vec![serde_qs::from_str::<UpdateUserTask>(req.query_string())
+                .map_err(|_| error::ErrorNotFound("param error"))?]
+        }
+        &Method::POST => {
+            // payload is a stream of Bytes objects
+            let mut body = BytesMut::new();
+            while let Some(chunk) = payload.next().await {
+                let chunk = chunk?;
+                // limit max size of in-memory payload
+                if (body.len() + chunk.len()) > PAYLOAD_MAX_SIZE {
+                    return Err(error::ErrorBadRequest("overflow"));
+                }
+                body.extend_from_slice(&chunk);
+            }
+            serde_json::from_slice::<Vec<UpdateUserTask>>(&body)?
+        }
+        _ => return Err(error::ErrorMethodNotAllowed("only allowed GET, POST")),
+    };
+
+    let mut success = 0i32;
+    let mut failed = 0i32;
     let start = std::time::Instant::now();
-    for (player_id, mode_val) in data.player_and_mode.iter() {
+    for UpdateUserTask {
+        player_id,
+        mode: mode_val,
+        recalc,
+    } in tasks.iter()
+    {
         let mode = match GameMode::from_u8(*mode_val) {
             Some(m) => m,
             None => {
@@ -124,16 +139,21 @@ pub async fn update_user_stats(
             }
         };
 
-        // If player is online, we should update stats and send player_updates packet to them
-        if let Some((pp, acc)) =
+        let pp_acc_result = if *recalc {
+            peace_utils::peace::player_calculate_pp_acc(*player_id, &mode.full_name(), &database)
+                .await
+        } else {
             peace_utils::peace::player_get_pp_acc(*player_id, &mode, &database).await
-        {
+        };
+
+        // If player is online, we should update stats and send player_updates packet to them
+        if let Some(result) = pp_acc_result {
             let mut p = p.write().await;
             // If player's current mode is this mode,
             // update current mode then clone into stats cache
             if p.game_status.mode == mode {
-                p.stats.pp_v2 = pp;
-                p.stats.accuracy = acc;
+                p.stats.pp_v2 = result.pp;
+                p.stats.accuracy = result.acc;
                 p.stats.calc_rank_from_database(&mode, &database).await;
                 p.stats.update_time();
                 // Send stats packet
@@ -144,8 +164,8 @@ pub async fn update_user_stats(
             } else {
                 // Otherwise, just update stats cache
                 if let Some(mut stats) = p.stats_cache.get_mut(&mode) {
-                    stats.pp_v2 = pp;
-                    stats.accuracy = acc;
+                    stats.pp_v2 = result.pp;
+                    stats.accuracy = result.acc;
                     stats.calc_rank_from_database(&mode, &database).await;
                     stats.update_time();
                 }
@@ -162,9 +182,10 @@ pub async fn update_user_stats(
         "[update_user_stats] Success update {} user's stats, time spent: {:?}",
         success, end
     );
-    HttpResponse::Ok().body(json!({
+
+    Ok(HttpResponse::Ok().body(json!({
         "success": success,
         "failed": failed,
         "duration": end
-    }))
+    })))
 }

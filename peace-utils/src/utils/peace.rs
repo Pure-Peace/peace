@@ -117,7 +117,7 @@ pub async fn player_get_pp_acc(
     player_id: i32,
     mode: &GameMode,
     database: &Database,
-) -> Option<(f32, f32)> {
+) -> Option<CalcPpAccResult> {
     match database
         .pg
         .query_first(
@@ -130,7 +130,10 @@ pub async fn player_get_pp_acc(
         )
         .await
     {
-        Ok(row) => Some((row.try_get("pp").ok()?, row.try_get("acc").ok()?)),
+        Ok(row) => Some(CalcPpAccResult {
+            pp: row.try_get("pp").ok()?,
+            acc: row.try_get("acc").ok()?,
+        }),
         Err(err) => {
             error!(
                 "[player_get_pp_acc] Failed to get player pp and acc from database, err: {:?}",

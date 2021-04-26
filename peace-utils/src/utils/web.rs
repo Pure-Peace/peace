@@ -112,6 +112,23 @@ pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
 
 #[cfg(feature = "actix_web")]
 #[inline(always)]
+pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
+    let v = req.headers().get(key);
+    if v.is_none() {
+        return false;
+    }
+    let v = v.unwrap().to_str();
+    if v.is_err() {
+        return false;
+    }
+    if v.unwrap() != value {
+        return false;
+    }
+    true
+}
+
+#[cfg(feature = "actix_web")]
+#[inline(always)]
 /// Get osu version from headers
 pub async fn get_osuver(req: &HttpRequest) -> String {
     match req.headers().get("osu-version") {

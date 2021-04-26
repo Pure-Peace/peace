@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 pub const OSU_FILE_DOWNLOAD_URL: &str = "https://old.ppy.sh/osu/";
 
 #[derive(Debug)]
@@ -33,4 +35,11 @@ pub enum ApiError {
     NotExists,
     RequestError,
     ParseError,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateUserTask {
+    pub player_id: i32,
+    pub mode: u8,
+    pub recalc: bool,
 }
