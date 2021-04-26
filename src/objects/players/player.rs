@@ -133,11 +133,11 @@ impl Player {
     pub async fn recalculate_pp_acc(&mut self, score_table: &str, database: &Database) {
         let calc_result =
             peace_utils::peace::player_calculate_pp_acc(self.id, score_table, database).await;
-        if let Some((acc, pp)) = calc_result {
+        if let Some(result) = calc_result {
             // Calc acc from bp
-            self.stats.accuracy = acc;
+            self.stats.accuracy = result.acc;
             // Calc pp from bp
-            self.stats.pp_v2 = pp;
+            self.stats.pp_v2 = result.pp;
         }
     }
 

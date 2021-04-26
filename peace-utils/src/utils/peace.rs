@@ -1,16 +1,21 @@
 use peace_constants::GameMode;
 use peace_database::Database;
 
+pub struct CalcPpAccResult {
+    pub pp: f32,
+    pub acc: f32,
+}
+
 #[inline(always)]
-/// Get player's bp then calculate acc and pp
+/// Get player's bp then calculate pp and acc
 /// ```
-/// calculate_pp_acc(...) -> Option<(acc, pp)>
+/// calculate_pp_acc(...) -> Option<(pp, acc)>
 /// ```
 pub async fn player_calculate_pp_acc(
     player_id: i32,
     score_table: &str,
     database: &Database,
-) -> Option<(f32, f32)> {
+) -> Option<CalcPpAccResult> {
     // Get bp
     let score_set = match database
         .pg
@@ -70,7 +75,7 @@ pub async fn player_calculate_pp_acc(
         total
     };
 
-    Some((acc, pp_v2))
+    Some(CalcPpAccResult { pp: pp_v2, acc })
 }
 
 #[inline(always)]
