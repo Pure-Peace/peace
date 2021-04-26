@@ -63,23 +63,28 @@ impl PeaceApi {
     }
 
     #[inline(always)]
-    pub async fn post<T: Serialize + ?Sized>(&self, url: &str, json: &T) -> Option<Response> {
-        self.request_wrapper(self.client.post(url).json(json)).await
+    pub fn full_url(&self, path: &str) -> String {
+        format!("{}/{}", self.url, path)
     }
 
     #[inline(always)]
-    pub async fn get<T: Serialize + ?Sized>(&self, url: &str, query: &T) -> Option<Response> {
-        self.request_wrapper(self.client.get(url).query(query))
+    pub async fn post<T: Serialize + ?Sized>(&self, path: &str, json: &T) -> Option<Response> {
+        self.request_wrapper(self.client.post(self.full_url(path)).json(json)).await
+    }
+
+    #[inline(always)]
+    pub async fn get<T: Serialize + ?Sized>(&self, path: &str, query: &T) -> Option<Response> {
+        self.request_wrapper(self.client.get(self.full_url(path)).query(query))
             .await
     }
 
     #[inline(always)]
     pub async fn get_json<Q: Serialize + ?Sized, T: DeserializeOwned>(
         &self,
-        url: &str,
+        path: &str,
         query: &Q,
     ) -> Result<T, ApiError> {
-        let res = match self.get(url, query).await {
+        let res = match self.get(path, query).await {
             Some(r) => {
                 if !r.status().is_success() {
                     return Err(ApiError::RequestError);
