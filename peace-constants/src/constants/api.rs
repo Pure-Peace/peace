@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub const OSU_FILE_DOWNLOAD_URL: &str = "https://old.ppy.sh/osu/";
 
@@ -37,7 +37,7 @@ pub enum ApiError {
     ParseError,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UpdateUserTask {
     pub player_id: i32,
     pub mode: u8,
