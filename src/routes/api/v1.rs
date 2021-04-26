@@ -1,4 +1,4 @@
-use actix_web::{get, post, web::Data, web::Json, HttpResponse};
+use actix_web::{get, post, web::Data, web::Json, HttpRequest, HttpResponse};
 use num_traits::FromPrimitive;
 use peace_constants::GameMode;
 use peace_database::Database;
@@ -60,18 +60,38 @@ pub async fn bot_message() -> HttpResponse {
 pub struct UpdateUserTasks {
     // player_id, mode_val
     pub player_and_mode: Vec<(i32, u8)>,
-    pub peace_key: String,
+}
+
+#[inline(always)]
+pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
+    let v = req.headers().get(key);
+    if v.is_none() {
+        return false;
+    }
+    let v = v.unwrap().to_str();
+    if v.is_err() {
+        return false;
+    }
+    if v.unwrap() != value {
+        return false;
+    }
+    true
 }
 
 /// POST "/api/v1/update_user_stats"
 /// TODO: maybe we should broadcast stats packet to all users
 #[post("/update_user_stats")]
 pub async fn update_user_stats(
+    req: HttpRequest,
     data: Json<UpdateUserTasks>,
     bancho: Data<Bancho>,
     database: Data<Database>,
 ) -> HttpResponse {
-    if data.peace_key != bancho.local_config.data.pp_server.peace_key {
+    if !header_checker(
+        &req,
+        "peace_key",
+        &bancho.local_config.data.pp_server.peace_key,
+    ) {
         return HttpResponse::NonAuthoritativeInformation().body("0");
     }
     let mut success = 0;
