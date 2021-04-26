@@ -1,8 +1,18 @@
 [server]
+# It is recommended to set it to 127.0.0.1, 
+# and then use nginx to expose part of the interface
 host = "127.0.0.1"
 port = 8080
+
+# data dir, including replays(.osr), screnshoots(ss)
 data_dir = ".data"
 
 [pp_server]
+# pp server address
 url = "http://127.0.0.1:8088"
+
+# Timeout for requesting pp server
 pp_calc_timeout = 8
+
+# Set peace_key in the pp server to the same value as here
+peace_key = "pp_server"

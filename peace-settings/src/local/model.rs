@@ -28,6 +28,7 @@ pub struct Server {
 pub struct PpServer {
     pub url: String,
     pub pp_calc_timeout: u64,
+    pub peace_key: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
