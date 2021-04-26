@@ -86,9 +86,9 @@ pub async fn player_save_pp_acc(
         .execute(
             &format!(
                 r#"UPDATE game_stats.{0} SET 
-            accuracy{1} = $7, 
-            pp_v2{1} = $8 
-            WHERE "id" = $9"#,
+            accuracy{1} = $1, 
+            pp_v2{1} = $2 
+            WHERE "id" = $3"#,
                 mode.mode_name(),
                 mode.sub_mod_table()
             ),
