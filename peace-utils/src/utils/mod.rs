@@ -7,6 +7,8 @@ pub mod common;
 pub mod geoip;
 #[cfg(feature = "passwords")]
 pub mod passwords;
+#[cfg(feature = "peace")]
+pub mod peace;
 #[cfg(feature = "python3")]
 pub mod python;
 #[cfg(feature = "serdes")]
