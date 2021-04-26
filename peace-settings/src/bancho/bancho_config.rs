@@ -112,13 +112,13 @@ You can manually set enable in the database table (bancho.config), or let us loa
             .pg
             .execute(
                 r#"INSERT INTO "bancho"."config" ("name", comment, enabled, settings) 
-                    VALUES ($1, $2, TRUE, $3) 
-                    ON CONFLICT ("name") DO UPDATE SET enabled = $4, settings = EXCLUDED.settings"#,
+                    VALUES ($1, $2, $3, $4) 
+                    ON CONFLICT ("name") DO UPDATE SET enabled = EXCLUDED.enabled, settings = EXCLUDED.settings"#,
                 &[
                     &self.name,
                     &self.comment,
-                    &serde_json::to_value(self.data.clone()).unwrap(),
                     &enabled,
+                    &serde_json::to_value(self.data.clone()).unwrap(),
                 ],
             )
             .await

@@ -28,7 +28,7 @@ CREATE FUNCTION bancho.bancho_config_trigger() RETURNS trigger
     AS $$BEGIN
 	NEW.update_time = CURRENT_TIMESTAMP;
 	IF NEW.enabled = TRUE THEN
-		UPDATE "bancho"."config" SET "enabled" = FALSE WHERE "enabled" = TRUE;
+		UPDATE "bancho"."config" SET "enabled" = FALSE WHERE "name" <> NEW."name" AND "enabled" = TRUE;
 	END IF;
 	RETURN NEW;
 END$$;
@@ -1185,6 +1185,7 @@ INSERT INTO public.db_versions (version, author, sql, release_note, create_time,
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.6', 'PurePeace', NULL, 'Add u_name, modify user.info -> user.status', '2021-04-20 09:41:22.083242+08', '2021-04-20 09:41:24.354682+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.9.7', 'PurePeace', NULL, 'Modify beatmaps: remove server', '2021-04-21 03:29:58.900138+08', '2021-04-21 03:29:58.900138+08');
 INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.10.0', 'PurePeace', NULL, 'Refactor: bancho config', '2021-04-21 20:21:10.927445+08', '2021-04-21 20:21:10.927445+08');
+INSERT INTO public.db_versions (version, author, sql, release_note, create_time, update_time) VALUES ('0.10.1', 'PurePeace', NULL, 'modify bancho config trigger', '2021-04-27 00:17:17.105743+08', '2021-04-27 00:17:17.105743+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.1.2', 'PurePeace', '0.1.4', 'add tables', '2020-12-15 01:16:37.785543+08', '2021-01-04 21:32:36.894734+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.0', 'PurePeace', '0.2.0', 'add bancho config, spec, register', '2021-02-14 12:35:58.665894+08', '2021-02-22 22:26:20.630535+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.2.1', 'PurePeace', '0.2.1', '++', '2021-02-22 22:26:23.940376+08', '2021-03-25 22:41:55.65887+08');
@@ -1211,6 +1212,7 @@ INSERT INTO public.versions (version, author, db_version, release_note, create_t
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.6', 'PurePeace', '0.9.6', 'optional unicode name support', '2021-04-20 09:41:44.570464+08', '2021-04-20 09:41:44.570464+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.7.7', 'PurePeace', '0.9.7', 'beatmaps edit', '2021-04-21 03:30:28.41399+08', '2021-04-21 03:30:28.41399+08');
 INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.8.0', 'PurePeace', '0.10.0', 'Refactor bancho config', '2021-04-21 20:21:16.90335+08', '2021-04-21 20:21:16.90335+08');
+INSERT INTO public.versions (version, author, db_version, release_note, create_time, update_time) VALUES ('0.10.1', 'PurePeace', '0.10.1', 'up to date', '2021-04-27 00:17:46.19709+08', '2021-04-27 00:17:46.19709+08');
 INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (1, 'System', 'system', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$this_user_not_avalible_login', '#%system%#@*.%', 0, 'UN', '2021-01-04 21:43:45.770011+08', '2021-01-06 23:09:32.522439+08');
 INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (6, 'ChinoChan', 'chinochan', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$bmVQNTdoZmdJSW9nMERsYWd4OGxRZ1hRSFpvUjg5TEs$H6OEckDS9yVSODESGYA2mPudB2UkoBUH8UhVB6B6Dsg', 'a@chino.com', 3, 'JP', '2020-12-19 21:35:54.465545+08', '2021-04-20 09:39:54.655107+08');
 INSERT INTO "user".base (id, name, name_safe, u_name, u_name_safe, password, email, privileges, country, create_time, update_time) VALUES (5, 'PurePeace', 'purepeace', NULL, NULL, '$argon2i$v=19$m=4096,t=3,p=1$VGQ3NXNFbnV1a25hVHAzazZwRm80N3hROVFabHdmaHk$djMKitAp+E/PD56gyVnIeM/7HmJNM9xBt6h/yAuRqPk', '940857703@qq.com', 16387, 'CN', '2020-12-19 21:35:32.810099+08', '2021-04-20 09:39:57.277453+08');
