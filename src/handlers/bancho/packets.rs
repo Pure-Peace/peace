@@ -33,7 +33,7 @@ pub async fn read_handle<'a>(
     match payload {
         // Payload not exists handlers
         None => {
-            let build_ctx = || HandlerContext {
+            let ctx = HandlerContext {
                 request_ip,
                 token,
                 id: player_id,
@@ -47,14 +47,30 @@ pub async fn read_handle<'a>(
             };
             match packet_id {
                 id::OSU_PING => None,
+                // Users ---------
                 id::OSU_USER_REQUEST_STATUS_UPDATE => {
-                    events::users::request_status_update(&build_ctx()).await
+                    events::users::request_status_update(&ctx).await
                 }
                 id::OSU_USER_PRESENCE_REQUEST_ALL => {
-                    events::users::presence_request_all(&build_ctx()).await
+                    events::users::presence_request_all(&ctx).await
                 }
-                id::OSU_SPECTATE_STOP => events::spectates::spectate_stop(&build_ctx()).await,
-                id::OSU_SPECTATE_CANT => events::spectates::spectate_cant(&build_ctx()).await,
+                id::OSU_SPECTATE_STOP => events::spectates::spectate_stop(&ctx).await,
+                id::OSU_SPECTATE_CANT => events::spectates::spectate_cant(&ctx).await,
+                /* // TODO: User.matches ---------
+                id::OSU_USER_PART_LOBBY => events::users::lobby_part(&ctx).await,
+                id::OSU_USER_JOIN_LOBBY => events::users::lobby_join(&ctx).await,
+                id::OSU_USER_PART_MATCH => events::users::match_part(&ctx).await,
+                id::OSU_USER_MATCH_READY => events::users::match_ready(&ctx).await,
+                // Matches ---------
+                id::OSU_MATCH_START => events::matches::start(&ctx).await,
+                id::OSU_MATCH_COMPLETE => events::matches::complete(&ctx).await,
+                id::OSU_MATCH_LOAD_COMPLETE => events::matches::load_complete(&ctx).await,
+                id::OSU_MATCH_NO_BEATMAP => events::matches::no_beatmap(&ctx).await,
+                id::OSU_MATCH_NOT_READY => events::matches::not_ready(&ctx).await,
+                id::OSU_MATCH_FAILED => events::matches::failed(&ctx).await,
+                id::OSU_MATCH_HAS_BEATMAP => events::matches::has_beatmap(&ctx).await,
+                id::OSU_MATCH_SKIP_REQUEST => events::matches::skip_request(&ctx).await,
+                id::OSU_MATCH_CHANGE_TEAM => events::matches::change_team(&ctx).await, */
                 _ => {
                     warn!(
                         "Unhandled packet (Non-payload): {:?}; user: {}({});",
@@ -99,7 +115,28 @@ pub async fn read_handle<'a>(
                 // Spectates ---------
                 id::OSU_SPECTATE_START => events::spectates::spectate_start(&ctx).await,
                 id::OSU_SPECTATE_FRAMES => events::spectates::spectate_frames_received(&ctx).await,
+                /* // TODO: User.matches ---------
+                id::OSU_USER_CREATE_MATCH => events::users::match_create(&ctx).await,
+                id::OSU_USER_JOIN_MATCH => events::users::match_join(&ctx).await,
                 // TODO: Matches ---------
+                id::OSU_MATCH_CHANGE_SLOT => events::matches::change_slot(&ctx).await,
+                id::OSU_MATCH_LOCK => events::matches::lock(&ctx).await,
+                id::OSU_MATCH_CHANGE_SETTINGS => events::matches::change_settings(&ctx).await,
+                id::OSU_MATCH_SCORE_UPDATE => events::matches::score_update(&ctx).await,
+                id::OSU_MATCH_CHANGE_MODS => events::matches::change_mods(&ctx).await,
+                id::OSU_MATCH_TRANSFER_HOST => events::matches::transfer_host(&ctx).await,
+                id::OSU_MATCH_INVITE => events::matches::invite(&ctx).await,
+                id::OSU_MATCH_CHANGE_PASSWORD => events::matches::change_password(&ctx).await,
+                // TODO: Tournament
+                id::OSU_TOURNAMENT_MATCH_INFO_REQUEST => {
+                    events::tournaments::match_info_request(&ctx).await
+                }
+                id::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => {
+                    events::tournaments::join_match_channel(&ctx).await
+                }
+                id::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => {
+                    events::tournaments::leave_match_channel(&ctx).await
+                } */
                 _ => {
                     warn!(
                         "Unhandled packet: {:?}; user: {}({}); payload (length): {:?}",

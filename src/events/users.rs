@@ -407,6 +407,11 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let channel_name = PayloadReader::new(ctx.payload).read_string()?;
+
+    if channel_name == "#highlight" {
+        return Some(());
+    }
+
     match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
             if channel.auto_close {

@@ -1,5 +1,7 @@
+pub mod matches;
 pub mod messages;
 pub mod spectates;
+pub mod tournaments;
 pub mod users;
 
 mod depends {
