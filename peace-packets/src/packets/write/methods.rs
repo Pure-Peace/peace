@@ -1,4 +1,4 @@
-use peace_constants::{id, LoginReply};
+use peace_constants::packets::{id, LoginReply};
 
 use super::utils::*;
 

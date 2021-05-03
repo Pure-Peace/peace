@@ -1,4 +1,4 @@
-use peace_constants::id;
+use peace_constants::packets::id;
 use std::convert::TryInto;
 use std::str;
 

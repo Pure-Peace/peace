@@ -7,7 +7,7 @@ use prometheus::IntCounterVec;
 use std::net::{IpAddr, Ipv4Addr};
 use std::time::Instant;
 
-use peace_constants::{BanchoPrivileges, LoginFailed, Privileges};
+use peace_constants::{packets::LoginFailed, BanchoPrivileges, Privileges};
 use peace_database::Database;
 use peace_packets::PacketBuilder;
 use peace_settings::bancho::model::BanchoConfigData;
@@ -494,7 +494,7 @@ pub async fn login(
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
-        peace_packets::login_reply(peace_constants::LoginSuccess::Verified(player.id)),
+        peace_packets::login_reply(peace_constants::packets::LoginSuccess::Verified(player.id)),
         peace_packets::protocol_version(19),
         peace_packets::bancho_privileges(player.bancho_privileges),
         if using_u_name {

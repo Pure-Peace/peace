@@ -8,7 +8,7 @@ use crate::{
     objects::{Bancho, Player, PlayerData},
 };
 
-use peace_constants::id;
+use peace_constants::packets::id;
 use peace_database::Database;
 
 use super::HandlerContext;
@@ -46,7 +46,6 @@ pub async fn read_handle<'a>(
                 payload: &[],
             };
             match packet_id {
-                id::OSU_PING => None,
                 // Users ---------
                 id::OSU_USER_REQUEST_STATUS_UPDATE => {
                     events::users::request_status_update(&ctx).await
@@ -56,10 +55,10 @@ pub async fn read_handle<'a>(
                 }
                 id::OSU_SPECTATE_STOP => events::spectates::spectate_stop(&ctx).await,
                 id::OSU_SPECTATE_CANT => events::spectates::spectate_cant(&ctx).await,
-                /* // TODO: User.matches ---------
+                // TODO: User.matches ---------
                 id::OSU_USER_PART_LOBBY => events::users::lobby_part(&ctx).await,
                 id::OSU_USER_JOIN_LOBBY => events::users::lobby_join(&ctx).await,
-                id::OSU_USER_PART_MATCH => events::users::match_part(&ctx).await,
+                /* id::OSU_USER_PART_MATCH => events::users::match_part(&ctx).await,
                 id::OSU_USER_MATCH_READY => events::users::match_ready(&ctx).await,
                 // Matches ---------
                 id::OSU_MATCH_START => events::matches::start(&ctx).await,

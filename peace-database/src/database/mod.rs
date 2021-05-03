@@ -4,7 +4,7 @@ use connectors::*;
 use colored::Colorize;
 
 #[cfg(feature = "with_peace")]
-use peace_constants::{DB_VERSION, PEACE_VERSION};
+use peace_constants::common::{DB_VERSION, PEACE_VERSION};
 
 /// Database object
 ///

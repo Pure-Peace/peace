@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-use peace_constants::{LoginFailed, LoginSuccess};
+use peace_constants::packets::{LoginFailed, LoginSuccess};
 
 use super::*;
 

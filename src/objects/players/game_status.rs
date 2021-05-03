@@ -1,5 +1,5 @@
-use super::{depends::*, PlayMods};
-use peace_constants::{Action, GameMode, PlayMod};
+use super::depends::*;
+use peace_constants::{Action, GameMode, PlayMods};
 
 #[derive(Debug, Clone)]
 pub struct GameStatus {
@@ -19,7 +19,7 @@ impl GameStatus {
             info: String::new(),
             beatmap_id: 0,
             beatmap_md5: String::new(),
-            mods: PlayMods::new(PlayMod::NoMod),
+            mods: PlayMods::new(),
             mode: GameMode::Std,
             update_time: Local::now(),
         }

@@ -1,6 +1,6 @@
 [package]
 name = "peace-settings"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"

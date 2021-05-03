@@ -1,7 +1,7 @@
 use crate::types::TokenString;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
-use peace_constants::{CountryCodes, GameMode, GeoData, PresenceFilter};
+use peace_constants::{geoip::GeoData, CountryCodes, GameMode, PresenceFilter};
 use peace_database::Database;
 
 use std::str::FromStr;
@@ -37,6 +37,7 @@ pub struct PlayerData {
     pub channels: Vec<String>,
     pub spectators: Vec<i32>,
     pub spectating: Option<i32>,
+    pub in_lobby: bool,
     pub login_time: DateTime<Local>,
     pub login_record_id: i64,
     pub token: TokenString,
@@ -71,6 +72,7 @@ impl PlayerData {
             channels: p.channels.iter().map(|s| s.to_string()).collect(),
             spectators: p.spectators.iter().map(|s| *s).collect(),
             spectating: p.spectating.clone(),
+            in_lobby: p.in_lobby,
             login_time: p.login_time,
             login_record_id: p.login_record_id,
             token: p.token.clone(),

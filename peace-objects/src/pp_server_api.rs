@@ -1,5 +1,5 @@
-use peace_constants::PPCalcResult;
 use derivative::Derivative;
+use peace_constants::PPCalcResult;
 use std::{
     sync::atomic::{AtomicUsize, Ordering},
     time::Duration,

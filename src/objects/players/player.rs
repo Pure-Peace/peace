@@ -1,8 +1,8 @@
 use maxminddb::Reader;
 use memmap::Mmap;
 use peace_constants::{
-    Action, BanchoPrivileges, ClientInfo, CountryCodes, GameMode, GeoData, PresenceFilter,
-    Privileges, CHEAT_DETECTED_DECREASE_CREDIT,
+    geoip::GeoData, Action, BanchoPrivileges, ClientInfo, CountryCodes, GameMode, PlayMods,
+    PresenceFilter, Privileges, CHEAT_DETECTED_DECREASE_CREDIT,
 };
 
 use crate::objects::{PlayerSettings, PlayerStatus};
@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 use crate::types::Argon2Cache;
 
-use super::{depends::*, PlayMods};
+use super::depends::*;
 
 const PLAYER_STATS_CACHE_TIMEOUT: i64 = 1800;
 
@@ -48,6 +48,7 @@ pub struct Player {
     pub channels: HashSet<String>,
     pub spectators: HashSet<i32>,
     pub spectating: Option<i32>,
+    pub in_lobby: bool,
     pub login_time: DateTime<Local>,
     pub login_record_id: i64,
     pub token: TokenString,
@@ -113,6 +114,7 @@ impl Player {
             channels: HashSet::new(),
             spectators: HashSet::new(),
             spectating: None,
+            in_lobby: false,
             login_time: now_time,
             login_record_id: -1,
             token: Uuid::new_v4().to_string(),

@@ -9,9 +9,9 @@ use async_std::prelude::*;
 use serde::Deserialize;
 use tokio_pg_mapper::FromTokioPostgresRow;
 
-pub use peace_constants::{GameMode, ScoreboardType};
+pub use peace_constants::{GameMode, PlayMods, ScoreboardType};
 
-use crate::{objects::PlayMods, routes::web::Context};
+use crate::routes::web::Context;
 
 macro_rules! get_login {
     ($ctx:ident, $data:ident, $failed:ident) => {

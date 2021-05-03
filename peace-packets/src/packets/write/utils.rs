@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use peace_constants::id;
+use peace_constants::packets::id;
 
 pub struct PacketBuilder {
     content: Vec<u8>,

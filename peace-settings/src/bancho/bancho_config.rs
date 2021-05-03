@@ -4,7 +4,7 @@ use chrono::{DateTime, Local};
 use colored::Colorize;
 use serde_json::Value;
 
-use peace_constants::DEFAULT_BANCHO_CONFIG_PATH;
+use peace_constants::common::DEFAULT_BANCHO_CONFIG_PATH;
 use peace_database::Database;
 
 use super::model::BanchoConfigData;

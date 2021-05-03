@@ -22,7 +22,7 @@ mod depends {
     pub use serde::Deserialize;
     pub use serde_json::json;
 
-    pub use peace_constants::LoginFailed;
+    pub use peace_constants::packets::LoginFailed;
     pub use peace_database::Database;
     pub use peace_packets::{PacketBuilder, PacketReader};
     pub use peace_settings::bancho::BanchoConfig;

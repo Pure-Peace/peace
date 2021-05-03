@@ -2,7 +2,6 @@ mod address;
 mod base;
 mod data;
 mod game_status;
-mod play_mods;
 mod player;
 mod settings;
 mod stats;
@@ -24,14 +23,12 @@ mod depends {
     pub use queue::Queue;
     pub use serde::Deserialize;
     pub use std::time::Instant;
-    pub use strum::IntoEnumIterator;
     pub use uuid::Uuid;
 }
 
 pub use address::PlayerAddress;
 pub use base::PlayerBase;
 pub use data::PlayerData;
-pub use play_mods::PlayMods;
 pub use player::Player;
 pub use settings::PlayerSettings;
 pub use status::PlayerStatus;

@@ -1,6 +1,6 @@
 use maxminddb::{geoip2::City, Reader};
 use memmap::Mmap;
-use peace_constants::GeoData;
+use peace_constants::geoip::GeoData;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[inline(always)]

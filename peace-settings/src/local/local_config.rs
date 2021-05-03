@@ -1,7 +1,7 @@
 use colored::Colorize;
 use config::{Config, ConfigError /* Environment, */};
 
-use peace_constants::{PEACE_BANNER, PEACE_LOCAL_CONFIG_DIR, PEACE_VERSION};
+use peace_constants::common::{PEACE_BANNER, PEACE_LOCAL_CONFIG_DIR, PEACE_VERSION};
 
 use super::LocalConfigData;
 

@@ -5,11 +5,9 @@ use derivative::Derivative;
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
 
-use peace_constants::{GameMode, SubmissionStatus};
+use peace_constants::{GameMode, PlayMods, SubmissionStatus};
 use peace_database::Database;
 use peace_utils::web::MultipartData;
-
-use crate::objects::PlayMods;
 
 #[pg_mapper(table = "")]
 #[derive(Debug, PostgresMapper)]

@@ -1,10 +1,8 @@
 use super::depends::*;
 use chrono::Local;
 use num_traits::FromPrimitive;
-use peace_constants::PresenceFilter;
+use peace_constants::{PlayMods, PresenceFilter};
 use peace_packets::PayloadReader;
-
-use crate::objects::PlayMods;
 
 #[inline(always)]
 /// #2: OSU_USER_LOGOUT
@@ -484,4 +482,25 @@ pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         player.write().await.away_message = message.content;
     };
     Some(())
+}
+
+#[inline(always)]
+/// #29: OSU_USER_PART_LOBBY
+///
+pub async fn lobby_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
+    // Try get player
+    let player = ctx.weak_player.upgrade()?;
+    {
+        let mut player = player.as_ref().write().await;
+        player.in_lobby = false;
+        drop(player);
+    }
+    Some(())
+}
+
+#[inline(always)]
+/// #30: OSU_USER_JOIN_LOBBY
+///
+pub async fn lobby_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
+    None
 }
