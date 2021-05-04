@@ -5,7 +5,7 @@ use async_std::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 
-use crate::objects::{Channel, Player};
+use crate::objects::{Channel, Match, Player};
 
 pub type TestType = RwLock<i32>;
 pub type TokenString = String;
@@ -17,6 +17,10 @@ pub type PlayerNameSessionMap = RwLock<HashMap<Username, Arc<RwLock<Player>>>>;
 
 pub type ChannelName = String;
 pub type ChannelList = HashMap<ChannelName, Channel>;
+
+pub type MatchId = i64;
+pub type MatchName = String;
+pub type MatchList = HashMap<MatchId, Match>;
 
 pub type UserId = i32;
 pub type Username = String;
