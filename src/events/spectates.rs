@@ -1,6 +1,6 @@
-use std::sync::{atomic::Ordering, Weak};
+use std::sync::{atomic::Ordering, Arc, Weak};
 
-use async_std::sync::RwLockReadGuard;
+use async_std::sync::RwLock;
 use peace_packets::PayloadReader;
 
 use crate::objects::{Channel, Player};
@@ -14,7 +14,7 @@ pub async fn try_remove_spectator<'a>(
     weak_player: &Weak<RwLock<Player>>,
     spectating_id: i32,
     channel_list: &Data<RwLock<ChannelList>>,
-    player_sessions: &RwLockReadGuard<'_, PlayerSessions>,
+    player_sessions: &PlayerSessions,
 ) {
     // First, Remove spectating status from me
     if let Some(player) = weak_player.upgrade() {
@@ -22,8 +22,8 @@ pub async fn try_remove_spectator<'a>(
     }
 
     // And, remove me from spectating player
-    let id_session_map = player_sessions.id_session_map.read().await;
-    let non_spectators = if let Some(spectating_target) = id_session_map.get(&spectating_id) {
+    let id_map = &player_sessions.id_map;
+    let non_spectators = if let Some(spectating_target) = id_map.get(&spectating_id) {
         let mut t = spectating_target.write().await;
         t.spectators.remove(&player_id);
         t.spectators.len() == 0
@@ -34,30 +34,28 @@ pub async fn try_remove_spectator<'a>(
     let spectating_channel_name = format!("#spec_{}", spectating_id);
     {
         let mut channel_list = channel_list.write().await;
-        if let Some(spectating_channel) = channel_list.get_mut(&spectating_channel_name) {
+        if let Some(spectating_channel) = channel_list.get(&spectating_channel_name) {
+            let mut c = spectating_channel.write().await;
+
             // Remove me from spectating channel
-            spectating_channel
-                .leave(player_id, Some(&*player_sessions))
-                .await;
+            c.leave(player_id, None).await;
 
             // The spectating player have not spectators
             if non_spectators {
                 // Remove spectating player from spectating channel
-                spectating_channel
-                    .leave(spectating_id, Some(&*player_sessions))
-                    .await;
+                c.leave(spectating_id, None).await;
             } else {
                 let fellow_data = peace_packets::fellow_spectator_left(player_id);
-                let channel_info = spectating_channel.channel_info_packet();
+                let channel_info = c.channel_info_packet();
 
-                if let Some(spectating_target) = id_session_map.get(&spectating_id) {
+                if let Some(spectating_target) = id_map.get(&spectating_id) {
                     let t = spectating_target.write().await;
                     // Send channel info to spectating player
                     t.enqueue(channel_info.clone()).await;
 
                     // Send data to each spectators
                     for id in t.spectators.iter() {
-                        if let Some(player) = id_session_map.get(&id) {
+                        if let Some(player) = id_map.get(&id) {
                             let p = player.read().await;
                             p.enqueue(fellow_data.clone()).await;
                             p.enqueue(channel_info.clone()).await;
@@ -67,14 +65,14 @@ pub async fn try_remove_spectator<'a>(
             }
 
             // If spectating channel is empty, remove it
-            if spectating_channel.player_count.load(Ordering::SeqCst) == 0 {
-                drop(spectating_channel);
+            if c.player_count.load(Ordering::SeqCst) == 0 {
+                drop(c);
                 channel_list.remove(&spectating_channel_name);
             };
         }
     }
 
-    if let Some(spectating_target) = id_session_map.get(&spectating_id) {
+    if let Some(spectating_target) = id_map.get(&spectating_id) {
         let t = spectating_target.read().await;
         t.enqueue(peace_packets::spectator_left(player_id)).await;
         debug!(
@@ -87,29 +85,28 @@ pub async fn try_remove_spectator<'a>(
 #[inline(always)]
 pub async fn create_specate_channel_if_not_exists(
     player_id: i32,
-    player_name: String,
+    player: &Arc<RwLock<Player>>,
     channel_list: &Data<RwLock<ChannelList>>,
-    player_sessions: &Data<RwLock<PlayerSessions>>,
 ) -> String {
     let channel_name = format!("#spec_{}", player_id);
+    let player_name = player.read().await.name.clone();
 
     if !channel_list.read().await.contains_key(&channel_name) {
-        let channel = Channel::new(
+        let mut channel = Channel::new(
             channel_name.clone(),
             format!("{}({}) 's spectator channel!", player_name, player_id),
             1,
             1,
             false,
             true,
-            player_sessions.clone().into_inner(),
         );
 
-        channel.join(player_id, None).await;
+        channel.join_player(player.clone(), None).await;
 
         channel_list
             .write()
             .await
-            .insert(channel_name.clone(), channel);
+            .insert(channel_name.clone(), Arc::new(RwLock::new(channel)));
 
         debug!("Spectate channel {} created.", channel_name);
     };
@@ -131,8 +128,8 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let player_sessions = ctx.bancho.player_sessions.read().await;
 
     // Specate an offline player is not allowed!
-    let target_name = match player_sessions.id_session_map.read().await.get(&target_id) {
-        Some(target) => target.read().await.name.clone(),
+    let target = match player_sessions.id_map.get(&target_id) {
+        Some(target) => target.clone(),
         None => {
             warn!(
                 "Player {}({}) tries to spectate an offline user {}.",
@@ -150,35 +147,39 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             ctx.weak_player,
             ctx.data.spectating.unwrap(),
             &ctx.bancho.channel_list,
-            &player_sessions,
+            &*player_sessions,
         )
         .await;
     }
 
-    // Create channel
-    let channel_name = create_specate_channel_if_not_exists(
-        target_id,
-        target_name,
-        &ctx.bancho.channel_list,
-        &ctx.bancho.player_sessions,
-    )
-    .await;
+    // Create spec channel
+    let channel_name =
+        create_specate_channel_if_not_exists(target_id, &target, &ctx.bancho.channel_list).await;
 
-    // Try join channel
+    // Try join spec channel
     {
         let channel_list = ctx.bancho.channel_list.read().await;
-        let channel = channel_list.get(&channel_name);
-        if channel.is_none() {
-            warn!("Failed to create spectate channel {}.", channel_name);
-            return None;
-        }
-        if !channel.unwrap().join(ctx.id, Some(&*player_sessions)).await {
-            warn!(
-                "Player {}({}) failed to join spectate channel {}.",
-                ctx.name, ctx.id, channel_name
-            );
-            return None;
-        }
+        match channel_list.get(&channel_name) {
+            Some(channel) => {
+                let mut c = channel.write().await;
+                match ctx.weak_player.upgrade() {
+                    Some(p) => {
+                        if !c.join_player(p, None).await {
+                            warn!(
+                                "Player {}({}) failed to join spectate channel {}.",
+                                ctx.name, ctx.id, channel_name
+                            );
+                            return None;
+                        }
+                    }
+                    None => return None,
+                };
+            }
+            None => {
+                warn!("Failed to create spectate channel {}.", channel_name);
+                return None;
+            }
+        };
     }
 
     // Ready to send packet
@@ -186,8 +187,8 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         let i_was_joined = peace_packets::fellow_spectator_joined(ctx.id);
         let i_was_joined2 = peace_packets::spectator_joined(ctx.id);
 
-        let id_session_map = player_sessions.id_session_map.read().await;
-        let (target, player) = (id_session_map.get(&target_id), ctx.weak_player.upgrade());
+        let id_map = &player_sessions.id_map;
+        let (target, player) = (id_map.get(&target_id), ctx.weak_player.upgrade());
         if target.is_none() || player.is_none() {
             return None;
         }
@@ -196,7 +197,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         let mut player = player.as_ref().unwrap().write().await;
 
         for spectator_id in target.spectators.iter() {
-            if let Some(spectator) = id_session_map.get(&spectator_id) {
+            if let Some(spectator) = id_map.get(&spectator_id) {
                 let s = spectator.read().await;
                 s.enqueue(i_was_joined.clone()).await;
                 player
@@ -241,11 +242,11 @@ pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()
     let data = peace_packets::spectator_frames(ctx.payload.to_vec());
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
-    let id_session_map = player_sessions.id_session_map.read().await;
+    let id_map = &player_sessions.id_map;
 
     // Send the spectate frames to our ctx's spectators
     for spectator_id in &ctx.data.spectators {
-        if let Some(spectator) = id_session_map.get(spectator_id) {
+        if let Some(spectator) = id_map.get(spectator_id) {
             spectator.read().await.enqueue(data.clone()).await;
         }
     }
@@ -260,16 +261,16 @@ pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let spectate_target_id = ctx.data.spectating?;
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
-    let id_session_map = player_sessions.id_session_map.read().await;
+    let id_map = &player_sessions.id_map;
 
     // Send packet
-    if let Some(spectate_target) = id_session_map.get(&spectate_target_id) {
+    if let Some(spectate_target) = id_map.get(&spectate_target_id) {
         let spectate_target = spectate_target.read().await;
 
         spectate_target.enqueue(data.clone()).await;
 
         for id in spectate_target.spectators.iter() {
-            if let Some(spectator) = id_session_map.get(id) {
+            if let Some(spectator) = id_map.get(id) {
                 spectator.read().await.enqueue(data.clone()).await;
             }
         }

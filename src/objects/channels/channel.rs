@@ -24,8 +24,7 @@ pub struct Channel {
     pub write_priv: i32,
     pub auto_join: bool,
     pub auto_close: bool,
-    pub id_session_map: PlayerIdSessionMap,
-    pub player_sessions: Arc<RwLock<PlayerSessions>>,
+    pub id_map: PlayerIdSessionMap,
     pub player_count: AtomicI16,
     pub create_time: DateTime<Local>,
 }
@@ -33,11 +32,9 @@ pub struct Channel {
 impl fmt::Debug for Channel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut sessions = vec![];
-        if let Some(guard) = self.id_session_map.try_read() {
-            for id in guard.keys() {
-                sessions.push(*id)
-            }
-        };
+        for id in self.id_map.keys() {
+            sessions.push(*id)
+        }
         f.debug_struct("Channel")
             .field("name", &self.name)
             .field("title", &self.title)
@@ -67,7 +64,10 @@ impl PartialEq for Channel {
 
 impl Channel {
     #[inline(always)]
-    /// Create channel from base object (from database)
+    /// Create channel from base object (from database);
+    ///
+    /// permanent channels
+    ///
     pub async fn from_base(
         base: &ChannelBase,
         player_sessions: Arc<RwLock<PlayerSessions>>,
@@ -79,13 +79,13 @@ impl Channel {
             write_priv: base.write_priv,
             auto_join: base.auto_join,
             auto_close: false,
-            id_session_map: RwLock::new(HashMap::with_capacity(50)),
-            player_sessions,
+            id_map: HashMap::with_capacity(50),
             player_count: AtomicI16::new(0),
             create_time: Local::now(),
         }
     }
 
+    #[inline(always)]
     pub fn new(
         name: String,
         title: String,
@@ -93,7 +93,6 @@ impl Channel {
         write_priv: i32,
         auto_join: bool,
         auto_close: bool,
-        player_sessions: Arc<RwLock<PlayerSessions>>,
     ) -> Self {
         Channel {
             name,
@@ -102,8 +101,7 @@ impl Channel {
             write_priv,
             auto_join,
             auto_close,
-            id_session_map: RwLock::new(HashMap::with_capacity(50)),
-            player_sessions,
+            id_map: HashMap::with_capacity(50),
             player_count: AtomicI16::new(0),
             create_time: Local::now(),
         }
@@ -131,7 +129,7 @@ impl Channel {
     ) {
         let sender_u = sender_u.as_ref().unwrap_or(sender);
         // For every players in channel
-        for (id, player) in self.id_session_map.read().await.iter() {
+        for (id, player) in self.id_map.iter() {
             // If not include sender, skip sender
             if !include_sender && (*id == sender_id) {
                 continue;
@@ -164,33 +162,39 @@ impl Channel {
     #[inline(always)]
     pub async fn update_channel_for_users(&self, player_sessions: Option<&PlayerSessions>) {
         let packet_data = self.channel_info_packet();
-        if self.auto_close {
+        if player_sessions.is_none() {
             // Temporary channel: for in channel players
-            for player in self.id_session_map.read().await.values() {
+            for player in self.id_map.values() {
                 player.read().await.enqueue(packet_data.clone()).await;
             }
-        } else if player_sessions.is_some() {
+        } else {
             // Permanent channel: for all players
             player_sessions.unwrap().enqueue_all(&packet_data).await;
         }
     }
 
     #[inline(always)]
-    /// Add a player to this channel
-    pub async fn join(&self, player_id: i32, player_sessions: Option<&PlayerSessions>) -> bool {
-        let result = if player_sessions.is_none() {
-            let player_sessions = self.player_sessions.read().await;
-            let id_session_map = player_sessions.id_session_map.read().await;
-            match id_session_map.get(&player_id) {
-                Some(player) => self.handle_join(player, Some(&*player_sessions)).await,
-                None => false,
+    /// Add a player to this channel by player_id
+    pub async fn join_by_player_id(
+        &mut self,
+        player_id: i32,
+        player_sessions: &PlayerSessions,
+        broadcast_channel_update: bool,
+    ) -> bool {
+        let p = player_sessions.get_player_by_id(player_id).await;
+        let result = match p {
+            Some(player) => {
+                self.join_player(
+                    player,
+                    if broadcast_channel_update {
+                        Some(player_sessions)
+                    } else {
+                        None
+                    },
+                )
+                .await
             }
-        } else {
-            let id_session_map = player_sessions.unwrap().id_session_map.read().await;
-            match id_session_map.get(&player_id) {
-                Some(player) => self.handle_join(player, player_sessions).await,
-                None => false,
-            }
+            None => false,
         };
 
         if !result {
@@ -204,15 +208,20 @@ impl Channel {
     }
 
     #[inline(always)]
-    pub async fn handle_join(
-        &self,
-        player: &Arc<RwLock<Player>>,
+    /// Join a player into channel
+    ///
+    /// If it's a permanent channel, should pass Some(player_sessions),
+    /// it means channel info will broadcast to all players.
+    /// otherwise, just pass None, channel info will only send to players in channel.
+    pub async fn join_player(
+        &mut self,
+        player: Arc<RwLock<Player>>,
         player_sessions: Option<&PlayerSessions>,
     ) -> bool {
         let (player_name, player_id) = {
             let player_cloned = player.clone();
             let mut player = player.write().await;
-            if self.id_session_map.read().await.contains_key(&player.id) {
+            if self.id_map.contains_key(&player.id) {
                 debug!(
                     "Player {}({}) is already in channel {}!",
                     player.name, player.id, self.name
@@ -220,10 +229,7 @@ impl Channel {
                 return false;
             }
 
-            self.id_session_map
-                .write()
-                .await
-                .insert(player.id, player_cloned);
+            self.id_map.insert(player.id, player_cloned);
 
             player.channels.insert(self.name.to_string());
             self.player_count.fetch_add(1, Ordering::SeqCst);
@@ -248,13 +254,21 @@ impl Channel {
 
     #[inline(always)]
     /// Remove a player from this channel
-    pub async fn leave(&self, player_id: i32, player_sessions: Option<&PlayerSessions>) -> bool {
-        if !self.id_session_map.read().await.contains_key(&player_id) {
+    ///
+    /// If it's a permanent channel, should pass Some(player_sessions),
+    /// it means channel info will broadcast to all players.
+    /// otherwise, just pass None, channel info will only send to players in channel.
+    pub async fn leave(
+        &mut self,
+        player_id: i32,
+        player_sessions: Option<&PlayerSessions>,
+    ) -> bool {
+        if !self.id_map.contains_key(&player_id) {
             debug!("Player ({}) is not in channel {}!", player_id, self.name);
             return false;
         }
 
-        let result = self.id_session_map.write().await.remove(&player_id);
+        let result = self.id_map.remove(&player_id);
         if result.is_none() {
             warn!(
                 "Failed to remove Player ({}) from Channel ({})!",

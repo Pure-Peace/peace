@@ -46,14 +46,15 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let channel_list = ctx.bancho.channel_list.read().await;
     match channel_list.get(&channel_name) {
         Some(channel) => {
+            let c = channel.read().await;
             // TODO: check player's priv?
 
             // Send message done
-            channel
-                .broadcast(ctx.name, ctx.u_name, ctx.id, &message.content, false)
+            c.broadcast(ctx.name, ctx.u_name, ctx.id, &message.content, false)
                 .await;
 
             // Drop locks
+            drop(c);
             drop(channel_list);
 
             info!(
@@ -101,10 +102,10 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
-    let name_session_map = player_sessions.name_session_map.read().await;
+    let name_map = &player_sessions.name_map;
 
     // Find target player
-    match name_session_map.get(&message.target) {
+    match name_map.get(&message.target) {
         Some(target) => {
             // Active player (sender)
             let target = target.read().await;

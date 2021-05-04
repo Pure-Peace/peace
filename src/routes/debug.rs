@@ -45,7 +45,7 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 pub async fn test_async_lock(bancho: Data<Bancho>) -> impl Responder {
     let start = Instant::now();
     let player_sessions = bancho.player_sessions.read().await;
-    let _map = player_sessions.token_map.read().await;
+    let _map = &player_sessions.token_map;
     let end = start.elapsed();
     HttpResponse::Ok()
         .set_header("Content-Type", "text/html; charset=UTF-8")
@@ -75,8 +75,7 @@ pub async fn test_player_read(token: Path<String>, bancho: Data<Bancho>) -> impl
 pub async fn test_player_money_add(token: Path<String>, bancho: Data<Bancho>) -> impl Responder {
     let start = Instant::now();
     let player_sessions = bancho.player_sessions.read().await;
-    let map = player_sessions.token_map.read().await;
-    let player_info = match map.get(&token.0) {
+    let player_info = match player_sessions.token_map.get(&token.0) {
         Some(player) => {
             // (*player).money += 1;
             //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
@@ -93,8 +92,7 @@ pub async fn test_player_money_add(token: Path<String>, bancho: Data<Bancho>) ->
 pub async fn test_player_money_reduce(token: Path<String>, bancho: Data<Bancho>) -> impl Responder {
     let start = Instant::now();
     let player_sessions = bancho.player_sessions.read().await;
-    let map = player_sessions.token_map.read().await;
-    let player_info = match map.get(&token.0) {
+    let player_info = match player_sessions.token_map.get(&token.0) {
         Some(player) => {
             // (*player).money -= 1;
             format!("{:?}", *player)
@@ -133,16 +131,11 @@ pub async fn player_sessions_all(bancho: Data<Bancho>) -> impl Responder {
 pub async fn player_maps_info(bancho: Data<Bancho>) -> impl Responder {
     let start = Instant::now();
     let maps = bancho.player_sessions.read().await;
-    let (token_map, id_session_map, name_session_map) = (
-        maps.token_map.read().await,
-        maps.id_session_map.read().await,
-        maps.name_session_map.read().await,
-    );
     HttpResponse::Ok().body(format!(
-        "token_map: {}, id_session_map: {}, name_session_map: {}; time: {:.2?}",
-        token_map.len(),
-        id_session_map.len(),
-        name_session_map.len(),
+        "token_map: {}, id_map: {}, name_map: {}; time: {:.2?}",
+        &maps.token_map.len(),
+        &maps.id_map.len(),
+        &maps.name_map.len(),
         start.elapsed()
     ))
 }

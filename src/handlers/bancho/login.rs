@@ -541,7 +541,7 @@ pub async fn login(
     let token = player_sessions.login(player).await;
 
     // Send new user to online users, and add online users to this new user
-    for online_player in player_sessions.token_map.read().await.values() {
+    for online_player in player_sessions.token_map.values() {
         let online_player = online_player.read().await;
 
         online_player
@@ -560,19 +560,21 @@ pub async fn login(
 
     // Join player into channel
     for channel in bancho.channel_list.read().await.values() {
+        let mut c = channel.write().await;
         // Have not privileges to join the channel
-        if (player_priv & channel.read_priv) <= 0 {
+        if (player_priv & c.read_priv) <= 0 {
             continue;
         }
 
         // Join player into channel
-        if channel.auto_join {
-            channel.join(player_id, Some(&*player_sessions)).await;
-            resp.add_ref(peace_packets::channel_join(&channel.display_name()));
+        if c.auto_join {
+            c.join_by_player_id(player_id, &*player_sessions, true)
+                .await;
+            resp.add_ref(peace_packets::channel_join(&c.display_name()));
         }
 
         // Send channel info to client
-        resp.add_ref(channel.channel_info_packet());
+        resp.add_ref(c.channel_info_packet());
     }
     // Release lock
     drop(player_sessions);

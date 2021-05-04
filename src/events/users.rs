@@ -61,7 +61,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>()?;
 
     let player_sessions = ctx.bancho.player_sessions.read().await;
-    let id_session_map = player_sessions.id_session_map.read().await;
+    let id_map = &player_sessions.id_map;
 
     if let Some(ctx_player) = &ctx.weak_player.upgrade() {
         let ctx_player = ctx_player.read().await;
@@ -72,7 +72,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
                 continue;
             }
 
-            if let Some(player) = id_session_map.get(player_id) {
+            if let Some(player) = id_map.get(player_id) {
                 let p = player.read().await.stats_packet();
                 ctx_player.enqueue(p).await;
             }
@@ -91,17 +91,13 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
     {
         let player_sessions = ctx.bancho.player_sessions.read().await;
-        let id_session_map = player_sessions.id_session_map.read().await;
-
         for player_id in &id_list {
-            if let Some(player) = id_session_map.get(player_id) {
+            if let Some(player) = player_sessions.id_map.get(player_id) {
                 let others = player.read().await;
                 user_presence_packets
                     .push(others.presence_packet(ctx.data.settings.display_u_name));
             }
         }
-
-        drop(id_session_map);
         drop(player_sessions);
     }
 
@@ -121,11 +117,11 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let user_presence_packets = {
         let player_sessions = ctx.bancho.player_sessions.read().await;
-        let id_session_map = player_sessions.id_session_map.read().await;
+        let id_map = &player_sessions.id_map;
 
-        let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_session_map.len());
+        let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_map.len());
 
-        for (player_id, player) in id_session_map.iter() {
+        for (player_id, player) in player_sessions.id_map.iter() {
             // Skip self
             if *player_id == ctx.id {
                 continue;
@@ -135,7 +131,6 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             user_presence_packets.push(others.presence_packet(ctx.data.settings.display_u_name));
         }
 
-        drop(id_session_map);
         drop(player_sessions);
 
         user_presence_packets
@@ -412,12 +407,12 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
     match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
-            if channel.auto_close {
-                channel.join(ctx.id, None).await;
+            let mut c = channel.write().await;
+            if c.auto_close {
+                c.join_player(ctx.weak_player.upgrade()?, None).await
             } else {
-                channel
-                    .join(ctx.id, Some(&*ctx.bancho.player_sessions.read().await))
-                    .await;
+                let s = ctx.bancho.player_sessions.read().await;
+                c.join_player(ctx.weak_player.upgrade()?, Some(&*s)).await
             };
         }
         None => {
@@ -438,12 +433,12 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let channel_name = PayloadReader::new(ctx.payload).read_string()?;
     match ctx.bancho.channel_list.read().await.get(&channel_name) {
         Some(channel) => {
-            if channel.auto_close {
-                channel.leave(ctx.id, None).await;
+            let mut c = channel.write().await;
+            if c.auto_close {
+                c.leave(ctx.id, None).await
             } else {
-                channel
-                    .leave(ctx.id, Some(&*ctx.bancho.player_sessions.read().await))
-                    .await;
+                let s = ctx.bancho.player_sessions.read().await;
+                c.leave(ctx.id, Some(&*s)).await
             };
         }
         None => {

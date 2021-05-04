@@ -28,7 +28,7 @@ impl ChannelListBuilder {
             Ok(rows) => {
                 let channel_bases: Vec<ChannelBase> = serde_postgres::from_rows(&rows).unwrap();
                 for base in channel_bases {
-                    channels.insert(base.name.clone(), Channel::from_base(&base, player_sessions.clone()).await);
+                    channels.insert(base.name.clone(), Arc::new(RwLock::new(Channel::from_base(&base, player_sessions.clone()).await)));
                 }
                 info!("{}", format!("Channels successfully loaded: {:?};", channels.keys()).bold().green());
                 channels

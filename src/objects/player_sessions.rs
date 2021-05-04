@@ -20,8 +20,8 @@ use super::{Player, PlayerData};
 
 pub struct PlayerSessions {
     pub token_map: PlayerSessionMap,
-    pub id_session_map: PlayerIdSessionMap,
-    pub name_session_map: PlayerNameSessionMap,
+    pub id_map: PlayerIdSessionMap,
+    pub name_map: PlayerNameSessionMap,
     pub player_count: AtomicI32,
     database: Data<Database>,
 }
@@ -39,11 +39,11 @@ impl PlayerSessions {
     pub fn new(capacity: usize, database: &Data<Database>) -> Self {
         PlayerSessions {
             /// Key: token, Value: Arc<RwLock<Player>>
-            token_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            token_map: hashbrown::HashMap::with_capacity(capacity),
             /// Key: Player.id, Value: Arc<RwLock<Player>>
-            id_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            id_map: hashbrown::HashMap::with_capacity(capacity),
             /// Key: Player.name (and Player.u_name) Value: Arc<RwLock<Player>>
-            name_session_map: RwLock::new(hashbrown::HashMap::with_capacity(capacity)),
+            name_map: hashbrown::HashMap::with_capacity(capacity),
             player_count: AtomicI32::new(0),
             database: database.clone(),
         }
@@ -60,18 +60,12 @@ impl PlayerSessions {
         {
             let arc_player = Arc::new(RwLock::new(player));
 
-            // Get locks
-            let (mut token_map, mut id_session_map, mut name_session_map) = (
-                self.token_map.write().await,
-                self.id_session_map.write().await,
-                self.name_session_map.write().await,
-            );
             // Insert into
-            token_map.insert(token.clone(), arc_player.clone());
-            id_session_map.insert(player_id, arc_player.clone());
-            name_session_map.insert(player_name, arc_player.clone());
+            self.token_map.insert(token.clone(), arc_player.clone());
+            self.id_map.insert(player_id, arc_player.clone());
+            self.name_map.insert(player_name, arc_player.clone());
             if let Some(u_name) = player_u_name {
-                name_session_map.insert(u_name, arc_player.clone());
+                self.name_map.insert(u_name, arc_player.clone());
             }
         }
         self.player_count.fetch_add(1, Ordering::SeqCst);
@@ -80,19 +74,13 @@ impl PlayerSessions {
 
     /// Logout a player from the PlayerSessions
     pub async fn logout(
-        &self,
+        &mut self,
         token: &TokenString,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
     ) -> Option<Player> {
         let logout_start = std::time::Instant::now();
-        // Get locks
-        let (mut token_map, mut id_session_map, mut name_session_map) = (
-            self.token_map.write().await,
-            self.id_session_map.write().await,
-            self.name_session_map.write().await,
-        );
         // Try Logout
-        match token_map.remove(token) {
+        match self.token_map.remove(token) {
             Some(arc_player) => {
                 // Remove and drop locks
                 let (player_id, player_channels) = {
@@ -106,15 +94,11 @@ impl PlayerSessions {
                         )
                     };
 
-                    id_session_map.remove(&player_id);
-                    name_session_map.remove(&player_name);
+                    self.id_map.remove(&player_id);
+                    self.name_map.remove(&player_name);
                     if let Some(u_name) = player_u_name {
-                        name_session_map.remove(&u_name);
+                        self.name_map.remove(&u_name);
                     };
-
-                    drop(token_map);
-                    drop(id_session_map);
-                    drop(name_session_map);
 
                     (player_id, player_channels)
                 };
@@ -126,8 +110,9 @@ impl PlayerSessions {
 
                 if channel_list.is_some() {
                     for channel in channel_list.unwrap().read().await.values() {
-                        if player_channels.contains(&channel.name) {
-                            channel.leave(player_id, Some(self)).await;
+                        let mut c = channel.write().await;
+                        if player_channels.contains(&c.name) {
+                            c.leave(player_id, Some(self)).await;
                         }
                     }
                 }
@@ -159,14 +144,14 @@ impl PlayerSessions {
 
     #[inline(always)]
     pub async fn enqueue_all(&self, packet_data: &PacketData) {
-        for player in self.token_map.read().await.values() {
+        for player in self.token_map.values() {
             player.read().await.enqueue(packet_data.clone()).await;
         }
     }
 
     #[inline(always)]
     pub async fn enqueue_by_token(&self, token: &TokenString, packet_data: PacketData) -> bool {
-        if let Some(player) = self.token_map.read().await.get(token) {
+        if let Some(player) = self.token_map.get(token) {
             player.read().await.enqueue(packet_data).await;
             return true;
         }
@@ -175,7 +160,7 @@ impl PlayerSessions {
 
     #[inline(always)]
     pub async fn enqueue_by_id(&self, user_id: &UserId, packet_data: PacketData) -> bool {
-        if let Some(player) = self.id_session_map.read().await.get(user_id) {
+        if let Some(player) = self.id_map.get(user_id) {
             player.read().await.enqueue(packet_data).await;
             return true;
         }
@@ -185,27 +170,27 @@ impl PlayerSessions {
     #[inline(always)]
     /// Token is exists or not
     pub async fn token_is_exists(&self, token: &TokenString) -> bool {
-        self.token_map.read().await.contains_key(token)
+        self.token_map.contains_key(token)
     }
 
     #[inline(always)]
     pub async fn id_is_exists(&self, id: &UserId) -> bool {
-        self.id_session_map.read().await.contains_key(&id)
+        self.id_map.contains_key(&id)
     }
 
     #[inline(always)]
     pub async fn get_player_by_id(&self, id: UserId) -> Option<Arc<RwLock<Player>>> {
-        self.id_session_map.read().await.get(&id).cloned()
+        self.id_map.get(&id).cloned()
     }
 
     #[inline(always)]
     pub async fn get_player_by_token(&self, token: &String) -> Option<Arc<RwLock<Player>>> {
-        self.token_map.read().await.get(token).cloned()
+        self.token_map.get(token).cloned()
     }
 
     #[inline(always)]
     pub async fn get_player_by_name(&self, username: &String) -> Option<Arc<RwLock<Player>>> {
-        self.name_session_map.read().await.get(username).cloned()
+        self.name_map.get(username).cloned()
     }
 
     #[inline(always)]
@@ -236,7 +221,7 @@ impl PlayerSessions {
     /// Think, why not use the following code?
     /// Because, passing a reference to the token directly will result in the read lock not being released, thus triggering a deadlock.
     /// ```
-    /// match self.id_session_map.read().await.get(&user_id) {
+    /// match self.id_map.get(&user_id) {
     ///     Some(token) => self.logout(token).await,
     ///     None => None,
     /// }
@@ -246,7 +231,7 @@ impl PlayerSessions {
         user_id: UserId,
         channel_list: Option<&Data<RwLock<ChannelList>>>,
     ) -> Option<Player> {
-        let token = match self.id_session_map.read().await.get(&user_id) {
+        let token = match self.id_map.get(&user_id) {
             Some(player) => player.read().await.token.to_string(),
             None => return None,
         };
@@ -258,7 +243,7 @@ impl PlayerSessions {
         let now_timestamp = Local::now().timestamp();
 
         let mut vec = vec![];
-        for (token, player) in self.token_map.read().await.iter() {
+        for (token, player) in self.token_map.iter() {
             if now_timestamp - player.read().await.last_active_time.timestamp() > session_timeout {
                 vec.push(token.clone())
             }
@@ -269,26 +254,26 @@ impl PlayerSessions {
     #[inline(always)]
     /// Use user_id check user is exists
     pub async fn user_is_logined(&self, user_id: UserId) -> bool {
-        self.id_session_map.read().await.contains_key(&user_id)
+        self.id_map.contains_key(&user_id)
     }
 
     #[inline(always)]
     /// For debug, get PlayerSessions.map to string
     pub async fn map_to_string(&self) -> String {
-        let token = format!("{:?}", self.token_map.read().await);
+        let token = format!("{:?}", self.token_map);
         format!("token map: {}", token)
     }
 
     #[inline(always)]
-    /// For debug, get PlayerSessions.id_session_map to string
+    /// For debug, get PlayerSessions.id_map to string
     pub async fn id_map_to_string(&self) -> String {
-        format!("{:?}", self.id_session_map.read().await)
+        format!("{:?}", self.id_map)
     }
 
     #[inline(always)]
     /// Get a player data (readonly)
     pub async fn get_player_data(&self, token: &TokenString) -> Option<PlayerData> {
-        match self.token_map.read().await.get(token) {
+        match self.token_map.get(token) {
             Some(player) => Some(PlayerData::from(&*player.read().await)),
             None => None,
         }
@@ -304,7 +289,7 @@ impl PlayerSessions {
     where
         F: FnOnce(&mut Player) -> Option<()>,
     {
-        match self.token_map.read().await.get(token) {
+        match self.token_map.get(token) {
             Some(player) => {
                 let mut player = player.write().await;
                 match handler(&mut *player) {
@@ -322,7 +307,7 @@ impl PlayerSessions {
     where
         F: FnOnce(&mut Player) -> Option<()>,
     {
-        match self.token_map.read().await.get(token) {
+        match self.token_map.get(token) {
             Some(player) => {
                 let mut player = player.write().await;
                 match handler(&mut *player) {

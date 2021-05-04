@@ -11,12 +11,12 @@ pub type TestType = RwLock<i32>;
 pub type TokenString = String;
 pub type PacketData = Vec<u8>;
 
-pub type PlayerSessionMap = RwLock<HashMap<TokenString, Arc<RwLock<Player>>>>;
-pub type PlayerIdSessionMap = RwLock<HashMap<UserId, Arc<RwLock<Player>>>>;
-pub type PlayerNameSessionMap = RwLock<HashMap<Username, Arc<RwLock<Player>>>>;
+pub type PlayerSessionMap = HashMap<TokenString, Arc<RwLock<Player>>>;
+pub type PlayerIdSessionMap = HashMap<UserId, Arc<RwLock<Player>>>;
+pub type PlayerNameSessionMap = HashMap<Username, Arc<RwLock<Player>>>;
 
 pub type ChannelName = String;
-pub type ChannelList = HashMap<ChannelName, Channel>;
+pub type ChannelList = HashMap<ChannelName, Arc<RwLock<Channel>>>;
 
 pub type MatchId = i64;
 pub type MatchName = String;

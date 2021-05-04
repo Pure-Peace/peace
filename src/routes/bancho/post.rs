@@ -74,7 +74,7 @@ pub async fn handler(
 
     // Get player
     let player_sessions_r = bancho.player_sessions.read().await;
-    let (player_data, weak_player) = match player_sessions_r.token_map.read().await.get(&token) {
+    let (player_data, weak_player) = match player_sessions_r.token_map.get(&token) {
         Some(player) => (
             PlayerData::from(&*player.read().await),
             Arc::downgrade(player),
