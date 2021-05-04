@@ -83,8 +83,51 @@ fn test_write_i32_list() {
 
 #[test]
 fn test_write_u32_i32() {
-    let int_u32 = super::utils::write_num(536870912 as u32);
-    let int_i32 = super::utils::write_num(536870912);
+    let int_u32 = super::utils::write(536870912 as u32);
+    let int_i32 = super::utils::write(536870912);
 
     println!("{:?} {:?}", int_u32, int_i32);
+}
+
+#[test]
+fn test_user_presence() {
+    let data = user_presence(5, "PurePeace", 8, 48, 1, 1.0, 1.0, 666);
+    println!("{}", data.len());
+    assert_eq!(
+        data,
+        [
+            83, 0, 0, 30, 0, 0, 0, 5, 0, 0, 0, 11, 9, 80, 117, 114, 101, 80, 101, 97, 99, 101, 32,
+            48, 1, 0, 0, 128, 63, 0, 0, 128, 63, 154, 2, 0, 0
+        ]
+    )
+}
+
+#[test]
+fn test_user_stats() {
+    let data = user_stats(
+        5,
+        1,
+        "idle",
+        "asdqwezxcasdqwezxcasdqwezxcasdqw",
+        0,
+        0,
+        1,
+        10000000,
+        0.998,
+        10000,
+        100000000,
+        100,
+        10000,
+    );
+    println!("{}", data.len());
+    assert_eq!(
+        data,
+        [
+            11, 0, 0, 84, 0, 0, 0, 5, 0, 0, 0, 1, 11, 4, 105, 100, 108, 101, 11, 32, 97, 115, 100,
+            113, 119, 101, 122, 120, 99, 97, 115, 100, 113, 119, 101, 122, 120, 99, 97, 115, 100,
+            113, 119, 101, 122, 120, 99, 97, 115, 100, 113, 119, 0, 0, 0, 0, 0, 1, 0, 0, 0, 128,
+            150, 152, 0, 0, 0, 0, 0, 40, 131, 35, 60, 16, 39, 0, 0, 0, 225, 245, 5, 0, 0, 0, 0,
+            100, 0, 0, 0, 16, 39
+        ]
+    )
 }

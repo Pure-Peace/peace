@@ -90,22 +90,176 @@ impl PacketBuilder {
     }
 }
 
-pub trait Number {
-    fn to_bytes(&self) -> Vec<u8>;
+pub trait OsuWrite {
+    fn osu_write(&self) -> Vec<u8>;
 }
 
 macro_rules! impl_number {
     ($($t:ty),+) => {
-        $(impl Number for $t {
+        $(impl OsuWrite for $t {
             #[inline(always)]
-            fn to_bytes(&self) -> Vec<u8> {
+            fn osu_write(&self) -> Vec<u8> {
                 Vec::from(self.to_le_bytes())
             }
         })+
     }
 }
 
-impl_number!(u8, i16, i32, u32, i64, f32);
+impl_number!(u8, u16, i16, i32, u32, i64, f32);
+
+/// Number vec
+impl<W: OsuWrite> OsuWrite for &Vec<W> {
+    #[inline(always)]
+    fn osu_write(&self) -> Vec<u8> {
+        let mut ret = Vec::from((self.len() as u16).to_le_bytes());
+        for int in self.iter() {
+            ret.extend(int.osu_write());
+        }
+        ret
+    }
+}
+
+macro_rules! impl_string {
+    ($($t:ty),+) => {
+        $(impl OsuWrite for $t {
+            #[inline(always)]
+            fn osu_write(&self) -> Vec<u8> {
+                let byte_length = self.len();
+                let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
+                if byte_length > 0 {
+                    data.push(11);
+                    data.extend(write_uleb128(byte_length as u32));
+                    data.extend(self.as_bytes());
+                } else {
+                    data.push(0);
+                }
+                data
+            }
+        })+
+    }
+}
+
+impl_string!(&String, &str);
+
+impl OsuWrite for bool {
+    #[inline(always)]
+    fn osu_write(&self) -> Vec<u8> {
+        if *self {
+            vec![1]
+        } else {
+            vec![0]
+        }
+    }
+}
+
+#[macro_export]
+/// Creating osu!packet data
+///
+/// # Examples:
+/// ```
+/// let val_1: i32 = 123;
+/// let val_2: i16 = 50;
+///
+/// // Single data, eq with `val_1.osu_write()`
+/// data!(val_1)
+///
+/// // Mutiple data, default capacity is 30
+/// data!(val_1, val_2)
+///
+/// // Specify initial capacity = 100
+/// data!(Cap = 100, val_1, val_2)
+/// ```
+macro_rules! data {
+    ($item:expr) => {
+        {
+            $item.osu_write()
+        }
+    };
+    ($($item:expr),+) => {
+        {
+            let mut data = Vec::with_capacity(30);
+            $(data.extend($item.osu_write());)+
+            data
+        }
+    };
+    (Cap=$capacity:expr;$($item:expr),+) => {
+        {
+            let mut data = Vec::with_capacity($capacity);
+            $(data.extend($item.osu_write());)+
+            data
+        }
+    }
+}
+
+#[macro_export]
+/// Creating osu!packet
+///
+/// The first parameter is always packet_id.
+///
+/// Two cases exist for the remaining parameters:
+/// 1. When last parameters ending with a semicolon,
+/// it means origin data (impl OsuWrite trait).
+/// 2. Otherwise it means packet data.
+///
+/// # Examples:
+/// ```
+/// // Origin data here (i32)
+/// let data = reply.val();
+/// build!(id::BANCHO_USER_STATS, data;)
+///
+/// // Packet data here (Vec<u8>)
+/// let data = reply.val().osu_write();
+/// build!(id::BANCHO_USER_STATS, data)
+///
+/// // Only packet_id
+/// build!(id::BANCHO_USER_STATS)
+///
+/// // Mutiple
+/// build!(
+///     id::BANCHO_USER_PRESENCE,
+///     data!(
+///         user_id,
+///         username,
+///         utc_offset + 24,
+///         country_code,
+///         (bancho_priv | 0) as u8,
+///         longitude,
+///         latitude,
+///         rank
+///     )
+/// )
+/// ```
+macro_rules! build {
+    ($packet_id:expr) => {
+        {
+            let mut packet = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
+            for (index, value) in ((packet.len() - 7) as i32).to_le_bytes().iter().enumerate() {
+                packet[3 + index] = *value;
+            }
+            packet
+        }
+    };
+    ($packet_id:expr,$($data:expr),*;) => {
+        {
+            let mut packet = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
+            $(packet.extend($data.osu_write());)*
+            for (index, value) in ((packet.len() - 7) as i32).to_le_bytes().iter().enumerate() {
+                packet[3 + index] = *value;
+            }
+            packet
+        }
+    };
+    ($packet_id:expr,$($data:expr),*) => {
+        {
+            let mut packet = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
+            $(packet.extend($data);)*
+            for (index, value) in ((packet.len() - 7) as i32).to_le_bytes().iter().enumerate() {
+                packet[3 + index] = *value;
+            }
+            packet
+        }
+    }
+}
 
 #[inline(always)]
 /// Create a empty packets
@@ -156,105 +310,58 @@ pub fn output(mut packet: Vec<u8>) -> Vec<u8> {
 }
 
 #[inline(always)]
-/// Write string packet
-pub fn write_string(string: &str) -> Vec<u8> {
-    let byte_length = string.len();
-    let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
-    if byte_length > 0 {
-        data.push(11); // 0x0b, means not empty
-        data.extend(write_uleb128(byte_length as u32));
-        data.extend(string.as_bytes());
-    } else {
-        data.push(0); // 0x00, means empty
-    }
-    data
-}
-
-#[inline(always)]
-/// Write string packet
-pub fn write_string_async(string: &str) -> Vec<u8> {
-    let byte_length = string.len();
-    let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
-    if byte_length > 0 {
-        data.push(11); // 0x0b, means not empty
-        data.extend(write_uleb128(byte_length as u32));
-        data.extend(string.as_bytes());
-    } else {
-        data.push(0); // 0x00, means empty
-    }
-    data
-}
-
-#[inline(always)]
 /// Write message packet
-///
-/// ### impl 1:
-/// ```
-/// PacketBuilder::from_multiple(&[
-///     write_string(sender),
-///     write_string(content),
-///     write_string(channel_name),
-///     write_num(sender_id),
-/// ])
-/// .done()
-/// ```
-///
-/// ### impl 2:
-/// ```
-/// PacketBuilder::new()
-///     .add(write_string(sender))
-///     .add(write_string(content))
-///     .add(write_string(channel_name))
-///     .add(write_num(sender_id))
-///     .done()
-/// ```
-///
-/// ### impl 3 (best performance):
-/// ```
-/// now impl
-/// ```
 pub fn write_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
-    let mut data: Vec<u8> = Vec::with_capacity(30);
-    data.extend(write_string(sender));
-    data.extend(write_string_async(content));
-    data.extend(write_string(target));
-    data.extend(write_num(sender_id));
-    data
+    data!(sender, content, target, sender_id)
 }
 
 #[inline(always)]
-pub fn write_message_sync(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
-    let mut data: Vec<u8> = Vec::with_capacity(30);
-    data.extend(write_string(sender));
-    data.extend(write_string(content));
-    data.extend(write_string(target));
-    data.extend(write_num(sender_id));
-    data
-}
-
-#[inline(always)]
-/// Write integer packet
-pub fn write_num<N: Number>(num: N) -> Vec<u8> {
-    num.to_bytes()
+pub async fn write_message_async(
+    sender: &str,
+    sender_id: i32,
+    content: &str,
+    target: &str,
+) -> Vec<u8> {
+    data!(sender, content, target, sender_id)
 }
 
 #[inline(always)]
 pub fn write_channel(name: &str, title: &str, player_count: i16) -> Vec<u8> {
-    let mut data: Vec<u8> = Vec::with_capacity(30);
-    data.extend(write_string(name));
-    data.extend(write_string(title));
-    data.extend(write_num(player_count));
-    data
+    data!(name, title, player_count)
 }
 
 #[inline(always)]
-/// Write int list packet
-pub fn write_int_list<N: Number>(integer_list: &Vec<N>) -> Vec<u8> {
-    let mut ret = Vec::from((integer_list.len() as u16).to_le_bytes());
-    for int in integer_list {
-        ret.extend(int.to_bytes());
-    }
-    ret
+pub fn write_score_frame(
+    timestamp: i32,
+    id: u8,
+    n300: u16,
+    n100: u16,
+    n50: u16,
+    geki: u16,
+    katu: u16,
+    miss: u16,
+    score: i32,
+    combo: u16,
+    max_combo: u16,
+    perfect: bool,
+    hp: u8,
+    tag_byte: u8,
+    score_v2: bool,
+) -> Vec<u8> {
+    data!(
+        timestamp, id, n300, n100, n50, geki, katu, miss, score, combo, max_combo, perfect, hp,
+        tag_byte, score_v2
+    )
+}
+
+#[inline(always)]
+pub fn write<W: OsuWrite>(t: W) -> Vec<u8> {
+    t.osu_write()
+}
+
+#[inline(always)]
+pub async fn write_async<W: OsuWrite>(t: W) -> Vec<u8> {
+    t.osu_write()
 }
 
 #[inline(always)]
