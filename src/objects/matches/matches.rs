@@ -72,25 +72,25 @@ pub struct Tourney {
 }
 
 pub struct MappoolItem {
-    group: String,
-    code: String,
-    note: String,
-    picker_id: i32,
-    picker: String,
-    mods: PlayMods,
-    mode: GameMode,
-    beatmap: Option<Beatmap>,
+    pub group: String,
+    pub code: String,
+    pub note: String,
+    pub picker_id: i32,
+    pub picker: String,
+    pub mods: PlayMods,
+    pub mode: GameMode,
+    pub beatmap: Option<Beatmap>,
 }
 
 pub struct Mappool {
-    id: i32,
-    name: String,
-    stage: String,
-    items: Vec<MappoolItem>,
-    bans: Vec<i32>,
-    creator_id: i32,
-    creator: String,
-    update_time: DateTime<Local>,
+    pub id: i32,
+    pub name: String,
+    pub stage: String,
+    pub items: Vec<MappoolItem>,
+    pub bans: Vec<i32>,
+    pub creator_id: i32,
+    pub creator: String,
+    pub update_time: DateTime<Local>,
 }
 
 pub struct MatchSlot {
@@ -127,42 +127,62 @@ impl MatchSlot {
         self.skipped = false;
         self.completed = false;
     }
+
+    #[inline(always)]
+    pub fn make_slots(size: i32) -> [Self; 16] {
+        let size = if size > 16 {
+            16
+        } else if size < 1 {
+            1
+        } else {
+            size
+        };
+        let mut s: [Self; 16] = array_init::array_init(|_| Self::new());
+        let mut close = 16 - size;
+        let mut index = 15;
+        while close > 0 {
+            s[index].status = MatchSlotStatus::Locked;
+            index -= 1;
+            close -= 1;
+        }
+        s
+    }
 }
 
 pub struct Match {
-    id: i64,
-    name: String,
-    password: Option<String>,
-    status: MatchStatus,
+    pub id: i64,
+    pub name: String,
+    pub password: Option<String>,
+    pub status: MatchStatus,
+    pub slots: [MatchSlot; 16],
 
-    is_tourney: bool,
-    is_temp: bool,
-    is_locked: bool,
+    pub is_tourney: bool,
+    pub is_temp: bool,
+    pub is_locked: bool,
 
-    tourney: Option<Tourney>,
-    mappool: Option<Mappool>,
+    pub tourney: Option<Tourney>,
+    pub mappool: Option<Mappool>,
 
-    host_id: i32,
-    referees: Vec<i32>,
-    streamers: Vec<i32>,
+    pub host_id: i32,
+    pub referees: Vec<i32>,
+    pub streamers: Vec<i32>,
 
-    beatmap_id: i32,
-    beatmap_md5: String,
-    beatmap_name: String,
+    pub beatmap_id: i32,
+    pub beatmap_md5: String,
+    pub beatmap_name: String,
 
-    mods: PlayMods,
-    mode: GameMode,
-    free_mods: bool,
+    pub mods: PlayMods,
+    pub mode: GameMode,
+    pub free_mods: bool,
 
-    // TODO
-    // channel: Channel,
-    team_mode: MatchTeamMode,
-    goal: MatchGoal,
+    pub channel: Arc<RwLock<Channel>>,
+    pub team_mode: MatchTeamMode,
+    pub goal: MatchGoal,
 
-    random_seed: i32,
+    pub random_seed: i32,
 
-    create_time: DateTime<Local>,
-    last_update: DateTime<Local>,
+    pub create_time: DateTime<Local>,
+    pub last_update: DateTime<Local>,
 }
 
 impl Match {
@@ -171,8 +191,10 @@ impl Match {
         id: i64,
         name: String,
         password: Option<String>,
+        size: i32,
         host_id: i32,
         is_tourney: bool,
+        channel: Arc<RwLock<Channel>>
     ) -> Self {
         let now = Local::now();
         Self {
@@ -180,6 +202,7 @@ impl Match {
             name,
             password,
             status: MatchStatus::Idle,
+            slots: MatchSlot::make_slots(size),
             is_tourney,
             is_temp: is_tourney,
             is_locked: false,
@@ -194,6 +217,7 @@ impl Match {
             mods: PlayMods::new(),
             mode: GameMode::Std,
             free_mods: true,
+            channel,
             team_mode: MatchTeamMode::HeadToHead,
             goal: MatchGoal::Score,
             random_seed: 0,

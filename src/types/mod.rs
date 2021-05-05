@@ -20,7 +20,7 @@ pub type ChannelList = HashMap<ChannelName, Arc<RwLock<Channel>>>;
 
 pub type MatchId = i64;
 pub type MatchName = String;
-pub type MatchList = HashMap<MatchId, Match>;
+pub type MatchList = HashMap<MatchId, Arc<RwLock<Match>>>;
 
 pub type UserId = i32;
 pub type Username = String;

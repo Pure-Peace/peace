@@ -497,5 +497,12 @@ pub async fn lobby_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// #30: OSU_USER_JOIN_LOBBY
 ///
 pub async fn lobby_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    None
+    // Try get player
+    let player = ctx.weak_player.upgrade()?;
+    {
+        let mut player = player.as_ref().write().await;
+        player.in_lobby = true;
+        drop(player);
+    }
+    Some(())
 }

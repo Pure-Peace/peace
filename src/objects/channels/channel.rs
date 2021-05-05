@@ -68,10 +68,7 @@ impl Channel {
     ///
     /// permanent channels
     ///
-    pub async fn from_base(
-        base: &ChannelBase,
-        player_sessions: Arc<RwLock<PlayerSessions>>,
-    ) -> Self {
+    pub async fn from_base(base: &ChannelBase) -> Self {
         Channel {
             name: base.name.to_string(),
             title: base.title.to_string(),

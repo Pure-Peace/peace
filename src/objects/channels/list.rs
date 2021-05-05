@@ -6,7 +6,7 @@ use hashbrown::HashMap;
 use colored::Colorize;
 use peace_database::Database;
 
-use crate::{objects::PlayerSessions, types::ChannelList};
+use crate::types::ChannelList;
 
 use super::{base::ChannelBase, Channel};
 
@@ -14,10 +14,7 @@ pub struct ChannelListBuilder {}
 
 impl ChannelListBuilder {
     /// Initial channels list from database
-    pub async fn new(
-        database: &Database,
-        player_sessions: &Arc<RwLock<PlayerSessions>>,
-    ) -> ChannelList {
+    pub async fn channels_from_database(database: &Database) -> ChannelList {
         info!(
             "{}",
             "Initializing default chat channels...".bold().bright_blue()
@@ -28,7 +25,7 @@ impl ChannelListBuilder {
             Ok(rows) => {
                 let channel_bases: Vec<ChannelBase> = serde_postgres::from_rows(&rows).unwrap();
                 for base in channel_bases {
-                    channels.insert(base.name.clone(), Arc::new(RwLock::new(Channel::from_base(&base, player_sessions.clone()).await)));
+                    channels.insert(base.name.clone(), Arc::new(RwLock::new(Channel::from_base(&base).await)));
                 }
                 info!("{}", format!("Channels successfully loaded: {:?};", channels.keys()).bold().green());
                 channels

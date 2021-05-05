@@ -1,6 +1,7 @@
 use actix_web::web::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
+use hashbrown::HashMap;
 use std::time::Instant;
 
 use peace_database::Database;
@@ -8,11 +9,16 @@ use peace_objects::{osu_api::OsuApi, pp_server_api::PPServerApi};
 use peace_settings::{bancho::BanchoConfig, local::LocalConfig};
 
 use super::{Caches, ChannelListBuilder};
-use crate::{objects::PlayerSessions, renders::BanchoGet, types::ChannelList};
+use crate::{
+    objects::PlayerSessions,
+    renders::BanchoGet,
+    types::{ChannelList, MatchList},
+};
 
 pub struct Bancho {
     pub player_sessions: Data<RwLock<PlayerSessions>>,
     pub channel_list: Data<RwLock<ChannelList>>,
+    pub match_list: Data<RwLock<MatchList>>,
     pub osu_api: Data<RwLock<OsuApi>>,
     pub pp_calculator: Data<PPServerApi>,
     pub render_get: Data<RwLock<BanchoGet>>,
@@ -31,7 +37,8 @@ impl Bancho {
 
         let config = lw(config);
         let player_sessions = lw(PlayerSessions::new(1000, database));
-        let channel_list = lw(ChannelListBuilder::new(database, &player_sessions).await);
+        let channel_list = lw(ChannelListBuilder::channels_from_database(database).await);
+        let match_list = lw(HashMap::with_capacity(50));
         let osu_api = lw(OsuApi::new(osu_api_keys).await);
         let pp_calculator = Data::new(PPServerApi::new(
             cfg.data.pp_server.url.clone(),
@@ -42,6 +49,7 @@ impl Bancho {
         Bancho {
             player_sessions,
             channel_list,
+            match_list,
             osu_api,
             pp_calculator,
             render_get,
