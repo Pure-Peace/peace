@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use actix_web::web::Data;
+use ntex::web::types::Data;
 use async_std::sync::RwLock;
 use chrono::Local;
 use peace_database::Database;

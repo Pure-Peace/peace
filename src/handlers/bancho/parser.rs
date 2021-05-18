@@ -1,5 +1,5 @@
 use crate::types::{Password, Username};
-use actix_web::web::Bytes;
+use ntex::util::Bytes;
 use peace_constants::{ClientHashes, ClientInfo};
 
 #[inline(always)]

@@ -21,17 +21,16 @@ impl ChannelListBuilder {
         );
         let mut channels: ChannelList = HashMap::new();
         // Get channels from database
-        match database.pg.query(r#"SELECT "name", "title", "read_priv", "write_priv", "auto_join" FROM "bancho"."channels";"#, &[]).await {
-            Ok(rows) => {
-                let channel_bases: Vec<ChannelBase> = serde_postgres::from_rows(&rows).unwrap();
-                for base in channel_bases {
+        match database.pg.structs_from_database::<ChannelBase>(r#"SELECT "name", "title", "read_priv", "write_priv", "auto_join" FROM "bancho"."channels";"#, &[]).await {
+            Some(channel_bases) => {
+                for base in channel_bases.iter() {
                     channels.insert(base.name.clone(), Arc::new(RwLock::new(Channel::from_base(&base).await)));
                 }
                 info!("{}", format!("Channels successfully loaded: {:?};", channels.keys()).bold().green());
                 channels
             },
-            Err(err) => {
-                error!("{}", format!("Failed to initialize chat channels, error: {:?}", err).bold().red());
+            None => {
+                error!("{}", format!("Failed to initialize chat channels").bold().red());
                 panic!();
             }
         }

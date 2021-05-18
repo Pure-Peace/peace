@@ -1,4 +1,4 @@
-use actix_web::{get, HttpResponse};
+use ntex::web::{get, HttpResponse};
 
 /// GET "/"
 #[get("/")]

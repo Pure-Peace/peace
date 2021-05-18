@@ -1,4 +1,3 @@
-extern crate derivative;
 extern crate serde;
 
 #[macro_use]
@@ -11,10 +10,10 @@ pub mod renders;
 pub mod routes;
 pub mod types;
 
-use actix_web::web::Data;
+use ntex::web::types::Data;
 use objects::{Bancho, Peace};
 
-#[actix_web::main]
+#[ntex::main]
 async fn main() -> std::io::Result<()> {
     // Create local settings
     let cfg = peace_settings::local::LocalConfig::init();

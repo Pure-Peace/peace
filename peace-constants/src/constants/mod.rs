@@ -13,11 +13,7 @@ pub mod geoip;
 pub mod packets;
 pub mod regexes;
 
-pub use client_data::*;
-pub use country::*;
-pub use game_mode::*;
-pub use play_mods::*;
-pub use players::*;
-pub use pp_calc::*;
-pub use privileges::*;
-pub use server::*;
+pub use {
+    client_data::*, country::*, game_mode::*, play_mods::*, players::*, pp_calc::*, privileges::*,
+    server::*,
+};

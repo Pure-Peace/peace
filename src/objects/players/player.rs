@@ -4,6 +4,7 @@ use peace_constants::{
     geoip::GeoData, Action, BanchoPrivileges, ClientInfo, CountryCodes, GameMode, PlayMods,
     PresenceFilter, Privileges, CHEAT_DETECTED_DECREASE_CREDIT,
 };
+use peace_database::serde_postgres;
 
 use crate::objects::{PlayerSettings, PlayerStatus};
 use derivative::Derivative;

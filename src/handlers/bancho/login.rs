@@ -1,20 +1,32 @@
 #![allow(unused_variables)]
-use actix_web::web::{Bytes, Data};
-use actix_web::HttpRequest;
-use maxminddb::Reader;
-use memmap::Mmap;
-use prometheus::IntCounterVec;
-use std::net::{IpAddr, Ipv4Addr};
-use std::time::Instant;
+use {
+    maxminddb::Reader,
+    memmap::Mmap,
+    ntex::{
+        util::Bytes,
+        web::{types::Data, HttpRequest},
+    },
+    prometheus::IntCounterVec,
+    std::{
+        net::{IpAddr, Ipv4Addr},
+        time::Instant,
+    },
+};
 
-use peace_constants::{packets::LoginFailed, BanchoPrivileges, Privileges};
-use peace_database::Database;
-use peace_packets::PacketBuilder;
-use peace_settings::bancho::model::BanchoConfigData;
+use {
+    peace_constants::{packets::LoginFailed, BanchoPrivileges, Privileges},
+    peace_database::Database,
+    peace_packets::PacketBuilder,
+    peace_settings::bancho::model::BanchoConfigData,
+};
 
-use crate::objects::{Bancho, Caches};
-use crate::objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus};
-use crate::types::PacketData;
+use tokio_pg_mapper::FromTokioPostgresRow;
+
+use crate::{
+    objects::{Bancho, Caches},
+    objects::{Player, PlayerAddress, PlayerSettings, PlayerStatus},
+    types::PacketData,
+};
 
 use super::parser;
 
@@ -250,7 +262,7 @@ pub async fn login(
 
     // Check user's hardware addresses
     let select_addresses_start = Instant::now();
-    let player_addresses: Vec<PlayerAddress> = match database
+    let player_addresses = match database
         .pg
         .query(
             r#"SELECT 
@@ -270,13 +282,21 @@ pub async fn login(
         )
         .await
     {
-        Ok(row) => serde_postgres::from_rows(&row).unwrap_or_else(|err| {
-            error!(
-                "could not deserialize player hardware address: {}({}); err: {:?}",
-                username, user_id, err
-            );
-            panic!();
-        }),
+        Ok(rows) => {
+            let mut addresses = Vec::with_capacity(rows.len());
+            for row in rows {
+                match PlayerAddress::from_row(row) {
+                    Ok(address) => addresses.push(address),
+                    Err(err) => {
+                        error!(
+                            "[player_addresses] Could not deserialize player address: {}({}); err: {:?}",
+                            username, user_id, err
+                        );
+                    }
+                };
+            }
+            addresses
+        },
         Err(err) => {
             error!(
                 "user {}({}) login failed, errors when checking hardware addresses; err: {:?}",

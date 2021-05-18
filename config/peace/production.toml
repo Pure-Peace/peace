@@ -20,7 +20,7 @@ level = "info"
 # Actix logger middleware format
 # Default is: '%a "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T'
 # If using reverse proxy, use %{r}a instead of %a
-# https://actix.rs/actix-web/actix_web/middleware/struct.Logger.html
+# https://actix.rs/actix-web/ntex/middleware/struct.Logger.html
 actix_log_format = '%s - %{r}a "%r" %b %T'
 
 # Logger will not record logs of these endpoints

@@ -1,17 +1,21 @@
 #![allow(unused_variables)]
-use crate::objects::{Bancho, ScroeFromDatabase};
-use peace_objects::beatmaps::Beatmap;
-use std::time::Instant;
 
-use actix_web::{web::Query, HttpResponse};
-use async_std::fs::File;
-use async_std::prelude::*;
-use serde::Deserialize;
-use tokio_pg_mapper::FromTokioPostgresRow;
+use {
+    async_std::fs::File,
+    async_std::prelude::*,
+    ntex::web::{types::Query, HttpResponse},
+    serde::Deserialize,
+    std::time::Instant,
+    tokio_pg_mapper::FromTokioPostgresRow,
+};
 
 pub use peace_constants::{GameMode, PlayMods, ScoreboardType};
+use peace_objects::beatmaps::Beatmap;
 
-use crate::routes::web::Context;
+use crate::{
+    objects::{Bancho, ScroeFromDatabase},
+    routes::web::Context,
+};
 
 macro_rules! get_login {
     ($ctx:ident, $data:ident, $failed:ident) => {

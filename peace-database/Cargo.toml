@@ -1,6 +1,6 @@
 [package]
 name = "peace-database"
-version = "0.2.1"
+version = "0.4.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -8,17 +8,27 @@ repository = "https://github.com/pure-peace/peace/peace-database"
 description = "async redis + postgres (connection pool) utility lib"
 
 [features]
-default = []
-with_peace = ["peace-constants"]
+default = ["serde_postgres"]
+serde_postgres = ["serde"]
+with_peace = ["serde_postgres", "peace-constants"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 colored = "2.0"
 log = "0.4"
-deadpool-postgres = "0.5"
-deadpool-redis = "0.6"
-tokio-postgres = { version = "0.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
-tokio-pg-mapper = "0.1"
+deadpool-postgres = "0.7"
+deadpool-redis = "0.7"
+redis = { version = "0.20", default-features = false, features = ["tokio-comp"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
+tokio-pg-mapper = "0.2"
+
+serde = { version = "1.0", optional = true }
 
 peace-constants = { path = "../peace-constants", optional = true }
+
+
+[dev-dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.6", features = ["macros", "rt-multi-thread"] }
+postgres = { version = "0.19" }

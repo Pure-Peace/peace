@@ -21,42 +21,45 @@ description = "osu! server written in Rust."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-cors = "0.5.4"
-actix-multipart = "0.3"
-actix-web = "3.1.0"
-actix-web-prom = "0.5.1"
+ntex = "0.3.16"
+tokio = "1.5.0"
+ntex-multipart = { git = "https://github.com/ntex-rs/ntex-extras", branch = "master" }
+
+# actix-cors = "0.5.4"
+# actix-multipart = "0.3"
+# actix-web = "3.1.0"
+# actix-web-prom = "0.5.1"
 array-init = "1.0.0"
 askama = "0.10.5"
 async-std = "1.9.0"
 base64 = "0.13.0"
-bytes = "0.5.6"
+bytes = "1.0"
 chrono = "0.4.19"
 colored = "2.0.0"
 derivative = "2.2.0"
 enum-primitive-derive = "0.2.1"
 env_logger = "0.8.3"
 futures = "0.3"
-hashbrown = "0.9.1"
+hashbrown = "0.11"
 json = "0.12.4"
 lazy_static = "1.4.0"
 log = "0.4.14"
-maxminddb = { version = "0.17.2", features = ["mmap"] }
+maxminddb = { version = "0.17", features = ["mmap"] }
 md5 = "0.7.0"
 memmap = "0.7.0"
 num-traits = "0.2"
 paste = "1.0"
-prometheus = { version = "0.11.0", features = ["process"] }
+prometheus = { version = "0.12", features = ["process"] }
 queue = "0.3.1"
-reqwest = { version = "0.10.10", features = ["rustls-tls", "json"], default-features = false }
+reqwest = { version = "0.11", features = ["rustls-tls", "json"], default-features = false }
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0.62"
-serde_postgres = "0.2.0"
 serde_qs = "0.8.2"
 strum = "0.20"
 strum_macros = "0.20"
-tokio-pg-mapper = "0.1.8"
-tokio-pg-mapper-derive = "0.1.5"
-tokio-postgres = { version = "0.5.5", features = ["with-chrono-0_4", "with-serde_json-1"] }
+tokio-pg-mapper = "0.2"
+tokio-pg-mapper-derive = "0.2"
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
 uuid = { version = "0.8", features = ["v4"] }
 
 

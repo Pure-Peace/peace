@@ -1,6 +1,7 @@
-use serde::Deserialize;
+use tokio_pg_mapper_derive::PostgresMapper;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, PostgresMapper)]
+#[pg_mapper(table = "")]
 pub struct ChannelBase {
     pub name: String,
     pub title: String,

@@ -1,6 +1,6 @@
 use std::sync::Weak;
 
-use actix_web::web::Data;
+use ntex::web::types::Data;
 use async_std::sync::RwLock;
 
 use crate::{

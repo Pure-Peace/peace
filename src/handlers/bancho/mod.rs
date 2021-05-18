@@ -7,7 +7,7 @@ pub use common::*;
 
 pub use login::login;
 
-use actix_web::web::Data;
+use ntex::web::types::Data;
 use async_std::sync::RwLock;
 use peace_database::Database;
 use std::sync::Weak;

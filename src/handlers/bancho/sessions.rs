@@ -1,4 +1,4 @@
-use actix_web::web::Data;
+use ntex::web::types::Data;
 
 use crate::objects::Bancho;
 

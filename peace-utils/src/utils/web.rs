@@ -1,8 +1,13 @@
-use actix_multipart::Multipart;
-use bytes::Bytes;
-use futures::StreamExt;
-use hashbrown::HashMap;
-use std::str::FromStr;
+use {
+    async_std::sync::RwLock,
+    bytes::Bytes,
+    futures::StreamExt,
+    hashbrown::HashMap,
+    ntex::http::header,
+    ntex::web::{middleware::Logger, types::Data, HttpRequest},
+    ntex_multipart::Multipart,
+    std::str::FromStr,
+};
 
 #[derive(Debug)]
 pub struct MultipartData {
@@ -34,13 +39,10 @@ impl MultipartData {
 pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
     let mut files = HashMap::new();
     let mut forms = HashMap::new();
-    while let Some(item) = mutipart_data.next().await {
-        let mut field = match item {
-            Ok(f) => f,
-            Err(_e) => continue,
-        };
-        if let Some(disposition) = field.content_disposition() {
-            let file_name = disposition.get_filename();
+    while let Some(Ok(mut field)) = mutipart_data.next().await {
+        if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
+            println!("ok: {:?}", disposition);
+            /* let file_name = disposition.get_filename();
             if let Some(key) = disposition.get_name() {
                 while let Some(Ok(chunk)) = field.next().await {
                     if file_name.is_some() {
@@ -52,7 +54,7 @@ pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
                         );
                     }
                 }
-            }
+            } */
         }
     }
     MultipartData { forms, files }
@@ -66,13 +68,10 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
     mut form_data: Multipart,
 ) -> Result<T, serde_qs::Error> {
     let mut temp: String = String::new();
-    while let Some(item) = form_data.next().await {
-        let mut field = match item {
-            Ok(f) => f,
-            Err(_e) => continue,
-        };
-        if let Some(disposition) = field.content_disposition() {
-            if let Some(key) = disposition.get_name() {
+    while let Some(Ok(mut field)) = form_data.next().await {
+        if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
+            println!("ok: {:?}", disposition);
+            /* if let Some(key) = disposition.get_name() {
                 while let Some(Ok(chunk)) = field.next().await {
                     let value = String::from_utf8(chunk.to_vec()).unwrap_or(String::new());
                     if temp.len() > 0 {
@@ -80,37 +79,23 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
                     }
                     temp.push_str(&format!("{}={}", key, value));
                 }
-            }
+            } */
         }
     }
     serde_qs::from_str(&temp)
 }
 
-#[cfg(feature = "actix_web")]
-use actix_web::{middleware::Logger, web::Data, HttpRequest};
-#[cfg(feature = "actix_web")]
-use async_std::sync::RwLock;
-
-#[cfg(feature = "actix_web")]
 #[inline(always)]
 pub fn lock_wrapper<T>(obj: T) -> Data<RwLock<T>> {
     Data::new(RwLock::new(obj))
 }
 
-#[cfg(feature = "actix_web")]
 #[inline(always)]
 /// Get real ip from request
 pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
-    match req.connection_info().realip_remote_addr() {
-        Some(ip) => Ok(match ip.find(':') {
-            Some(idx) => ip[0..idx].to_string(),
-            None => ip.to_string(),
-        }),
-        None => Err(()),
-    }
+    Ok(req.connection_info().host().to_string())
 }
 
-#[cfg(feature = "actix_web")]
 #[inline(always)]
 pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
     let v = req.headers().get(key);
@@ -127,7 +112,6 @@ pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
     true
 }
 
-#[cfg(feature = "actix_web")]
 #[inline(always)]
 /// Get osu version from headers
 pub async fn get_osuver(req: &HttpRequest) -> String {
@@ -137,7 +121,6 @@ pub async fn get_osuver(req: &HttpRequest) -> String {
     }
 }
 
-#[cfg(feature = "actix_web")]
 #[inline(always)]
 /// Get osu token from headers
 pub async fn get_token(req: &HttpRequest) -> String {
@@ -147,7 +130,6 @@ pub async fn get_token(req: &HttpRequest) -> String {
     }
 }
 
-#[cfg(feature = "actix_web")]
 #[inline(always)]
 pub fn osu_sumit_token_checker(req: &HttpRequest) -> bool {
     if let Some(token) = req.headers().get("Token") {
@@ -167,13 +149,12 @@ pub fn osu_sumit_token_checker(req: &HttpRequest) -> bool {
     false
 }
 
-#[cfg(feature = "actix_web")]
 pub fn make_logger(
     log_format: &str,
     exclude_target_endpoint: bool,
     target_endpoint: &str,
     exclude_endpoints: &Vec<String>,
-    exclude_endpoints_regex: &Vec<String>,
+    _exclude_endpoints_regex: &Vec<String>,
 ) -> Logger {
     let mut logger = match exclude_target_endpoint {
         true => Logger::new(log_format).exclude(target_endpoint),
@@ -182,8 +163,9 @@ pub fn make_logger(
     for i in exclude_endpoints.iter() {
         logger = logger.exclude(i as &str);
     }
-    for i in exclude_endpoints_regex.iter() {
+    // TODO: ntex is currently not supporting for regex
+    /* for i in exclude_endpoints_regex.iter() {
         logger = logger.exclude_regex(i as &str);
-    }
+    } */
     logger
 }

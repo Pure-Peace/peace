@@ -2,7 +2,7 @@ use crate::types::TokenString;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 use peace_constants::{geoip::GeoData, CountryCodes, GameMode, PresenceFilter};
-use peace_database::Database;
+use peace_database::{serde_postgres, Database};
 
 use std::str::FromStr;
 

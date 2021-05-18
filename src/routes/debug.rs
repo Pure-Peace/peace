@@ -1,20 +1,22 @@
 use crate::objects::Bancho;
 
-use actix_web::{
-    dev::Server,
-    web::{Data, Path},
+use {
+    async_std::channel::Sender,
+    maxminddb::Reader,
+    memmap::Mmap,
+    ntex::server::Server,
+    ntex::web::{
+        get,
+        types::{Data, Path},
+        HttpResponse,
+    },
+    peace_database::Database,
+    std::time::Instant,
 };
-use actix_web::{get, HttpResponse, Responder};
-use async_std::channel::Sender;
-use maxminddb::Reader;
-use memmap::Mmap;
-use peace_database::Database;
-
-use std::time::Instant;
 
 /// GET "/test_pg"
 #[get("/test_pg")]
-pub async fn test_pg(database: Data<Database>) -> impl Responder {
+pub async fn test_pg(database: Data<Database>) -> HttpResponse {
     let start = Instant::now();
     let contents = database
         .pg
@@ -30,7 +32,7 @@ pub async fn test_pg(database: Data<Database>) -> impl Responder {
 
 /// GET "/test_redis"
 #[get("/test_redis")]
-pub async fn test_redis(database: Data<Database>) -> impl Responder {
+pub async fn test_redis(database: Data<Database>) -> HttpResponse {
     let start = Instant::now();
     let _ = database.redis.set("test", &["PurePeace", "NX"]).await;
     let contents: String = database.redis.get("test").await.unwrap();
@@ -42,7 +44,7 @@ pub async fn test_redis(database: Data<Database>) -> impl Responder {
 
 /// GET "/test_async_lock"
 #[get("/test_async_lock")]
-pub async fn test_async_lock(bancho: Data<Bancho>) -> impl Responder {
+pub async fn test_async_lock(bancho: Data<Bancho>) -> HttpResponse {
     let start = Instant::now();
     let player_sessions = bancho.player_sessions.read().await;
     let _map = &player_sessions.token_map;
@@ -54,13 +56,13 @@ pub async fn test_async_lock(bancho: Data<Bancho>) -> impl Responder {
 
 /// GET "/test_player_read"
 #[get("/test_player_read/{token}")]
-pub async fn test_player_read(token: Path<String>, bancho: Data<Bancho>) -> impl Responder {
+pub async fn test_player_read(token: Path<String>, bancho: Data<Bancho>) -> HttpResponse {
     let start = Instant::now();
     let player_info = match bancho
         .player_sessions
         .read()
         .await
-        .get_player_data(&token.0)
+        .get_player_data(&token.into_inner())
         .await
     {
         Some(player_data) => format!("{:?}", player_data),
@@ -72,10 +74,10 @@ pub async fn test_player_read(token: Path<String>, bancho: Data<Bancho>) -> impl
 
 /// GET "/test_player_money_add"
 #[get("/test_player_money_add/{token}")]
-pub async fn test_player_money_add(token: Path<String>, bancho: Data<Bancho>) -> impl Responder {
+pub async fn test_player_money_add(token: Path<String>, bancho: Data<Bancho>) -> HttpResponse {
     let start = Instant::now();
     let player_sessions = bancho.player_sessions.read().await;
-    let player_info = match player_sessions.token_map.get(&token.0) {
+    let player_info = match player_sessions.token_map.get(&token.into_inner()) {
         Some(player) => {
             // (*player).money += 1;
             //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
@@ -89,10 +91,10 @@ pub async fn test_player_money_add(token: Path<String>, bancho: Data<Bancho>) ->
 
 /// GET "/test_player_money_reduce"
 #[get("/test_player_money_reduce/{token}")]
-pub async fn test_player_money_reduce(token: Path<String>, bancho: Data<Bancho>) -> impl Responder {
+pub async fn test_player_money_reduce(token: Path<String>, bancho: Data<Bancho>) -> HttpResponse {
     let start = Instant::now();
     let player_sessions = bancho.player_sessions.read().await;
-    let player_info = match player_sessions.token_map.get(&token.0) {
+    let player_info = match player_sessions.token_map.get(&token.into_inner()) {
         Some(player) => {
             // (*player).money -= 1;
             format!("{:?}", *player)
@@ -108,13 +110,16 @@ pub async fn test_player_money_reduce(token: Path<String>, bancho: Data<Bancho>)
 pub async fn test_player_money_reduce_special(
     token: Path<String>,
     bancho: Data<Bancho>,
-) -> impl Responder {
+) -> HttpResponse {
     let start = Instant::now();
     let player_info = bancho
         .player_sessions
         .read()
         .await
-        .handle_player_get(&token.0, |_player| Some(()) /* (*player).money -= 1 */)
+        .handle_player_get(
+            &token.into_inner(),
+            |_player| Some(()), /* (*player).money -= 1 */
+        )
         .await;
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("{:?} {:.2?}", player_info, end))
@@ -122,13 +127,13 @@ pub async fn test_player_money_reduce_special(
 
 /// GET "/player_sessions_all"
 #[get("/player_sessions_all")]
-pub async fn player_sessions_all(bancho: Data<Bancho>) -> impl Responder {
+pub async fn player_sessions_all(bancho: Data<Bancho>) -> HttpResponse {
     HttpResponse::Ok().body(bancho.player_sessions.read().await.map_to_string().await)
 }
 
 /// GET "/player_maps_info"
 #[get("/player_maps_info")]
-pub async fn player_maps_info(bancho: Data<Bancho>) -> impl Responder {
+pub async fn player_maps_info(bancho: Data<Bancho>) -> HttpResponse {
     let start = Instant::now();
     let maps = bancho.player_sessions.read().await;
     HttpResponse::Ok().body(format!(
@@ -142,22 +147,23 @@ pub async fn player_maps_info(bancho: Data<Bancho>) -> impl Responder {
 
 /// GET "/player_channels_all"
 #[get("/player_channels_all")]
-pub async fn player_channels_all(bancho: Data<Bancho>) -> impl Responder {
+pub async fn player_channels_all(bancho: Data<Bancho>) -> HttpResponse {
     HttpResponse::Ok().body(format!("{:?}", bancho.channel_list.read().await.values()))
 }
 
 /// GET "/player_sessions_kick"
 #[get("/player_sessions_kick/{token}")]
-pub async fn player_sessions_kick(token: Path<String>, bancho: Data<Bancho>) -> impl Responder {
+pub async fn player_sessions_kick(token: Path<String>, bancho: Data<Bancho>) -> HttpResponse {
+    let token = token.into_inner();
     HttpResponse::Ok().body(
         match bancho
             .player_sessions
             .write()
             .await
-            .logout(&token.0, Some(&bancho.channel_list))
+            .logout(&token, Some(&bancho.channel_list))
             .await
         {
-            Some(player) => format!("{}\n{:?}", token.0, player),
+            Some(player) => format!("{}\n{:?}", token, player),
             None => "non this player".to_string(),
         },
     )
@@ -165,13 +171,13 @@ pub async fn player_sessions_kick(token: Path<String>, bancho: Data<Bancho>) -> 
 
 /// GET "/player_sessions_kick_uid"
 #[get("/player_sessions_kick_uid/{user_id}")]
-pub async fn player_sessions_kick_uid(user_id: Path<i32>, bancho: Data<Bancho>) -> impl Responder {
+pub async fn player_sessions_kick_uid(user_id: Path<i32>, bancho: Data<Bancho>) -> HttpResponse {
     HttpResponse::Ok().body(
         match bancho
             .player_sessions
             .write()
             .await
-            .logout_with_id(user_id.0, Some(&bancho.channel_list))
+            .logout_with_id(user_id.into_inner(), Some(&bancho.channel_list))
             .await
         {
             Some(player) => format!("{:?}", player),
@@ -185,7 +191,7 @@ pub async fn player_sessions_kick_uid(user_id: Path<i32>, bancho: Data<Bancho>) 
 pub async fn test_geo_ip(
     ip_address: Path<String>,
     geo_db: Data<Option<Reader<Mmap>>>,
-) -> impl Responder {
+) -> HttpResponse {
     match peace_utils::geoip::geo_ip_info(&ip_address.to_string(), &geo_db.get_ref()).await {
         Ok(json_success) => HttpResponse::Ok()
             .content_type("application/json; charset=utf-8")
@@ -198,23 +204,20 @@ pub async fn test_geo_ip(
 
 /// GET "/bancho_config_get"
 #[get("/bancho_config_get")]
-pub async fn bancho_config_get(bancho: Data<Bancho>) -> impl Responder {
+pub async fn bancho_config_get(bancho: Data<Bancho>) -> HttpResponse {
     HttpResponse::Ok().body(format!("{:?}", bancho.config.read().await))
 }
 
 /// GET "/bancho_config_update"
 #[get("/bancho_config_update")]
-pub async fn bancho_config_update(
-    database: Data<Database>,
-    bancho: Data<Bancho>,
-) -> impl Responder {
+pub async fn bancho_config_update(database: Data<Database>, bancho: Data<Bancho>) -> HttpResponse {
     let result = bancho.config.write().await.update(&database).await;
     HttpResponse::Ok().body(format!("{}", result))
 }
 
 /// GET "/osu_api_test"
 #[get("/osu_api_test")]
-pub async fn osu_api_test(bancho: Data<Bancho>) -> impl Responder {
+pub async fn osu_api_test(bancho: Data<Bancho>) -> HttpResponse {
     let results = bancho.osu_api.write().await.test_all().await;
     HttpResponse::Ok()
         .content_type("application/json")
@@ -223,13 +226,13 @@ pub async fn osu_api_test(bancho: Data<Bancho>) -> impl Responder {
 
 /// GET "/osu_api_all"
 #[get("/osu_api_all")]
-pub async fn osu_api_all(bancho: Data<Bancho>) -> impl Responder {
+pub async fn osu_api_all(bancho: Data<Bancho>) -> HttpResponse {
     HttpResponse::Ok().body(format!("{:?}", bancho.osu_api.read().await))
 }
 
 /// GET "/osu_api_reload"
 #[get("/osu_api_reload")]
-pub async fn osu_api_reload(bancho: Data<Bancho>) -> impl Responder {
+pub async fn osu_api_reload(bancho: Data<Bancho>) -> HttpResponse {
     let start = Instant::now();
     let api_keys = bancho.config.read().await.data.server.osu_api_keys.clone();
     bancho.osu_api.write().await.reload_clients(api_keys).await;
@@ -239,7 +242,7 @@ pub async fn osu_api_reload(bancho: Data<Bancho>) -> impl Responder {
 
 /// GET "/server_stop"
 #[get("/server_stop")]
-pub async fn server_stop(sender: Data<Sender<Option<Server>>>) -> impl Responder {
+pub async fn server_stop(sender: Data<Sender<Option<Server>>>) -> HttpResponse {
     let start = Instant::now();
     let _ = sender.send(None).await;
     let end = start.elapsed();

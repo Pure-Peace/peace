@@ -1,13 +1,15 @@
 #![allow(dead_code)]
 
-use colored::Colorize;
-use deadpool_redis::{cmd as _cmd, redis::ErrorKind, Cmd, Connection, Pool};
-use deadpool_redis::{
-    redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs},
-    PoolError,
+use {
+    colored::Colorize,
+    deadpool_redis::{cmd as _cmd, redis::ErrorKind, Cmd, Connection, Pool},
+    deadpool_redis::{
+        redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs},
+        PoolError,
+    },
+    std::convert::From,
+    std::marker::Send,
 };
-use std::convert::From;
-use std::marker::Send;
 
 /// Redis object
 ///

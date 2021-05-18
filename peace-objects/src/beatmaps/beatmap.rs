@@ -5,13 +5,12 @@ use peace_constants::{
 };
 
 #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-use field_names::FieldNames;
-#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-use peace_database::Database;
-#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-use postgres_types::{FromSql, ToSql};
-#[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-use tokio_pg_mapper_derive::PostgresMapper;
+use {
+    field_names::FieldNames,
+    peace_database::Database,
+    postgres_types::{FromSql, ToSql},
+    tokio_pg_mapper_derive::PostgresMapper,
+};
 
 use crate::beatmaps::traits::MyBeatmapCache;
 use crate::beatmaps::BeatmapFromApi;
@@ -21,11 +20,11 @@ use super::{cache::BeatmapCache, traits::BeatmapCacheStorage};
 
 #[cfg_attr(
     all(not(feature = "no_database"), feature = "with_peace"),
-    pg_mapper(table = "")
+    derive(FromSql, FieldNames, ToSql, PostgresMapper)
 )]
 #[cfg_attr(
     all(not(feature = "no_database"), feature = "with_peace"),
-    derive(FromSql, FieldNames, ToSql, PostgresMapper)
+    pg_mapper(table = "")
 )]
 #[derive(Debug, Clone)]
 pub struct Beatmap {

@@ -14,7 +14,7 @@ mod depends {
         objects::Channel,
         types::{Location, PacketData, TokenString},
     };
-    pub use actix_web::web::Data;
+    pub use ntex::web::types::Data;
     pub use async_std::sync::{Mutex, RwLock};
     pub use chrono::prelude::{DateTime, Local};
     pub use hashbrown::{HashMap, HashSet};

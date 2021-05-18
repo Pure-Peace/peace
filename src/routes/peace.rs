@@ -1,17 +1,16 @@
-use actix_web::web::{get, post, scope, ServiceConfig};
-use actix_web::{dev::HttpServiceFactory, guard};
+use ntex::web::{self, guard, scope, ServiceConfig};
 
 /// Function that will be called on new Application to configure routes for this module
 /// Initial all routes
 pub fn init(cfg: &mut ServiceConfig, config_data: &peace_settings::local::LocalConfigData) {
     init_default(cfg);
-    cfg.service(init_bancho());
-    cfg.service(init_web());
-    cfg.service(init_api_v1());
-    cfg.service(init_api_v2());
+    init_bancho(cfg);
+    init_web(cfg);
+    init_api_v1(cfg);
+    init_api_v2(cfg);
 
     if config_data.geoip.web_api {
-        cfg.service(init_geoip());
+        init_geoip(cfg);
     };
 
     // !warning: only debug!
@@ -21,10 +20,9 @@ pub fn init(cfg: &mut ServiceConfig, config_data: &peace_settings::local::LocalC
 }
 
 // Init geoip api
-fn init_geoip() -> impl HttpServiceFactory {
+fn init_geoip(cfg: &mut ServiceConfig) {
     use super::geoip::*;
-    let path = "/geoip";
-    scope(path).service(index).service(geo_ip)
+    cfg.service(scope("/geoip").service(index).service(geo_ip));
 }
 
 fn init_debug(cfg: &mut ServiceConfig) {
@@ -57,45 +55,51 @@ fn init_default(cfg: &mut ServiceConfig) {
 }
 
 /// Routes for bancho
-fn init_bancho() -> impl HttpServiceFactory {
+fn init_bancho(cfg: &mut ServiceConfig) {
     use super::bancho;
-    scope("/bancho")
-        .route("/", get().to(bancho::get::handler))
-        .route(
-            "/",
-            post()
-                .guard(guard::Header("user-agent", "osu!"))
-                .to(bancho::post::handler),
-        )
-        .service(bancho::osu_register)
+    cfg.service(
+        scope("/bancho")
+            .route("/", web::get().to(bancho::get::handler))
+            .route(
+                "/",
+                web::post()
+                    .guard(guard::Header("user-agent", "osu!"))
+                    .to(bancho::post::handler),
+            )
+            .service(bancho::osu_register),
+    );
 }
 
 /// Routes for web
-fn init_web() -> impl HttpServiceFactory {
-    use super::web;
-    scope("/web")
-        .route("/{path}", get().to(web::get::handler))
-        .route("/{path}", post().to(web::post::handler))
+fn init_web(cfg: &mut ServiceConfig) {
+    use super::web::*;
+    cfg.service(
+        scope("/web")
+            .route("/{path}", web::get().to(get::handler))
+            .route("/{path}", web::post().to(post::handler)),
+    );
 }
 
 /// Routes for api_v1
-fn init_api_v1() -> impl HttpServiceFactory {
+fn init_api_v1(cfg: &mut ServiceConfig) {
     use super::api::v1::*;
-    scope("/api/v1")
-        .service(index)
-        .service(is_online)
-        .service(online_users)
-        .service(server_status)
-        .service(verified_status)
-        .service(ci_trigger)
-        .service(bot_message)
-        .route("/update_user_stats", get().to(update_user_stats))
-        .route("/update_user_stats", post().to(update_user_stats))
-        .service(recreate_score_table)
+    cfg.service(
+        scope("/api/v1")
+            .service(index)
+            .service(is_online)
+            .service(online_users)
+            .service(server_status)
+            .service(verified_status)
+            .service(ci_trigger)
+            .service(bot_message)
+            .route("/update_user_stats", web::get().to(update_user_stats))
+            .route("/update_user_stats", web::post().to(update_user_stats))
+            .service(recreate_score_table),
+    );
 }
 
 /// Routes for api_v2
-fn init_api_v2() -> impl HttpServiceFactory {
+fn init_api_v2(cfg: &mut ServiceConfig) {
     use super::api::v2::*;
-    scope("/api/v2").service(index)
+    cfg.service(scope("/api/v2").service(index));
 }

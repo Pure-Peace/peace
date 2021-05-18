@@ -1,6 +1,8 @@
-use enum_primitive_derive::Primitive;
-use num_traits::FromPrimitive;
-use serde::{de::Error, Deserialize, Deserializer};
+use {
+    enum_primitive_derive::Primitive,
+    num_traits::FromPrimitive,
+    serde::{de::Error, Deserialize, Deserializer},
+};
 
 pub const CHEAT_DETECTED_DECREASE_CREDIT: i32 = 200;
 
@@ -34,9 +36,9 @@ impl RankStatusInServer {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SubmissionStatus {
-    Failed = 0,
-    Passed = 1,
-    PassedAndTop = 2,
+    Failed          = 0,
+    Passed          = 1,
+    PassedAndTop    = 2,
 }
 
 impl SubmissionStatus {

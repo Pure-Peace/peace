@@ -1,18 +1,17 @@
-use actix_cors::Cors;
-use actix_web::{dev::Server, web::Data, App, HttpServer};
-use actix_web_prom::PrometheusMetrics;
-use async_std::channel::{unbounded, Receiver, Sender};
-use colored::Colorize;
-use maxminddb::{self, Reader};
-use memmap::Mmap;
-use peace_database::Database;
-use prometheus::{opts, IntCounterVec};
-use std::time::Instant;
+use {
+    async_std::channel::{unbounded, Receiver, Sender},
+    colored::Colorize,
+    maxminddb::{self, Reader},
+    memmap::Mmap,
+    ntex::server::Server,
+    ntex::web::{types::Data, App, HttpServer},
+    peace_database::Database,
+    prometheus::{opts, IntCounterVec},
+    std::time::Instant,
+    // use actix_web_prom::PrometheusMetrics;
+};
 
-use crate::handlers::bancho;
-use crate::objects::Bancho;
-use crate::objects::Caches;
-use crate::routes;
+use crate::{handlers::bancho, objects::Bancho, objects::Caches, routes};
 
 use peace_settings::local::{LocalConfig, LocalConfigData};
 
@@ -21,7 +20,7 @@ pub struct Peace {
     pub bancho: Data<Bancho>,
     pub local_config: LocalConfig,
     pub database: Data<Database>,
-    pub prometheus: PrometheusMetrics,
+    // pub prometheus: PrometheusMetrics,
     pub counter: IntCounterVec,
     pub geo_db: Data<Option<Reader<Mmap>>>,
     pub caches: Data<Caches>,
@@ -41,7 +40,7 @@ impl Peace {
             .unwrap_or("127.0.0.1:8080".to_string());
 
         // Prometheus
-        let (prometheus, counter) = Self::prom_init(&addr, sets);
+        let counter = Self::prom_init(&addr, sets);
         // Geo mmdb
         let geo_db = Data::new(Self::mmdb_init(sets));
         // Global cache
@@ -54,7 +53,7 @@ impl Peace {
             bancho,
             local_config,
             database,
-            prometheus,
+            // prometheus,
             counter,
             geo_db,
             caches,
@@ -71,7 +70,7 @@ impl Peace {
         info!("{}", "Starting http server...".bold().bright_blue());
         let server = {
             let s = self.local_config.data.clone();
-            let prom = self.prometheus.clone();
+            // let prom = self.prometheus.clone();
             let bancho = self.bancho.clone();
             let geo_db = self.geo_db.clone();
             let caches = self.caches.clone();
@@ -88,14 +87,15 @@ impl Peace {
                         &s.logger.exclude_endpoints,
                         &s.logger.exclude_endpoints_regex,
                     ))
-                    .wrap(prom.clone())
-                    .wrap(
+                    // TODO: prometheus middleware
+                    // .wrap(prom.clone())
+                    /* .wrap(
                         Cors::default()
                             .allow_any_origin()
                             .allow_any_header()
                             .allow_any_method()
                             .supports_credentials(),
-                    )
+                    ) */
                     .app_data(bancho.clone())
                     .app_data(geo_db.clone())
                     .app_data(caches.clone())
@@ -183,7 +183,7 @@ impl Peace {
         async_std::task::spawn(handle_session_recycle(self.bancho.clone()));
     }
 
-    pub fn prom_init(addr: &String, sets: &LocalConfigData) -> (PrometheusMetrics, IntCounterVec) {
+    pub fn prom_init(addr: &String, sets: &LocalConfigData) -> IntCounterVec {
         // Ready prometheus
         println!(
             "> {}",
@@ -212,7 +212,7 @@ impl Peace {
         let counter = IntCounterVec::new(counter_opts, &["endpoint", "method", "status"]).unwrap();
 
         // Init prometheus
-        let prometheus = PrometheusMetrics::new(
+        /* let prometheus = PrometheusMetrics::new(
             &sets.prom.namespace,
             Some(&sets.prom.endpoint),
             Some(labels),
@@ -220,9 +220,10 @@ impl Peace {
         prometheus
             .registry
             .register(Box::new(counter.clone()))
-            .unwrap();
+            .unwrap(); */
 
-        (prometheus, counter)
+        /* prometheus, */
+        counter
     }
 
     pub fn mmdb_init(sets: &LocalConfigData) -> Option<Reader<Mmap>> {

@@ -1,8 +1,14 @@
-use actix_web::{
-    error, get, http::Method, web::BytesMut, web::Data, web::Path, web::Payload, Error,
-    HttpRequest, HttpResponse,
-};
 use futures::StreamExt;
+use ntex::{
+    http::Method,
+    util::BytesMut,
+    web::{
+        error, get,
+        types::Data,
+        types::{Path, Payload},
+        Error, HttpRequest, HttpResponse,
+    },
+};
 use num_traits::FromPrimitive;
 use peace_constants::{api::UpdateUserTask, GameMode};
 use peace_database::Database;
@@ -77,18 +83,18 @@ pub async fn recreate_score_table(
     bancho: Data<Bancho>,
     database: Data<Database>,
     caches: Data<Caches>,
-) -> Result<HttpResponse, Error> {
+) -> HttpResponse {
     if !peace_utils::web::header_checker(
         &req,
         "peace_key",
         &bancho.local_config.data.pp_server.peace_key,
     ) {
-        return Err(error::ErrorUnauthorized("peace_key is invalid"));
+        return HttpResponse::Unauthorized().body("peace_key is invalid");
     }
 
     let mode = match GameMode::from_u8(data.mode) {
         Some(m) => m,
-        None => return Err(error::ErrorNotFound("mode is invalid")),
+        None => return HttpResponse::NotFound().body("mode is invalid"),
     };
 
     let _temp_table = Bancho::create_score_table(
@@ -101,7 +107,7 @@ pub async fn recreate_score_table(
     )
     .await;
 
-    return Ok(HttpResponse::Ok().body("ok"));
+    HttpResponse::Ok().body("ok")
 }
 
 /// Update user(multiple or single)'s stats in game
@@ -122,7 +128,7 @@ pub async fn update_user_stats(
         "peace_key",
         &bancho.local_config.data.pp_server.peace_key,
     ) {
-        return Err(error::ErrorUnauthorized("peace_key is invalid"));
+        return Ok(HttpResponse::Unauthorized().body("peace_key is invalid"));
     }
 
     let tasks = match req.method() {
@@ -137,13 +143,13 @@ pub async fn update_user_stats(
                 let chunk = chunk?;
                 // limit max size of in-memory payload
                 if (body.len() + chunk.len()) > PAYLOAD_MAX_SIZE {
-                    return Err(error::ErrorBadRequest("overflow"));
+                    return Ok(HttpResponse::BadRequest().body("overflow"));
                 }
                 body.extend_from_slice(&chunk);
             }
             serde_json::from_slice::<Vec<UpdateUserTask>>(&body)?
         }
-        _ => return Err(error::ErrorMethodNotAllowed("only allowed GET, POST")),
+        _ => return Ok(HttpResponse::MethodNotAllowed().body("only allowed GET, POST")),
     };
 
     let mut success = 0i32;

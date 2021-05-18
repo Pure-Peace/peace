@@ -9,8 +9,8 @@ use peace_constants::{GameMode, PlayMods, SubmissionStatus};
 use peace_database::Database;
 use peace_utils::web::MultipartData;
 
-#[pg_mapper(table = "")]
 #[derive(Debug, PostgresMapper)]
+#[pg_mapper(table = "")]
 pub struct MiniScore {
     pub rank: i64,
     pub id: i64,
@@ -65,8 +65,8 @@ impl MiniScore {
     }
 }
 
-#[pg_mapper(table = "")]
 #[derive(Debug, PostgresMapper)]
+#[pg_mapper(table = "")]
 pub struct ScroeFromDatabase {
     pub rank: i64,
     pub id: i64,

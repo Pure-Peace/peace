@@ -1,10 +1,8 @@
-use actix_web::{
-    get,
-    web::{Data, Path},
-    HttpResponse,
+use {
+    maxminddb::Reader,
+    memmap::Mmap,
+    ntex::web::{get, types::Data, types::Path, HttpResponse},
 };
-use maxminddb::Reader;
-use memmap::Mmap;
 
 #[get("")]
 pub async fn index() -> HttpResponse {

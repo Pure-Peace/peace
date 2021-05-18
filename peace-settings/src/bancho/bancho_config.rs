@@ -44,7 +44,7 @@ impl BanchoConfig {
             }
             Err(err) => {
                 error!("[BanchoConfig] Failed to get from database, err: {:?}", err);
-                panic!(TIPS)
+                panic!("{}", TIPS)
             }
         }
     }
@@ -59,7 +59,7 @@ impl BanchoConfig {
                     "[BanchoConfig] Failed to get column \"settings\" from database row, err: {:?}",
                     err
                 );
-                panic!(TIPS)
+                panic!("{}", TIPS)
             }
         };
         if let Some(settings_val) = settings_val {
@@ -72,7 +72,7 @@ impl BanchoConfig {
                     Err(err) => {
                         error!("[BanchoConfig] Failed to parse json, err: {:?}", err);
                         if parse_err_panic {
-                            panic!(TIPS)
+                            panic!("{}", TIPS)
                         }
                         return None;
                     }

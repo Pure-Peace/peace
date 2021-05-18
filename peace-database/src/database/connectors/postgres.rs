@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
-use colored::Colorize;
-use deadpool_postgres::{Client, Pool, PoolError};
-use std::fmt;
-use tokio_pg_mapper::FromTokioPostgresRow;
-use tokio_postgres::{types::ToSql, Error, NoTls, Row, Statement};
+use {
+    colored::Colorize,
+    deadpool_postgres::{Client, Pool, PoolError},
+    std::fmt,
+    tokio_pg_mapper::FromTokioPostgresRow,
+    tokio_postgres::{types::ToSql, Error, NoTls, Row, Statement},
+};
 
 pub enum PostgresError {
     PoolError,
@@ -242,6 +244,38 @@ impl Postgres {
                 None
             }
         }
+    }
+
+    #[inline(always)]
+    pub async fn structs_from_database<T: FromTokioPostgresRow>(
+        &self,
+        query: &str,
+        param: &[&(dyn ToSql + Sync)],
+    ) -> Option<Vec<T>> {
+        let rows = self.query(query, param).await;
+        if let Err(err) = rows {
+            debug!(
+                "[struct_from_database] Failed to get row from database, error: {:?}",
+                err
+            );
+            return None;
+        }
+
+        let rows = rows.unwrap();
+        let mut structs = Vec::with_capacity(rows.len());
+        for row in rows {
+            match <T>::from_row(row) {
+                Ok(t) => structs.push(t),
+                Err(err) => {
+                    let type_name = std::any::type_name::<T>();
+                    error!(
+                        "[struct_from_database] Failed to deserialize {} from pg-row! error: {:?}",
+                        type_name, err
+                    );
+                }
+            };
+        }
+        Some(structs)
     }
 
     #[inline(always)]

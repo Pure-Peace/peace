@@ -5,8 +5,8 @@ use tokio_pg_mapper_derive::PostgresMapper;
 set_with_db! {
     table="user";
     schema="settings";
-    #[pg_mapper(table = "user.settings")]
     #[derive(Clone, Debug, PostgresMapper)]
+    #[pg_mapper(table = "user.settings")]
     pub struct PlayerSettings {
         pub id: i32,
         pub game_mode: i16,

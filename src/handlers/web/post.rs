@@ -1,12 +1,12 @@
-use actix_multipart::Multipart;
-use actix_web::HttpResponse;
-use chrono::Local;
-use peace_objects::beatmaps::Beatmap;
-use serde::Deserialize;
-use std::time::Instant;
+use {
+    chrono::Local, ntex::web::HttpResponse, ntex_multipart::Multipart,
+    peace_objects::beatmaps::Beatmap, serde::Deserialize, std::time::Instant,
+};
 
-use crate::objects::{Bancho, MiniScore, ScoreData, SubmitModular};
-use crate::routes::web::Context;
+use crate::{
+    objects::{Bancho, MiniScore, ScoreData, SubmitModular},
+    routes::web::Context,
+};
 
 use peace_constants::SubmissionStatus;
 

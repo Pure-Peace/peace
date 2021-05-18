@@ -9,7 +9,7 @@ mod depends {
         objects::{PlayerData, PlayerSessions},
         types::ChannelList,
     };
-    pub use actix_web::web::Data;
+    pub use ntex::web::types::Data;
     pub use async_std::sync::RwLock;
     pub use peace_constants::{Action, GameMode, PlayMod, Privileges};
     pub use peace_database::Database;

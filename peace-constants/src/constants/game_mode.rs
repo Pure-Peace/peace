@@ -1,9 +1,11 @@
 #![allow(non_camel_case_types)]
 
-use crate::PlayMod;
-use enum_primitive_derive::Primitive;
-use num_traits::FromPrimitive;
-use serde::{de::Error, Deserialize, Deserializer};
+use {
+    crate::PlayMod,
+    enum_primitive_derive::Primitive,
+    num_traits::FromPrimitive,
+    serde::{de::Error, Deserialize, Deserializer},
+};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive, Hash)]
 #[repr(u8)]

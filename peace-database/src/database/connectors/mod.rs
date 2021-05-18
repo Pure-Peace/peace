@@ -1,5 +1,4 @@
 mod postgres;
 mod redis;
 
-pub use postgres::Postgres;
-pub use redis::Redis;
+pub use {self::postgres::Postgres, self::redis::Redis};

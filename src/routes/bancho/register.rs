@@ -52,22 +52,23 @@ pub async fn osu_register(
         let mut temp: String = String::new();
         while let Some(item) = form_data.next().await {
             let mut field = item.unwrap();
-            if let Some(content_type) = field.content_disposition() {
-                let key = content_type.get_name();
-                if key.is_none() {
+            let content_type = field.headers();
+            println!("TODO: register, {:?}", content_type);
+            // TODO: register
+            /* let key = content_type.get_name();
+            if key.is_none() {
+                continue;
+            }
+            while let Some(chunk) = field.next().await {
+                if chunk.is_err() {
                     continue;
                 }
-                while let Some(chunk) = field.next().await {
-                    if chunk.is_err() {
-                        continue;
-                    }
-                    let value = String::from_utf8(chunk.unwrap().to_vec()).unwrap_or(String::new());
-                    if temp.len() > 0 {
-                        temp.push('&');
-                    }
-                    temp.push_str(&format!("{}={}", key.unwrap(), value));
+                let value = String::from_utf8(chunk.unwrap().to_vec()).unwrap_or(String::new());
+                if temp.len() > 0 {
+                    temp.push('&');
                 }
-            }
+                temp.push_str(&format!("{}={}", key.unwrap(), value));
+            } */
         }
         serde_qs::from_str::<RegisterForm>(
             &temp
