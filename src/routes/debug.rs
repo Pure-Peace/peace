@@ -11,7 +11,7 @@ use {
     },
     peace_database::Database,
     std::time::Instant,
-    tokio::sync::mpsc::Sender,
+    tokio::sync::mpsc::UnboundedSender,
 };
 
 /// GET "/test_pg"
@@ -242,9 +242,9 @@ pub async fn osu_api_reload(bancho: Data<Bancho>) -> HttpResponse {
 
 /// GET "/server_stop"
 #[get("/server_stop")]
-pub async fn server_stop(sender: Data<Sender<Option<Server>>>) -> HttpResponse {
+pub async fn server_stop(sender: Data<UnboundedSender<Option<Server>>>) -> HttpResponse {
     let start = Instant::now();
-    let _ = sender.send(None).await;
+    let _ = sender.send(None);
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("done in: {:?}", end))
 }

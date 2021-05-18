@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(feature = "osu_file_downloader")]
-use peace_performance::Beatmap as PPbeatmap;
+use {peace_performance::Beatmap as PPbeatmap, std::io::Cursor};
 
 use super::client::OsuApiClient;
 
@@ -173,7 +173,7 @@ impl OsuApi {
         };
 
         let bytes = bytes.unwrap();
-        let b = match PPbeatmap::parse(tokio::io::Cursor::new(bytes.clone())).await {
+        let b = match PPbeatmap::parse(Cursor::new(bytes.clone())).await {
             Ok(b) => b,
             Err(err) => {
                 error!(
