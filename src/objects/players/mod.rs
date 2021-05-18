@@ -15,7 +15,7 @@ mod depends {
         types::{Location, PacketData, TokenString},
     };
     pub use ntex::web::types::Data;
-    pub use async_std::sync::{Mutex, RwLock};
+    pub use tokio::sync::{Mutex, RwLock};
     pub use chrono::prelude::{DateTime, Local};
     pub use hashbrown::{HashMap, HashSet};
     pub use num_traits::FromPrimitive;

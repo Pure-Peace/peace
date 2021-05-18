@@ -1,6 +1,6 @@
 use std::sync::atomic::AtomicI32;
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 use peace_objects::beatmaps::CommonBeatmapCaches;

@@ -7,7 +7,7 @@ mod register;
 mod depends {
     pub use {
         askama::Template,
-        async_std::sync::RwLock,
+        tokio::sync::RwLock,
         futures::StreamExt,
         maxminddb::Reader,
         memmap::Mmap,

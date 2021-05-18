@@ -1,6 +1,6 @@
 [package]
 name = "peace-constants"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"

@@ -1,6 +1,6 @@
 use std::sync::{atomic::Ordering, Arc, Weak};
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use peace_packets::PayloadReader;
 
 use crate::objects::{Channel, Player};

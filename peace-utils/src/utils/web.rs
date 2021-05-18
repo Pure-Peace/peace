@@ -1,5 +1,5 @@
 use {
-    async_std::sync::RwLock,
+    tokio::sync::RwLock,
     bytes::Bytes,
     futures::StreamExt,
     hashbrown::HashMap,

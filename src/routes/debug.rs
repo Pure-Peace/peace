@@ -1,7 +1,6 @@
 use crate::objects::Bancho;
 
 use {
-    async_std::channel::Sender,
     maxminddb::Reader,
     memmap::Mmap,
     ntex::server::Server,
@@ -12,6 +11,7 @@ use {
     },
     peace_database::Database,
     std::time::Instant,
+    tokio::sync::mpsc::Sender,
 };
 
 /// GET "/test_pg"
@@ -80,7 +80,7 @@ pub async fn test_player_money_add(token: Path<String>, bancho: Data<Bancho>) ->
     let player_info = match player_sessions.token_map.get(&token.into_inner()) {
         Some(player) => {
             // (*player).money += 1;
-            //async_std::task::sleep(std::time::Duration::from_secs(1)).await;
+            //tokio::task::sleep(std::time::Duration::from_secs(1)).await;
             format!("{:?}", *player)
         }
         None => "non this player".to_string(),

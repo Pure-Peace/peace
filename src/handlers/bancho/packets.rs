@@ -1,7 +1,7 @@
 use std::sync::Weak;
 
 use ntex::web::types::Data;
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 
 use crate::{
     events,

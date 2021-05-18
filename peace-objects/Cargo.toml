@@ -1,6 +1,6 @@
 [package]
 name = "peace-objects"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -9,8 +9,8 @@ description = "Some reusable objects from peace. Beatmap, osu!api, pp calculator
 
 [features]
 default = ["async_trait"]
-async_trait = ["async-trait", "async-std"]
-osu_file_downloader = ["peace-performance", "bytes", "async-std", "md-5"]
+async_trait = ["async-trait", "tokio"]
+osu_file_downloader = ["peace-performance", "bytes", "tokio", "md-5"]
 with_peace = [
     "peace-database",
     "tokio-postgres",
@@ -19,7 +19,7 @@ with_peace = [
     "postgres-types",
     "field_names",
     "async_trait",
-    "async-std",
+    "tokio",
     "pp_server_api",
 ]
 pp_server_api = []
@@ -45,7 +45,7 @@ postgres-types = { version = "0.2", features = ["derive", "with-chrono-0_4", "wi
 
 field_names = { version = "0.1.1", optional = true }
 async-trait = { version = "0.1", optional = true }
-async-std = { version = "1.9.0", optional = true }
+tokio = { version = "1.6", optional = true }
 
 bytes = { version = "1.0", optional = true }
 peace-performance = { git = "https://github.com/Pure-Peace/Peace-performance.git", branch = "main", optional = true }

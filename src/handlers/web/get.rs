@@ -1,16 +1,16 @@
 #![allow(unused_variables)]
 
 use {
-    async_std::fs::File,
-    async_std::prelude::*,
     ntex::web::{types::Query, HttpResponse},
     serde::Deserialize,
     std::time::Instant,
+    tokio::fs::File,
     tokio_pg_mapper::FromTokioPostgresRow,
 };
 
 pub use peace_constants::{GameMode, PlayMods, ScoreboardType};
 use peace_objects::beatmaps::Beatmap;
+use tokio::io::AsyncReadExt;
 
 use crate::{
     objects::{Bancho, ScroeFromDatabase},

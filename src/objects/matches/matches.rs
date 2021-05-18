@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use enum_primitive_derive::Primitive;
 use peace_constants::{GameMode, PlayMods};

@@ -3,7 +3,7 @@ pub mod post;
 
 mod depends {
     pub use {
-        async_std::sync::RwLock,
+        tokio::sync::RwLock,
         maxminddb::Reader,
         memmap::Mmap,
         ntex::{

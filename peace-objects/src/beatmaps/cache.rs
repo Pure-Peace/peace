@@ -1,5 +1,5 @@
 #[cfg(feature = "async_trait")]
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 use std::sync::atomic::{AtomicI32, Ordering};

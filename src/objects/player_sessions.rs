@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use ntex::web::types::Data;
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use chrono::Local;
 use peace_database::Database;
 use std::{

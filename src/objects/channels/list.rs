@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use hashbrown::HashMap;
 
 use colored::Colorize;

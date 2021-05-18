@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use askama::Template;
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 
 use peace_settings::bancho::BanchoConfig;
 

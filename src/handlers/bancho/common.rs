@@ -1,4 +1,4 @@
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use peace_database::{serde_postgres, Database};
 
 use crate::{objects::PlayerBase, types::Argon2Cache};

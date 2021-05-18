@@ -1,5 +1,5 @@
 use ntex::web::types::Data;
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use chrono::Local;
 use hashbrown::HashMap;
 use std::time::Instant;

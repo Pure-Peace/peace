@@ -1,4 +1,4 @@
-use async_std::io;
+use tokio::io;
 use md5::{Digest, Md5};
 use std::{
     fs::File,

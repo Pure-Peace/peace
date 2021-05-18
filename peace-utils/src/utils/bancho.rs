@@ -28,7 +28,7 @@ pub async fn save_replay(
     score_id: i64,
     data_dir: &str,
     mode: &peace_constants::GameMode,
-) -> async_std::io::Result<()> {
+) -> std::io::Result<()> {
     let dir = format!(
         "{}/replays/{}/{}",
         data_dir,
@@ -37,5 +37,5 @@ pub async fn save_replay(
     );
     let file_path = format!("{}/{}.osr", dir, score_id);
     let _ = std::fs::create_dir_all(dir);
-    async_std::fs::write(file_path, score_file).await
+    tokio::fs::write(file_path, score_file).await
 }

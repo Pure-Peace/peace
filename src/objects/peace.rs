@@ -1,5 +1,4 @@
 use {
-    async_std::channel::{unbounded, Receiver, Sender},
     colored::Colorize,
     maxminddb::{self, Reader},
     memmap::Mmap,
@@ -9,11 +8,13 @@ use {
     prometheus::{opts, IntCounterVec},
     std::time::Instant,
     // use actix_web_prom::PrometheusMetrics;
+    tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
 };
 
 use crate::{handlers::bancho, objects::Bancho, objects::Caches, routes};
 
 use peace_settings::local::{LocalConfig, LocalConfigData};
+use tokio::sync::Mutex;
 
 pub struct Peace {
     pub addr: String,
@@ -25,8 +26,8 @@ pub struct Peace {
     pub geo_db: Data<Option<Reader<Mmap>>>,
     pub caches: Data<Caches>,
     pub server: Option<Server>,
-    pub sender: Sender<Option<Server>>,
-    pub receiver: Receiver<Option<Server>>,
+    pub sender: UnboundedSender<Option<Server>>,
+    pub receiver: Data<Mutex<UnboundedReceiver<Option<Server>>>>,
     pub start_time: Option<Instant>,
 }
 
@@ -46,7 +47,7 @@ impl Peace {
         // Global cache
         let caches = Data::new(Caches::new());
 
-        let (sender, receiver) = unbounded();
+        let (sender, receiver) = unbounded_channel();
 
         Self {
             addr,
@@ -59,7 +60,7 @@ impl Peace {
             caches,
             server: None,
             sender,
-            receiver,
+            receiver: Data::new(Mutex::new(receiver)),
             start_time: None,
         }
     }
@@ -110,7 +111,7 @@ impl Peace {
             .unwrap()
             .run()
         };
-        let _ = self.sender.send(Some(server)).await;
+        let _ = self.sender.send(Some(server));
         self.start_time = Some(self.started());
     }
 
@@ -138,12 +139,12 @@ impl Peace {
 
     /// Server stopped
     pub async fn stopped(&self) -> std::io::Result<()> {
-        let server = self.receiver.recv().await.unwrap().unwrap();
+        let server = self.receiver.lock().await.recv().await.unwrap().unwrap();
         // Waiting for server stopped
         let rx = self.receiver.clone();
         let srv = server.clone();
-        async_std::task::spawn(async move {
-            if let Ok(_) = rx.recv().await {
+        tokio::task::spawn(async move {
+            if let Some(_) = rx.lock().await.recv().await {
                 warn!("Received shutdown signal, stop server...");
                 srv.stop(true).await
             }
@@ -174,13 +175,13 @@ impl Peace {
                     .session_recycle
                     .check_interval as u64;
                 // Sleep interval
-                async_std::task::sleep(std::time::Duration::from_secs(interval)).await;
+                tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
                 // Check recycle
                 bancho::sessions::recycle_handler(&bancho).await;
             }
         }
         info!("{}", "Starting session recycle...".bold().bright_blue());
-        async_std::task::spawn(handle_session_recycle(self.bancho.clone()));
+        tokio::task::spawn(handle_session_recycle(self.bancho.clone()));
     }
 
     pub fn prom_init(addr: &String, sets: &LocalConfigData) -> IntCounterVec {

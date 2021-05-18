@@ -173,7 +173,7 @@ impl OsuApi {
         };
 
         let bytes = bytes.unwrap();
-        let b = match PPbeatmap::parse(async_std::io::Cursor::new(bytes.clone())).await {
+        let b = match PPbeatmap::parse(tokio::io::Cursor::new(bytes.clone())).await {
             Ok(b) => b,
             Err(err) => {
                 error!(
