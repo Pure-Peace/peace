@@ -82,7 +82,7 @@ impl Peace {
                 // App
                 App::new()
                     .wrap(peace_utils::web::make_logger(
-                        &s.logger.actix_log_format,
+                        &s.logger.server_log_format,
                         s.prom.exclude_endpoint_log,
                         &s.prom.endpoint,
                         &s.logger.exclude_endpoints,

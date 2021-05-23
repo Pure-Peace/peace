@@ -43,7 +43,7 @@ pub struct LoggerMode {
 pub struct Logger {
     pub level: String,
     pub mode: LoggerMode,
-    pub actix_log_format: String,
+    pub server_log_format: String,
     pub exclude_endpoints: Vec<String>,
     pub exclude_endpoints_regex: Vec<String>,
 }

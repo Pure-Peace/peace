@@ -1,3 +1,6 @@
+use ntex::http::header;
+use peace_utils::common::ContentDisposition;
+
 use super::depends::*;
 
 #[derive(Debug, Deserialize)]
@@ -8,11 +11,41 @@ pub struct RegisterForm {
     pub check: i32,
 }
 
+#[inline(always)]
+async fn parse_reg_form(mut form_data: Multipart) -> Option<RegisterForm> {
+    let (mut username, mut email, mut password, mut check) = (None, None, None, None);
+    while let Some(Ok(mut field)) = form_data.next().await {
+        if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
+            if let Ok(disposition_str) = disposition.to_str() {
+                if let Some(name) = ContentDisposition::get_name(disposition_str) {
+                    if let Some(Ok(chunk)) = field.next().await {
+                        if let Ok(value) = String::from_utf8(chunk.to_vec()) {
+                            match name.as_str() {
+                                "user[username]" => username = Some(value),
+                                "user[user_email]" => email = Some(value),
+                                "user[password]" => password = Some(value),
+                                "check" => check = Some(value.parse::<i32>().ok()?),
+                                _ => continue,
+                            }
+                        }
+                    }
+                };
+            }
+        };
+    }
+    Some(RegisterForm {
+        username: username?,
+        email: email?,
+        password: password?,
+        check: check?,
+    })
+}
+
 #[post("/users")]
 /// In-game registration handler
 pub async fn osu_register(
     req: HttpRequest,
-    mut form_data: Multipart,
+    form_data: Multipart,
     database: Data<Database>,
     geo_db: Data<Option<Reader<Mmap>>>,
     bancho: Data<Bancho>,
@@ -48,39 +81,11 @@ pub async fn osu_register(
     }
 
     // Parse register form data
-    let form_data = {
-        let mut temp: String = String::new();
-        while let Some(item) = form_data.next().await {
-            let mut field = item.unwrap();
-            let content_type = field.headers();
-            println!("TODO: register, {:?}", content_type);
-            // TODO: register
-            /* let key = content_type.get_name();
-            if key.is_none() {
-                continue;
-            }
-            while let Some(chunk) = field.next().await {
-                if chunk.is_err() {
-                    continue;
-                }
-                let value = String::from_utf8(chunk.unwrap().to_vec()).unwrap_or(String::new());
-                if temp.len() > 0 {
-                    temp.push('&');
-                }
-                temp.push_str(&format!("{}={}", key.unwrap(), value));
-            } */
-        }
-        serde_qs::from_str::<RegisterForm>(
-            &temp
-                .replace("user[username]", "username")
-                .replace("user[user_email]", "email")
-                .replace("user[password]", "password"),
-        )
-    };
-    if form_data.is_err() {
+    let form_data = parse_reg_form(form_data).await;
+    if form_data.is_none() {
         error!(
-            "in-game registration failed! request_ip: {}, error: {:?}",
-            request_ip, form_data
+            "in-game registration failed! request_ip: {}, Missing required params",
+            request_ip
         );
         return HttpResponse::BadRequest().body("Missing required params");
     };

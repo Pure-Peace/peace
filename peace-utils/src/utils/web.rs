@@ -1,5 +1,6 @@
+use crate::common::ContentDisposition;
+
 use {
-    tokio::sync::RwLock,
     bytes::Bytes,
     futures::StreamExt,
     hashbrown::HashMap,
@@ -7,6 +8,7 @@ use {
     ntex::web::{middleware::Logger, types::Data, HttpRequest},
     ntex_multipart::Multipart,
     std::str::FromStr,
+    tokio::sync::RwLock,
 };
 
 #[derive(Debug)]
@@ -41,20 +43,22 @@ pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
     let mut forms = HashMap::new();
     while let Some(Ok(mut field)) = mutipart_data.next().await {
         if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
-            println!("ok: {:?}", disposition);
-            /* let file_name = disposition.get_filename();
-            if let Some(key) = disposition.get_name() {
-                while let Some(Ok(chunk)) = field.next().await {
-                    if file_name.is_some() {
-                        files.insert(key.to_string(), chunk);
-                    } else {
-                        forms.insert(
-                            key.to_string(),
-                            String::from_utf8(chunk.to_vec()).unwrap_or(String::new()),
-                        );
+            if let Ok(disposition_str) = disposition.to_str() {
+                if let Some(dis) = ContentDisposition::parse(disposition_str) {
+                    if let Some(key) = dis.name {
+                        while let Some(Ok(chunk)) = field.next().await {
+                            if dis.filename.is_some() {
+                                files.insert(key.to_string(), chunk);
+                            } else {
+                                forms.insert(
+                                    key.to_string(),
+                                    String::from_utf8(chunk.to_vec()).unwrap_or(String::new()),
+                                );
+                            }
+                        }
                     }
                 }
-            } */
+            }
         }
     }
     MultipartData { forms, files }
@@ -70,16 +74,17 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
     let mut temp: String = String::new();
     while let Some(Ok(mut field)) = form_data.next().await {
         if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
-            println!("ok: {:?}", disposition);
-            /* if let Some(key) = disposition.get_name() {
-                while let Some(Ok(chunk)) = field.next().await {
-                    let value = String::from_utf8(chunk.to_vec()).unwrap_or(String::new());
-                    if temp.len() > 0 {
-                        temp.push('&');
+            if let Ok(disposition_str) = disposition.to_str() {
+                if let Some(key) = ContentDisposition::get_name(disposition_str) {
+                    while let Some(Ok(chunk)) = field.next().await {
+                        let value = String::from_utf8(chunk.to_vec()).unwrap_or(String::new());
+                        if temp.len() > 0 {
+                            temp.push('&');
+                        }
+                        temp.push_str(&format!("{}={}", key, value));
                     }
-                    temp.push_str(&format!("{}={}", key, value));
                 }
-            } */
+            }
         }
     }
     serde_qs::from_str(&temp)
