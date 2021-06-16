@@ -128,7 +128,7 @@ pub struct SubmitModular {
     pub quit: bool,     // x (quit 0 or 1)
     pub fail_time: i64, // ft (fail time)
     #[derivative(Debug = "ignore")]
-    pub score: Vec<u8>, // score (base64 -> bytes)
+    pub score: Option<Vec<u8>>, // score (base64 -> bytes)
     pub fs: String,
     pub beatmap_hash: String, // bmk
     pub c1: String,
@@ -137,7 +137,7 @@ pub struct SubmitModular {
     pub osu_version: i32,  // osuver
     // pub s: String, // s (s??) what's that?
     #[derivative(Debug = "ignore")]
-    pub iv: Vec<u8>, // iv (initialization vector base64 -> bytes)
+    pub iv: Option<Vec<u8>>, // iv (initialization vector base64 -> bytes)
     #[derivative(Debug = "ignore")]
     pub score_file: Option<Bytes>, // score (replay file, octet-stream bytes lzma)
 }
@@ -149,7 +149,7 @@ impl SubmitModular {
             quit: data.form::<i32>("x")? == 1,
             fail_time: data.form("ft")?,
             score: match decode(data.form::<String>("score")?) {
-                Ok(s) => s,
+                Ok(s) => Some(s),
                 Err(_err) => return None,
             },
             fs: data.form("fs")?,
@@ -160,7 +160,7 @@ impl SubmitModular {
             osu_version: data.form("osuver")?,
             // s: data.form("s")?, what
             iv: match decode(data.form::<String>("iv")?) {
-                Ok(s) => s,
+                Ok(s) => Some(s),
                 Err(_err) => return None,
             },
             score_file: data.file("score"),
@@ -195,19 +195,22 @@ pub struct ScoreData {
 
 impl ScoreData {
     #[inline(always)]
-    pub async fn from_submit_modular(submit_data: &SubmitModular) -> Option<Self> {
+    pub async fn from_submit_modular(submit_data: &mut SubmitModular) -> Option<Self> {
         use peace_utils::serdes::try_parse;
-        let data = match peace_utils::python::submit_modular_decrypt(
-            submit_data.osu_version,
-            &submit_data.iv,
-            &submit_data.score,
-        ) {
-            Ok(d) => d,
-            Err(err) => {
-                warn!("[SubmitModular] Python decrypt failed, err: {:?}", err);
-                return None;
-            }
-        };
+        let iv = std::mem::replace(&mut submit_data.iv, None);
+        let score = std::mem::replace(&mut submit_data.score, None);
+        let data =
+            match peace_utils::crypto::submit_modular_decrypt(submit_data.osu_version, iv?, score?)
+            {
+                Ok(d) => d,
+                Err(err) => {
+                    warn!(
+                        "[SubmitModular] Rijndael-256-cbc decrypt failed, err: {:?}",
+                        err
+                    );
+                    return None;
+                }
+            };
         // Check len
         if data.len() < 18 {
             warn!("[SubmitModular] Invalid score data length ( < 18)");

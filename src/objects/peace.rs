@@ -116,8 +116,6 @@ impl Peace {
     }
 
     pub async fn start(&mut self) -> std::io::Result<()> {
-        peace_utils::python::python_rijndael_init();
-
         self.session_recycle().await;
 
         // Start

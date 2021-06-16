@@ -107,7 +107,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     };
     // Parse submit mutipart data
     let submit_parse = Instant::now();
-    let submit_data =
+    let mut submit_data =
         match SubmitModular::from_mutipart(peace_utils::web::get_mutipart_data(payload).await) {
             Some(d) => d,
             None => {
@@ -124,7 +124,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     );
     // Parse score data
     let score_parse = Instant::now();
-    let mut s = match ScoreData::from_submit_modular(&submit_data).await {
+    let mut s = match ScoreData::from_submit_modular(&mut submit_data).await {
         Some(s) => s,
         None => {
             warn!(
