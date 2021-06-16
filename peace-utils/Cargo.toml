@@ -1,11 +1,11 @@
 [package]
 name = "peace-utils"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace/peace-utils"
-description = "Utilities. Password encryption, calculation of file MD5, processing request (multipart), etc."
+description = "Utilities. Password encryption, calculation of file MD5, processing request (multipart), osu!score decryption or encryption, etc."
 
 [features]
 default = []
@@ -16,19 +16,11 @@ all = [
     "passwords",
     "serdes",
     "web",
-    "python3",
     "async_file",
     "peace",
+    "crypto",
 ]
-with_peace = [
-    "bancho",
-    "geoip",
-    "passwords",
-    "serdes",
-    "web",
-    "python3",
-    "peace",
-]
+with_peace = ["bancho", "geoip", "passwords", "serdes", "web", "peace", "crypto"]
 serdes = ["chrono", "serde"]
 passwords = ["lazy_static", "rand", "rust-argon2"]
 geoip = ["maxminddb", "memmap", "serde_json", "peace-constants"]
@@ -46,6 +38,7 @@ web = [
 python3 = ["pyo3"]
 async_file = ["tokio", "md-5"]
 peace = ["peace-database", "peace-constants"]
+crypto = ["simple-rijndael"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -55,30 +48,32 @@ colored = "2.0.0"
 indicatif = "0.15.0"
 
 # bancho / web
-bytes = { version = "1.0", optional = true }
-tokio = { version = "1.6", optional = true }
+bytes = { version="1.0", optional=true }
+tokio = { version="1.6", optional=true }
 # geoip
-maxminddb = { version = "0.17", features = ["mmap"], optional = true }
-memmap = { version = "0.7", optional = true }
-serde_json = { version = "1.0", optional = true }
+maxminddb = { version="0.17", features=["mmap"], optional=true }
+memmap = { version="0.7", optional=true }
+serde_json = { version="1.0", optional=true }
 # password
-lazy_static = { version = "1.4", optional = true }
-rand = { version = "0.8", optional = true }
-rust-argon2 = { version = "0.8", optional = true }
+lazy_static = { version="1.4", optional=true }
+rand = { version="0.8", optional=true }
+rust-argon2 = { version="0.8", optional=true }
 # serde
-chrono = { version = "0.4", optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
+chrono = { version="0.4", optional=true }
+serde = { version="1.0", features=["derive"], optional=true }
 # web
-serde_qs = { version = "0.8", optional = true }
-hashbrown = { version = "0.11", optional = true }
-ntex-multipart = { git = "https://github.com/ntex-rs/ntex-extras", branch = "master", optional = true }
-ntex = { version = "0.3", optional = true }
-futures = { version = "0.3", optional = true }
+serde_qs = { version="0.8", optional=true }
+hashbrown = { version="0.11", optional=true }
+ntex-multipart = { git="https://github.com/ntex-rs/ntex-extras", branch="master", optional=true }
+ntex = { version="0.3", optional=true }
+futures = { version="0.3", optional=true }
 # python
-pyo3 = { version = "0.13.2", features = ["auto-initialize"], optional = true }
+pyo3 = { version="0.13.2", features=["auto-initialize"], optional=true }
 # async_file
-md-5 = { version = "0.9", optional = true }
+md-5 = { version="0.9", optional=true }
+# crypto
+simple-rijndael = { version="*", git="https://github.com/Pure-Peace/simple-rijndael", branch="main", optional=true }
 
 
-peace-database = { path = "../peace-database", optional = true }
-peace-constants = { path = "../peace-constants", optional = true }
+peace-database = { path="../peace-database", optional=true }
+peace-constants = { path="../peace-constants", optional=true }

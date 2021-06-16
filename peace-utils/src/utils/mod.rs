@@ -15,3 +15,6 @@ pub mod python;
 pub mod serdes;
 #[cfg(feature = "web")]
 pub mod web;
+
+#[cfg(feature = "crypto")]
+pub mod crypto;
