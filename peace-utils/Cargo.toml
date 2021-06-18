@@ -1,6 +1,6 @@
 [package]
 name = "peace-utils"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -45,13 +45,13 @@ crypto = ["simple-rijndael"]
 [dependencies]
 log = "0.4"
 colored = "2.0.0"
-indicatif = "0.15.0"
+indicatif = "0.16"
 
 # bancho / web
 bytes = { version="1.0", optional=true }
 tokio = { version="1.6", optional=true }
 # geoip
-maxminddb = { version="0.17", features=["mmap"], optional=true }
+maxminddb = { version="0.18", features=["mmap"], optional=true }
 memmap = { version="0.7", optional=true }
 serde_json = { version="1.0", optional=true }
 # password

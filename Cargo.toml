@@ -10,7 +10,7 @@ members = [
 
 [package]
 name = "peace"
-version = "0.12.0"
+version = "0.12.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -34,7 +34,7 @@ hashbrown = "0.11"
 json = "0.12.4"
 lazy_static = "1.4.0"
 log = "0.4.14"
-maxminddb = { version = "0.17", features = ["mmap"] }
+maxminddb = { version = "0.18", features = ["mmap"] }
 md5 = "0.7.0"
 memmap = "0.7.0"
 ntex = "0.3"
@@ -42,14 +42,14 @@ ntex-multipart = { git = "https://github.com/ntex-rs/ntex-extras", branch = "mas
 num-traits = "0.2"
 paste = "1.0"
 prometheus = { version = "0.12", features = ["process"] }
-queue = "0.3.1"
+queue = "0.3"
 reqwest = { version = "0.11", features = ["rustls-tls", "json"], default-features = false }
-serde = { version = "1.0.123", features = ["derive"] }
-serde_json = "1.0.62"
-serde_qs = "0.8.2"
-strum = "0.20"
-strum_macros = "0.20"
-tokio = "1.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_qs = "0.8"
+strum = "0.21"
+strum_macros = "0.21"
+tokio = "1.7"
 tokio-pg-mapper = "0.2"
 tokio-pg-mapper-derive = "0.2"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }

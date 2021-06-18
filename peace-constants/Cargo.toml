@@ -10,8 +10,8 @@ description = "Miscellaneous. Some sonstants used by peace"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-strum = "0.20"
-strum_macros = "0.20"
+strum = "0.21"
+strum_macros = "0.21"
 serde = { version = "1.0", features = ["derive"] }
 regex = "1.4"
 enum-primitive-derive = "0.2"

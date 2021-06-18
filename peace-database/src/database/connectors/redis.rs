@@ -2,11 +2,13 @@
 
 use {
     colored::Colorize,
-    deadpool_redis::{cmd as _cmd, redis::ErrorKind, Cmd, Connection, Pool},
     deadpool_redis::{
-        redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs},
+        redis::{
+            cmd as _cmd, Cmd, ErrorKind, FromRedisValue, RedisError, RedisResult, ToRedisArgs,
+        },
         PoolError,
     },
+    deadpool_redis::{ConnectionWrapper, Pool},
     std::convert::From,
     std::marker::Send,
 };
@@ -95,9 +97,9 @@ impl Redis {
     /// # Examples:
     ///
     /// ```
-    /// let conn<deadpool_redis:Connection> = get_conn().await;
+    /// let conn<deadpool_redis:ConnectionWrapper> = get_conn().await;
     /// ```
-    pub async fn get_conn(&self) -> RedisResult<Connection> {
+    pub async fn get_conn(&self) -> RedisResult<ConnectionWrapper> {
         self.pool.get().await.map_err(|e| match e {
             PoolError::Backend(e) => e,
             _ => RedisError::from((ErrorKind::IoError, "PoolError", format!("{:?}", e))),
@@ -148,7 +150,7 @@ impl Redis {
     /// ```
     pub async fn execute<T: ToRedisArgs>(&self, name: &str, arg: T) -> RedisResult<()> {
         let mut conn = self.get_conn().await?;
-        _cmd(name).arg(arg).execute_async(&mut conn).await
+        _cmd(name).arg(arg).query_async(&mut conn).await
     }
 
     /// Query a Cmd object
@@ -174,7 +176,7 @@ impl Redis {
     /// ```
     pub async fn execute_cmd(&self, cmd: &Cmd) -> RedisResult<()> {
         let mut conn = self.get_conn().await?;
-        cmd.execute_async(&mut conn).await
+        cmd.query_async(&mut conn).await
     }
 
     /// Set a key to redis
@@ -199,11 +201,7 @@ impl Redis {
     /// ```
     pub async fn set<T: ToRedisArgs>(&self, key: &str, value: T) -> RedisResult<()> {
         let mut conn = self.get_conn().await?;
-        _cmd("SET")
-            .arg(key)
-            .arg(value)
-            .execute_async(&mut conn)
-            .await
+        _cmd("SET").arg(key).arg(value).query_async(&mut conn).await
     }
 
     /// Set a key, and return value before set
@@ -243,7 +241,7 @@ impl Redis {
         items: &'a [(K, V)],
     ) -> RedisResult<()> {
         let mut conn = self.get_conn().await?;
-        _cmd("MSET").arg(items).execute_async(&mut conn).await
+        _cmd("MSET").arg(items).query_async(&mut conn).await
     }
 
     /// Get multiple keys (MGET)
@@ -294,7 +292,7 @@ impl Redis {
         _cmd("EXPIRE")
             .arg(key)
             .arg(expire)
-            .execute_async(&mut conn)
+            .query_async(&mut conn)
             .await
     }
 
