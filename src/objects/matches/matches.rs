@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use enum_primitive_derive::Primitive;
 use peace_constants::{GameMode, PlayMods};
 use peace_objects::beatmaps::Beatmap;
+use tokio::sync::RwLock;
 
 use crate::objects::{Channel, Player};
 
@@ -129,7 +129,7 @@ impl MatchSlot {
     }
 
     #[inline(always)]
-    pub fn make_slots(size: i32) -> [Self; 16] {
+    pub fn make_slots(size: i32) -> Vec<Self> {
         let size = if size > 16 {
             16
         } else if size < 1 {
@@ -137,7 +137,7 @@ impl MatchSlot {
         } else {
             size
         };
-        let mut s: [Self; 16] = array_init::array_init(|_| Self::new());
+        let mut s = (0..16).map(|_| Self::new()).collect::<Vec<MatchSlot>>();
         let mut close = 16 - size;
         let mut index = 15;
         while close > 0 {
@@ -154,7 +154,7 @@ pub struct Match {
     pub name: String,
     pub password: Option<String>,
     pub status: MatchStatus,
-    pub slots: [MatchSlot; 16],
+    pub slots: Vec<MatchSlot>,
 
     pub is_tourney: bool,
     pub is_temp: bool,
@@ -194,7 +194,7 @@ impl Match {
         size: i32,
         host_id: i32,
         is_tourney: bool,
-        channel: Arc<RwLock<Channel>>
+        channel: Arc<RwLock<Channel>>,
     ) -> Self {
         let now = Local::now();
         Self {
