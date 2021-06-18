@@ -17,7 +17,7 @@ debug = false
 # Level is selected from logger.mode
 level = "info"
 
-# Actix logger middleware format
+# Ntex logger middleware format
 # Default is: '%a "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T'
 # If using reverse proxy, use %{X-Forwarded-For}i instead of %a
 # https://docs.rs/ntex/0.3.16/ntex/web/middleware/struct.Logger.html
