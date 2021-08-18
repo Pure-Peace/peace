@@ -1,6 +1,6 @@
 [package]
 name = "peace-database"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -30,5 +30,5 @@ peace-constants = { path = "../peace-constants", optional = true }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.7", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.9", features = ["macros", "rt-multi-thread"] }
 postgres = { version = "0.19" }

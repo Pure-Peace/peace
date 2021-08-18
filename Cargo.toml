@@ -10,7 +10,7 @@ members = [
 
 [package]
 name = "peace"
-version = "0.12.1"
+version = "0.12.2"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2018"
 license = "MIT"
@@ -49,7 +49,7 @@ serde_json = "1.0"
 serde_qs = "0.8"
 strum = "0.21"
 strum_macros = "0.21"
-tokio = "1.7"
+tokio = "1.9"
 tokio-pg-mapper = "0.2"
 tokio-pg-mapper-derive = "0.2"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
