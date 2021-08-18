@@ -48,7 +48,7 @@ async-trait = { version = "0.1", optional = true }
 tokio = { version = "1.7", optional = true }
 
 bytes = { version = "1.0", optional = true }
-peace-performance = { git = "https://github.com/Pure-Peace/Peace-performance.git", branch = "main", optional = true }
+peace-performance = { version = "0.4.0", optional = true }
 md-5 = { version = "0.9", optional = true }
 
 
