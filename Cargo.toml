@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "bin/peace-server",
+    "bin/pp-server",
+    "framework/peace-pp-server",
     "framework/peace-bancho",
     "framework/peace-database",
     "framework/peace-constants",

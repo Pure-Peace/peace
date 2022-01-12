@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="icon" type="image/ico">
+  <title>PP Server | Welcome~</title>
+</head>
+
+<body>
+  <h1>Hello~ PP-server is DEVELOPING.</h1>
+  <p>Please access <a href="/api/calc">/api/calc</a> to calculate pp, usage:</p>
+  <P>Sample</P>
+  <p>WITH MD5: <a
+      href="/api/calc?md5=ccb1f31b5eeaf26d40f8c905293efc03">/api/calc?md5=ccb1f31b5eeaf26d40f8c905293efc03</a></p>
+  <p>WITH BID: <a href="/api/calc?bid=2848898">/api/calc?bid=2848898</a></p>
+  <P>WITH SID + FILENAME: <a
+      href="/api/calc?sid=1378720&file_name=Tanchiky%20-%20Bridge%20(NyarkoO)%20[Extension].osu">/api/calc?sid=1378720&file_name=Tanchiky%20-%20Bridge%20(NyarkoO)%20[Extension].osu</a>
+  </P>
+  <p>Optional:</p>
+  <p>md5 (Get beatmap with md5) *Recommend</p>
+  <p>bid (Get beatmap with bid)</p>
+  <p>sid (Get beatmap with sid and file_name)</p>
+  <p>file_name ({artist} - {title} ({mapper}) [{diff_name}].osu)</p>
+  <p>mode (0 = osu!, 1 = Taiko, 2 = CtB, 3 = osu!mania).</p>
+  <p>mods (<a href="https://github.com/ppy/osu-api/wiki">See osu-api/wiki</a>)</p>
+  <p>n50 (Count of 50) [ Irrelevant for osu!mania and osu!taiko ]</p>
+  <p>n100 (Count of 100) [ Irrelevant for osu!mania ]</p>
+  <p>n300 (Count of 300) [ Irrelevant for osu!mania ]</p>
+  <p>acc (float: 0-100) [ Irrelevant for osu!mania ]</p>
+  <p>miss (Count of miss) [ Irrelevant for osu!mania ]</p>
+  <p>score [ Only relevant for osu!mania ]</p>
+  <p>combo (Your combo) [ Irrelevant for osu!mania ]</p>
+  <p>katu (Count of katu) [ Only relevant for osu!ctb ]</p>
+  <p>passed_obj (If failed, use count of passed objects)</p>
+  <p>simple (0 or 1; if 1, returns simple info)</p>
+  <p>acc_list (0 or 1; if 1, calculate and returns pp results of acc 95, 98, 99, 100.</p>
+  <p>no_miss (0 or 1; if 1, calculate pp if no miss.</p>
+</body>
+
+
+<style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background-color: rgb(37, 32, 29);
+    color: rgba(250, 250, 250, 0.95);
+  }
+
+  * {
+    box-sizing: content-box;
+  }
+
+
+  a {
+    text-decoration: none;
+    color: rgba(250, 250, 250, 0.95);
+    animation: test 2s linear infinite;
+    transition: .4s ease;
+  }
+
+  a:hover {
+    color: rgba(250, 250, 250, 0.8) !important;
+  }
+</style>
+
+</html>

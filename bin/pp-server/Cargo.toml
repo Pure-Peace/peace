@@ -1,0 +1,39 @@
+[package]
+name = "pp-server"
+version = "0.5.0"
+authors = ["Pure-Peace <940857703@qq.com>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pure-peace/pp-server"
+default-run = "pp-server-with-peace"
+
+[[bin]]
+name = "pp-server-with-peace"
+path = "src/main.rs"
+
+[[bin]]
+name = "pp-server-without-db"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+# default = ["peace-objects/no_database"] # Not use peace database, run pp-server independently.
+default = ["with_peace"] # Works with peace, including peace database
+
+with_peace = [
+    "peace-database",
+    "peace-objects/with_peace",
+    "peace-objects/peace_api",
+    "peace-utils/peace",
+]
+
+[dependencies]
+ntex = "0.3"
+
+peace-pp-server = { path = "../../framework/peace-pp-server" }
+peace-constants = { path = "../../framework/peace-constants" }
+peace-settings = { path = "../../framework/peace-settings" }
+peace-utils = { path = "../../framework/peace-utils", features = ["web", "async_file"] }
+
+peace-database = { path = "../../framework/peace-database", features = ["with_peace"], optional = true }
+peace-objects = { path = "../../framework/peace-objects", features = ["osu_file_downloader"], optional = true }

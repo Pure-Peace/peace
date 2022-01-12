@@ -1,0 +1,65 @@
+[package]
+name = "peace-pp-server"
+version = "0.5.0"
+authors = ["Pure-Peace <940857703@qq.com>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+# default = ["peace-objects/no_database"] # Not use peace database, run pp-server independently.
+default = ["with_peace"] # Works with peace, including peace database
+
+with_peace = [
+    "deadpool-postgres",
+    "deadpool-redis",
+    "tokio-postgres",
+    "peace-database",
+    "peace-objects/with_peace",
+    "peace-objects/peace_api",
+    "peace-utils/peace",
+]
+
+[dependencies]
+askama = "0.10.5"
+bytes = "1.0"
+chrono = "0.4.19"
+colored = "2.0.0"
+config = "0.11"
+derivative = "2.2.0"
+dotenv = "0.15.0"
+env_logger = "0.8.3"
+field_names = "0.1.1"
+hashbrown = "0.11"
+json = "0.12.4"
+log = "0.4.14"
+ntex = "0.3"
+prometheus = { version = "0.12", features = ["process"] }
+reqwest = { version = "0.11", features = [
+    "rustls-tls",
+    "json",
+], default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_str = "0.1.0"
+tokio = { version = "1.9" }
+
+
+# Feature peace
+deadpool-postgres = { version = "0.9", optional = true }
+deadpool-redis = { version = "0.8", optional = true }
+tokio-postgres = { version = "0.7", features = [
+    "with-chrono-0_4",
+    "with-serde_json-1",
+], optional = true }
+
+peace-performance = { version = "0.4.0" }
+
+peace-constants = { path = "../peace-constants" }
+peace-database = { path = "../peace-database", features = ["with_peace"], optional = true }
+peace-objects = { path = "../peace-objects", features = ["osu_file_downloader"], optional = true }
+peace-settings = { path = "../peace-settings" }
+peace-utils = { path = "../peace-utils", features = ["web", "async_file"] }
+

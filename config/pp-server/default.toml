@@ -1,0 +1,36 @@
+# .osu files dir path (without last '/')
+# use '\\' instead of '\' in windows
+osu_files_dir = "example_data/beatmaps"
+
+# if true, pp server will recalculate all .osu files in dir before started.
+recalculate_osu_file_md5 = true
+
+# if true, pp server will Load all .osu files at start;
+# WARING: May cause insufficient memory if beatmap_cache_max > 9000
+preload_osu_files = true
+
+# max beatmap count in cache
+beatmap_cache_max = 200
+beatmap_cache_timeout = 3600
+
+# if true, will auto remove timeout beatmap cache each interval (seconds)
+auto_clean_cache = true
+auto_clean_interval = 300
+
+# Set peace_key in the pp server to the same value as here
+peace_key = "pp_server"
+peace_url = "http://127.0.0.1:8080" # without last "/"
+
+# pp server config
+[server]
+# It is recommended to set it to 127.0.0.1, 
+# and then use nginx to expose part of the interface
+host = "127.0.0.1"
+port = 8088
+
+# auto pp recalculate task config (features peace)
+[auto_pp_recalculate]
+# each interval do once
+interval = 60
+# if pp calculate fails > max_retry, skip it
+max_retry = 5
