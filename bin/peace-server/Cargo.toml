@@ -10,44 +10,8 @@ description = "osu! server written in Rust."
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-askama = "0.10.5"
-base64 = "0.13.0"
-bytes = "1.0"
-chrono = "0.4.19"
-colored = "2.0.0"
-derivative = "2.2.0"
-enum-primitive-derive = "0.2.1"
-env_logger = "0.8.3"
-futures = "0.3"
-hashbrown = "0.11"
-json = "0.12.4"
-lazy_static = "1.4.0"
-log = "0.4.14"
-maxminddb = { version = "0.18", features = ["mmap"] }
-md5 = "0.7.0"
-memmap = "0.7.0"
 ntex = "0.3"
-ntex-multipart = { git = "https://github.com/ntex-rs/ntex-extras", branch = "master" }
-num-traits = "0.2"
-paste = "1.0"
-prometheus = { version = "0.12", features = ["process"] }
-queue = "0.3"
-reqwest = { version = "0.11", features = ["rustls-tls", "json"], default-features = false }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_qs = "0.8"
-strum = "0.21"
-strum_macros = "0.21"
-tokio = "1.9"
-tokio-pg-mapper = "0.2"
-tokio-pg-mapper-derive = "0.2"
-tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
-uuid = { version = "0.8", features = ["v4"] }
 
-
-peace-constants = { path = "../../framework/peace-constants", version = "*" }
 peace-database = { path = "../../framework/peace-database", features = ["with_peace"], version = "*" }
-bancho-packets = { path = "../../framework/bancho-packets", version = "*" }
-peace-objects = { path = "../../framework/peace-objects", features = ["with_peace"], version = "*" }
-peace-utils = { path = "../../framework/peace-utils", features = ["with_peace"], version = "*" }
 peace-settings = { path = "../../framework/peace-settings", version = "*" }
+peace-bancho = { path = "../../framework/peace-bancho", version = "*" }

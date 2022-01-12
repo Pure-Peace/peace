@@ -1,26 +1,17 @@
-extern crate serde;
-
-#[macro_use]
-extern crate log;
-
-pub mod events;
-pub mod handlers;
-pub mod objects;
-pub mod renders;
-pub mod routes;
-pub mod types;
+use peace_bancho::objects::{Bancho, Peace};
+use peace_database::Database;
+use peace_settings::local::LocalConfig;
 
 use ntex::web::types::Data;
-use objects::{Bancho, Peace};
 
 #[ntex::main]
 async fn main() -> std::io::Result<()> {
     // Create local settings
-    let cfg = peace_settings::local::LocalConfig::init();
+    let cfg = LocalConfig::init();
 
     // Create database object includes postgres and redis pool
     let database = Data::new(
-        peace_database::Database::new(
+        Database::new(
             &cfg.data.postgres,
             &cfg.data.redis,
             cfg.data.check_db_version_on_created,
