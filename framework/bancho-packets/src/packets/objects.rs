@@ -54,10 +54,6 @@ impl LoginReply for LoginSuccess {
 #[derive(Debug, Clone, Eq, PartialEq, Primitive)]
 #[repr(u8)]
 pub enum id {
-    /*
-        Thanks to gulag
-        https://github.com/cmyui/gulag/blob/master/packets.py
-    */
     /// Bancho packet ids
     OSU_USER_CHANGE_ACTION                  = 0,
     OSU_SEND_PUBLIC_MESSAGE                 = 1,
