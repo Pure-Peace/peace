@@ -24,7 +24,9 @@ where
     fn osu_write(self) -> Vec<u8> {
         let mut ret = Vec::with_capacity(self.len() + 2);
         ret.extend((self.len() as u16).to_le_bytes());
-        ret.extend(self.iter().map(|i| i.osu_write()).collect());
+        for int in self {
+            ret.append(&mut int.osu_write());
+        }
         ret
     }
 }
