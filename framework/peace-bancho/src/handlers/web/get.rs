@@ -66,7 +66,7 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     ///
     /// GET /web/check-updates.php
     ///
-    /// ```
+    /// ```rust,ignore
     /// CheckUpdates {
     ///     action: String = [check, path, error],
     ///     stream: String = [cuttingedge, stable40, beta40, stable],
@@ -183,7 +183,7 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
     ///
     /// GET /web/lastfm.php
     ///
-    /// ```
+    /// ```rust,ignore
     /// Lastfm {
     ///     b: String = beatmap ban,
     ///     action: String,
@@ -493,7 +493,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///
 /// TODO: Performance optimization
 /// Get scoreboard option 2: Multiple JOINs
-/// ```
+/// ```rust,ignore
 ///
 /// let top_50 = ctx
 ///     .database
@@ -517,6 +517,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///         &[&beatmap.md5],
 ///     )
 ///     .await;
+/// 
 /// let personal_best = ctx
 ///     .database
 ///     .pg
@@ -539,6 +540,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///         &[&beatmap.md5],
 ///     )
 ///     .await;
+///
 /// let total_count = ctx
 ///     .database
 ///     .pg

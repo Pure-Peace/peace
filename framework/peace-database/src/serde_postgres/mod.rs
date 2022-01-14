@@ -8,7 +8,7 @@
 //! - [`postgres`](//docs.rs/postgres)
 //! - [`tokio_postgres`](//docs.rs/postgres/tokio_postgres)
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use std::error::Error;
 //! use serde::Deserialize;
 //! use tokio_postgres::{connect, NoTls};

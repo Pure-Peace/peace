@@ -120,7 +120,7 @@ impl GameMode {
     #[inline(always)]
     /// Get lowercase name
     ///
-    /// ```
+    /// ```rust,ignore
     /// GameMode::Std_rx -> "std_rx"
     /// ```
     pub fn full_name(&self) -> String {
@@ -130,7 +130,7 @@ impl GameMode {
     #[inline(always)]
     /// Get mode name
     ///
-    /// ```
+    /// ```rust,ignore
     /// GameMode::Std_rx -> "std"
     /// ```
     pub fn mode_name(&self) -> String {
@@ -140,7 +140,7 @@ impl GameMode {
     #[inline(always)]
     /// Get sub mod name
     ///
-    /// ```
+    /// ```rust,ignore
     /// GameMode::Std_rx -> "rx"
     /// ```
     pub fn sub_mod(&self) -> &str {
@@ -155,7 +155,7 @@ impl GameMode {
     #[inline(always)]
     /// Get mode name (database fields with "_")
     ///
-    /// ```
+    /// ```rust,ignore
     /// GameMode::Std_rx -> "_rx"
     /// ```
     pub fn sub_mod_table(&self) -> &str {

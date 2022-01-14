@@ -220,7 +220,8 @@ impl PlayerSessions {
     ///
     /// Think, why not use the following code?
     /// Because, passing a reference to the token directly will result in the read lock not being released, thus triggering a deadlock.
-    /// ```
+    /// 
+    /// ```rust,ignore
     /// match self.id_map.get(&user_id) {
     ///     Some(token) => self.logout(token).await,
     ///     None => None,

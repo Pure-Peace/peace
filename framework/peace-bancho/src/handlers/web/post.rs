@@ -26,7 +26,7 @@ macro_rules! chart_item {
 ///
 /// POST /web/osu-error.php
 ///
-/// ```
+/// ```rust,ignore
 /// OsuError {
 ///     u: String = username,
 ///     p: String = password hash,

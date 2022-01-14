@@ -17,7 +17,7 @@ use {
 ///
 /// # Examples:
 ///
-/// ```
+/// ```rust,ignore
 /// // normal
 /// let mut conn = pool.get().await.unwrap();
 /// let res: String = cmd("get").arg("a").query_async(&mut conn).await.unwrap();
@@ -49,19 +49,19 @@ impl Redis {
     /// # Try it:
     ///
     /// Will set expires to -1 (permanent)
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", "value").await;
-    /// ```
+    /// ```rust,ignore
     /// Will set expires to 1000s
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", &["value", "EX", "1000"]).await;
-    /// ```
+    /// ```rust,ignore
     /// "NX" means set if key not exists
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", &["value", "EX", "1000", "NX"]).await;
-    /// ```
+    /// ```rust,ignore
     /// "XX" means set if key already exists
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", &["value", "XX"]).await;
     /// ```
     /// if check_connect is true, will test usability when creating connection pool
@@ -96,7 +96,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let conn<deadpool_redis:ConnectionWrapper> = get_conn().await;
     /// ```
     pub async fn get_conn(&self) -> RedisResult<ConnectionWrapper> {
@@ -112,7 +112,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let mut conn = get_conn().await.unwrap();
     ///
     /// // query
@@ -128,7 +128,7 @@ impl Redis {
     ///
     /// # Example:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let result = query("get", &["key"]).await;
     /// let result = query("get", "key").await;
     /// ```
@@ -145,7 +145,7 @@ impl Redis {
     ///
     /// # Example:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let _ = execute("set", &["key", "value"])
     /// ```
     pub async fn execute<T: ToRedisArgs>(&self, name: &str, arg: T) -> RedisResult<()> {
@@ -157,7 +157,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let cmd_object = cmd("set").arg(&["key", "value"]);
     /// let _ = query_cmd(cmd_object).await;
     /// ```
@@ -170,7 +170,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let cmd_object = cmd("set").arg(&["key", "value"]);
     /// let _ = execute_cmd(cmd_object).await;
     /// ```
@@ -184,19 +184,19 @@ impl Redis {
     /// # Examples:
     ///
     /// Will set expires to -1 (permanent)
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", "value").await;
     /// ```
     /// Will set expires to 1000s
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", &["value", "EX", "1000"]).await;
     /// ```
     /// "NX" means set if key not exists
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", &["value", "EX", "1000", "NX"]).await;
     /// ```
     /// "XX" means set if key already exists
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", &["value", "XX"]).await;
     /// ```
     pub async fn set<T: ToRedisArgs>(&self, key: &str, value: T) -> RedisResult<()> {
@@ -208,7 +208,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", "value").await;
     /// let before = get_set("key", "value2").await; // will get "value" and set key to "value2"
     /// ```
@@ -230,7 +230,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let _ = set_all(&[("key1", "value1"), ("key2", "value2")]).await;
     /// let results: Vec<String> = get_all(&["key1", "key2"]).await;
     /// println!("{:?}", results);
@@ -248,7 +248,7 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let _ = set_all(&[("key1", "value1"), ("key2", "value2")]).await;
     /// let results: Vec<String> = get_all(&["key1", "key2"]).await;
     /// println!("{:?}", results);
@@ -266,7 +266,7 @@ impl Redis {
     /// Returns the number of deleted keys
     ///
     /// # Examples:
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key1", "value1").await; // set key1
     /// let count: u32 = del(&["key1", "key2"]).await; // will get 1, because key2 is not exists
     /// let count: u32 = del("key1").await; // delete one key
@@ -280,7 +280,7 @@ impl Redis {
     /// Set expire time to a key (seconds)
     ///
     /// # Examples:
-    /// ```
+    /// ```rust,ignore
     /// let _ = set("key", "value").await;
     /// let _ = expire("key", 0).await;
     /// let value: String = get("key").await;
@@ -300,13 +300,13 @@ impl Redis {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let value: Result<String, _> = get("key").await;
     /// let value: String = get("key").await.unwrap();
     /// let value = get::<String>("key").await.unwrap();
     /// ```
     /// Default value
-    /// ```
+    /// ```rust,ignore
     /// let value = get("key").await.unwrap_or_else(|_| {
     ///     error!("failed to get key");
     ///     "default".to_string()

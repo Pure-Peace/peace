@@ -4,7 +4,7 @@ use peace_constants::{ClientHashes, ClientInfo};
 
 #[inline(always)]
 /// Get Login data lines
-/// ```
+/// ```rust,ignore
 ///  rows:
 ///      0: username
 ///      1: password hash
@@ -23,7 +23,7 @@ async fn parse_data_lines(body: &String) -> Result<Vec<String>, ()> {
 }
 #[inline(always)]
 /// Get client info lines
-/// ```
+/// ```rust,ignore
 ///  rows:
 ///      0: osu version
 ///      1: time offset (utc)
@@ -63,7 +63,7 @@ async fn parse_client_info(data_lines: String) -> Result<(ClientInfo, String), (
 }
 #[inline(always)]
 /// Get client hash set
-/// ```
+/// ```rust,ignore
 ///  rows:
 ///      0: osu path md5
 ///      1: adapters (network physical addresses delimited by '.')

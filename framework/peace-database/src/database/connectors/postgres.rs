@@ -86,7 +86,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let (client, statment) = get_ready("YOUR SQL");
     /// let result = client.query(statment, ["params $1-$n", ...]);
     /// ```
@@ -104,7 +104,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let client<deadpool_postgres:Client> = get_client();
     /// ```
     pub async fn get_client(&self) -> Result<Client, PostgresError> {
@@ -127,7 +127,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let rows: Vec<Row> = query("YOUR SQL $1", ["params $1-$n", ...]);
     /// ```
     pub async fn query(
@@ -148,7 +148,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let row: Row = query_first("YOUR SQL $1", ["params $1-$n", ...]);
     /// ```
     pub async fn query_first(
@@ -167,7 +167,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let row: Row = query_first_simple("YOUR SQL");
     /// ```
     pub async fn query_first_simple(&self, query: &str) -> Result<Row, PostgresError> {
@@ -179,7 +179,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let row: Vec<Row> = query_simple("YOUR SQL");
     /// ```
     pub async fn query_simple(&self, query: &str) -> Result<Vec<Row>, PostgresError> {
@@ -191,7 +191,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let size: u64 = execute("YOUR SQL $1", ["params $1-$n", ...]);
     /// ```
     pub async fn execute(
@@ -210,7 +210,7 @@ impl Postgres {
     ///
     /// # Examples:
     ///
-    /// ```
+    /// ```rust,ignore
     /// let size: u64 = execute_simple("YOUR SQL");
     /// ```
     pub async fn execute_simple(&self, query: &str) -> Result<u64, PostgresError> {

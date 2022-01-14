@@ -8,7 +8,7 @@ pub struct CalcPpAccResult {
 
 #[inline(always)]
 /// Get player's bp then calculate pp and acc
-/// ```
+/// ```rust,ignore
 /// calculate_pp_acc(...) -> Option<(pp, acc)>
 /// ```
 pub async fn player_calculate_pp_acc(
