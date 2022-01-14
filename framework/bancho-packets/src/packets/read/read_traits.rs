@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-pub trait ReadInteger<T> {
+pub trait NumberAsBytes<T> {
     fn from_le_bytes(data: &[u8]) -> Option<T>;
     fn from_be_bytes(data: &[u8]) -> Option<T>;
     fn as_usize(self) -> usize;
@@ -8,7 +8,7 @@ pub trait ReadInteger<T> {
 
 macro_rules! impl_read_integer {
     ($($t:ty),+) => {
-        $(impl ReadInteger<$t> for $t {
+        $(impl NumberAsBytes<$t> for $t {
             #[inline(always)]
             fn from_le_bytes(data: &[u8]) -> Option<$t> {
                 Some(<$t>::from_le_bytes(match data.try_into() {

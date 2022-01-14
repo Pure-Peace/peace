@@ -1,7 +1,7 @@
 use crate::{build, data, out_packet};
 use crate::{id, LoginReply};
 
-use super::traits::*;
+use super::write_traits::*;
 use super::utils::*;
 
 #[inline(always)]
@@ -54,7 +54,7 @@ pub fn user_stats(
     build!(
         id::BANCHO_USER_STATS,
         data!(
-            Cap = 60;
+            { 60 };
             user_id,
             action,
             info,

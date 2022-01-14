@@ -77,8 +77,10 @@ fn test_login() {
 #[test]
 fn test_write_i32_list() {
     //let list = utils::write_int_list(&vec![1001, 1002, 1003]);
-    let list = user_presence_bundle(&vec![1001, 1002, 1003]);
-    println!("{:?}", list);
+    assert_eq!(
+        user_presence_bundle(&vec![1001, 1002, 1003]),
+        vec![96, 0, 0, 14, 0, 0, 0, 3, 0, 233, 3, 0, 0, 234, 3, 0, 0, 235, 3, 0, 0]
+    )
 }
 
 #[test]

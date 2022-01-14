@@ -2,7 +2,7 @@
 mod tests;
 
 pub mod objects;
-pub mod traits;
+pub mod read_traits;
 pub mod utils;
 
 pub use objects::*;

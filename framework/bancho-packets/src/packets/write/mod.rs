@@ -4,7 +4,7 @@ mod tests;
 pub mod macros;
 pub mod methods;
 pub mod objects;
-pub mod traits;
+pub mod write_traits;
 pub mod utils;
 
 pub use methods::*;

@@ -8,7 +8,7 @@ pub trait LoginReply {
 }
 /// Login replys (i32)
 ///
-/// ```
+/// ```rust,ignore
 /// LoginReply {
 ///     InvalidCredentials        = -1,
 ///     OutdatedClient            = -2,

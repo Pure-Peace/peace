@@ -3,7 +3,7 @@ use crate::packets::id;
 
 use crate::data;
 
-use super::traits::OsuWrite;
+use super::write_traits::OsuWrite;
 
 #[inline(always)]
 /// Create a empty packets
@@ -20,7 +20,7 @@ pub fn empty() -> Vec<u8> {
 ///
 ///
 /// Packets posit:
-/// ```
+/// ```rust,ignore
 /// [0..=1]: packet id
 /// [2]: null
 /// [3..=6]: packet length

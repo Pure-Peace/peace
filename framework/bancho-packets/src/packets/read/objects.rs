@@ -2,7 +2,7 @@ use num_traits::FromPrimitive;
 use std::convert::TryInto;
 use std::str;
 
-use super::{traits::*, utils::read_uleb128};
+use super::{read_traits::*, utils::read_uleb128};
 use crate::id;
 
 #[derive(Debug)]
@@ -32,15 +32,15 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    pub fn read_integer<Integer: ReadInteger<Integer>>(&mut self) -> Option<Integer> {
-        let data = self.read(std::mem::size_of::<Integer>())?;
-        Integer::from_le_bytes(data)
+    pub fn read_integer<N: NumberAsBytes<N>>(&mut self) -> Option<N> {
+        let data = self.read(std::mem::size_of::<N>())?;
+        N::from_le_bytes(data)
     }
 
     #[inline(always)]
-    pub fn read_i32_list<IntLength: ReadInteger<IntLength>>(&mut self) -> Option<Vec<i32>> {
-        let length_data = self.read(std::mem::size_of::<IntLength>())?;
-        let int_count = IntLength::from_le_bytes(length_data)?.as_usize();
+    pub fn read_i32_list<N: NumberAsBytes<N>>(&mut self) -> Option<Vec<i32>> {
+        let length_data = self.read(std::mem::size_of::<N>())?;
+        let int_count = N::from_le_bytes(length_data)?.as_usize();
 
         let mut data: Vec<i32> = Vec::with_capacity(int_count);
         for _ in 0..int_count {
@@ -79,7 +79,7 @@ impl<'a> PayloadReader<'a> {
                 Ok(s) => s,
                 Err(_) => return None,
             }
-            .to_string(),
+            .into(),
         )
     }
 
