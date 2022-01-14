@@ -94,21 +94,21 @@ pub async fn handler(
 
     // Read & handle client packets
     let mut reader = PacketReader::from_vec(body.to_vec());
-    while let Some((packet_id, payload)) = reader.next() {
+    while let Some(packet) = reader.next() {
         // osu_ping need not handle
-        if packet_id == id::OSU_PING {
+        if packet.id == id::OSU_PING {
             continue;
         };
 
         handlers::bancho::packets::read_handle(
-            &packet_id,
+            &packet.id,
             &request_ip,
             &token,
             &player_data,
             &weak_player,
             &bancho,
             &database,
-            payload,
+            packet.payload,
         )
         .await;
     }

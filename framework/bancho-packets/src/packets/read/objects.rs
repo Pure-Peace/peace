@@ -3,15 +3,7 @@ use std::convert::TryInto;
 use std::str;
 
 use super::{read_traits::*, utils::read_uleb128};
-use crate::id;
-
-#[derive(Debug)]
-pub struct Message {
-    pub sender: String,
-    pub content: String,
-    pub target: String,
-    pub sender_id: i32,
-}
+use crate::{id, BanchoMessage, Packet};
 
 pub struct PayloadReader<'a> {
     pub payload: &'a [u8],
@@ -53,8 +45,8 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    pub fn read_message(&mut self) -> Option<Message> {
-        Some(Message {
+    pub fn read_message(&mut self) -> Option<BanchoMessage> {
+        Some(BanchoMessage {
             sender: self.read_string()?,
             content: self.read_string()?,
             target: self.read_string()?,
@@ -128,7 +120,7 @@ impl PacketReader {
 
     #[inline(always)]
     /// Read the osu!client packet: (packet id, payload)
-    pub fn next(&mut self) -> Option<(id, Option<&[u8]>)> {
+    pub fn next(&mut self) -> Option<Packet> {
         if (self.buf.len() - self.index) < 7 {
             self.finish = true;
             return None;
@@ -145,7 +137,12 @@ impl PacketReader {
         });
         let length = u32::from_le_bytes(match header[3..=6].try_into() {
             Ok(b) => b,
-            Err(_) => return Some((packet_id, None)),
+            Err(_) => {
+                return Some(Packet {
+                    id: packet_id,
+                    payload: None,
+                })
+            }
         });
 
         self.packet_count += 1;
@@ -163,7 +160,10 @@ impl PacketReader {
             }
         };
 
-        Some((packet_id, payload))
+        Some(Packet {
+            id: packet_id,
+            payload,
+        })
     }
 
     #[inline(always)]

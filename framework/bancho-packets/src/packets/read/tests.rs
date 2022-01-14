@@ -52,12 +52,12 @@ mod test_read {
             33, 240, 159, 146, 150,
         ];
         let mut reader = PacketReader::from_vec(packet);
-        let (id, payload) = reader.next().unwrap();
+        let packet = reader.next().unwrap();
 
-        let mut payload_reader = PayloadReader::new(payload.unwrap());
+        let mut payload_reader = PayloadReader::new(packet.payload.unwrap());
         let str_data = payload_reader.read_string();
 
-        println!("{:?}: {:?}", id, str_data);
+        println!("{:?}: {:?}", packet.id, str_data);
     }
 
     #[test]
@@ -69,9 +69,9 @@ mod test_read {
             104, 0, 0, 0, 0, 0, 0, 24, 0, 0, 23, 0, 0, 0, 11, 21, 232, 175, 187, 229, 143, 150,
             229, 174, 140, 228, 186, 134, 239, 188, 129, 239, 188, 129, 226, 156, 168,
         ]);
-        while let Some((packet_id, payload)) = reader.next() {
-            print!("{:?}: ", packet_id);
-            match payload {
+        while let Some(packet) = reader.next() {
+            print!("{:?}: ", packet.id);
+            match packet.payload {
                 None => println!("Non-payload"),
                 Some(payload) => {
                     let mut payload_reader = PayloadReader::new(payload);
@@ -85,12 +85,12 @@ mod test_read {
     fn test_read_integer() {
         let packet = vec![103, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0];
         let mut reader = PacketReader::from_vec(packet);
-        let (id, payload) = reader.next().unwrap();
+        let packet = reader.next().unwrap();
 
-        let mut payload_reader = PayloadReader::new(payload.unwrap());
+        let mut payload_reader = PayloadReader::new(packet.payload.unwrap());
         let int_data = payload_reader.read_integer::<u32>();
 
-        println!("{:?}: {:?}", id, int_data);
+        println!("{:?}: {:?}", packet.id, int_data);
     }
 
     #[test]
@@ -100,12 +100,12 @@ mod test_read {
             117, 0, 0, 0, 0,
         ];
         let mut reader = PacketReader::from_vec(packet);
-        let (id, payload) = reader.next().unwrap();
+        let packet = reader.next().unwrap();
 
-        let mut payload_reader = PayloadReader::new(payload.unwrap());
+        let mut payload_reader = PayloadReader::new(packet.payload.unwrap());
         let message = payload_reader.read_message();
 
-        println!("{:?}: {:?}", id, message);
+        println!("{:?}: {:?}", packet.id, message);
     }
 
     #[test]
@@ -151,8 +151,8 @@ mod test_read {
             97, 99, 101, 32, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
         ];
         let mut reader = PacketReader::from_vec(packet);
-        while let Some((packet_id, payload)) = reader.next() {
-            println!("{:?}: {:?}", packet_id, payload.unwrap_or(&[]));
+        while let Some(packet) = reader.next() {
+            println!("{:?}: {:?}", packet.id, packet.payload.unwrap_or(&[]));
         }
     }
 

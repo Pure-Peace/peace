@@ -85,9 +85,9 @@ fn packets_read_benchmark(c: &mut Criterion) {
     group.bench_function("big packets read", |b| {
         b.iter(|| {
             let mut reader = PacketReader::from_vec(packet.clone());
-            while let Some((packet_id, payload)) = reader.next() {
-                let _a = packet_id;
-                let _b = payload;
+            while let Some(packet) = reader.next() {
+                let _a = packet.id;
+                let _b = packet.payload;
             }
         })
     });
