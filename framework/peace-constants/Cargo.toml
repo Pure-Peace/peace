@@ -2,7 +2,7 @@
 name = "peace-constants"
 version = "0.5.3"
 authors = ["PurePeace <940857703@qq.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace/peace-constants"
 description = "Miscellaneous. Some sonstants used by peace"

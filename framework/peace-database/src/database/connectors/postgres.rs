@@ -325,7 +325,7 @@ macro_rules! set_with_db {
                             Ok(_) => true,
                             Err(err) => {
                                 warn!(
-                                    stringify!("[set_with_db] Failed to set "$struct_name"."$field_name" to table "$table", err: ""{:?}"),
+                                    stringify!("[set_with_db] Failed to set "$struct_name "."$field_name " to table "$table ", err: ""{:?}"),
                                     err
                                 );
                                 false

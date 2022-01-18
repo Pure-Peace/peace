@@ -2,7 +2,7 @@
 name = "peace-objects"
 version = "0.8.3"
 authors = ["PurePeace <940857703@qq.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace/peace-objects"
 description = "Some reusable objects from peace. Beatmap, osu!api, pp calculator (requester)."

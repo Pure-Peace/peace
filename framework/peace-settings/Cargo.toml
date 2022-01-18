@@ -2,7 +2,7 @@
 name = "peace-settings"
 version = "0.4.1"
 authors = ["PurePeace <940857703@qq.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace/peace-settings"
 description = "Some reusable peace settings objects. Logger, bancho config."

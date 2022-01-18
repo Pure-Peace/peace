@@ -2,7 +2,7 @@
 name = "peace-bancho"
 version = "0.12.2"
 authors = ["PurePeace <940857703@qq.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace"
 description = "osu! server written in Rust"
