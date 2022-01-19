@@ -23,8 +23,7 @@ mod depends {
     };
 
     pub use {
-        bancho_packets::{id, LoginFailed},
-        bancho_packets::{PacketBuilder, PacketReader},
+        bancho_packets::{LoginFailed, LoginReply, PacketBuilder, PacketId, PacketReader},
         peace_database::Database,
         peace_settings::bancho::BanchoConfig,
     };

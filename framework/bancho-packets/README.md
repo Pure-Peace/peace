@@ -59,14 +59,14 @@ BANCHO_NOTIFICATION: Some("读取完了！！✨")
 ## Writing to osu
 
 ```rust
-use bancho_packets::{LoginFailed, self};
+use bancho_packets::{LoginFailed, PacketBuilder, self};
 
 // Single packet
 let data = bancho_packets::login_reply(LoginFailed::InvalidCredentials);
 let data1 = bancho_packets::notification("hello");
 
 // Multiple packets with Builder
-let data3 = bancho_packets::PacketBuilder::new()
+let data3 = PacketBuilder::new()
     .add(bancho_packets::login_reply(
         bancho_packets::LoginSuccess::Verified(1009),
     ))
@@ -84,11 +84,11 @@ let data3 = bancho_packets::PacketBuilder::new()
 ## Raw (Build your own packet)
 
 ```rust
-use bancho_packets::{id, build, data, out_packet, write_traits::*};
+use bancho_packets::{PacketId, build, data, out_packet, traits::writing::*};
 
 // Build simple packet
 let number_data: i32 = 1;
-let packet = build!(id::BANCHO_MATCH_PLAYER_SKIPPED, number_data)
+let packet = build!(PacketId::BANCHO_MATCH_PLAYER_SKIPPED, number_data)
 
 // Complex
 pub fn user_stats(
@@ -107,7 +107,7 @@ pub fn user_stats(
     pp: i16,
 ) -> Vec<u8> {
     build!(
-        id::BANCHO_USER_STATS,
+        PacketId::BANCHO_USER_STATS,
         data!(
             { 60 }; // initial data size
             user_id,

@@ -2,8 +2,10 @@ use num_traits::FromPrimitive;
 use std::convert::TryInto;
 use std::str;
 
-use super::{read_traits::*, utils::read_uleb128};
-use crate::{id, BanchoMessage, Packet};
+use crate::{
+    io::{traits::reading::NumberAsBytes, utils::read_uleb128},
+    packets::{BanchoMessage, Packet, PacketHeader, PacketId},
+};
 
 pub struct PayloadReader<'a> {
     pub payload: &'a [u8],
@@ -66,13 +68,7 @@ impl<'a> PayloadReader<'a> {
         self.index += data_length;
         let data = self.payload.get(cur..self.index)?;
 
-        Some(
-            match str::from_utf8(data) {
-                Ok(s) => s,
-                Err(_) => return None,
-            }
-            .into(),
-        )
+        Some(str::from_utf8(data).ok()?.into())
     }
 
     #[inline(always)]
@@ -86,7 +82,6 @@ impl<'a> PayloadReader<'a> {
 pub struct PacketReader {
     pub buf: Vec<u8>,
     pub index: usize,
-    pub current_packet: id,
     pub payload_length: usize,
     pub finish: bool,
     pub payload_count: u16,
@@ -99,7 +94,6 @@ impl PacketReader {
         PacketReader {
             buf: body,
             index: 0,
-            current_packet: id::OSU_UNKNOWN_PACKET,
             payload_length: 0,
             finish: false,
             payload_count: 0,
@@ -112,7 +106,6 @@ impl PacketReader {
     pub fn reset(&mut self) {
         self.finish = false;
         self.index = 0;
-        self.current_packet = id::OSU_UNKNOWN_PACKET;
         self.payload_length = 0;
         self.payload_count = 0;
         self.packet_count = 0;
@@ -131,56 +124,35 @@ impl PacketReader {
         self.index += 7;
 
         // Get packet id and payload length
-        let packet_id = id::from_u8(header[0]).unwrap_or_else(|| {
-            println!("[PacketReader]: unknown packet id({})", header[0]);
-            id::OSU_UNKNOWN_PACKET
-        });
-        let length = u32::from_le_bytes(match header[3..=6].try_into() {
-            Ok(b) => b,
-            Err(_) => {
-                return Some(Packet {
-                    id: packet_id,
-                    payload: None,
-                })
-            }
-        });
-
+        let PacketHeader { id, payload_length } = PacketReader::read_header(header)?;
         self.packet_count += 1;
-        self.current_packet = packet_id.clone();
 
         // Read the payload
-        let payload = match length {
-            0 => None,
-            _ => {
-                self.payload_count += 1;
-                self.payload_length = length as usize;
-                // Skip this payload at next call
-                self.index += self.payload_length;
-                self.buf.get(self.index - self.payload_length..self.index)
-            }
+        let payload = if payload_length == 0 {
+            None
+        } else {
+            self.payload_count += 1;
+            self.payload_length = payload_length as usize;
+            // Skip this payload at next call
+            self.index += self.payload_length;
+            self.buf.get(self.index - self.payload_length..self.index)
         };
 
-        Some(Packet {
-            id: packet_id,
-            payload,
-        })
+        Some(Packet { id, payload })
     }
 
     #[inline(always)]
     /// Read packet header: (type, length)
-    pub fn read_header(body: Vec<u8>) -> Option<(id, u32)> {
-        if body.len() < 7 {
-            return None;
-        }
-        let header = &body[..7];
-        Some((
-            id::from_u8(header[0]).unwrap_or(id::OSU_UNKNOWN_PACKET),
-            u32::from_le_bytes(match header[3..=6].try_into() {
-                Ok(b) => b,
-                Err(_) => {
-                    return None;
-                }
-            }),
-        ))
+    pub fn read_header(header: &[u8]) -> Option<PacketHeader> {
+        let id = *header.get(0)?;
+        let packet_id = PacketId::from_u8(id).unwrap_or_else(|| {
+            println!("[PacketReader]: unknown packet id({})", id);
+            PacketId::OSU_UNKNOWN_PACKET
+        });
+        let payload_length = u32::from_le_bytes(header[3..=6].try_into().ok()?);
+        Some(PacketHeader {
+            id: packet_id,
+            payload_length,
+        })
     }
 }

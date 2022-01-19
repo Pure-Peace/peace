@@ -1,11 +1,11 @@
 [package]
 name = "bancho-packets"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace"
-description = "osu! bancho packet read & write utilities."
+description = "osu! bancho packet reading & writing utilities."
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

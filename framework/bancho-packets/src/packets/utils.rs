@@ -1,9 +1,4 @@
-#![allow(dead_code)]
-use crate::packets::id;
-
-use crate::data;
-
-use super::write_traits::OsuWrite;
+use crate::{data, io::traits::writing::OsuWrite, packets::structures::PacketId};
 
 #[inline(always)]
 /// Create a empty packets
@@ -32,7 +27,7 @@ pub fn empty() -> Vec<u8> {
 ///
 /// so I think it is sufficient to insert the packet_id in the first position
 ///
-pub fn new(packet_id: id) -> Vec<u8> {
+pub fn new_packet(packet_id: PacketId) -> Vec<u8> {
     vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
 
@@ -40,8 +35,8 @@ pub fn new(packet_id: id) -> Vec<u8> {
 /// Simple packaging for output(new(packet_id))
 ///
 /// !Note: Packet length is included
-pub fn simple_pack(packet_id: id) -> Vec<u8> {
-    output(new(packet_id))
+pub fn simple_pack(packet_id: PacketId) -> Vec<u8> {
+    output(new_packet(packet_id))
 }
 
 #[inline(always)]
@@ -99,21 +94,9 @@ pub fn write_score_frame(
 }
 
 #[inline(always)]
-pub fn write<W>(t: W) -> Vec<u8>
+pub fn osu_write<W>(t: W) -> Vec<u8>
 where
     W: OsuWrite,
 {
     t.osu_write()
-}
-
-#[inline(always)]
-/// Unsigned to uleb128
-pub fn write_uleb128(mut unsigned: u32) -> Vec<u8> {
-    let mut data: Vec<u8> = Vec::with_capacity(2);
-    while unsigned >= 0x80 {
-        data.push(((unsigned & 0x7f) | 0x80) as u8);
-        unsigned >>= 7;
-    }
-    data.push(unsigned as u8);
-    data
 }
