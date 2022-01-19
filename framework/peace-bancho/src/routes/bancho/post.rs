@@ -24,10 +24,7 @@ pub async fn handler(
     };
 
     // Blocked ip
-    if bancho
-        .config
-        .read()
-        .await
+    if read_lock!(bancho.config)
         .data
         .server
         .ip_blacklist
@@ -73,10 +70,10 @@ pub async fn handler(
     };
 
     // Get player
-    let player_sessions_r = bancho.player_sessions.read().await;
+    let player_sessions_r = read_lock!(bancho.player_sessions);
     let (player_data, weak_player) = match player_sessions_r.token_map.get(&token) {
         Some(player) => (
-            PlayerData::from(&*player.read().await),
+            PlayerData::from(&*read_lock!(player)),
             Arc::downgrade(player),
         ),
         None => {
@@ -115,7 +112,7 @@ pub async fn handler(
 
     // Push player's packets to the response
     if let Some(player) = weak_player.upgrade() {
-        let mut player = player.write().await;
+        let mut player = write_lock!(player);
         // Update player's active time
         player.update_active();
 

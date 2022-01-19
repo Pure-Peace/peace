@@ -166,10 +166,7 @@ impl Peace {
         #[inline(always)]
         async fn handle_session_recycle(bancho: Data<Bancho>) {
             loop {
-                let interval = bancho
-                    .config
-                    .read()
-                    .await
+                let interval = read_lock!(bancho.config)
                     .data
                     .session_recycle
                     .check_interval as u64;

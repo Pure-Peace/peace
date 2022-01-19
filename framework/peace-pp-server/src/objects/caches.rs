@@ -54,7 +54,7 @@ impl Caches {
 
     #[inline(always)]
     pub async fn cache_pp_beatmap(&self, md5: String, pp_beatmap_cache: PPbeatmapCache) {
-        let mut cw = self.pp_beatmap_cache.write().await;
+        let mut cw = write_lock!(self.pp_beatmap_cache);
         if cw.len() as i32 > self.config.beatmap_cache_max {
             debug!("[pp_beatmap_cache] Cache exceed max limit.");
             return;

@@ -1,7 +1,6 @@
 #![allow(dead_code)]
-use ntex::web::types::Data;
-use tokio::sync::RwLock;
 use chrono::Local;
+use ntex::web::types::Data;
 use peace_database::Database;
 use std::{
     fmt,
@@ -10,6 +9,7 @@ use std::{
         Arc,
     },
 };
+use tokio::sync::RwLock;
 
 use crate::types::{
     Argon2Cache, ChannelList, PacketData, PlayerIdSessionMap, PlayerNameSessionMap,
@@ -85,7 +85,7 @@ impl PlayerSessions {
                 // Remove and drop locks
                 let (player_id, player_channels) = {
                     let (player_id, player_name, player_u_name, player_channels) = {
-                        let player = arc_player.read().await;
+                        let player = read_lock!(arc_player);
                         (
                             player.id,
                             player.name.clone(),
@@ -109,8 +109,8 @@ impl PlayerSessions {
                     .await;
 
                 if channel_list.is_some() {
-                    for channel in channel_list.unwrap().read().await.values() {
-                        let mut c = channel.write().await;
+                    for channel in read_lock!(channel_list.unwrap()).values() {
+                        let mut c = write_lock!(channel);
                         if player_channels.contains(&c.name) {
                             c.leave(player_id, Some(self)).await;
                         }
@@ -120,9 +120,7 @@ impl PlayerSessions {
                 let mut player = match Arc::try_unwrap(arc_player) {
                     Ok(player) => player.into_inner(),
                     Err(arc_player) => {
-                        arc_player
-                            .write()
-                            .await
+                        write_lock!(arc_player)
                             .update_logout_time(&self.database)
                             .await;
                         return None;
@@ -145,14 +143,14 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn enqueue_all(&self, packet_data: &PacketData) {
         for player in self.token_map.values() {
-            player.read().await.enqueue(packet_data.clone()).await;
+            read_lock!(player).enqueue(packet_data.clone()).await;
         }
     }
 
     #[inline(always)]
     pub async fn enqueue_by_token(&self, token: &TokenString, packet_data: PacketData) -> bool {
         if let Some(player) = self.token_map.get(token) {
-            player.read().await.enqueue(packet_data).await;
+            read_lock!(player).enqueue(packet_data).await;
             return true;
         }
         false
@@ -161,7 +159,7 @@ impl PlayerSessions {
     #[inline(always)]
     pub async fn enqueue_by_id(&self, user_id: &UserId, packet_data: PacketData) -> bool {
         if let Some(player) = self.id_map.get(user_id) {
-            player.read().await.enqueue(packet_data).await;
+            read_lock!(player).enqueue(packet_data).await;
             return true;
         }
         false
@@ -203,9 +201,7 @@ impl PlayerSessions {
     ) -> Option<Arc<RwLock<Player>>> {
         let player = self.get_player_by_name(username).await?;
 
-        if !player
-            .read()
-            .await
+        if !read_lock!(player)
             .check_password_hash(password_hash, argon2_cache)
             .await
         {
@@ -220,7 +216,7 @@ impl PlayerSessions {
     ///
     /// Think, why not use the following code?
     /// Because, passing a reference to the token directly will result in the read lock not being released, thus triggering a deadlock.
-    /// 
+    ///
     /// ```rust,ignore
     /// match self.id_map.get(&user_id) {
     ///     Some(token) => self.logout(token).await,
@@ -233,7 +229,7 @@ impl PlayerSessions {
         channel_list: Option<&Data<RwLock<ChannelList>>>,
     ) -> Option<Player> {
         let token = match self.id_map.get(&user_id) {
-            Some(player) => player.read().await.token.to_string(),
+            Some(player) => read_lock!(player).token.to_string(),
             None => return None,
         };
         self.logout(&token, channel_list).await
@@ -245,7 +241,7 @@ impl PlayerSessions {
 
         let mut vec = vec![];
         for (token, player) in self.token_map.iter() {
-            if now_timestamp - player.read().await.last_active_time.timestamp() > session_timeout {
+            if now_timestamp - read_lock!(player).last_active_time.timestamp() > session_timeout {
                 vec.push(token.clone())
             }
         }
@@ -275,7 +271,7 @@ impl PlayerSessions {
     /// Get a player data (readonly)
     pub async fn get_player_data(&self, token: &TokenString) -> Option<PlayerData> {
         match self.token_map.get(token) {
-            Some(player) => Some(PlayerData::from(&*player.read().await)),
+            Some(player) => Some(PlayerData::from(&*read_lock!(player))),
             None => None,
         }
     }
@@ -292,7 +288,7 @@ impl PlayerSessions {
     {
         match self.token_map.get(token) {
             Some(player) => {
-                let mut player = player.write().await;
+                let mut player = write_lock!(player);
                 match handler(&mut *player) {
                     Some(()) => Ok(PlayerData::from(&mut *player)),
                     None => Err(()),
@@ -310,7 +306,7 @@ impl PlayerSessions {
     {
         match self.token_map.get(token) {
             Some(player) => {
-                let mut player = player.write().await;
+                let mut player = write_lock!(player);
                 match handler(&mut *player) {
                     Some(()) => Ok(()),
                     None => Err(()),

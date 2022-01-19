@@ -1,7 +1,7 @@
 use std::sync::{atomic::Ordering, Arc, Weak};
 
-use tokio::sync::RwLock;
 use bancho_packets::PayloadReader;
+use tokio::sync::RwLock;
 
 use crate::objects::{Channel, Player};
 
@@ -18,13 +18,13 @@ pub async fn try_remove_spectator<'a>(
 ) {
     // First, Remove spectating status from me
     if let Some(player) = weak_player.upgrade() {
-        player.write().await.spectating = None;
+        write_lock!(player).spectating = None;
     }
 
     // And, remove me from spectating player
     let id_map = &player_sessions.id_map;
     let non_spectators = if let Some(spectating_target) = id_map.get(&spectating_id) {
-        let mut t = spectating_target.write().await;
+        let mut t = write_lock!(spectating_target);
         t.spectators.remove(&player_id);
         t.spectators.len() == 0
     } else {
@@ -33,9 +33,9 @@ pub async fn try_remove_spectator<'a>(
 
     let spectating_channel_name = format!("#spec_{}", spectating_id);
     {
-        let mut channel_list = channel_list.write().await;
+        let mut channel_list = write_lock!(channel_list);
         if let Some(spectating_channel) = channel_list.get(&spectating_channel_name) {
-            let mut c = spectating_channel.write().await;
+            let mut c = write_lock!(spectating_channel);
 
             // Remove me from spectating channel
             c.leave(player_id, None).await;
@@ -49,14 +49,14 @@ pub async fn try_remove_spectator<'a>(
                 let channel_info = c.channel_info_packet();
 
                 if let Some(spectating_target) = id_map.get(&spectating_id) {
-                    let t = spectating_target.write().await;
+                    let t = write_lock!(spectating_target);
                     // Send channel info to spectating player
                     t.enqueue(channel_info.clone()).await;
 
                     // Send data to each spectators
                     for id in t.spectators.iter() {
                         if let Some(player) = id_map.get(&id) {
-                            let p = player.read().await;
+                            let p = read_lock!(player);
                             p.enqueue(fellow_data.clone()).await;
                             p.enqueue(channel_info.clone()).await;
                         }
@@ -73,7 +73,7 @@ pub async fn try_remove_spectator<'a>(
     }
 
     if let Some(spectating_target) = id_map.get(&spectating_id) {
-        let t = spectating_target.read().await;
+        let t = read_lock!(spectating_target);
         t.enqueue(bancho_packets::spectator_left(player_id)).await;
         debug!(
             "Player {}({}) is no longer watching {}({}).",
@@ -89,9 +89,9 @@ pub async fn create_specate_channel_if_not_exists(
     channel_list: &Data<RwLock<ChannelList>>,
 ) -> String {
     let channel_name = format!("#spec_{}", player_id);
-    let player_name = player.read().await.name.clone();
+    let player_name = read_lock!(player).name.clone();
 
-    if !channel_list.read().await.contains_key(&channel_name) {
+    if !read_lock!(channel_list).contains_key(&channel_name) {
         let mut channel = Channel::new(
             channel_name.clone(),
             format!("{}({}) 's spectator channel!", player_name, player_id),
@@ -103,10 +103,7 @@ pub async fn create_specate_channel_if_not_exists(
 
         channel.join_player(player.clone(), None).await;
 
-        channel_list
-            .write()
-            .await
-            .insert(channel_name.clone(), Arc::new(RwLock::new(channel)));
+        write_lock!(channel_list).insert(channel_name.clone(), Arc::new(RwLock::new(channel)));
 
         debug!("Spectate channel {} created.", channel_name);
     };
@@ -125,7 +122,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         return None;
     }
 
-    let player_sessions = ctx.bancho.player_sessions.read().await;
+    let player_sessions = read_lock!(ctx.bancho.player_sessions);
 
     // Specate an offline player is not allowed!
     let target = match player_sessions.id_map.get(&target_id) {
@@ -158,10 +155,10 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
     // Try join spec channel
     {
-        let channel_list = ctx.bancho.channel_list.read().await;
+        let channel_list = read_lock!(ctx.bancho.channel_list);
         match channel_list.get(&channel_name) {
             Some(channel) => {
-                let mut c = channel.write().await;
+                let mut c = write_lock!(channel);
                 match ctx.weak_player.upgrade() {
                     Some(p) => {
                         if !c.join_player(p, None).await {
@@ -188,17 +185,14 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         let i_was_joined2 = bancho_packets::spectator_joined(ctx.id);
 
         let id_map = &player_sessions.id_map;
-        let (target, player) = (id_map.get(&target_id), ctx.weak_player.upgrade());
-        if target.is_none() || player.is_none() {
-            return None;
-        }
+        let (target, player) = (id_map.get(&target_id)?, ctx.weak_player.upgrade()?);
 
-        let mut target = target.unwrap().write().await;
-        let mut player = player.as_ref().unwrap().write().await;
+        let mut target = write_lock!(target);
+        let mut player = write_lock!(player.as_ref());
 
         for spectator_id in target.spectators.iter() {
             if let Some(spectator) = id_map.get(&spectator_id) {
-                let s = spectator.read().await;
+                let s = read_lock!(spectator);
                 s.enqueue(i_was_joined.clone()).await;
                 player
                     .enqueue(bancho_packets::fellow_spectator_joined(s.id))
@@ -221,7 +215,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// #17: OSU_SPECTATE_STOP (non-payload)
 ///
 pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let player_sessions = ctx.bancho.player_sessions.read().await;
+    let player_sessions = read_lock!(ctx.bancho.player_sessions);
 
     try_remove_spectator(
         ctx.id,
@@ -241,13 +235,13 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let data = bancho_packets::spectator_frames(ctx.payload.to_vec());
 
-    let player_sessions = ctx.bancho.player_sessions.read().await;
+    let player_sessions = read_lock!(ctx.bancho.player_sessions);
     let id_map = &player_sessions.id_map;
 
     // Send the spectate frames to our ctx's spectators
     for spectator_id in &ctx.data.spectators {
         if let Some(spectator) = id_map.get(spectator_id) {
-            spectator.read().await.enqueue(data.clone()).await;
+            read_lock!(spectator).enqueue(data.clone()).await;
         }
     }
     Some(())
@@ -260,18 +254,18 @@ pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let data = bancho_packets::spectator_cant_spectate(ctx.id);
     let spectate_target_id = ctx.data.spectating?;
 
-    let player_sessions = ctx.bancho.player_sessions.read().await;
+    let player_sessions = read_lock!(ctx.bancho.player_sessions);
     let id_map = &player_sessions.id_map;
 
     // Send packet
     if let Some(spectate_target) = id_map.get(&spectate_target_id) {
-        let spectate_target = spectate_target.read().await;
+        let spectate_target = read_lock!(spectate_target);
 
         spectate_target.enqueue(data.clone()).await;
 
         for id in spectate_target.spectators.iter() {
             if let Some(spectator) = id_map.get(id) {
-                spectator.read().await.enqueue(data.clone()).await;
+                read_lock!(spectator).enqueue(data.clone()).await;
             }
         }
     };

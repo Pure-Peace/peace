@@ -143,7 +143,7 @@ impl PPserver {
                 let now = Local::now().timestamp();
 
                 // Collect cache if timeout
-                let pp_beatmap_cache = caches.pp_beatmap_cache.read().await;
+                let pp_beatmap_cache = read_lock!(caches.pp_beatmap_cache);
                 for (k, v) in pp_beatmap_cache.iter() {
                     if now - v.time.timestamp() > timeout as i64 {
                         ready_to_clean.push(k.clone());
@@ -155,7 +155,7 @@ impl PPserver {
                 // Clean timeout cache
                 if ready_to_clean.len() > 0 {
                     debug!("[auto_cache_clean] Timeout cache founded, will clean them...");
-                    let mut pp_beatmap_cache = caches.pp_beatmap_cache.write().await;
+                    let mut pp_beatmap_cache = write_lock!(caches.pp_beatmap_cache);
                     for k in ready_to_clean {
                         pp_beatmap_cache.remove(&k);
                     }

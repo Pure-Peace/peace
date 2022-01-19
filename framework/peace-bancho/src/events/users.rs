@@ -1,8 +1,8 @@
 use super::depends::*;
+use bancho_packets::PayloadReader;
 use chrono::Local;
 use num_traits::FromPrimitive;
 use peace_constants::{PlayMods, PresenceFilter};
-use bancho_packets::PayloadReader;
 
 #[inline(always)]
 /// #2: OSU_USER_LOGOUT
@@ -13,10 +13,7 @@ pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         return None;
     }
 
-    ctx.bancho
-        .player_sessions
-        .write()
-        .await
+    write_lock!(ctx.bancho.player_sessions)
         .logout(ctx.token, Some(&ctx.bancho.channel_list))
         .await;
     Some(())
@@ -36,7 +33,7 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     if let Some(player) = ctx.weak_player.upgrade() {
-        player.write().await.presence_filter = filter.unwrap();
+        write_lock!(player).presence_filter = filter.unwrap();
     };
     Some(())
 }
@@ -47,7 +44,7 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// Update self's status for self
 pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     if let Some(player) = ctx.weak_player.upgrade() {
-        let player = player.read().await;
+        let player = read_lock!(player);
         player.enqueue(player.stats_packet()).await;
     };
     Some(())
@@ -60,11 +57,11 @@ pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>()?;
 
-    let player_sessions = ctx.bancho.player_sessions.read().await;
+    let player_sessions = read_lock!(ctx.bancho.player_sessions);
     let id_map = &player_sessions.id_map;
 
     if let Some(ctx_player) = &ctx.weak_player.upgrade() {
-        let ctx_player = ctx_player.read().await;
+        let ctx_player = read_lock!(ctx_player);
 
         for player_id in &id_list {
             // Skip self
@@ -73,7 +70,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             }
 
             if let Some(player) = id_map.get(player_id) {
-                let p = player.read().await.stats_packet();
+                let p = read_lock!(player).stats_packet();
                 ctx_player.enqueue(p).await;
             }
         }
@@ -90,10 +87,10 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_list.len());
 
     {
-        let player_sessions = ctx.bancho.player_sessions.read().await;
+        let player_sessions = read_lock!(ctx.bancho.player_sessions);
         for player_id in &id_list {
             if let Some(player) = player_sessions.id_map.get(player_id) {
-                let others = player.read().await;
+                let others = read_lock!(player);
                 user_presence_packets
                     .push(others.presence_packet(ctx.data.settings.display_u_name));
             }
@@ -102,7 +99,7 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     if let Some(ctx_player) = ctx.weak_player.upgrade() {
-        let ctx_player = ctx_player.read().await;
+        let ctx_player = read_lock!(ctx_player);
         for packets in user_presence_packets {
             ctx_player.enqueue(packets).await;
         }
@@ -116,7 +113,7 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 // Send other's presence to self (all)
 pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let user_presence_packets = {
-        let player_sessions = ctx.bancho.player_sessions.read().await;
+        let player_sessions = read_lock!(ctx.bancho.player_sessions);
         let id_map = &player_sessions.id_map;
 
         let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_map.len());
@@ -127,7 +124,7 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
                 continue;
             }
             // Send presence to self
-            let others = player.read().await;
+            let others = read_lock!(player);
             user_presence_packets.push(others.presence_packet(ctx.data.settings.display_u_name));
         }
 
@@ -137,7 +134,7 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     };
 
     if let Some(ctx_player) = ctx.weak_player.upgrade() {
-        let ctx_player = ctx_player.read().await;
+        let ctx_player = read_lock!(ctx_player);
         for packets in user_presence_packets {
             ctx_player.enqueue(packets).await;
         }
@@ -190,7 +187,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
     // Update player's status
     let player_stats_packets_new = if let Some(player) = ctx.weak_player.upgrade() {
-        let mut player = player.write().await;
+        let mut player = write_lock!(player);
         player.update_status(
             action,
             info,
@@ -210,10 +207,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     };
 
     // Send it to all players
-    ctx.bancho
-        .player_sessions
-        .read()
-        .await
+    read_lock!(ctx.bancho.player_sessions)
         .enqueue_all(&player_stats_packets_new)
         .await;
     Some(())
@@ -232,11 +226,7 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     // Add an offline player is not allowed
-    if !ctx
-        .bancho
-        .player_sessions
-        .read()
-        .await
+    if !read_lock!(ctx.bancho.player_sessions)
         .id_is_exists(&target_id)
         .await
     {
@@ -258,7 +248,7 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) -> 
     let player = ctx.weak_player.upgrade()?;
 
     {
-        let mut player = player.as_ref().write().await;
+        let mut player = write_lock!(player.as_ref());
 
         if player.friends.contains(&target_id) {
             info!(
@@ -311,11 +301,7 @@ pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     // Remove a offline player is not allowed
-    if !ctx
-        .bancho
-        .player_sessions
-        .read()
-        .await
+    if !read_lock!(ctx.bancho.player_sessions)
         .id_is_exists(&target)
         .await
     {
@@ -336,7 +322,7 @@ pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) -> 
     let player = ctx.weak_player.upgrade()?;
 
     {
-        let mut player = player.as_ref().write().await;
+        let mut player = write_lock!(player.as_ref());
 
         let friend_index = player.friends.binary_search(&target);
         if friend_index.is_err() {
@@ -385,7 +371,7 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option
     let value = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
 
     if let Some(player) = ctx.weak_player.upgrade() {
-        player.write().await.only_friend_pm_allowed = value == 1;
+        write_lock!(player).only_friend_pm_allowed = value == 1;
         debug!(
             "Player {}({}) toggled block-non-friend-dms with value {}",
             ctx.name, ctx.id, value
@@ -405,13 +391,13 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         return Some(());
     }
 
-    match ctx.bancho.channel_list.read().await.get(&channel_name) {
+    match read_lock!(ctx.bancho.channel_list).get(&channel_name) {
         Some(channel) => {
-            let mut c = channel.write().await;
+            let mut c = write_lock!(channel);
             if c.auto_close {
                 c.join_player(ctx.weak_player.upgrade()?, None).await
             } else {
-                let s = ctx.bancho.player_sessions.read().await;
+                let s = read_lock!(ctx.bancho.player_sessions);
                 c.join_player(ctx.weak_player.upgrade()?, Some(&*s)).await
             };
         }
@@ -431,13 +417,13 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// Player leave from a channel
 pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let channel_name = PayloadReader::new(ctx.payload).read_string()?;
-    match ctx.bancho.channel_list.read().await.get(&channel_name) {
+    match read_lock!(ctx.bancho.channel_list).get(&channel_name) {
         Some(channel) => {
-            let mut c = channel.write().await;
+            let mut c = write_lock!(channel);
             if c.auto_close {
                 c.leave(ctx.id, None).await
             } else {
-                let s = ctx.bancho.player_sessions.read().await;
+                let s = read_lock!(ctx.bancho.player_sessions);
                 c.leave(ctx.id, Some(&*s)).await
             };
         }
@@ -457,7 +443,7 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     let mut message = PayloadReader::new(ctx.payload).read_message()?;
 
-    let cfg_r = ctx.bancho.config.read().await;
+    let cfg_r = read_lock!(ctx.bancho.config);
     let cfg = &cfg_r.data;
 
     // Limit the length of message content
@@ -474,7 +460,7 @@ pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     if let Some(player) = ctx.weak_player.upgrade() {
-        player.write().await.away_message = message.content;
+        write_lock!(player).away_message = message.content;
     };
     Some(())
 }
@@ -486,7 +472,7 @@ pub async fn lobby_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // Try get player
     let player = ctx.weak_player.upgrade()?;
     {
-        let mut player = player.as_ref().write().await;
+        let mut player = write_lock!(player.as_ref());
         player.in_lobby = false;
         drop(player);
     }
@@ -500,7 +486,7 @@ pub async fn lobby_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // Try get player
     let player = ctx.weak_player.upgrade()?;
     {
-        let mut player = player.as_ref().write().await;
+        let mut player = write_lock!(player.as_ref());
         player.in_lobby = true;
         drop(player);
     }

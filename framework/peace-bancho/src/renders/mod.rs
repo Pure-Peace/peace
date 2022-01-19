@@ -16,7 +16,7 @@ pub struct BanchoGet {
 impl BanchoGet {
     pub async fn new(bancho_config: &Arc<RwLock<BanchoConfig>>) -> Self {
         let (server_name, server_front) = {
-            let cfg = bancho_config.read().await;
+            let cfg = read_lock!(bancho_config);
             (
                 cfg.data.server_info.name.clone(),
                 cfg.data.server_info.front_url.clone(),
@@ -32,7 +32,7 @@ impl BanchoGet {
     #[inline(always)]
     pub async fn update(&mut self) {
         let (server_name, server_front) = {
-            let cfg = self.bancho_config.read().await;
+            let cfg = read_lock!(self.bancho_config);
             (
                 cfg.data.server_info.name.clone(),
                 cfg.data.server_info.front_url.clone(),

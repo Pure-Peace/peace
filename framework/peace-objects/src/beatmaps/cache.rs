@@ -1,8 +1,8 @@
-#[cfg(feature = "async_trait")]
-use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 use std::sync::atomic::{AtomicI32, Ordering};
+#[cfg(feature = "async_trait")]
+use tokio::sync::RwLock;
 
 #[cfg(feature = "async_trait")]
 use async_trait::async_trait;
@@ -123,23 +123,17 @@ impl<
         file_name: Option<&String>,
     ) -> Option<T> {
         if let Some(md5) = md5 {
-            if let Some(b) = self.md5.read().await.get(md5).cloned() {
+            if let Some(b) = read_lock!(self.md5).get(md5).cloned() {
                 return Some(b);
             }
         };
         if let Some(bid) = &bid {
-            if let Some(b) = self.bid.read().await.get(bid).cloned() {
+            if let Some(b) = read_lock!(self.bid).get(bid).cloned() {
                 return Some(b);
             }
         };
         if let (Some(sid), Some(f)) = (&sid, file_name) {
-            if let Some(b) = self
-                .sid
-                .read()
-                .await
-                .get(&format!("{}_{}", sid, f))
-                .cloned()
-            {
+            if let Some(b) = read_lock!(self.sid).get(&format!("{}_{}", sid, f)).cloned() {
                 return Some(b);
             }
         };
@@ -157,21 +151,14 @@ impl<
     ) -> Option<T> {
         let mut result = None;
         if let Some(md5) = md5 {
-            result = self
-                .md5
-                .write()
-                .await
-                .insert(md5.clone(), T::new(beatmap.cloned()));
+            result = write_lock!(self.md5).insert(md5.clone(), T::new(beatmap.cloned()));
         };
         if let Some(bid) = bid {
-            result = self.bid.write().await.insert(bid, T::new(beatmap.cloned()));
+            result = write_lock!(self.bid).insert(bid, T::new(beatmap.cloned()));
         };
         if let (Some(sid), Some(f)) = (sid, file_name) {
-            result = self
-                .sid
-                .write()
-                .await
-                .insert(format!("{}_{}", sid, f), T::new(beatmap.cloned()));
+            result =
+                write_lock!(self.sid).insert(format!("{}_{}", sid, f), T::new(beatmap.cloned()));
         };
         if result.is_some() {
             self.length.fetch_add(1, Ordering::SeqCst);
@@ -198,9 +185,9 @@ impl<
     #[inline(always)]
     async fn clean(&self) -> i32 {
         let (mut md5, mut bid, mut sid) = (
-            self.md5.write().await,
-            self.bid.write().await,
-            self.sid.write().await,
+            write_lock!(self.md5),
+            write_lock!(self.bid),
+            write_lock!(self.sid),
         );
         (md5.clear(), bid.clear(), sid.clear());
         self.length.swap(0, Ordering::SeqCst)
@@ -211,7 +198,7 @@ impl<
         let (mut md5, mut bid, mut sid) = (Vec::new(), Vec::new(), Vec::new());
         {
             {
-                let lock = self.md5.read().await;
+                let lock = read_lock!(self.md5);
                 for (key, b) in lock.iter() {
                     if b.is_expired(expires) {
                         md5.push(key.clone())
@@ -219,7 +206,7 @@ impl<
                 }
             }
             {
-                let mut lock = self.md5.write().await;
+                let mut lock = write_lock!(self.md5);
                 for key in &md5 {
                     lock.remove(key);
                 }
@@ -227,7 +214,7 @@ impl<
         }
         {
             {
-                let lock = self.bid.read().await;
+                let lock = read_lock!(self.bid);
                 for (key, b) in lock.iter() {
                     if b.is_expired(expires) {
                         bid.push(key.clone())
@@ -235,7 +222,7 @@ impl<
                 }
             }
             {
-                let mut lock = self.bid.write().await;
+                let mut lock = write_lock!(self.bid);
                 for key in &bid {
                     lock.remove(key);
                 }
@@ -243,7 +230,7 @@ impl<
         }
         {
             {
-                let lock = self.sid.read().await;
+                let lock = read_lock!(self.sid);
                 for (key, b) in lock.iter() {
                     if b.is_expired(expires) {
                         sid.push(key.clone())
@@ -251,7 +238,7 @@ impl<
                 }
             }
             {
-                let mut lock = self.sid.write().await;
+                let mut lock = write_lock!(self.sid);
                 for key in &sid {
                     lock.remove(key);
                 }

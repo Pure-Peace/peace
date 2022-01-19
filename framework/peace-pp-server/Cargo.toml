@@ -65,4 +65,4 @@ peace-objects = { path = "../peace-objects", features = [
     "osu_file_downloader",
 ], optional = true }
 peace-settings = { path = "../peace-settings" }
-peace-utils = { path = "../peace-utils", features = ["web", "async_file"] }
+peace-utils = { path = "../peace-utils", features = ["web", "async_file", "macro"] }

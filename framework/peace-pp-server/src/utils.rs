@@ -61,7 +61,7 @@ pub async fn preload_osu_files(osu_files_dir: &String, max_load: i32, caches: &D
     let bar = peace_utils::common::progress_bar(min(max_load, total as i32) as u64);
     let mut success = 0;
     let start = Instant::now();
-    let mut pp_beatmap_cache = caches.pp_beatmap_cache.write().await;
+    let mut pp_beatmap_cache = write_lock!(caches.pp_beatmap_cache);
     for entry in entries {
         bar.inc(1);
         if let Some(entry) = entry {

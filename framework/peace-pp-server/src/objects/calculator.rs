@@ -164,7 +164,7 @@ pub async fn get_beatmap(
         .await;
     if let Some(b) = b {
         #[cfg(feature = "with_peace")]
-        let expire = glob.config.read().await.data.beatmaps.cache_expires;
+        let expire = read_lock!(glob.config).data.beatmaps.cache_expires;
         #[cfg(not(feature = "with_peace"))]
         let expire = glob.local_config.data.beatmap_cache_timeout as i64;
 
@@ -198,7 +198,7 @@ pub async fn get_beatmap_from_local(
 ) -> Result<Data<PPbeatmap>, GetBeatmapError> {
     // Try get from beatmap cache
     if let Some(md5) = md5 {
-        if let Some(c) = caches.pp_beatmap_cache.read().await.get(md5) {
+        if let Some(c) = read_lock!(caches.pp_beatmap_cache).get(md5) {
             let b = c.get();
             debug!("[calculate_pp] Get beatmap {}({:?}) from cache.", md5, bid);
             return Ok(b);
@@ -232,12 +232,7 @@ pub async fn get_beatmap_from_local(
     };
 
     if let Some(bid) = bid {
-        if let Some(c) = caches
-            .pp_beatmap_cache
-            .read()
-            .await
-            .get(&format!("bid_{}", bid))
-        {
+        if let Some(c) = read_lock!(caches.pp_beatmap_cache).get(&format!("bid_{}", bid)) {
             let b = c.get();
             debug!("[calculate_pp] Get beatmap {:?}({}) from cache.", md5, bid);
             return Ok(b);
@@ -258,9 +253,9 @@ pub async fn get_beatmap_from_api(
     let start = Instant::now();
     let bid = if bid.is_none() {
         #[cfg(feature = "with_peace")]
-        let expires = glob.config.read().await.data.beatmaps.cache_expires;
+        let expires = read_lock!(glob.config).data.beatmaps.cache_expires;
         #[cfg(feature = "with_peace")]
-        let osu_api = glob.osu_api.read().await;
+        let osu_api = read_lock!(glob.osu_api);
 
         #[cfg(not(feature = "with_peace"))]
         let expires = glob.local_config.data.beatmap_cache_timeout as i64;
@@ -285,7 +280,7 @@ pub async fn get_beatmap_from_api(
     };
     // Download beatmap, and try parse it
     #[cfg(feature = "with_peace")]
-    let osu_api = glob.osu_api.read().await;
+    let osu_api = read_lock!(glob.osu_api);
     #[cfg(not(feature = "with_peace"))]
     let osu_api = &glob.osu_api;
 

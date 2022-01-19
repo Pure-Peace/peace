@@ -1,9 +1,9 @@
 use std::sync::atomic::AtomicI32;
 
-use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
 use peace_objects::beatmaps::CommonBeatmapCaches;
+use tokio::sync::RwLock;
 
 use crate::types::{Argon2Cache, TempTableCache};
 
@@ -29,27 +29,21 @@ impl Caches {
 
     #[inline(always)]
     pub async fn cache_temp_table(&self, table_name: String) -> Option<DateTime<Local>> {
-        self.temp_table_cache
-            .write()
-            .await
-            .insert(table_name, Local::now())
+        write_lock!(self.temp_table_cache).insert(table_name, Local::now())
     }
 
     #[inline(always)]
     pub async fn cache_password(&self, argon2: &String, password: &String) -> Option<String> {
-        self.argon2_cache
-            .write()
-            .await
-            .insert(argon2.to_string(), password.to_string())
+        write_lock!(self.argon2_cache).insert(argon2.to_string(), password.to_string())
     }
 
     #[inline(always)]
     pub async fn get_password(&self, argon2: &String) -> Option<String> {
-        self.argon2_cache.read().await.get(argon2).cloned()
+        read_lock!(self.argon2_cache).get(argon2).cloned()
     }
 
     #[inline(always)]
     pub async fn get_temp_table(&self, table_name: &String) -> Option<DateTime<Local>> {
-        self.temp_table_cache.read().await.get(table_name).cloned()
+        read_lock!(self.temp_table_cache).get(table_name).cloned()
     }
 }

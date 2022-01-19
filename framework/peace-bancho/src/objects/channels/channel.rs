@@ -132,7 +132,7 @@ impl Channel {
                 continue;
             }
             // Send them message
-            let p = player.read().await;
+            let p = read_lock!(player);
             p.enqueue(bancho_packets::send_message(
                 if p.settings.display_u_name {
                     &sender_u
@@ -162,7 +162,7 @@ impl Channel {
         if player_sessions.is_none() {
             // Temporary channel: for in channel players
             for player in self.id_map.values() {
-                player.read().await.enqueue(packet_data.clone()).await;
+                read_lock!(player).enqueue(packet_data.clone()).await;
             }
         } else {
             // Permanent channel: for all players
@@ -217,7 +217,7 @@ impl Channel {
     ) -> bool {
         let (player_name, player_id) = {
             let player_cloned = player.clone();
-            let mut player = player.write().await;
+            let mut player = write_lock!(player);
             if self.id_map.contains_key(&player.id) {
                 debug!(
                     "Player {}({}) is already in channel {}!",
@@ -277,7 +277,7 @@ impl Channel {
         let (player_name, player_id) = {
             let player = result.unwrap();
             self.player_count.fetch_sub(1, Ordering::SeqCst);
-            let mut player = player.write().await;
+            let mut player = write_lock!(player);
 
             player.channels.remove(&self.name);
             // Send it to player's client

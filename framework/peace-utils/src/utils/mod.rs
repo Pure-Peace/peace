@@ -18,3 +18,6 @@ pub mod web;
 
 #[cfg(feature = "crypto")]
 pub mod crypto;
+
+#[cfg(feature = "macro")]
+pub mod macros;

@@ -173,10 +173,7 @@ pub async fn update_user_stats(
             }
         };
 
-        let p = match bancho
-            .player_sessions
-            .read()
-            .await
+        let p = match read_lock!(bancho.player_sessions)
             .get_player_by_id(*player_id)
             .await
         {
@@ -196,7 +193,7 @@ pub async fn update_user_stats(
 
         // If player is online, we should update stats and send player_updates packet to them
         if let Some(result) = pp_acc_result {
-            let mut p = p.write().await;
+            let mut p = write_lock!(p);
             // If player's current mode is this mode,
             // update current mode then clone into stats cache
             if p.game_status.mode == mode {

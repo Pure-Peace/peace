@@ -19,11 +19,7 @@ use crate::{
 
 macro_rules! get_login {
     ($ctx:ident, $data:ident, $failed:ident) => {
-        match $ctx
-            .bancho
-            .player_sessions
-            .read()
-            .await
+        match read_lock!($ctx.bancho.player_sessions)
             .get_login_by_name(
                 &$data.username,
                 &$data.password_hash,
@@ -82,7 +78,7 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     // Read config
     let (update_enabled, update_expires) = {
-        let c = ctx.bancho.config.read().await;
+        let c = read_lock!(ctx.bancho.config);
         (
             c.data.client_update.enabled,
             c.data.client_update.cache_expires,
@@ -225,7 +221,7 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
     let beatmap_ban = beatmap_ban.unwrap();
 
     let player = get_login!(ctx, data, done);
-    let mut player = player.write().await;
+    let mut player = write_lock!(player);
     warn!(
         "lastfm detected hack {} by player {}({})",
         beatmap_ban, player.name, player.id
@@ -264,7 +260,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
     let player = get_login!(ctx, data, failed);
 
     let (player_id, player_name) = {
-        let p = player.read().await;
+        let p = read_lock!(player);
         (p.id, p.name.clone())
     };
 
@@ -381,7 +377,7 @@ pub async fn osu_add_favourite<'a>(ctx: &Context<'a>) -> HttpResponse {
     // Get login
     let player = get_login!(ctx, data, failed);
 
-    let player_id = player.read().await.id;
+    let player_id = read_lock!(player).id;
 
     if let Ok(_) = ctx
         .database
@@ -417,7 +413,7 @@ pub async fn osu_get_favourites<'a>(ctx: &Context<'a>) -> HttpResponse {
     // Get login
     let player = get_login!(ctx, data, failed);
 
-    let player_id = player.read().await.id;
+    let player_id = read_lock!(player).id;
 
     if let Ok(rows) = ctx
         .database
@@ -455,9 +451,7 @@ pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
     let player = get_login!(ctx, data, failed);
 
     // Convert to string
-    let friends: String = player
-        .read()
-        .await
+    let friends: String = read_lock!(player)
         .friends
         .iter()
         .map(|id| id.to_string() + "\n")
@@ -473,11 +467,7 @@ pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///
 /// String Array
 pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
-    if let Some(background_images) = &ctx
-        .bancho
-        .config
-        .read()
-        .await
+    if let Some(background_images) = &read_lock!(ctx.bancho.config)
         .data
         .server
         .seasonal_backgrounds
@@ -517,7 +507,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
 ///         &[&beatmap.md5],
 ///     )
 ///     .await;
-/// 
+///
 /// let personal_best = ctx
 ///     .database
 ///     .pg
@@ -600,7 +590,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
     debug!("osu_osz2_get_scores, data: {:?}", data);
     let (all_beatmaps_not_submitted, all_beatmaps_have_scoreboard) = {
-        let c = ctx.bancho.config.read().await;
+        let c = read_lock!(ctx.bancho.config);
         (
             c.data.beatmaps.all_not_submitted,
             c.data.beatmaps.all_have_scoreboard,
@@ -610,7 +600,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
     // Player handlers
     // try update user stats, get some info, etc.
     let (pp_board, player_id, player_country, using_u_name) = {
-        let mut player = player.write().await;
+        let mut player = write_lock!(player);
 
         // Hack detected
         if data.a > 0 {
@@ -650,10 +640,7 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
 
         // send it stats
         if let Some(user_stats_packet) = user_stats_packet {
-            ctx.bancho
-                .player_sessions
-                .read()
-                .await
+            read_lock!(ctx.bancho.player_sessions)
                 .enqueue_all(&user_stats_packet)
                 .await;
         }
@@ -671,8 +658,8 @@ pub async fn osu_osz2_get_scores<'a>(ctx: &Context<'a>) -> HttpResponse {
         // Try get beatmap with MD5, Setid and filename,
         // from local cache, database cache, and osu!api.
         // if get a beatmap, will auto cache it.
-        let expires = ctx.bancho.config.read().await.data.beatmaps.cache_expires;
-        let osu_api = ctx.bancho.osu_api.read().await;
+        let expires = read_lock!(ctx.bancho.config).data.beatmaps.cache_expires;
+        let osu_api = read_lock!(ctx.bancho.osu_api);
         let b = Beatmap::get(
             Some(&data.beatmap_hash),
             None,

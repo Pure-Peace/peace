@@ -51,7 +51,7 @@ pub async fn osu_register(
     bancho: Data<Bancho>,
     caches: Data<Caches>,
 ) -> HttpResponse {
-    let cfg_r = bancho.config.read().await;
+    let cfg_r = read_lock!(bancho.config);
     let cfg = &cfg_r.data;
     let r = &cfg.in_game_registration;
     // Register closed
@@ -197,11 +197,7 @@ pub async fn osu_register(
         let password_argon2 = peace_utils::passwords::argon2_encode(password_md5.as_bytes()).await;
 
         // Cache it
-        caches
-            .argon2_cache
-            .write()
-            .await
-            .insert(password_argon2.clone(), password_md5);
+        write_lock!(caches.argon2_cache).insert(password_argon2.clone(), password_md5);
 
         // Save to database
         // No need to do anything else, the trigger in the database will be completed:

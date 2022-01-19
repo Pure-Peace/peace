@@ -297,7 +297,7 @@ impl Player {
         argon2_cache: &RwLock<Argon2Cache>,
     ) -> bool {
         // Try read password hash from argon2 cache
-        let cached_password_hash = { argon2_cache.read().await.get(&self._password).cloned() };
+        let cached_password_hash = { read_lock!(argon2_cache).get(&self._password).cloned() };
 
         // Cache hitted, checking
         if let Some(cached_password_hash) = cached_password_hash {
@@ -310,10 +310,7 @@ impl Player {
         if verify_result {
             // If password is correct, cache it
             // key = argon2 cipher, value = password hash
-            argon2_cache
-                .write()
-                .await
-                .insert(self._password.clone(), password_hash.clone());
+            write_lock!(argon2_cache).insert(self._password.clone(), password_hash.clone());
         }
 
         verify_result

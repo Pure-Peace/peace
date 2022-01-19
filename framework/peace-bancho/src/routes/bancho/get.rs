@@ -5,7 +5,7 @@ pub async fn handler(counter: Data<IntCounterVec>, bancho: Data<Bancho>) -> Http
         .with_label_values(&["/bancho", "get", "start"])
         .inc();
 
-    let mut render = bancho.render_get.write().await;
+    let mut render = write_lock!(bancho.render_get);
     render.update().await;
 
     HttpResponse::Ok()

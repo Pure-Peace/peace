@@ -141,11 +141,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // Get login
     let player_name = &s.player_name;
-    let player = match ctx
-        .bancho
-        .player_sessions
-        .read()
-        .await
+    let player = match read_lock!(ctx.bancho.player_sessions)
         .get_login_by_name(player_name, &submit_data.password, &ctx.caches.argon2_cache)
         .await
     {
@@ -162,7 +158,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // Get configs
     let (maintenance_enabled, auto_ban_enabled, auto_ban_whitelist, auto_ban_pp, front_url) = {
-        let cfg_r = ctx.bancho.config.read().await;
+        let cfg_r = read_lock!(ctx.bancho.config);
         let c = &cfg_r.data;
         (
             c.maintenance.enabled,
@@ -173,7 +169,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         )
     };
 
-    let mut player_w = player.write().await;
+    let mut player_w = write_lock!(player);
     let player_id = player_w.id;
     let old_stats = player_w.stats.clone();
 
@@ -202,10 +198,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // Send it stats
     if let Some(user_stats_packet) = user_stats_packet {
-        ctx.bancho
-            .player_sessions
-            .read()
-            .await
+        read_lock!(ctx.bancho.player_sessions)
             .enqueue_all(&user_stats_packet)
             .await;
     }
@@ -217,8 +210,8 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
 
     // Get beatmap
     let beatmap = {
-        let expires = ctx.bancho.config.read().await.data.beatmaps.cache_expires;
-        let osu_api = ctx.bancho.osu_api.read().await;
+        let expires = read_lock!(ctx.bancho.config).data.beatmaps.cache_expires;
+        let osu_api = read_lock!(ctx.bancho.osu_api);
         match Beatmap::get(
             Some(&s.beatmap_md5),
             None,
@@ -431,7 +424,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
         }
     };
 
-    let mut player_w = player.write().await;
+    let mut player_w = write_lock!(player);
 
     // Update player's stats
     {

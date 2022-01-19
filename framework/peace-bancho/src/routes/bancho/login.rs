@@ -15,7 +15,7 @@ pub async fn handler(
     counter: Data<IntCounterVec>,
     geo_db: Data<Option<Reader<Mmap>>>,
 ) -> HttpResponse {
-    let cfg_r = bancho.config.read().await;
+    let cfg_r = read_lock!(bancho.config);
     let cfg = &cfg_r.data;
 
     // Login is currently disabled
@@ -36,7 +36,9 @@ pub async fn handler(
             .set_header("cho-protocol", "19")
             .body(
                 resp.add(bancho_packets::login_reply(LoginFailed::InvalidCredentials))
-                    .add(bancho_packets::notification("You are not allowed to login!"))
+                    .add(bancho_packets::notification(
+                        "You are not allowed to login!",
+                    ))
                     .write_out(),
             );
     }
@@ -44,10 +46,7 @@ pub async fn handler(
     // Online user limit check
     if cfg.online_user_limit.enabled {
         // Get online players
-        let online_users = bancho
-            .player_sessions
-            .read()
-            .await
+        let online_users = read_lock!(bancho.player_sessions)
             .player_count
             .load(Ordering::SeqCst);
 

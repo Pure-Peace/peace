@@ -19,8 +19,9 @@ all = [
     "async_file",
     "peace",
     "crypto",
+    "macro"
 ]
-with_peace = ["bancho", "geoip", "passwords", "serdes", "web", "peace", "crypto"]
+with_peace = ["bancho", "geoip", "passwords", "serdes", "web", "peace", "crypto", "macro"]
 serdes = ["chrono", "serde"]
 passwords = ["lazy_static", "rand", "rust-argon2"]
 geoip = ["maxminddb", "memmap", "serde_json", "peace-constants"]
@@ -39,6 +40,7 @@ python3 = ["pyo3"]
 async_file = ["tokio", "md-5"]
 peace = ["peace-database", "peace-constants"]
 crypto = ["simple-rijndael"]
+macro = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

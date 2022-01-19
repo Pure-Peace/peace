@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate peace_utils;
+
 pub mod beatmaps;
 pub mod osu_api;
 #[cfg(feature = "peace_api")]

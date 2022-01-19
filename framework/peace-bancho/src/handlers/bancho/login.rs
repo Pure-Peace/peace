@@ -541,7 +541,7 @@ pub async fn login(
     let player_priv = player.privileges;
 
     // Lock the PlayerSessions before we handle it
-    let mut player_sessions = bancho.player_sessions.write().await;
+    let mut player_sessions = write_lock!(bancho.player_sessions);
 
     // Check is the user_id already login,
     // if true, logout old session
@@ -562,7 +562,7 @@ pub async fn login(
 
     // Send new user to online users, and add online users to this new user
     for online_player in player_sessions.token_map.values() {
-        let online_player = online_player.read().await;
+        let online_player = read_lock!(online_player);
 
         online_player
             .enqueue(
@@ -579,8 +579,8 @@ pub async fn login(
     }
 
     // Join player into channel
-    for channel in bancho.channel_list.read().await.values() {
-        let mut c = channel.write().await;
+    for channel in read_lock!(bancho.channel_list).values() {
+        let mut c = write_lock!(channel);
         // Have not privileges to join the channel
         if (player_priv & c.read_priv) <= 0 {
             continue;

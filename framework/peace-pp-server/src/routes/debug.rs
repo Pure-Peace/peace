@@ -39,7 +39,7 @@ pub async fn server_stop(sender: Data<UnboundedSender<Option<Server>>>) -> HttpR
 #[get("/clear_cache")]
 pub async fn clear_cache(caches: Data<Caches>) -> HttpResponse {
     let start = Instant::now();
-    caches.pp_beatmap_cache.write().await.clear();
+    write_lock!(caches.pp_beatmap_cache).clear();
     let end = start.elapsed();
     HttpResponse::Ok().body(format!("clear_cache done in: {:?}", end))
 }

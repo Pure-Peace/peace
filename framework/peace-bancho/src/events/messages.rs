@@ -26,7 +26,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         x => x.to_string(),
     };
 
-    let cfg_r = ctx.bancho.config.read().await;
+    let cfg_r = read_lock!(ctx.bancho.config);
     let cfg = &cfg_r.data;
 
     // Limit the length of message content
@@ -43,10 +43,10 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     }
 
     // Check channel
-    let channel_list = ctx.bancho.channel_list.read().await;
+    let channel_list = read_lock!(ctx.bancho.channel_list);
     match channel_list.get(&channel_name) {
         Some(channel) => {
-            let c = channel.read().await;
+            let c = read_lock!(channel);
             // TODO: check player's priv?
 
             // Send message done
@@ -85,7 +85,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         return None;
     }
 
-    let cfg_r = ctx.bancho.config.read().await;
+    let cfg_r = read_lock!(ctx.bancho.config);
     let cfg = &cfg_r.data;
 
     // Limit the length of message content
@@ -101,14 +101,14 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
         message.content = message.content.replace(i, "**")
     }
 
-    let player_sessions = ctx.bancho.player_sessions.read().await;
+    let player_sessions = read_lock!(ctx.bancho.player_sessions);
     let name_map = &player_sessions.name_map;
 
     // Find target player
     match name_map.get(&message.target) {
         Some(target) => {
             // Active player (sender)
-            let target = target.read().await;
+            let target = read_lock!(target);
             let player = ctx.weak_player.upgrade();
 
             if player.is_none() {
@@ -118,7 +118,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
                 );
                 return None;
             };
-            let player = player.as_ref().unwrap().read().await;
+            let player = read_lock!(player.as_ref()?);
 
             let target_name = if player.settings.display_u_name {
                 target.try_u_name()
