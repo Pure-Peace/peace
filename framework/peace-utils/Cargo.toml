@@ -64,8 +64,8 @@ serde = { version="1.0", features=["derive"], optional=true }
 # web
 serde_qs = { version="0.8", optional=true }
 hashbrown = { version="0.11", optional=true }
-ntex-multipart = { git="https://github.com/ntex-rs/ntex-extras", branch="master", optional=true }
-ntex = { version="0.3", optional=true }
+ntex-multipart = { git="https://github.com/ntex-rs/ntex-extras", rev="4f4258a533ab5015cb14171c7d1aa584a1bf6c18", optional=true }
+ntex = { version = "0.5", features = ["tokio"], optional = true }
 futures = { version="0.3", optional=true }
 # python
 pyo3 = { version="0.13.2", features=["auto-initialize"], optional=true }

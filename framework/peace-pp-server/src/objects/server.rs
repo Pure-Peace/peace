@@ -16,6 +16,7 @@ use {
     ntex::web::types::Query,
 };
 
+use ntex::time::Seconds;
 use tokio::sync::Mutex;
 
 use super::glob::Glob;
@@ -93,7 +94,7 @@ impl PPserver {
                     .data(counter.clone())
                     .configure(|service_cfg| routes::init(service_cfg, &s))
             })
-            .shutdown_timeout(2)
+            .shutdown_timeout(Seconds(2))
             .keep_alive(120)
             .bind(&self.addr)
             .unwrap()

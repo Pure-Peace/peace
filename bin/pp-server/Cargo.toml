@@ -28,7 +28,7 @@ with_peace = [
 ]
 
 [dependencies]
-ntex = "0.3"
+ntex = { version = "0.5", features = ["tokio"] }
 
 peace-pp-server = { path = "../../framework/peace-pp-server" }
 peace-constants = { path = "../../framework/peace-constants" }

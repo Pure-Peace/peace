@@ -6,11 +6,16 @@ edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace"
 description = "osu! server written in Rust."
+default-run = "peace-server"
+
+[[bin]]
+name = "peace-server"
+path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ntex = "0.3"
+ntex = { version = "0.5", features = ["tokio"] }
 
 peace-database = { path = "../../framework/peace-database", features = ["with_peace"], version = "*" }
 peace-settings = { path = "../../framework/peace-settings", version = "*" }

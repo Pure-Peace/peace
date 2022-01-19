@@ -35,7 +35,7 @@ field_names = "0.1.1"
 hashbrown = "0.11"
 json = "0.12.4"
 log = "0.4.14"
-ntex = "0.3"
+ntex = { version = "0.5", features = ["tokio"] }
 prometheus = { version = "0.12", features = ["process"] }
 reqwest = { version = "0.11", features = [
     "rustls-tls",
@@ -58,8 +58,11 @@ tokio-postgres = { version = "0.7", features = [
 peace-performance = { version = "0.4.0" }
 
 peace-constants = { path = "../peace-constants" }
-peace-database = { path = "../peace-database", features = ["with_peace"], optional = true }
-peace-objects = { path = "../peace-objects", features = ["osu_file_downloader"], optional = true }
+peace-database = { path = "../peace-database", features = [
+    "with_peace",
+], optional = true }
+peace-objects = { path = "../peace-objects", features = [
+    "osu_file_downloader",
+], optional = true }
 peace-settings = { path = "../peace-settings" }
 peace-utils = { path = "../peace-utils", features = ["web", "async_file"] }
-

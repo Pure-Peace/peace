@@ -24,7 +24,7 @@ pub async fn get_beatmap_rating(beatmap_md5: &String, database: &Database) -> Op
 
 #[inline(always)]
 pub async fn save_replay(
-    score_file: bytes::Bytes,
+    score_file: Vec<u8>,
     score_id: i64,
     data_dir: &str,
     mode: &peace_constants::GameMode,

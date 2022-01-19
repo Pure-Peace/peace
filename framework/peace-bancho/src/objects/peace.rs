@@ -13,6 +13,7 @@ use {
 
 use crate::{handlers::bancho, objects::Bancho, objects::Caches, routes};
 
+use ntex::time::Seconds;
 use peace_settings::local::{LocalConfig, LocalConfigData};
 use tokio::sync::Mutex;
 
@@ -105,7 +106,7 @@ impl Peace {
                     .data(counter.clone())
                     .configure(|service_cfg| routes::peace::init(service_cfg, &s))
             })
-            .shutdown_timeout(2)
+            .shutdown_timeout(Seconds(2))
             .keep_alive(120)
             .bind(&self.addr)
             .unwrap()

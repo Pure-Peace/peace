@@ -1,5 +1,4 @@
 use base64::decode;
-use bytes::Bytes;
 use chrono::{DateTime, Local};
 use derivative::Derivative;
 use tokio_pg_mapper::FromTokioPostgresRow;
@@ -139,7 +138,7 @@ pub struct SubmitModular {
     #[derivative(Debug = "ignore")]
     pub iv: Option<Vec<u8>>, // iv (initialization vector base64 -> bytes)
     #[derivative(Debug = "ignore")]
-    pub score_file: Option<Bytes>, // score (replay file, octet-stream bytes lzma)
+    pub score_file: Option<Vec<u8>>, // score (replay file, octet-stream bytes lzma)
 }
 
 impl SubmitModular {

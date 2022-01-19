@@ -14,7 +14,7 @@ use {
 #[derive(Debug)]
 pub struct MultipartData {
     pub forms: HashMap<String, String>,
-    pub files: HashMap<String, Bytes>,
+    pub files: HashMap<String, Vec<u8>>,
 }
 
 impl MultipartData {
@@ -31,7 +31,7 @@ impl MultipartData {
     }
 
     #[inline(always)]
-    pub fn file(&mut self, key: &str) -> Option<Bytes> {
+    pub fn file(&mut self, key: &str) -> Option<Vec<u8>> {
         self.files.remove(key)
     }
 }
@@ -48,7 +48,7 @@ pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
                     if let Some(key) = dis.name {
                         while let Some(Ok(chunk)) = field.next().await {
                             if dis.filename.is_some() {
-                                files.insert(key.to_string(), chunk);
+                                files.insert(key.to_string(), chunk.to_vec());
                             } else {
                                 forms.insert(
                                     key.to_string(),
