@@ -1,4 +1,3 @@
-use base64::decode;
 use chrono::{DateTime, Local};
 use derivative::Derivative;
 use tokio_pg_mapper::FromTokioPostgresRow;
@@ -147,10 +146,7 @@ impl SubmitModular {
         Some(Self {
             quit: data.form::<i32>("x")? == 1,
             fail_time: data.form("ft")?,
-            score: match decode(data.form::<String>("score")?) {
-                Ok(s) => Some(s),
-                Err(_err) => return None,
-            },
+            score: base64::decode(data.form::<String>("score")?).ok(),
             fs: data.form("fs")?,
             beatmap_hash: data.form("bmk")?,
             c1: data.form("c1")?,
@@ -158,10 +154,7 @@ impl SubmitModular {
             password: data.form("pass")?,
             osu_version: data.form("osuver")?,
             // s: data.form("s")?, what
-            iv: match decode(data.form::<String>("iv")?) {
-                Ok(s) => Some(s),
-                Err(_err) => return None,
-            },
+            iv: base64::decode(data.form::<String>("iv")?).ok(),
             score_file: data.file("score"),
         })
     }
