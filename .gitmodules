@@ -1,3 +1,6 @@
 [submodule "framework/simple-rijndael"]
 	path = framework/simple-rijndael
 	url = https://github.com/Pure-Peace/simple-rijndael
+[submodule "framework/peace-performance"]
+	path = framework/peace-performance
+	url = https://github.com/Pure-Peace/peace-performance
