@@ -1,0 +1,3 @@
+[submodule "framework/simple-rijndael"]
+	path = framework/simple-rijndael
+	url = https://github.com/Pure-Peace/simple-rijndael
