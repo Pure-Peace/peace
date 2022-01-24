@@ -1,0 +1,17 @@
+[package]
+name = "peace-geoip"
+version = "0.1.0"
+authors = ["PurePeace <940857703@qq.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace"
+description = "Utils for GeoLite2-City.mmdb"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+maxminddb = { version = "0.21", features = ["mmap"] }
+memmap2 = { version = "0.3" }
+serde_json = { version = "1" }
+serde = { version = "1", features = ["derive"] }

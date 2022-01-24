@@ -10,6 +10,7 @@ members = [
     "framework/peace-objects",
     "framework/peace-utils",
     "framework/peace-settings",
+    "framework/peace-geoip"
 ]
 
 # link-time-optimization
