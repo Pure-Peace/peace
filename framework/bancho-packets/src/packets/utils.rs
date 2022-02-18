@@ -98,5 +98,7 @@ pub fn osu_write<W>(t: W) -> Vec<u8>
 where
     W: OsuWrite,
 {
-    t.osu_write()
+    let mut buf = Vec::new();
+    t.osu_write(&mut buf);
+    buf
 }

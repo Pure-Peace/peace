@@ -114,21 +114,23 @@ pub mod macros {
     macro_rules! data {
     ($item:expr) => {
         {
-            $item.osu_write()
+            let mut buf = Vec::with_capacity(30);
+            item.osu_write(&mut buf);
+            buf
         }
     };
     ($($item:expr),+) => {
         {
-            let mut data = Vec::with_capacity(30);
-            $(data.extend($item.osu_write());)+
-            data
+            let mut buf = Vec::with_capacity(30);
+            $($item.osu_write(&mut buf);)+
+            buf
         }
     };
     ({ $capacity:expr }; $($item:expr),+) => {
         {
-            let mut data = Vec::with_capacity($capacity);
-            $(data.extend($item.osu_write());)+
-            data
+            let mut buf = Vec::with_capacity($capacity);
+            $($item.osu_write(&mut buf);)+
+            buf
         }
     }
 }
@@ -194,7 +196,7 @@ pub mod macros {
     ($packet_id:expr,$($data:expr),*) => {
         {
             let mut p = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
-            $(p.extend($data.osu_write());)*
+            $($data.osu_write(&mut p);)*
             out_packet!(p)
         }
     }

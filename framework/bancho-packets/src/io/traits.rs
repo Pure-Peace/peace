@@ -43,15 +43,15 @@ pub mod writing {
     use crate::io::utils::write_uleb128;
 
     pub trait OsuWrite {
-        fn osu_write(self) -> Vec<u8>;
+        fn osu_write(self, buf: &mut Vec<u8>);
     }
 
     macro_rules! impl_number {
         ($($t:ty),+) => {
             $(impl OsuWrite for $t {
                 #[inline(always)]
-                fn osu_write(self) -> Vec<u8> {
-                    self.to_le_bytes().into()
+                fn osu_write(self, buf: &mut Vec<u8>) {
+                    buf.extend(self.to_le_bytes())
                 }
             })+
         }
@@ -60,13 +60,11 @@ pub mod writing {
     macro_rules! impl_number_list {
         () => {
             #[inline(always)]
-            fn osu_write(self) -> Vec<u8> {
-                let mut ret = Vec::with_capacity(self.len() + 2);
-                ret.extend((self.len() as u16).to_le_bytes());
+            fn osu_write(self, buf: &mut Vec<u8>) {
+                buf.extend((self.len() as u16).to_le_bytes());
                 for int in self {
-                    ret.append(&mut int.osu_write());
+                    buf.extend(int.to_le_bytes())
                 }
-                ret
             }
         };
     }
@@ -83,17 +81,15 @@ pub mod writing {
         ($($t:ty),+) => {
             $(impl OsuWrite for $t {
                 #[inline(always)]
-                fn osu_write(self) -> Vec<u8> {
+                fn osu_write(self, buf: &mut Vec<u8>) {
                     let byte_length = self.len();
-                    let mut data: Vec<u8> = Vec::with_capacity(byte_length + 3);
                     if byte_length > 0 {
-                        data.push(11);
-                        data.extend(write_uleb128(byte_length as u32));
-                        data.extend(self.as_bytes());
+                        buf.push(11);
+                        buf.extend(write_uleb128(byte_length as u32));
+                        buf.extend(self.as_bytes());
                     } else {
-                        data.push(0);
+                        buf.push(0);
                     }
-                    data
                 }
             })+
         }
@@ -101,33 +97,29 @@ pub mod writing {
 
     impl OsuWrite for u8 {
         #[inline(always)]
-        fn osu_write(self) -> Vec<u8> {
-            vec![self]
+        fn osu_write(self, buf: &mut Vec<u8>) {
+            buf.push(self);
         }
     }
 
     impl OsuWrite for Vec<u8> {
         #[inline(always)]
-        fn osu_write(self) -> Vec<u8> {
-            self
+        fn osu_write(mut self, buf: &mut Vec<u8>) {
+            buf.append(&mut self);
         }
     }
 
     impl OsuWrite for &Vec<u8> {
         #[inline(always)]
-        fn osu_write(self) -> Vec<u8> {
-            self.clone()
+        fn osu_write(self, buf: &mut Vec<u8>) {
+            buf.extend(self);
         }
     }
 
     impl OsuWrite for bool {
         #[inline(always)]
-        fn osu_write(self) -> Vec<u8> {
-            if self {
-                vec![1]
-            } else {
-                vec![0]
-            }
+        fn osu_write(self, buf: &mut Vec<u8>) {
+            buf.push(if self { 1 } else { 0 });
         }
     }
 
