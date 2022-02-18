@@ -1,4 +1,7 @@
-use std::{net::IpAddr, path::Path};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    path::Path,
+};
 
 use serde::Serialize;
 
@@ -7,14 +10,23 @@ pub use memmap2::Mmap;
 
 const LANG: &str = "en";
 
-#[derive(Serialize, Debug, Clone, Default)]
+#[derive(Serialize, Debug, Clone)]
 pub struct GeoipData {
-    pub ip_address: String,
+    pub ip_address: IpAddr,
     pub location: Location,
     pub continent: Continent,
     pub country: Country,
     pub region: Region,
     pub city: City,
+}
+
+impl Default for GeoipData {
+    fn default() -> Self {
+        Self {
+            ip_address: IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -52,7 +64,7 @@ pub struct City {
 }
 
 pub trait FromMaxmindDB {
-    fn city(&self, address: IpAddr) -> Result<GeoipData, MaxMindDBError>;
+    fn geo_data(&self, ip_address: IpAddr) -> Result<GeoipData, MaxMindDBError>;
 }
 
 macro_rules! map_to_string {
@@ -68,10 +80,10 @@ macro_rules! get_name {
 }
 
 impl FromMaxmindDB for Reader<Mmap> {
-    fn city(&self, address: IpAddr) -> Result<GeoipData, MaxMindDBError> {
-        let geo_data = self.lookup::<geoip2::City>(address)?;
+    fn geo_data(&self, ip_address: IpAddr) -> Result<GeoipData, MaxMindDBError> {
+        let data = self.lookup::<geoip2::City>(ip_address)?;
 
-        let location = geo_data
+        let location = data
             .location
             .map(|lo| Location {
                 latitude: lo.latitude,
@@ -80,7 +92,7 @@ impl FromMaxmindDB for Reader<Mmap> {
             })
             .unwrap_or_default();
 
-        let continent = geo_data
+        let continent = data
             .continent
             .map(|co| Continent {
                 geoname_id: co.geoname_id,
@@ -89,7 +101,7 @@ impl FromMaxmindDB for Reader<Mmap> {
             })
             .unwrap_or_default();
 
-        let country = geo_data
+        let country = data
             .country
             .map(|c| Country {
                 geoname_id: c.geoname_id,
@@ -98,7 +110,7 @@ impl FromMaxmindDB for Reader<Mmap> {
             })
             .unwrap_or_default();
 
-        let region = geo_data
+        let region = data
             .subdivisions
             .as_ref()
             .filter(|regions| !regions.is_empty())
@@ -110,7 +122,7 @@ impl FromMaxmindDB for Reader<Mmap> {
             })
             .unwrap_or_default();
 
-        let city = geo_data
+        let city = data
             .city
             .map(|c| City {
                 geoname_id: c.geoname_id,
@@ -119,7 +131,7 @@ impl FromMaxmindDB for Reader<Mmap> {
             .unwrap_or_default();
 
         Ok(GeoipData {
-            ip_address: address.to_string(),
+            ip_address,
             location,
             continent,
             country,

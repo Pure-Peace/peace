@@ -1,11 +1,11 @@
 [package]
-name = "peace-geoip"
-version = "0.1.0"
+name = "simple-geoip"
+version = "0.1.1"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace"
-description = "Utils for GeoLite2-City.mmdb"
+description = "Simple and practical geo-ip tools"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
