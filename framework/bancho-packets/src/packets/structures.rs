@@ -11,13 +11,13 @@ pub struct BanchoMessage {
     pub sender_id: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Packet<'a> {
     pub id: PacketId,
     pub payload: Option<&'a [u8]>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PacketHeader {
     pub id: PacketId,
     pub payload_length: u32,

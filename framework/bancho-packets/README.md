@@ -29,7 +29,7 @@ let data = vec![
 ];
 
 // Create reader
-let mut reader = PacketReader::from_vec(data);
+let mut reader = PacketReader::new(data);
 
 // Read packets
 while let Some(packet) = reader.next() {

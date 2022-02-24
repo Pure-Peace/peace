@@ -1,15 +1,15 @@
 use num_traits::FromPrimitive;
 use std::convert::TryInto;
-use std::str;
 
 use crate::{
-    io::{traits::reading::NumberAsBytes, utils::read_uleb128},
-    packets::{BanchoMessage, Packet, PacketHeader, PacketId},
+    packets::{Packet, PacketHeader, PacketId},
+    read_uleb128,
+    traits::reading::OsuRead,
 };
 
 pub struct PayloadReader<'a> {
-    pub payload: &'a [u8],
-    pub index: usize,
+    pub(crate) payload: &'a [u8],
+    pub(crate) index: usize,
 }
 
 impl<'a> PayloadReader<'a> {
@@ -19,86 +19,85 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline(always)]
-    fn read(&mut self, length: usize) -> Option<&[u8]> {
-        let data = self.payload.get(self.index..self.index + length)?;
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    #[inline(always)]
+    pub fn payload(&self) -> &'a [u8] {
+        self.payload
+    }
+
+    #[inline(always)]
+    pub fn add_index(&mut self, offset: usize) -> usize {
+        self.index += offset;
+        self.index
+    }
+
+    #[inline(always)]
+    pub fn sub_index(&mut self, offset: usize) -> usize {
+        self.index -= offset;
+        self.index
+    }
+
+    #[inline(always)]
+    pub(crate) fn next(&mut self, length: usize) -> Option<&[u8]> {
         self.index += length;
-        Some(data)
+        Some(self.payload.get(self.index - length..self.index)?)
     }
 
     #[inline(always)]
-    pub fn read_integer<N: NumberAsBytes<N>>(&mut self) -> Option<N> {
-        let data = self.read(std::mem::size_of::<N>())?;
-        N::from_le_bytes(data)
+    pub fn read<T>(&mut self) -> Option<T>
+    where
+        T: OsuRead<T>,
+    {
+        T::read(self)
     }
 
     #[inline(always)]
-    pub fn read_i32_list<N: NumberAsBytes<N>>(&mut self) -> Option<Vec<i32>> {
-        let length_data = self.read(std::mem::size_of::<N>())?;
-        let int_count = N::from_le_bytes(length_data)?.as_usize();
-
-        let mut data: Vec<i32> = Vec::with_capacity(int_count);
-        for _ in 0..int_count {
-            data.push(i32::from_le_bytes(match self.read(4)?.try_into() {
-                Ok(u) => u,
-                Err(_) => return None,
-            }));
-        }
-        Some(data)
-    }
-
-    #[inline(always)]
-    pub fn read_message(&mut self) -> Option<BanchoMessage> {
-        Some(BanchoMessage {
-            sender: self.read_string()?,
-            content: self.read_string()?,
-            target: self.read_string()?,
-            sender_id: self.read_integer()?,
-        })
-    }
-
-    #[inline(always)]
-    pub fn read_string(&mut self) -> Option<String> {
-        if self.payload.get(self.index)? != &11u8 {
-            return None;
-        }
-        self.index += 1;
-        let data_length = self.read_uleb128()? as usize;
-
-        let cur = self.index;
-        self.index += data_length;
-        let data = self.payload.get(cur..self.index)?;
-
-        Some(str::from_utf8(data).ok()?.into())
-    }
-
-    #[inline(always)]
-    pub fn read_uleb128(&mut self) -> Option<u32> {
+    pub(crate) fn read_uleb128(&mut self) -> Option<u32> {
         let (val, length) = read_uleb128(&self.payload.get(self.index..)?)?;
         self.index += length;
         Some(val)
     }
 }
 
-pub struct PacketReader {
-    pub buf: Vec<u8>,
-    pub index: usize,
-    pub payload_length: usize,
-    pub finish: bool,
-    pub payload_count: u16,
-    pub packet_count: u16,
+pub struct PacketReader<'a> {
+    buf: &'a [u8],
+    index: usize,
+    payload_length: usize,
+    finish: bool,
 }
 
-impl PacketReader {
+impl<'a> PacketReader<'a> {
     #[inline(always)]
-    pub fn from_vec(body: Vec<u8>) -> Self {
+    pub fn new(buf: &'a [u8]) -> Self {
         PacketReader {
-            buf: body,
+            buf,
             index: 0,
             payload_length: 0,
             finish: false,
-            payload_count: 0,
-            packet_count: 0,
         }
+    }
+
+    #[inline(always)]
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    #[inline(always)]
+    pub fn buf(&self) -> &'a [u8] {
+        self.buf
+    }
+
+    #[inline(always)]
+    pub fn payload_len(&self) -> usize {
+        self.payload_length
+    }
+
+    #[inline(always)]
+    pub fn is_finished(&self) -> bool {
+        self.finish
     }
 
     #[inline(always)]
@@ -107,8 +106,6 @@ impl PacketReader {
         self.finish = false;
         self.index = 0;
         self.payload_length = 0;
-        self.payload_count = 0;
-        self.packet_count = 0;
     }
 
     #[inline(always)]
@@ -125,13 +122,11 @@ impl PacketReader {
 
         // Get packet id and payload length
         let PacketHeader { id, payload_length } = PacketReader::read_header(header)?;
-        self.packet_count += 1;
 
         // Read the payload
         let payload = if payload_length == 0 {
             None
         } else {
-            self.payload_count += 1;
             self.payload_length = payload_length as usize;
             // Skip this payload at next call
             self.index += self.payload_length;
@@ -145,14 +140,9 @@ impl PacketReader {
     /// Read packet header: (type, length)
     pub fn read_header(header: &[u8]) -> Option<PacketHeader> {
         let id = *header.get(0)?;
-        let packet_id = PacketId::from_u8(id).unwrap_or_else(|| {
-            println!("[PacketReader]: unknown packet id({})", id);
-            PacketId::OSU_UNKNOWN_PACKET
-        });
-        let payload_length = u32::from_le_bytes(header[3..=6].try_into().ok()?);
         Some(PacketHeader {
-            id: packet_id,
-            payload_length,
+            id: PacketId::from_u8(id).unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
+            payload_length: u32::from_le_bytes(header[3..=6].try_into().ok()?),
         })
     }
 }

@@ -115,7 +115,7 @@ pub mod macros {
     ($item:expr) => {
         {
             let mut buf = Vec::with_capacity(30);
-            item.osu_write(&mut buf);
+            $item.osu_write(&mut buf);
             buf
         }
     };
