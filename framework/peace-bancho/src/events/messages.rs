@@ -1,5 +1,5 @@
 use super::depends::*;
-use bancho_packets::PayloadReader;
+use bancho_packets::{BanchoMessage, PayloadReader};
 
 #[inline(always)]
 /// #1: OSU_SEND_PUBLIC_MESSAGE
@@ -7,7 +7,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let mut message = payload.read_message()?;
+    let mut message = payload.read::<BanchoMessage>()?;
 
     let channel_name = match message.target.as_str() {
         "#spectator" => {
@@ -78,7 +78,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
 
     let mut payload = PayloadReader::new(ctx.payload);
-    let mut message = payload.read_message()?;
+    let mut message = payload.read::<BanchoMessage>()?;
 
     // BanchoBot? current not exists
     if message.target == "BanchoBot" {

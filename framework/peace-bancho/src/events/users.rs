@@ -1,5 +1,5 @@
 use super::depends::*;
-use bancho_packets::PayloadReader;
+use bancho_packets::{PayloadReader, BanchoMessage};
 use chrono::Local;
 use num_traits::FromPrimitive;
 use peace_constants::{PlayMods, PresenceFilter};
@@ -24,7 +24,7 @@ pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Update player's presence_filter
 pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let filter_val = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
+    let filter_val = PayloadReader::new(ctx.payload).read::<i32>()?;
     let filter: Option<PresenceFilter> = PresenceFilter::from_i32(filter_val);
 
     if filter.is_none() {
@@ -55,7 +55,7 @@ pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Send other's stats to self
 pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>()?;
+    let id_list = PayloadReader::new(ctx.payload).read::<Vec<i32>>()?;
 
     let player_sessions = read_lock!(ctx.bancho.player_sessions);
     let id_map = &player_sessions.id_map;
@@ -83,7 +83,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Send other's presence to self (list)
 pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let id_list = PayloadReader::new(ctx.payload).read_i32_list::<i16>()?;
+    let id_list = PayloadReader::new(ctx.payload).read::<Vec<i32>>()?;
     let mut user_presence_packets: Vec<Vec<u8>> = Vec::with_capacity(id_list.len());
 
     {
@@ -150,12 +150,12 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // Read the packet
     let mut reader = PayloadReader::new(ctx.payload);
     let (action, info, beatmap_md5, play_mods_value, game_mode_u8, beatmap_id) = (
-        reader.read_integer::<u8>()?,
-        reader.read_string()?,
-        reader.read_string()?,
-        reader.read_integer::<u32>()?,
-        reader.read_integer::<u8>()?,
-        reader.read_integer::<i32>()?,
+        reader.read::<u8>()?,
+        reader.read()?,
+        reader.read()?,
+        reader.read::<u32>()?,
+        reader.read::<u8>()?,
+        reader.read::<i32>()?,
     );
 
     let action = match Action::from_u8(action) {
@@ -218,7 +218,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Add a player to friends
 pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let target_id = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
+    let target_id = PayloadReader::new(ctx.payload).read::<i32>()?;
 
     // -1 is BanchoBot, not exists
     if target_id == -1 {
@@ -293,7 +293,7 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) -> 
 ///
 /// Remove a player from friends
 pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let target = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
+    let target = PayloadReader::new(ctx.payload).read::<i32>()?;
 
     // -1 is BanchoBot, not exists
     if target == -1 {
@@ -368,7 +368,7 @@ pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) -> 
 ///
 /// Player toggle block-non-friend-dms with a value
 pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let value = PayloadReader::new(ctx.payload).read_integer::<i32>()?;
+    let value = PayloadReader::new(ctx.payload).read::<i32>()?;
 
     if let Some(player) = ctx.weak_player.upgrade() {
         write_lock!(player).only_friend_pm_allowed = value == 1;
@@ -385,7 +385,7 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option
 ///
 /// Player join to a channel
 pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let channel_name = PayloadReader::new(ctx.payload).read_string()?;
+    let channel_name = PayloadReader::new(ctx.payload).read::<String>()?;
 
     if channel_name == "#highlight" {
         return Some(());
@@ -416,7 +416,7 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 ///
 /// Player leave from a channel
 pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let channel_name = PayloadReader::new(ctx.payload).read_string()?;
+    let channel_name = PayloadReader::new(ctx.payload).read::<String>()?;
     match read_lock!(ctx.bancho.channel_list).get(&channel_name) {
         Some(channel) => {
             let mut c = write_lock!(channel);
@@ -441,7 +441,7 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// #82: OSU_USER_SET_AWAY_MESSAGE
 ///
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let mut message = PayloadReader::new(ctx.payload).read_message()?;
+    let mut message = PayloadReader::new(ctx.payload).read::<BanchoMessage>()?;
 
     let cfg_r = read_lock!(ctx.bancho.config);
     let cfg = &cfg_r.data;

@@ -90,7 +90,7 @@ pub async fn handler(
     drop(player_sessions_r);
 
     // Read & handle client packets
-    let mut reader = PacketReader::from_vec(body.to_vec());
+    let mut reader = PacketReader::new(&body);
     while let Some(packet) = reader.next() {
         // osu_ping need not handle
         if packet.id == PacketId::OSU_PING {
@@ -129,8 +129,8 @@ pub async fn handler(
 
     let bancho_end = bancho_start.elapsed();
     debug!(
-        "bancho handle end, time spend: {:?}; packet count: {:?}; payload size: {}",
-        bancho_end, reader.packet_count, reader.payload_length
+        "bancho handle end, time spend: {:?}; payload size: {}",
+        bancho_end, reader.payload_len()
     );
 
     HttpResponse::Ok()
