@@ -130,7 +130,7 @@ impl PPserver {
         self.stopped().await
     }
 
-    #[inline(always)]
+    #[inline]
     // Auto cache clean
     pub async fn start_auto_cache_clean(&self, interval: u64, timeout: u64) {
         let caches = self.glob.caches.clone();
@@ -169,7 +169,7 @@ impl PPserver {
     }
 
     #[cfg(feature = "with_peace")]
-    #[inline(always)]
+    #[inline]
     /// Auto pp recalculate (When pp calculation fails, join the queue and try to recalculate)
     pub async fn start_auto_pp_recalculate(&self, interval: u64, max_retry: i32) {
         let duration = Duration::from_secs(interval);

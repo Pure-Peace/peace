@@ -11,7 +11,7 @@ pub struct RegisterForm {
     pub check: i32,
 }
 
-#[inline(always)]
+#[inline]
 async fn parse_reg_form(mut form_data: Multipart) -> Option<RegisterForm> {
     let (mut username, mut email, mut password, mut check) = (None, None, None, None);
     while let Some(Ok(mut field)) = form_data.next().await {

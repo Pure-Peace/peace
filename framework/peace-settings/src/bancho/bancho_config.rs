@@ -20,7 +20,7 @@ pub struct BanchoConfig {
 }
 
 impl BanchoConfig {
-    #[inline(always)]
+    #[inline]
     /// Initial bancho config from database
     pub async fn create(database: &Database) -> Option<Self> {
         match database
@@ -49,7 +49,7 @@ impl BanchoConfig {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_row(row: tokio_postgres::Row, parse_err_panic: bool) -> Option<Self> {
         // Try get settings json value
         let settings_val = match row.try_get::<'_, _, Option<Value>>("settings") {
@@ -82,7 +82,7 @@ impl BanchoConfig {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn config_not_found(database: &Database) -> Option<Self> {
         let mut input = String::new();
         println!("\n{}\n", format!("**WARNING**: \n[BanchoConfig] Cannot found enabled config in database! 
@@ -106,7 +106,7 @@ You can manually set enable in the database table (bancho.config), or let us loa
         };
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn save_to_database(&self, database: &Database, enabled: bool) -> bool {
         match database
             .pg
@@ -137,7 +137,7 @@ You can manually set enable in the database table (bancho.config), or let us loa
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_from_file() -> Option<Self> {
         let error = |e| {
             error!(
@@ -167,7 +167,7 @@ You can manually set enable in the database table (bancho.config), or let us loa
         })
     }
 
-    #[inline(always)]
+    #[inline]
     /// Update bancho config from database
     pub async fn update(&mut self, database: &Database) -> bool {
         let start = std::time::Instant::now();

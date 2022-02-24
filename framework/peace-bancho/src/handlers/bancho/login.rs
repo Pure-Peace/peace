@@ -34,7 +34,7 @@ lazy_static::lazy_static! {
     static ref DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 }
 
-#[inline(always)]
+#[inline]
 /// Bancho login handler
 pub async fn login(
     req: HttpRequest,

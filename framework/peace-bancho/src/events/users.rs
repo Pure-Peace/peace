@@ -4,7 +4,7 @@ use chrono::Local;
 use num_traits::FromPrimitive;
 use peace_constants::{PlayMods, PresenceFilter};
 
-#[inline(always)]
+#[inline]
 /// #2: OSU_USER_LOGOUT
 ///
 /// Player logout from server
@@ -19,7 +19,7 @@ pub async fn user_logout<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #79: OSU_USER_RECEIVE_UPDATES
 ///
 /// Update player's presence_filter
@@ -38,7 +38,7 @@ pub async fn receive_updates<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #3: OSU_USER_REQUEST_STATUS_UPDATE (non-payload)
 ///
 /// Update self's status for self
@@ -50,7 +50,7 @@ pub async fn request_status_update<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #85: OSU_USER_STATS_REQUEST
 ///
 /// Send other's stats to self
@@ -78,7 +78,7 @@ pub async fn stats_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #97: OSU_USER_PRESENCE_REQUEST
 ///
 /// Send other's presence to self (list)
@@ -107,7 +107,7 @@ pub async fn presence_request<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// # 98: OSU_USER_PRESENCE_REQUEST_ALL (non-payload)
 ///
 // Send other's presence to self (all)
@@ -142,7 +142,7 @@ pub async fn presence_request_all<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #0: OSU_USER_CHANGE_ACTION
 ///
 /// Update player's status
@@ -213,7 +213,7 @@ pub async fn change_action<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #73: OSU_USER_FRIEND_ADD
 ///
 /// Add a player to friends
@@ -241,7 +241,7 @@ pub async fn add_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// Add a player to friends
 pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) -> Option<()> {
     // Try get player
@@ -288,7 +288,7 @@ pub async fn handle_add_friend<'a>(target_id: i32, ctx: &HandlerContext<'a>) -> 
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #74: OSU_USER_FRIEND_REMOVE
 ///
 /// Remove a player from friends
@@ -315,7 +315,7 @@ pub async fn remove_friend<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// Remove a player from friends
 pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) -> Option<()> {
     // Try get player
@@ -363,7 +363,7 @@ pub async fn handle_remove_friend<'a>(target: i32, ctx: &HandlerContext<'a>) -> 
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #99: OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS
 ///
 /// Player toggle block-non-friend-dms with a value
@@ -380,7 +380,7 @@ pub async fn toggle_block_non_friend_dms<'a>(ctx: &HandlerContext<'a>) -> Option
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #63: OSU_USER_CHANNEL_JOIN
 ///
 /// Player join to a channel
@@ -411,7 +411,7 @@ pub async fn channel_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #78: OSU_USER_CHANNEL_PART
 ///
 /// Player leave from a channel
@@ -437,7 +437,7 @@ pub async fn channel_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #82: OSU_USER_SET_AWAY_MESSAGE
 ///
 pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
@@ -465,7 +465,7 @@ pub async fn set_away_message<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #29: OSU_USER_PART_LOBBY
 ///
 pub async fn lobby_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
@@ -479,7 +479,7 @@ pub async fn lobby_part<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #30: OSU_USER_JOIN_LOBBY
 ///
 pub async fn lobby_join<'a>(ctx: &HandlerContext<'a>) -> Option<()> {

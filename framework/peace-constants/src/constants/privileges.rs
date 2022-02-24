@@ -25,11 +25,11 @@ pub enum Privileges {
 }
 
 impl Privileges {
-    #[inline(always)]
+    #[inline]
     pub fn enough(self, privileges: i32) -> bool {
         (privileges & self as i32) > 0
     }
-    #[inline(always)]
+    #[inline]
     pub fn not_enough(self, privileges: i32) -> bool {
         (privileges & self as i32) == 0
     }

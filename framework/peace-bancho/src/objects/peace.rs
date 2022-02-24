@@ -66,7 +66,7 @@ impl Peace {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn run_server(&mut self) {
         // Run server
         info!("{}", "Starting http server...".bold().bright_blue());
@@ -163,7 +163,7 @@ impl Peace {
     /// Start auto recycle task,
     /// it will auto logout deactive players from bancho each interval
     pub async fn session_recycle(&mut self) {
-        #[inline(always)]
+        #[inline]
         async fn handle_session_recycle(bancho: Data<Bancho>) {
             loop {
                 let interval = read_lock!(bancho.config)

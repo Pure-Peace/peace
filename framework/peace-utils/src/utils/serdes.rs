@@ -4,7 +4,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Local};
 use serde::{de, Deserialize, Deserializer};
 
-#[inline(always)]
+#[inline]
 pub fn from_str<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: FromStr,
@@ -15,7 +15,7 @@ where
     T::from_str(&s).map_err(de::Error::custom)
 }
 
-#[inline(always)]
+#[inline]
 pub fn from_str_optional<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     T: FromStr,
@@ -32,7 +32,7 @@ where
     })
 }
 
-#[inline(always)]
+#[inline]
 pub fn from_str_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
@@ -47,12 +47,12 @@ where
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn noew_time_local() -> DateTime<Local> {
     Local::now()
 }
 
-#[inline(always)]
+#[inline]
 pub fn try_parse<T>(string: &str) -> Option<T>
 where
     T: FromStr,

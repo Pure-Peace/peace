@@ -38,12 +38,12 @@ impl<'de> Deserialize<'de> for GameMode {
 }
 
 impl GameMode {
-    #[inline(always)]
+    #[inline]
     pub fn parse(game_mode_u8: u8) -> Option<Self> {
         GameMode::from_u8(game_mode_u8)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn pp_is_best(&self) -> bool {
         match self {
             Self::Std_rx => true,
@@ -52,13 +52,13 @@ impl GameMode {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn parse_with_playmod(game_mode_u8: u8, playmod_list: &Vec<PlayMod>) -> Option<Self> {
         let game_mode_u8 = GameMode::value_with_playmod(game_mode_u8, playmod_list);
         GameMode::from_u8(game_mode_u8)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update_with_playmod(&mut self, playmod_list: &Vec<PlayMod>) {
         let game_mode_u8 = GameMode::value_with_playmod(*self as u8, playmod_list);
         if let Some(game_mode) = GameMode::from_u8(game_mode_u8) {
@@ -66,7 +66,7 @@ impl GameMode {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn value_with_playmod(mut game_mode_u8: u8, playmod_list: &Vec<PlayMod>) -> u8 {
         // !More detailed game mod but:
         //
@@ -86,38 +86,38 @@ impl GameMode {
         game_mode_u8
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn raw_value(&self) -> u8 {
         self.val() % 4
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn val(&self) -> u8 {
         *self as u8
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_rx(&self) -> bool {
         let self_value = self.val();
         self_value > 3 && self_value < 8
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_ap(&self) -> bool {
         self.val() == 8
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_scv2(&self) -> bool {
         self.val() == 12
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_vn(&self) -> bool {
         self.val() < 4
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get lowercase name
     ///
     /// ```rust,ignore
@@ -127,7 +127,7 @@ impl GameMode {
         format!("{:?}", self).to_lowercase()
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get mode name
     ///
     /// ```rust,ignore
@@ -137,7 +137,7 @@ impl GameMode {
         self.full_name().split('_').collect::<Vec<&str>>()[0].to_string()
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get sub mod name
     ///
     /// ```rust,ignore
@@ -152,7 +152,7 @@ impl GameMode {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get mode name (database fields with "_")
     ///
     /// ```rust,ignore

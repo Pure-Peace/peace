@@ -16,7 +16,7 @@ lazy_static::lazy_static! {
     };
 }
 
-#[inline(always)]
+#[inline]
 pub fn rand_string(len: usize) -> String {
     rand::thread_rng()
         .sample_iter(rand::distributions::Alphanumeric)
@@ -25,7 +25,7 @@ pub fn rand_string(len: usize) -> String {
         .collect::<String>()
 }
 
-#[inline(always)]
+#[inline]
 /// Argon2 verify
 pub async fn argon2_verify(password_crypted: &str, password: &str) -> bool {
     let argon2_verify_start = Instant::now();
@@ -47,7 +47,7 @@ pub async fn argon2_verify(password_crypted: &str, password: &str) -> bool {
     }
 }
 
-#[inline(always)]
+#[inline]
 /// Argon2 encode
 pub async fn argon2_encode(password: &[u8]) -> String {
     argon2::hash_encoded(password, rand_string(32).as_bytes(), &ARGON2_CONFIG).unwrap()

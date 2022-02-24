@@ -53,7 +53,7 @@ pub struct MenuIcon {
 }
 
 impl MenuIcon {
-    #[inline(always)]
+    #[inline]
     pub fn get(&self) -> Option<String> {
         if self.enabled {
             Some(format!("{}|{}", self.image_url, self.click_url))
@@ -90,7 +90,7 @@ pub struct AutoBan {
 }
 
 impl AutoBan {
-    #[inline(always)]
+    #[inline]
     pub fn pp(&self, mode: &GameMode) -> Option<i32> {
         match mode {
             GameMode::Std => self.std,

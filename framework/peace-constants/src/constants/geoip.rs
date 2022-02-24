@@ -45,7 +45,7 @@ pub struct GeoError<'a> {
 }
 
 impl<'a> GeoError<'a> {
-    #[inline(always)]
+    #[inline]
     pub fn new(ip_address: &'a str, message: Option<&'a str>) -> String {
         serde_json::to_string(&GeoError {
             ip_address,

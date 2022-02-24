@@ -13,40 +13,40 @@ pub struct PayloadReader<'a> {
 }
 
 impl<'a> PayloadReader<'a> {
-    #[inline(always)]
+    #[inline]
     pub fn new(payload: &'a [u8]) -> Self {
         PayloadReader { payload, index: 0 }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn index(&self) -> usize {
         self.index
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn payload(&self) -> &'a [u8] {
         self.payload
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn add_index(&mut self, offset: usize) -> usize {
         self.index += offset;
         self.index
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn sub_index(&mut self, offset: usize) -> usize {
         self.index -= offset;
         self.index
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn next(&mut self, length: usize) -> Option<&[u8]> {
         self.index += length;
         Some(self.payload.get(self.index - length..self.index)?)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn read<T>(&mut self) -> Option<T>
     where
         T: OsuRead<T>,
@@ -54,7 +54,7 @@ impl<'a> PayloadReader<'a> {
         T::read(self)
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn read_uleb128(&mut self) -> Option<u32> {
         let (val, length) = read_uleb128(&self.payload.get(self.index..)?)?;
         self.index += length;
@@ -70,7 +70,7 @@ pub struct PacketReader<'a> {
 }
 
 impl<'a> PacketReader<'a> {
-    #[inline(always)]
+    #[inline]
     pub fn new(buf: &'a [u8]) -> Self {
         PacketReader {
             buf,
@@ -80,27 +80,27 @@ impl<'a> PacketReader<'a> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn index(&self) -> usize {
         self.index
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn buf(&self) -> &'a [u8] {
         self.buf
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn payload_len(&self) -> usize {
         self.payload_length
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_finished(&self) -> bool {
         self.finish
     }
 
-    #[inline(always)]
+    #[inline]
     // Reset the packet reader
     pub fn reset(&mut self) {
         self.finish = false;
@@ -108,7 +108,7 @@ impl<'a> PacketReader<'a> {
         self.payload_length = 0;
     }
 
-    #[inline(always)]
+    #[inline]
     /// Read the osu!client packet: (packet id, payload)
     pub fn next(&mut self) -> Option<Packet> {
         if (self.buf.len() - self.index) < 7 {
@@ -136,7 +136,7 @@ impl<'a> PacketReader<'a> {
         Some(Packet { id, payload })
     }
 
-    #[inline(always)]
+    #[inline]
     /// Read packet header: (type, length)
     pub fn read_header(header: &[u8]) -> Option<PacketHeader> {
         let id = *header.get(0)?;

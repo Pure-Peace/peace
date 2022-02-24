@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-#[inline(always)]
+#[inline]
 pub fn calc_file_md5<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
     let file = File::open(path)?;
     let mut hasher = Md5::new();

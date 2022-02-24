@@ -3,7 +3,7 @@ use tokio::sync::RwLock;
 
 use crate::{objects::PlayerBase, types::Argon2Cache};
 
-#[inline(always)]
+#[inline]
 pub async fn checking_password(
     player_base: &PlayerBase,
     password_hash: &String,
@@ -33,7 +33,7 @@ pub async fn checking_password(
     verify_result
 }
 
-#[inline(always)]
+#[inline]
 pub async fn get_player_base(username: &String, database: &Database) -> Option<PlayerBase> {
     let username_safe = username.to_lowercase().replace(" ", "_");
 

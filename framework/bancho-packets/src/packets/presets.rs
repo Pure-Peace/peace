@@ -8,13 +8,13 @@ use crate::{
     },
 };
 
-#[inline(always)]
+#[inline]
 /// #5: BANCHO_USER_LOGIN_REPLY
 pub fn login_reply(reply: impl LoginReply) -> Vec<u8> {
     build!(PacketId::BANCHO_USER_LOGIN_REPLY, reply.val())
 }
 
-#[inline(always)]
+#[inline]
 /// #7: BANCHO_SEND_MESSAGE
 pub fn send_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     build!(
@@ -23,13 +23,13 @@ pub fn send_message(sender: &str, sender_id: i32, content: &str, target: &str) -
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #8: BANCHO_PONG
 pub fn pong() -> Vec<u8> {
     build!(PacketId::BANCHO_PONG)
 }
 
-#[inline(always)]
+#[inline]
 /// #9: BANCHO_HANDLE_IRC_CHANGE_USERNAME
 pub fn change_username(username_old: &str, username_new: &str) -> Vec<u8> {
     build!(
@@ -38,7 +38,7 @@ pub fn change_username(username_old: &str, username_new: &str) -> Vec<u8> {
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #11: BANCHO_USER_STATS
 pub fn user_stats(
     user_id: i32,
@@ -76,146 +76,146 @@ pub fn user_stats(
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #12: BANCHO_USER_LOGOUT
 pub fn user_logout(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_USER_LOGOUT, user_id, 0_u8)
 }
 
-#[inline(always)]
+#[inline]
 /// #13: BANCHO_SPECTATOR_JOINED
 pub fn spectator_joined(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_SPECTATOR_JOINED, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #14: BANCHO_SPECTATOR_LEFT
 pub fn spectator_left(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_SPECTATOR_LEFT, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #15: BANCHO_SPECTATE_FRAMES
 pub fn spectator_frames(data: Vec<u8>) -> Vec<u8> {
     build!(PacketId::BANCHO_SPECTATE_FRAMES, data)
 }
 
-#[inline(always)]
+#[inline]
 /// #19: BANCHO_MATCH_JOIN_FAIL
 pub fn version_update() -> Vec<u8> {
     build!(PacketId::BANCHO_VERSION_UPDATE)
 }
 
-#[inline(always)]
+#[inline]
 /// #22: BANCHO_SPECTATOR_CANT_SPECTATE
 pub fn spectator_cant_spectate(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_SPECTATOR_CANT_SPECTATE, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #23: BANCHO_GET_ATTENTION
 pub fn get_attention() -> Vec<u8> {
     build!(PacketId::BANCHO_GET_ATTENTION)
 }
 
-#[inline(always)]
+#[inline]
 /// #24: BANCHO_NOTIFICATION
 pub fn notification(msg: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_NOTIFICATION, msg)
 }
 
-#[inline(always)]
+#[inline]
 /// #26: BANCHO_UPDATE_MATCH
 /// TODO
 pub fn update_match() {}
 
-#[inline(always)]
+#[inline]
 /// #27: BANCHO_NEW_MATCH
 /// TODO
 pub fn new_match() {}
 
-#[inline(always)]
+#[inline]
 /// #28: BANCHO_DISBAND_MATCH
 pub fn disband_match(match_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_DISBAND_MATCH, match_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #34: BANCHO_TOGGLE_BLOCK_NON_FRIEND_DMS
 pub fn toggle_block_non_friend_pm() -> Vec<u8> {
     build!(PacketId::BANCHO_TOGGLE_BLOCK_NON_FRIEND_DMS)
 }
 
-#[inline(always)]
+#[inline]
 /// #36: BANCHO_MATCH_JOIN_SUCCESS
 /// TODO
 pub fn match_join_success() {}
 
-#[inline(always)]
+#[inline]
 /// #37: BANCHO_MATCH_JOIN_FAIL
 pub fn match_join_fail() -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_JOIN_FAIL)
 }
 
-#[inline(always)]
+#[inline]
 /// #42: BANCHO_FELLOW_SPECTATOR_JOINED
 pub fn fellow_spectator_joined(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_FELLOW_SPECTATOR_JOINED, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #43: BANCHO_FELLOW_SPECTATOR_LEFT
 pub fn fellow_spectator_left(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_FELLOW_SPECTATOR_LEFT, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #46: BANCHO_MATCH_START
 /// TODO
 pub fn match_start() {}
 
-#[inline(always)]
+#[inline]
 /// #48: BANCHO_MATCH_SCORE_UPDATE
 /// TODO
 pub fn match_score_update() {}
 
-#[inline(always)]
+#[inline]
 /// #50: BANCHO_MATCH_TRANSFER_HOST
 pub fn match_transfer_host() -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_TRANSFER_HOST)
 }
 
-#[inline(always)]
+#[inline]
 /// #53: BANCHO_MATCH_ALL_PLAYERS_LOADED
 pub fn match_all_player_loaded() -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_ALL_PLAYERS_LOADED)
 }
 
-#[inline(always)]
+#[inline]
 /// #57: BANCHO_MATCH_PLAYER_FAILED
 pub fn match_player_failed(slot_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_PLAYER_FAILED, slot_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #58: BANCHO_MATCH_COMPLETE
 pub fn match_complete() -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_COMPLETE)
 }
 
-#[inline(always)]
+#[inline]
 /// #61: BANCHO_MATCH_SKIP
 pub fn match_skip() -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_SKIP)
 }
 
-#[inline(always)]
+#[inline]
 /// #64: BANCHO_CHANNEL_JOIN_SUCCESS
 pub fn channel_join(channel_name: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_CHANNEL_JOIN_SUCCESS, channel_name)
 }
 
-#[inline(always)]
+#[inline]
 /// #65: BANCHO_CHANNEL_INFO
 pub fn channel_info(name: &str, title: &str, player_count: i16) -> Vec<u8> {
     build!(
@@ -224,13 +224,13 @@ pub fn channel_info(name: &str, title: &str, player_count: i16) -> Vec<u8> {
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #66: BANCHO_CHANNEL_KICK
 pub fn channel_kick(channel_name: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_CHANNEL_KICK, channel_name)
 }
 
-#[inline(always)]
+#[inline]
 /// #67: BANCHO_CHANNEL_AUTO_JOIN
 pub fn channel_auto_join(name: &str, title: &str, player_count: i16) -> Vec<u8> {
     build!(
@@ -239,48 +239,48 @@ pub fn channel_auto_join(name: &str, title: &str, player_count: i16) -> Vec<u8> 
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #69: BANCHO_BEATMAP_INFO_REPLY
 /// UNUSED
 pub fn beatmap_info_reply() {}
 
-#[inline(always)]
+#[inline]
 /// #71: BANCHO_PRIVILEGES
 pub fn bancho_privileges(privileges: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_PRIVILEGES, privileges)
 }
 
-#[inline(always)]
+#[inline]
 /// #72: BANCHO_FRIENDS_LIST
 pub fn friends_list(friends: &Vec<i32>) -> Vec<u8> {
     build!(PacketId::BANCHO_FRIENDS_LIST, friends)
 }
 
-#[inline(always)]
+#[inline]
 /// #75: BANCHO_PROTOCOL_VERSION
 pub fn protocol_version(version: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_PROTOCOL_VERSION, version)
 }
 
-#[inline(always)]
+#[inline]
 /// #76: BANCHO_MAIN_MENU_ICON
 /// menu_icon = image_url: &str | click_url: &str
 pub fn main_menu_icon(menu_icon: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_MAIN_MENU_ICON, menu_icon)
 }
 
-#[inline(always)]
+#[inline]
 /// #80: BANCHO_MONITOR
 /// deprecated
 pub fn monitor() {}
 
-#[inline(always)]
+#[inline]
 /// #81: BANCHO_MATCH_PLAYER_SKIPPED
 pub fn match_player_skipped(slot_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_PLAYER_SKIPPED, slot_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #83: BANCHO_USER_PRESENCE
 ///
 /// including player stats and presence
@@ -309,56 +309,56 @@ pub fn user_presence(
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #86: BANCHO_RESTART
 pub fn bancho_restart(millis: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_RESTART, millis)
 }
 
-#[inline(always)]
+#[inline]
 /// #88: BANCHO_MATCH_INVITE
 /// TODO
 pub fn match_invite() {}
 
-#[inline(always)]
+#[inline]
 /// #89: BANCHO_CHANNEL_INFO_END
 pub fn channel_info_end() -> Vec<u8> {
     build!(PacketId::BANCHO_CHANNEL_INFO_END)
 }
 
-#[inline(always)]
+#[inline]
 /// #91: BANCHO_MATCH_CHANGE_PASSWORD
 pub fn match_change_password(password: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_CHANGE_PASSWORD, password)
 }
 
-#[inline(always)]
+#[inline]
 /// #92: BANCHO_SILENCE_END
 pub fn silence_end(duration: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_SILENCE_END, duration)
 }
 
-#[inline(always)]
+#[inline]
 /// #94: BANCHO_USER_SILENCED
 pub fn user_silenced(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_USER_SILENCED, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #95: BANCHO_USER_PRESENCE_SINGLE
 /// UNUSED
 pub fn user_presence_single(user_id: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_USER_PRESENCE_SINGLE, user_id)
 }
 
-#[inline(always)]
+#[inline]
 /// #96: BANCHO_USER_PRESENCE_BUNDLE
 /// UNUSED
 pub fn user_presence_bundle(player_id_list: &Vec<i32>) -> Vec<u8> {
     build!(PacketId::BANCHO_USER_PRESENCE_BUNDLE, player_id_list)
 }
 
-#[inline(always)]
+#[inline]
 /// #100: BANCHO_USER_DM_BLOCKED
 pub fn user_dm_blocked(target: &str) -> Vec<u8> {
     build!(
@@ -367,7 +367,7 @@ pub fn user_dm_blocked(target: &str) -> Vec<u8> {
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #101: BANCHO_TARGET_IS_SILENCED
 pub fn target_silenced(target: &str) -> Vec<u8> {
     build!(
@@ -376,38 +376,38 @@ pub fn target_silenced(target: &str) -> Vec<u8> {
     )
 }
 
-#[inline(always)]
+#[inline]
 /// #102: BANCHO_VERSION_UPDATE_FORCED
 pub fn version_update_forced() -> Vec<u8> {
     build!(PacketId::BANCHO_VERSION_UPDATE_FORCED)
 }
 
-#[inline(always)]
+#[inline]
 /// #103: BANCHO_SWITCH_SERVER
 pub fn switch_server(time: i32) -> Vec<u8> {
     build!(PacketId::BANCHO_SWITCH_SERVER, time)
 }
 
-#[inline(always)]
+#[inline]
 /// #104: BANCHO_ACCOUNT_RESTRICTED
 pub fn account_restricted() -> Vec<u8> {
     build!(PacketId::BANCHO_ACCOUNT_RESTRICTED)
 }
 
-#[inline(always)]
+#[inline]
 /// #105: BANCHO_RTX
 /// deprecated
 pub fn rtx(msg: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_RTX, msg)
 }
 
-#[inline(always)]
+#[inline]
 /// #106: BANCHO_MATCH_ABORT
 pub fn match_abort() -> Vec<u8> {
     build!(PacketId::BANCHO_MATCH_ABORT)
 }
 
-#[inline(always)]
+#[inline]
 /// #107: BANCHO_SWITCH_TOURNAMENT_SERVER
 pub fn switch_tournament_server(ip: &str) -> Vec<u8> {
     build!(PacketId::BANCHO_SWITCH_TOURNAMENT_SERVER, ip)

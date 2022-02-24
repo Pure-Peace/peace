@@ -56,14 +56,14 @@ impl Drop for Channel {
 }
 
 impl PartialEq for Channel {
-    #[inline(always)]
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
     }
 }
 
 impl Channel {
-    #[inline(always)]
+    #[inline]
     /// Create channel from base object (from database);
     ///
     /// permanent channels
@@ -82,7 +82,7 @@ impl Channel {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn new(
         name: String,
         title: String,
@@ -104,7 +104,7 @@ impl Channel {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Channel display name
     pub fn display_name(&self) -> String {
         match &self.name {
@@ -114,7 +114,7 @@ impl Channel {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Send message to every player in channel
     pub async fn broadcast(
         &self,
@@ -147,7 +147,7 @@ impl Channel {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn channel_info_packet(&self) -> PacketData {
         bancho_packets::channel_info(
             &self.display_name(),
@@ -156,7 +156,7 @@ impl Channel {
         )
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn update_channel_for_users(&self, player_sessions: Option<&PlayerSessions>) {
         let packet_data = self.channel_info_packet();
         if player_sessions.is_none() {
@@ -170,7 +170,7 @@ impl Channel {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Add a player to this channel by player_id
     pub async fn join_by_player_id(
         &mut self,
@@ -204,7 +204,7 @@ impl Channel {
         result
     }
 
-    #[inline(always)]
+    #[inline]
     /// Join a player into channel
     ///
     /// If it's a permanent channel, should pass Some(player_sessions),
@@ -249,7 +249,7 @@ impl Channel {
         return true;
     }
 
-    #[inline(always)]
+    #[inline]
     /// Remove a player from this channel
     ///
     /// If it's a permanent channel, should pass Some(player_sessions),

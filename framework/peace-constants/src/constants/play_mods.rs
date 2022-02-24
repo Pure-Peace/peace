@@ -54,17 +54,17 @@ pub enum PlayMod {
 }
 
 impl PlayMod {
-    #[inline(always)]
+    #[inline]
     pub fn val(&self) -> u32 {
         *self as u32
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn contains(&self, value: u32) -> bool {
         (value & self.val()) > 0
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn not_contains(&self, value: u32) -> bool {
         (value & self.val()) == 0
     }
@@ -87,7 +87,7 @@ impl<'de> Deserialize<'de> for PlayMods {
 }
 
 impl PlayMods {
-    #[inline(always)]
+    #[inline]
     /// Initial playmods with NoMod
     pub fn new() -> Self {
         PlayMods {
@@ -96,7 +96,7 @@ impl PlayMods {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Initial playmods with a single playmod
     pub fn with(playmod: PlayMod) -> Self {
         PlayMods {
@@ -105,12 +105,12 @@ impl PlayMods {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn include(&self, play_mod: &PlayMod) -> bool {
         self.list.contains(play_mod)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn parse(play_mods_value: u32) -> Self {
         PlayMods {
             value: play_mods_value,
@@ -118,13 +118,13 @@ impl PlayMods {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update(&mut self, play_mods_value: u32) {
         self.value = play_mods_value;
         self.list = self.mods();
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_mods(value: u32) -> Vec<PlayMod> {
         match PlayMod::from_u32(value) {
             Some(play_mod) => vec![play_mod],
@@ -134,7 +134,7 @@ impl PlayMods {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn mods(&self) -> Vec<PlayMod> {
         PlayMods::get_mods(self.value)
     }

@@ -5,7 +5,7 @@ pub struct PacketBuilder {
 }
 
 impl PacketBuilder {
-    #[inline(always)]
+    #[inline]
     /// Initial an empty packet
     pub fn new() -> Self {
         PacketBuilder {
@@ -13,7 +13,7 @@ impl PacketBuilder {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Initial a packet with id
     ///
     /// !Note: Packet length is not included,
@@ -23,13 +23,13 @@ impl PacketBuilder {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Initial from packet data
     pub fn from(packet: Vec<u8>) -> PacketBuilder {
         PacketBuilder { content: packet }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_multiple(packets: &mut [Vec<u8>]) -> PacketBuilder {
         let mut packet = utils::empty();
         for i in packets.iter_mut() {
@@ -38,7 +38,7 @@ impl PacketBuilder {
         PacketBuilder { content: packet }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn merge(packets: &mut [Vec<u8>]) -> Vec<u8> {
         let mut packet = utils::empty();
         for i in packets.iter_mut() {
@@ -47,14 +47,14 @@ impl PacketBuilder {
         packet
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn add_multiple_ref(&mut self, packets: &mut [Vec<u8>]) {
         for i in packets.iter_mut() {
             self.content.append(i)
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn add_multiple(mut self, packets: &mut [Vec<u8>]) -> PacketBuilder {
         for i in packets.iter_mut() {
             self.content.append(i)
@@ -62,27 +62,27 @@ impl PacketBuilder {
         self
     }
 
-    #[inline(always)]
+    #[inline]
     /// Add packet data
     pub fn add(mut self, packet: Vec<u8>) -> PacketBuilder {
         self.content.extend(packet);
         self
     }
 
-    #[inline(always)]
+    #[inline]
     /// Add packet data
     pub fn add_ref(&mut self, packet: Vec<u8>) -> &PacketBuilder {
         self.content.extend(packet);
         self
     }
 
-    #[inline(always)]
+    #[inline]
     /// Write out the packet
     pub fn write_out(self) -> Vec<u8> {
         self.content
     }
 
-    #[inline(always)]
+    #[inline]
     /// Pack the packet
     ///
     /// !Note: Packet length will be added

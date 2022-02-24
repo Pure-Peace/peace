@@ -32,7 +32,7 @@ set_with_db! {
 }
 
 impl PlayerStatus {
-    #[inline(always)]
+    #[inline]
     /// Initial pleyer info from database
     pub async fn from_database(user_id: i32, database: &Database) -> Option<PlayerStatus> {
         database
@@ -41,7 +41,7 @@ impl PlayerStatus {
             .await
     }
 
-    #[inline(always)]
+    #[inline]
     /// Update player info from database
     pub async fn update(&mut self, database: &Database) -> bool {
         let start = std::time::Instant::now();

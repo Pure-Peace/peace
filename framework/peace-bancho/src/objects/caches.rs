@@ -27,22 +27,22 @@ impl Caches {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn cache_temp_table(&self, table_name: String) -> Option<DateTime<Local>> {
         write_lock!(self.temp_table_cache).insert(table_name, Local::now())
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn cache_password(&self, argon2: &String, password: &String) -> Option<String> {
         write_lock!(self.argon2_cache).insert(argon2.to_string(), password.to_string())
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_password(&self, argon2: &String) -> Option<String> {
         read_lock!(self.argon2_cache).get(argon2).cloned()
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_temp_table(&self, table_name: &String) -> Option<DateTime<Local>> {
         read_lock!(self.temp_table_cache).get(table_name).cloned()
     }

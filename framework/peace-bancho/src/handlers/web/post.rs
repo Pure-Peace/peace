@@ -21,7 +21,7 @@ macro_rules! chart_item {
     };
 }
 
-#[inline(always)]
+#[inline]
 /// Multipart Form-data
 ///
 /// POST /web/osu-error.php
@@ -82,7 +82,7 @@ pub async fn osu_error<'a>(_ctx: &Context<'a>, _payload: Multipart) -> HttpRespo
     HttpResponse::Ok().body("ok")
 }
 
-#[inline(always)]
+#[inline]
 pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> HttpResponse {
     let failed = HttpResponse::Ok().body("error: no");
     let request_ip = match peace_utils::web::get_realip(&ctx.req).await {

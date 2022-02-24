@@ -14,7 +14,7 @@ pub enum PostgresError {
 }
 
 impl PostgresError {
-    #[inline(always)]
+    #[inline]
     pub fn from_pg_err(pg_error: Error) -> Self {
         Self::DbError(pg_error)
     }
@@ -70,7 +70,7 @@ impl Postgres {
         Postgres { pool }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Test whether the connection pool can connect to the postgres
     ///
     /// Will returns bool
@@ -81,7 +81,7 @@ impl Postgres {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Ready to query
     ///
     /// # Examples:
@@ -99,7 +99,7 @@ impl Postgres {
         Ok((client, statement))
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get postgres client from deadpool
     ///
     /// # Examples:
@@ -114,7 +114,7 @@ impl Postgres {
         })
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn batch_execute(&self, query: &str) -> Result<(), PostgresError> {
         let c = self.get_client().await?;
         c.batch_execute(query)
@@ -122,7 +122,7 @@ impl Postgres {
             .map_err(PostgresError::from_pg_err)
     }
 
-    #[inline(always)]
+    #[inline]
     /// Query and get all result rows
     ///
     /// # Examples:
@@ -141,7 +141,7 @@ impl Postgres {
             .map_err(PostgresError::from_pg_err)
     }
 
-    #[inline(always)]
+    #[inline]
     /// Query and query the frist result row
     /// ### The query using this method must return a result row.
     /// ### If you are not sure whether the result will be returned, please use get_all instead of get_first.
@@ -162,7 +162,7 @@ impl Postgres {
             .map_err(PostgresError::from_pg_err)
     }
 
-    #[inline(always)]
+    #[inline]
     /// Query and query the frist result row (no params)
     ///
     /// # Examples:
@@ -174,7 +174,7 @@ impl Postgres {
         self.query_first(query, &[]).await
     }
 
-    #[inline(always)]
+    #[inline]
     /// Query and query all result rows (no params)
     ///
     /// # Examples:
@@ -186,7 +186,7 @@ impl Postgres {
         self.query(query, &[]).await
     }
 
-    #[inline(always)]
+    #[inline]
     /// Query and return the number of result rows
     ///
     /// # Examples:
@@ -205,7 +205,7 @@ impl Postgres {
             .map_err(PostgresError::from_pg_err)
     }
 
-    #[inline(always)]
+    #[inline]
     /// Query and return the number of result rows (no params)
     ///
     /// # Examples:
@@ -217,7 +217,7 @@ impl Postgres {
         self.execute(query, &[]).await
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn struct_from_database<T: FromTokioPostgresRow>(
         &self,
         query: &str,
@@ -246,7 +246,7 @@ impl Postgres {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn structs_from_database<T: FromTokioPostgresRow>(
         &self,
         query: &str,
@@ -278,7 +278,7 @@ impl Postgres {
         Some(structs)
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn struct_from_database_simple<T: FromTokioPostgresRow>(
         &self,
         table: &str,

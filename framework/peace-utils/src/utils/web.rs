@@ -18,7 +18,7 @@ pub struct MultipartData {
 }
 
 impl MultipartData {
-    #[inline(always)]
+    #[inline]
     pub fn form<T>(&mut self, key: &str) -> Option<T>
     where
         T: FromStr,
@@ -30,13 +30,13 @@ impl MultipartData {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn file(&mut self, key: &str) -> Option<Vec<u8>> {
         self.files.remove(key)
     }
 }
 
-#[inline(always)]
+#[inline]
 /// Get deserialized multipart/form-data or files
 pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
     let mut files = HashMap::new();
@@ -64,7 +64,7 @@ pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
     MultipartData { forms, files }
 }
 
-#[inline(always)]
+#[inline]
 /// Get deserialized multipart/form-data
 ///
 /// use query method, some data types not support (such as bytes)
@@ -90,18 +90,18 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
     serde_qs::from_str(&temp)
 }
 
-#[inline(always)]
+#[inline]
 pub fn lock_wrapper<T>(obj: T) -> Data<RwLock<T>> {
     Data::new(RwLock::new(obj))
 }
 
-#[inline(always)]
+#[inline]
 /// Get real ip from request
 pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
     Ok(req.connection_info().host().to_string())
 }
 
-#[inline(always)]
+#[inline]
 pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
     let v = req.headers().get(key);
     if v.is_none() {
@@ -117,7 +117,7 @@ pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
     true
 }
 
-#[inline(always)]
+#[inline]
 /// Get osu version from headers
 pub async fn get_osuver(req: &HttpRequest) -> String {
     match req.headers().get("osu-version") {
@@ -126,7 +126,7 @@ pub async fn get_osuver(req: &HttpRequest) -> String {
     }
 }
 
-#[inline(always)]
+#[inline]
 /// Get osu token from headers
 pub async fn get_token(req: &HttpRequest) -> String {
     match req.headers().get("osu-token") {
@@ -135,7 +135,7 @@ pub async fn get_token(req: &HttpRequest) -> String {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn osu_sumit_token_checker(req: &HttpRequest) -> bool {
     if let Some(token) = req.headers().get("Token") {
         if let Ok(token) = token.to_str() {

@@ -104,7 +104,7 @@ pub struct MatchSlot {
 }
 
 impl MatchSlot {
-    #[inline(always)]
+    #[inline]
     pub fn new() -> Self {
         Self {
             player: None,
@@ -117,7 +117,7 @@ impl MatchSlot {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn reset(&mut self) {
         self.player = None;
         self.status = MatchSlotStatus::Open;
@@ -128,7 +128,7 @@ impl MatchSlot {
         self.completed = false;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn make_slots(size: i32) -> Vec<Self> {
         let size = if size > 16 {
             16
@@ -186,7 +186,7 @@ pub struct Match {
 }
 
 impl Match {
-    #[inline(always)]
+    #[inline]
     pub fn new(
         id: i64,
         name: String,
@@ -226,7 +226,7 @@ impl Match {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn invite_link(&self) -> String {
         let mut link = format!("osump://{}/", self.id);
         if let Some(pw) = &self.password {
@@ -235,7 +235,7 @@ impl Match {
         link
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn map_bid_url(&self, base_url: Option<&str>) -> String {
         format!(
             "{}/b/{}",
@@ -244,7 +244,7 @@ impl Match {
         )
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn map_md5_url(&self, base_url: Option<&str>) -> String {
         format!(
             "{}/h/{}",

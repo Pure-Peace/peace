@@ -1,7 +1,7 @@
 use super::depends::*;
 use bancho_packets::{BanchoMessage, PayloadReader};
 
-#[inline(always)]
+#[inline]
 /// #1: OSU_SEND_PUBLIC_MESSAGE
 pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?
@@ -72,7 +72,7 @@ pub async fn public<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #24: OSU_SEND_PRIVATE_MESSAGE
 pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     // TODO: check player is slienced?

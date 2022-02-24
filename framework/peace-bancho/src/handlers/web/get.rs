@@ -50,7 +50,7 @@ const HAX_DETECTED_NOTIFICATION: Option<&str> = Some(
     "Warning: Please do not cheat. It makes no sense. If you do, you will most likely be banned.",
 );
 
-#[inline(always)]
+#[inline]
 pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     let default = HttpResponse::Ok().body("[]");
     const ACTION_VALID: &[&str; 3] = &["check", "path", "error"];
@@ -167,12 +167,12 @@ pub async fn check_updates<'a>(ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body(resp)
 }
 
-#[inline(always)]
+#[inline]
 pub async fn bancho_connect<'a>(_ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body("")
 }
 
-#[inline(always)]
+#[inline]
 pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
     let done = HttpResponse::Ok().body("-3");
     /// Query Data
@@ -241,7 +241,7 @@ pub async fn lastfm<'a>(ctx: &Context<'a>) -> HttpResponse {
     done
 }
 
-#[inline(always)]
+#[inline]
 /// GET osu-rate.php
 pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
     let failed = HttpResponse::Unauthorized().body("");
@@ -331,7 +331,7 @@ pub async fn osu_rate<'a>(ctx: &Context<'a>) -> HttpResponse {
     ))
 }
 
-#[inline(always)]
+#[inline]
 pub async fn osu_get_replay<'a>(ctx: &Context<'a>) -> HttpResponse {
     const REPLAY_PATH: &'static str = ".data/replays";
     let failed = HttpResponse::Unauthorized().body("");
@@ -359,7 +359,7 @@ pub async fn osu_get_replay<'a>(ctx: &Context<'a>) -> HttpResponse {
     failed
 }
 
-#[inline(always)]
+#[inline]
 pub async fn osu_add_favourite<'a>(ctx: &Context<'a>) -> HttpResponse {
     let failed = HttpResponse::Unauthorized().body("");
     #[derive(Debug, Deserialize)]
@@ -397,7 +397,7 @@ pub async fn osu_add_favourite<'a>(ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body("failed")
 }
 
-#[inline(always)]
+#[inline]
 pub async fn osu_get_favourites<'a>(ctx: &Context<'a>) -> HttpResponse {
     let failed = HttpResponse::Unauthorized().body("");
     #[derive(Debug, Deserialize)]
@@ -434,7 +434,7 @@ pub async fn osu_get_favourites<'a>(ctx: &Context<'a>) -> HttpResponse {
     failed
 }
 
-#[inline(always)]
+#[inline]
 pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
     let failed = HttpResponse::Unauthorized().body("");
     #[derive(Debug, Deserialize)]
@@ -460,7 +460,7 @@ pub async fn osu_get_friends<'a>(ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body(friends)
 }
 
-#[inline(always)]
+#[inline]
 /// Seasonal background images
 ///
 /// Locate on database -> bancho.config.seasonal_backgrounds
@@ -478,7 +478,7 @@ pub async fn osu_get_seasonal<'a>(ctx: &Context<'a>) -> HttpResponse {
     HttpResponse::Ok().body("[]")
 }
 
-#[inline(always)]
+#[inline]
 /// Get scoreboard in-game
 ///
 /// TODO: Performance optimization

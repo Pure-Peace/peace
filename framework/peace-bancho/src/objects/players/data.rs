@@ -81,17 +81,17 @@ impl PlayerData {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn try_u_name(&self) -> String {
         self.u_name.as_ref().unwrap_or(&self.name).clone()
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_country_code(&self) -> u8 {
         CountryCodes::from_str(&self.country).unwrap_or(CountryCodes::UN) as u8
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_stats_from_database(
         &self,
         game_mode: &GameMode,

@@ -6,7 +6,7 @@ pub struct CalcPpAccResult {
     pub acc: f32,
 }
 
-#[inline(always)]
+#[inline]
 /// Get player's bp then calculate pp and acc
 /// ```rust,ignore
 /// calculate_pp_acc(...) -> Option<(pp, acc)>
@@ -78,7 +78,7 @@ pub async fn player_calculate_pp_acc(
     Some(CalcPpAccResult { pp: pp_v2, acc })
 }
 
-#[inline(always)]
+#[inline]
 pub async fn player_save_pp_acc(
     player_id: i32,
     mode: &GameMode,
@@ -112,7 +112,7 @@ pub async fn player_save_pp_acc(
     }
 }
 
-#[inline(always)]
+#[inline]
 pub async fn player_get_pp_acc(
     player_id: i32,
     mode: &GameMode,
@@ -144,7 +144,7 @@ pub async fn player_get_pp_acc(
     }
 }
 
-#[inline(always)]
+#[inline]
 pub async fn pp_recalc_task(
     score_table: &str,
     score_id: i64,

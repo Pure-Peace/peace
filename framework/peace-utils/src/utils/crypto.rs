@@ -7,7 +7,7 @@ pub enum SubmitModularErrors {
     StringParseError(FromUtf8Error),
 }
 
-#[inline(always)]
+#[inline]
 /// Decrypt osu!score data with Rijndael-256-cbc algorithm
 pub fn submit_modular_decrypt(
     osu_version: i32,

@@ -82,12 +82,12 @@ pub struct BeatmapFromApi {
 }
 
 impl BeatmapFromApi {
-    #[inline(always)]
+    #[inline]
     pub fn convert_to_beatmap(self) -> Beatmap {
         Beatmap::from(self)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn convert_to_beatmap_cache(self) -> BeatmapCache {
         BeatmapCache {
             beatmap: Some(Beatmap::from(self)),
@@ -95,7 +95,7 @@ impl BeatmapFromApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn file_name(&self) -> String {
         peace_utils::common::safe_file_name(format!(
             "{artist} - {title} ({mapper}) [{diff_name}].osu",
@@ -106,7 +106,7 @@ impl BeatmapFromApi {
         ))
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn from_osu_api(
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
@@ -160,7 +160,7 @@ impl BeatmapFromApi {
     }
 
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub async fn save_to_database(&self, database: &Database) -> bool {
         match database
             .pg

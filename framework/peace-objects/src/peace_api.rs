@@ -22,7 +22,7 @@ pub struct PeaceApi {
 }
 
 impl PeaceApi {
-    #[inline(always)]
+    #[inline]
     pub fn new(key: String, url: String) -> Self {
         let client = reqwest::Client::builder()
             .connection_verbose(false)
@@ -40,7 +40,7 @@ impl PeaceApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn request_wrapper(&self, req: RequestBuilder) -> Option<Response> {
         let start = std::time::Instant::now();
         let res = req.header("peace_key", &self.key).send().await;
@@ -62,27 +62,27 @@ impl PeaceApi {
         Some(res.unwrap())
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn full_url(&self, path: &str) -> String {
         format!("{}/{}", self.url, path)
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn post<T: Serialize + ?Sized>(&self, path: &str, json: &T) -> Option<Response> {
         self.request_wrapper(self.client.post(&self.full_url(path)).json(json)).await
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get<T: Serialize + ?Sized>(&self, path: &str, query: &T) -> Option<Response> {
         self.request_wrapper(self.client.get(&self.full_url(path)).query(query)).await
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn simple_get(&self, path: &str) -> Option<Response> {
         self.request_wrapper(self.client.get(&self.full_url(path))).await
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_json<Q: Serialize + ?Sized, T: DeserializeOwned>(
         &self,
         path: &str,
@@ -109,13 +109,13 @@ impl PeaceApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn success(&self, delay: usize) {
         self.success_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn failed(&self, delay: usize) {
         self.failed_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);

@@ -25,7 +25,7 @@ pub struct GenericBeatmapCache<T> {
 pub type BeatmapCache = GenericBeatmapCache<Beatmap>;
 
 impl MyBeatmapCache<Beatmap> for BeatmapCache {
-    #[inline(always)]
+    #[inline]
     fn new(beatmap: Option<Beatmap>) -> Self {
         Self {
             beatmap,
@@ -33,7 +33,7 @@ impl MyBeatmapCache<Beatmap> for BeatmapCache {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     fn is_expired(&self, expires: i64) -> bool {
         if let Some(beatmap) = &self.beatmap {
             // Fixed never expire!
@@ -46,7 +46,7 @@ impl MyBeatmapCache<Beatmap> for BeatmapCache {
 }
 
 impl BeatmapCache {
-    #[inline(always)]
+    #[inline]
     pub fn new(beatmap: Option<Beatmap>) -> Self {
         let create_time = match &beatmap {
             Some(b) => b.update_time,
@@ -58,13 +58,13 @@ impl BeatmapCache {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_not_submit(&self) -> bool {
         self.beatmap.is_none()
     }
 
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub async fn from_database(method: &GetBeatmapMethod, database: &Database) -> Option<Self> {
         let beatmap = Beatmap::from_database(method, database).await?;
         let create_time = beatmap.update_time.clone();
@@ -76,7 +76,7 @@ impl BeatmapCache {
         Some(new)
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn from_osu_api(
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
@@ -114,7 +114,7 @@ impl<
         T: Sync + std::marker::Send + Clone + MyBeatmapCache<B>,
     > BeatmapCacheStorage<B, T> for GenericBeatmapCaches<T>
 {
-    #[inline(always)]
+    #[inline]
     async fn get(
         &self,
         md5: Option<&String>,
@@ -140,7 +140,7 @@ impl<
         None
     }
 
-    #[inline(always)]
+    #[inline]
     async fn cache(
         &self,
         md5: Option<&String>,
@@ -166,23 +166,23 @@ impl<
         result
     }
 
-    #[inline(always)]
+    #[inline]
     async fn cache_with_md5(&self, md5: &String, beatmap: Option<&B>) -> Option<T> {
         self.cache(Some(md5), None, None, None, beatmap).await
     }
 
-    #[inline(always)]
+    #[inline]
     async fn cache_with_bid(&self, bid: i32, beatmap: Option<&B>) -> Option<T> {
         self.cache(None, Some(bid), None, None, beatmap).await
     }
 
-    #[inline(always)]
+    #[inline]
     async fn cache_with_sid(&self, sid: i32, file_name: &String, beatmap: Option<&B>) -> Option<T> {
         self.cache(None, None, Some(sid), Some(file_name), beatmap)
             .await
     }
 
-    #[inline(always)]
+    #[inline]
     async fn clean(&self) -> i32 {
         let (mut md5, mut bid, mut sid) = (
             write_lock!(self.md5),
@@ -193,7 +193,7 @@ impl<
         self.length.swap(0, Ordering::SeqCst)
     }
 
-    #[inline(always)]
+    #[inline]
     async fn remove_timeouted(&self, expires: i64) -> i32 {
         let (mut md5, mut bid, mut sid) = (Vec::new(), Vec::new(), Vec::new());
         {

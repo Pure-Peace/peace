@@ -7,7 +7,7 @@ use crate::objects::{Channel, Player};
 
 use super::depends::*;
 
-#[inline(always)]
+#[inline]
 pub async fn try_remove_spectator<'a>(
     player_id: i32,
     player_name: &String,
@@ -82,7 +82,7 @@ pub async fn try_remove_spectator<'a>(
     }
 }
 
-#[inline(always)]
+#[inline]
 pub async fn create_specate_channel_if_not_exists(
     player_id: i32,
     player: &Arc<RwLock<Player>>,
@@ -111,7 +111,7 @@ pub async fn create_specate_channel_if_not_exists(
     channel_name
 }
 
-#[inline(always)]
+#[inline]
 /// #16: OSU_SPECTATE_START
 ///
 pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
@@ -211,7 +211,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #17: OSU_SPECTATE_STOP (non-payload)
 ///
 pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
@@ -229,7 +229,7 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #18: OSU_SPECTATE_FRAMES
 ///
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
@@ -247,7 +247,7 @@ pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()
     Some(())
 }
 
-#[inline(always)]
+#[inline]
 /// #21: OSU_SPECTATE_CANT (non-payload)
 ///
 pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) -> Option<()> {

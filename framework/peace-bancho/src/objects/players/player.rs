@@ -70,7 +70,7 @@ impl Player {
         format!("{:?}", self)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn try_u_name(&self) -> String {
         self.u_name.as_ref().unwrap_or(&self.name).clone()
     }
@@ -123,7 +123,7 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_name(&self, use_u_name: bool) -> String {
         if use_u_name {
             self.try_u_name()
@@ -132,7 +132,7 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn recalculate_pp_acc(&mut self, score_table: &str, database: &Database) {
         let calc_result =
             peace_utils::peace::player_calculate_pp_acc(self.id, score_table, database).await;
@@ -144,7 +144,7 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn save_stats(&self, mode: &GameMode, database: &Database) -> bool {
         match database
             .pg
@@ -185,7 +185,7 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn recalculate_stats(
         &mut self,
         mode: &GameMode,
@@ -201,7 +201,7 @@ impl Player {
         self.enqueue(self.stats_packet()).await;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn stats_packet(&self) -> PacketData {
         bancho_packets::user_stats(
             self.id,
@@ -220,7 +220,7 @@ impl Player {
         )
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn presence_packet(&self, using_u_name: bool) -> PacketData {
         bancho_packets::user_presence(
             self.id,
@@ -234,7 +234,7 @@ impl Player {
         )
     }
 
-    #[inline(always)]
+    #[inline]
     /// presence_packet + stats_packet
     pub fn user_data_packet(&self, using_u_name: bool) -> PacketData {
         bancho_packets::PacketBuilder::merge(&mut [
@@ -243,7 +243,7 @@ impl Player {
         ])
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update_status(
         &mut self,
         action: Action,
@@ -262,7 +262,7 @@ impl Player {
         self.game_status.update_time = Local::now();
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update_ip(&mut self, ip_address: String, geo_db: &Option<Reader<Mmap>>) {
         // Update ip
         self.ip = ip_address.clone();
@@ -275,12 +275,12 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_country_code(&self) -> u8 {
         CountryCodes::from_str(&self.country).unwrap_or(CountryCodes::UN) as u8
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn update_mods(&mut self, mode: &GameMode, mods: &PlayMods) -> Option<PacketData> {
         if &self.game_status.mode != mode || self.game_status.mods.value != mods.value {
             self.game_status.mode = mode.clone();
@@ -290,7 +290,7 @@ impl Player {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn check_password_hash(
         &self,
         password_hash: &String,
@@ -316,17 +316,17 @@ impl Player {
         verify_result
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn check_password_argon2(&self, password_argon2: &String) -> bool {
         &self._password == password_argon2
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update_password(&mut self, password: &String) {
         self._password = password.clone()
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn bancho_privileges(privileges: i32) -> i32 {
         let mut bancho_priv = 0;
 
@@ -353,12 +353,12 @@ impl Player {
         bancho_priv
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update_active(&mut self) {
         self.last_active_time = Local::now();
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn add_notes(
         &self,
         content: &String,
@@ -381,7 +381,7 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn hack_detected(
         &mut self,
         hack_id: i32,
@@ -520,7 +520,7 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn update_stats(&mut self, database: &Database) {
         match self.stats_cache.get(&self.game_status.mode) {
             Some(stats) => {
@@ -564,13 +564,13 @@ impl Player {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn cache_stats(&mut self, mode: &GameMode) {
         let s = self.stats.clone();
         self.stats_cache.insert(mode.clone(), s);
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_stats_from_database(&self, database: &Database) -> Option<Stats> {
         // Build query string
         let sql = format!(
@@ -627,7 +627,7 @@ impl Player {
         };
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn once_notification(&mut self, key: &str, notification: &str) {
         if !self.flag_cache.contains_key(key) {
             // send notification to this player once
@@ -637,7 +637,7 @@ impl Player {
         };
     }
 
-    #[inline(always)]
+    #[inline]
     /// Enqueue a packet into queue, returns the length of queue
     pub async fn enqueue(&self, packet_data: PacketData) -> usize {
         self.queue
@@ -653,29 +653,29 @@ impl Player {
             })
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn dequeue(&mut self) -> Option<PacketData> {
         self.queue.lock().await.dequeue()
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get the queue data as vec, readonly
     pub async fn queue_data(&self) -> Vec<PacketData> {
         self.queue.lock().await.vec().clone()
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get the queue size
     pub async fn queue_len(&self) -> usize {
         self.queue.lock().await.len()
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn queue_peek(&self) -> Option<PacketData> {
         self.queue.lock().await.peek()
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn queue_is_empty(&self) -> bool {
         self.queue.lock().await.is_empty()
     }

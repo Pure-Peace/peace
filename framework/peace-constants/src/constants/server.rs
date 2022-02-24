@@ -19,7 +19,7 @@ pub enum RankStatusInServer {
 }
 
 impl RankStatusInServer {
-    #[inline(always)]
+    #[inline]
     pub fn from_api_rank_status(i: i32) -> Self {
         match i {
             -2 => Self::Pending,
@@ -42,7 +42,7 @@ pub enum SubmissionStatus {
 }
 
 impl SubmissionStatus {
-    #[inline(always)]
+    #[inline]
     pub fn val(&self) -> i16 {
         *self as i16
     }

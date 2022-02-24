@@ -1,7 +1,7 @@
 use peace_database::Database;
 
 /// Get beatmap ratings from database
-#[inline(always)]
+#[inline]
 pub async fn get_beatmap_rating(beatmap_md5: &String, database: &Database) -> Option<f32> {
     match database
         .pg
@@ -22,7 +22,7 @@ pub async fn get_beatmap_rating(beatmap_md5: &String, database: &Database) -> Op
     }
 }
 
-#[inline(always)]
+#[inline]
 pub async fn save_replay(
     score_file: Vec<u8>,
     score_id: i64,

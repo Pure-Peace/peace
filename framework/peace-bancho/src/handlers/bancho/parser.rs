@@ -2,7 +2,7 @@ use crate::types::{Password, Username};
 use ntex::util::Bytes;
 use peace_constants::{ClientHashes, ClientInfo};
 
-#[inline(always)]
+#[inline]
 /// Get Login data lines
 /// ```rust,ignore
 ///  rows:
@@ -21,7 +21,7 @@ async fn parse_data_lines(body: &String) -> Result<Vec<String>, ()> {
         false => Err(()),
     }
 }
-#[inline(always)]
+#[inline]
 /// Get client info lines
 /// ```rust,ignore
 ///  rows:
@@ -61,7 +61,7 @@ async fn parse_client_info(data_lines: String) -> Result<(ClientInfo, String), (
         false => Err(()),
     }
 }
-#[inline(always)]
+#[inline]
 /// Get client hash set
 /// ```rust,ignore
 ///  rows:
@@ -89,7 +89,7 @@ async fn parse_client_hashes(client_hashes: String) -> Result<ClientHashes, ()> 
     }
 }
 
-#[inline(always)]
+#[inline]
 /// Parse login data
 pub async fn parse_login_data(
     body: &Bytes,

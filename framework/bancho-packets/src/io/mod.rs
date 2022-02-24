@@ -6,7 +6,7 @@ pub mod traits;
 pub use reader::*;
 pub use writer::*;
 
-#[inline(always)]
+#[inline]
 /// Unsigned to uleb128
 pub fn write_uleb128(mut unsigned: u32) -> Vec<u8> {
     let mut data: Vec<u8> = Vec::with_capacity(2);
@@ -18,7 +18,7 @@ pub fn write_uleb128(mut unsigned: u32) -> Vec<u8> {
     data
 }
 
-#[inline(always)]
+#[inline]
 pub fn read_uleb128(slice: &[u8]) -> Option<(u32, usize)> {
     let (mut val, mut shift, mut index) = (0, 0, 0);
     loop {

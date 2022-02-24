@@ -1,12 +1,12 @@
 use crate::{data, io::traits::writing::OsuWrite, packets::structures::PacketId};
 
-#[inline(always)]
+#[inline]
 /// Create a empty packets
 pub fn empty() -> Vec<u8> {
     Vec::with_capacity(11)
 }
 
-#[inline(always)]
+#[inline]
 /// Initial a packet by id
 ///
 /// !Note: Packet length is not included,
@@ -31,7 +31,7 @@ pub fn new_packet(packet_id: PacketId) -> Vec<u8> {
     vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
 
-#[inline(always)]
+#[inline]
 /// Simple packaging for output(new(packet_id))
 ///
 /// !Note: Packet length is included
@@ -39,7 +39,7 @@ pub fn simple_pack(packet_id: PacketId) -> Vec<u8> {
     output(new_packet(packet_id))
 }
 
-#[inline(always)]
+#[inline]
 /// Add packet length and write out
 pub fn output(mut packet: Vec<u8>) -> Vec<u8> {
     for (index, value) in ((packet.len() - 7) as i32).to_le_bytes().iter().enumerate() {
@@ -48,13 +48,13 @@ pub fn output(mut packet: Vec<u8>) -> Vec<u8> {
     packet
 }
 
-#[inline(always)]
+#[inline]
 /// Write message packet
 pub fn write_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     data!(sender, content, target, sender_id)
 }
 
-#[inline(always)]
+#[inline]
 pub async fn write_message_async(
     sender: &str,
     sender_id: i32,
@@ -64,12 +64,12 @@ pub async fn write_message_async(
     data!(sender, content, target, sender_id)
 }
 
-#[inline(always)]
+#[inline]
 pub fn write_channel(name: &str, title: &str, player_count: i16) -> Vec<u8> {
     data!(name, title, player_count)
 }
 
-#[inline(always)]
+#[inline]
 pub fn write_score_frame(
     timestamp: i32,
     id: u8,
@@ -93,7 +93,7 @@ pub fn write_score_frame(
     )
 }
 
-#[inline(always)]
+#[inline]
 pub fn osu_write<W>(t: W) -> Vec<u8>
 where
     W: OsuWrite,

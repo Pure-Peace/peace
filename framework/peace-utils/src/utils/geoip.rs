@@ -3,7 +3,7 @@ use memmap::Mmap;
 use peace_constants::geoip::GeoData;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-#[inline(always)]
+#[inline]
 /// Query geo-ip info from local database
 pub async fn geo_ip_info(
     ip_address: &String,
@@ -23,7 +23,7 @@ pub async fn geo_ip_info(
     Ok(json_data.unwrap())
 }
 
-#[inline(always)]
+#[inline]
 /// Query geo-ip data from local database
 pub fn get_geo_ip_data(ip_address: &String, geo_db: &Reader<Mmap>) -> Result<GeoData, String> {
     if !ip_address.parse::<Ipv4Addr>().is_ok() && !ip_address.parse::<Ipv6Addr>().is_ok() {

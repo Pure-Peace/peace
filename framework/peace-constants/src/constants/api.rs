@@ -10,7 +10,7 @@ pub enum GetBeatmapMethod {
 }
 
 impl GetBeatmapMethod {
-    #[inline(always)]
+    #[inline]
     pub fn db_column_name(&self) -> String {
         match self {
             &Self::Md5(_) => "md5",
@@ -20,7 +20,7 @@ impl GetBeatmapMethod {
         .to_string()
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn to_string(&self) -> String {
         match self {
             Self::Md5(v) => v.to_string(),

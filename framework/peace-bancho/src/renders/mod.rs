@@ -29,7 +29,7 @@ impl BanchoGet {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn update(&mut self) {
         let (server_name, server_front) = {
             let cfg = read_lock!(self.bancho_config);

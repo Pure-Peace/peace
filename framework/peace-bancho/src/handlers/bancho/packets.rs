@@ -14,7 +14,7 @@ use peace_database::Database;
 use super::HandlerContext;
 
 /// osu!Bancho packet read handle
-#[inline(always)]
+#[inline]
 pub async fn read_handle<'a>(
     packet_id: &'a PacketId,
     request_ip: &'a String,

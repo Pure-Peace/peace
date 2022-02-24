@@ -41,13 +41,13 @@ impl OsuApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn success(&self, delay: usize) {
         self.success_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn failed(&self, delay: usize) {
         self.failed_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);
@@ -81,7 +81,7 @@ impl OsuApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get<T: Serialize + ?Sized>(&self, url: &str, query: &T) -> Option<Response> {
         if self.clients.is_empty() {
             error!("{}", NOT_API_KEYS);
@@ -127,7 +127,7 @@ impl OsuApi {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_json<Q: Serialize + ?Sized, T: DeserializeOwned>(
         &self,
         url: &str,
@@ -151,7 +151,7 @@ impl OsuApi {
     }
 
     #[cfg(feature = "osu_file_downloader")]
-    #[inline(always)]
+    #[inline]
     pub async fn get_pp_beatmap(
         &self,
         bid: i32,

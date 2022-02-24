@@ -49,7 +49,7 @@ impl PlayerSessions {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Login a player into PlayerSessions
     pub async fn login(&mut self, player: Player) -> TokenString {
         let token = player.token.clone();
@@ -140,14 +140,14 @@ impl PlayerSessions {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn enqueue_all(&self, packet_data: &PacketData) {
         for player in self.token_map.values() {
             read_lock!(player).enqueue(packet_data.clone()).await;
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn enqueue_by_token(&self, token: &TokenString, packet_data: PacketData) -> bool {
         if let Some(player) = self.token_map.get(token) {
             read_lock!(player).enqueue(packet_data).await;
@@ -156,7 +156,7 @@ impl PlayerSessions {
         false
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn enqueue_by_id(&self, user_id: &UserId, packet_data: PacketData) -> bool {
         if let Some(player) = self.id_map.get(user_id) {
             read_lock!(player).enqueue(packet_data).await;
@@ -165,33 +165,33 @@ impl PlayerSessions {
         false
     }
 
-    #[inline(always)]
+    #[inline]
     /// Token is exists or not
     pub async fn token_is_exists(&self, token: &TokenString) -> bool {
         self.token_map.contains_key(token)
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn id_is_exists(&self, id: &UserId) -> bool {
         self.id_map.contains_key(&id)
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_player_by_id(&self, id: UserId) -> Option<Arc<RwLock<Player>>> {
         self.id_map.get(&id).cloned()
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_player_by_token(&self, token: &String) -> Option<Arc<RwLock<Player>>> {
         self.token_map.get(token).cloned()
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn get_player_by_name(&self, username: &String) -> Option<Arc<RwLock<Player>>> {
         self.name_map.get(username).cloned()
     }
 
-    #[inline(always)]
+    #[inline]
     /// If user is online, check password and returns this user
     pub async fn get_login_by_name(
         &self,
@@ -211,7 +211,7 @@ impl PlayerSessions {
         Some(player)
     }
 
-    #[inline(always)]
+    #[inline]
     /// Logout a player from the PlayerSessions with user id
     ///
     /// Think, why not use the following code?
@@ -235,7 +235,7 @@ impl PlayerSessions {
         self.logout(&token, channel_list).await
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn deactive_token_list(&self, session_timeout: i64) -> Vec<TokenString> {
         let now_timestamp = Local::now().timestamp();
 
@@ -248,26 +248,26 @@ impl PlayerSessions {
         vec
     }
 
-    #[inline(always)]
+    #[inline]
     /// Use user_id check user is exists
     pub async fn user_is_logined(&self, user_id: UserId) -> bool {
         self.id_map.contains_key(&user_id)
     }
 
-    #[inline(always)]
+    #[inline]
     /// For debug, get PlayerSessions.map to string
     pub async fn map_to_string(&self) -> String {
         let token = format!("{:?}", self.token_map);
         format!("token map: {}", token)
     }
 
-    #[inline(always)]
+    #[inline]
     /// For debug, get PlayerSessions.id_map to string
     pub async fn id_map_to_string(&self) -> String {
         format!("{:?}", self.id_map)
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get a player data (readonly)
     pub async fn get_player_data(&self, token: &TokenString) -> Option<PlayerData> {
         match self.token_map.get(token) {
@@ -276,7 +276,7 @@ impl PlayerSessions {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Handle a player, then return player data
     pub async fn handle_player_get<F>(
         &self,
@@ -298,7 +298,7 @@ impl PlayerSessions {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     /// Handle a player
     pub async fn handle_player<F>(&self, token: &TokenString, handler: F) -> Result<(), ()>
     where

@@ -18,7 +18,7 @@ pub struct PPbeatmapCache {
 }
 
 impl PPbeatmapCache {
-    #[inline(always)]
+    #[inline]
     pub fn new(beatmap: PPbeatmap) -> Self {
         Self {
             beatmap: Data::new(beatmap),
@@ -26,7 +26,7 @@ impl PPbeatmapCache {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get(&self) -> Data<PPbeatmap> {
         self.beatmap.clone()
     }
@@ -52,7 +52,7 @@ impl Caches {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn cache_pp_beatmap(&self, md5: String, pp_beatmap_cache: PPbeatmapCache) {
         let mut cw = write_lock!(self.pp_beatmap_cache);
         if cw.len() as i32 > self.config.beatmap_cache_max {

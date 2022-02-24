@@ -8,7 +8,7 @@ use std::{fs, io};
 
 use crate::objects::{Caches, PPbeatmapCache};
 
-#[inline(always)]
+#[inline]
 pub fn check_is_osu_file(entry: &Result<fs::DirEntry, io::Error>) -> u8 {
     if entry.is_err() {
         return 3;
@@ -29,7 +29,7 @@ pub fn check_is_osu_file(entry: &Result<fs::DirEntry, io::Error>) -> u8 {
     1
 }
 
-#[inline(always)]
+#[inline]
 pub fn listing_osu_files(osu_files_dir: &String) -> (Vec<Option<fs::DirEntry>>, usize) {
     println!(
         "{}",
@@ -51,7 +51,7 @@ pub fn listing_osu_files(osu_files_dir: &String) -> (Vec<Option<fs::DirEntry>>, 
     (entries, total)
 }
 
-#[inline(always)]
+#[inline]
 pub async fn preload_osu_files(osu_files_dir: &String, max_load: i32, caches: &Data<Caches>) {
     let (entries, total) = listing_osu_files(osu_files_dir);
     if total > 9000 && max_load > 9000 {
@@ -100,7 +100,7 @@ pub async fn preload_osu_files(osu_files_dir: &String, max_load: i32, caches: &D
     )
 }
 
-#[inline(always)]
+#[inline]
 pub fn recalculate_osu_file_md5(osu_files_dir: &String) {
     let mut renamed = 0;
     let mut done = 0;
@@ -142,7 +142,7 @@ pub fn recalculate_osu_file_md5(osu_files_dir: &String) {
     )
 }
 
-#[inline(always)]
+#[inline]
 pub fn checking_osu_dir(osu_files_dir: &String, recalculate_md5: bool) {
     if osu_files_dir == "" {
         println!(

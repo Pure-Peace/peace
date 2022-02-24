@@ -2,7 +2,7 @@ use colored::Colorize;
 use pyo3::{types::PyBytes, PyErr, Python};
 use std::time::Instant;
 
-#[inline(always)]
+#[inline]
 /// I have implemented Rust's rijndael-256-cbc algorithm
 /// and do not need to use this python method anymore.
 /// But keep this code as an example of Rust calling python.
@@ -25,7 +25,7 @@ pub fn python_rijndael_init() {
     };
 }
 
-#[inline(always)]
+#[inline]
 /// I have implemented Rust's rijndael-256-cbc algorithm
 /// and do not need to use this python method anymore.
 /// But keep this code as an example of Rust calling python.

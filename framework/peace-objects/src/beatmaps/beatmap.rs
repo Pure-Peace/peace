@@ -49,32 +49,32 @@ pub struct Beatmap {
 
 impl Beatmap {
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub fn query_fields() -> String {
         format!("\"{}\"", Beatmap::FIELDS.join("\",\""))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_unranked(&self) -> bool {
         self.rank_status < 1
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_ranked(&self) -> bool {
         self.rank_status > 0 && self.rank_status != 4
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_qualified(&self) -> bool {
         self.rank_status == 3
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn rank_status_in_server(&self) -> RankStatusInServer {
         RankStatusInServer::from_api_rank_status(self.rank_status)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn file_name(&self) -> String {
         peace_utils::common::safe_file_name(format!(
             "{artist} - {title} ({mapper}) [{diff_name}].osu",
@@ -85,7 +85,7 @@ impl Beatmap {
         ))
     }
 
-    #[inline(always)]
+    #[inline]
     /// Get beatmap with MD5 or SID, from local, database, osu!api.
     ///
     /// if `try_from_cache` is true, will try get it from local cache or database first.
@@ -299,7 +299,7 @@ impl Beatmap {
         backup_beatmap
     }
 
-    #[inline(always)]
+    #[inline]
     // TODO: from cache by bid, sid...
     pub async fn from_cache<C: BeatmapCacheStorage<Beatmap, BeatmapCache>>(
         md5: Option<&String>,
@@ -326,7 +326,7 @@ impl Beatmap {
         Err(())
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn from_osu_api(
         method: &GetBeatmapMethod,
         file_name: Option<&String>,
@@ -344,7 +344,7 @@ impl Beatmap {
         .convert_to_beatmap())
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_expired(&self, expires: i64) -> bool {
         // Fixed never expire!
         if self.fixed_rank_status {
@@ -354,7 +354,7 @@ impl Beatmap {
     }
 
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub async fn from_database(method: &GetBeatmapMethod, database: &Database) -> Option<Self> {
         let key = method.to_string();
         debug!(
@@ -374,19 +374,19 @@ impl Beatmap {
     }
 
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub async fn from_database_by_bid(bid: i32, database: &Database) -> Option<Self> {
         Self::from_database(&GetBeatmapMethod::Bid(bid), database).await
     }
 
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub async fn from_database_by_sid(sid: i32, database: &Database) -> Option<Self> {
         Self::from_database(&GetBeatmapMethod::Sid(sid), database).await
     }
 
     #[cfg(all(not(feature = "no_database"), feature = "with_peace"))]
-    #[inline(always)]
+    #[inline]
     pub async fn from_database_by_md5(md5: &String, database: &Database) -> Option<Self> {
         Self::from_database(&GetBeatmapMethod::Md5(md5.to_string()), database).await
     }

@@ -37,12 +37,12 @@ impl Stats {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn update_time(&mut self) {
         self.update_time = Local::now()
     }
 
-    #[inline(always)]
+    #[inline]
     /// calc rank by pp v2
     ///
     /// TODO: Support for ppv1!!!!! current default is ppv2!~!!!
@@ -78,12 +78,12 @@ impl Stats {
     }
 }
 
-#[inline(always)]
+#[inline]
 fn default_rank() -> i32 {
     100000
 }
 
-#[inline(always)]
+#[inline]
 fn default_time() -> DateTime<Local> {
     Local::now()
 }

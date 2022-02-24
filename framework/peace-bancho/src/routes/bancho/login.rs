@@ -2,7 +2,7 @@ use super::depends::*;
 
 const DEFAULT_TOKEN: &str = "login_failed";
 
-#[inline(always)]
+#[inline]
 pub async fn handler(
     resp: PacketBuilder,
     req: HttpRequest,

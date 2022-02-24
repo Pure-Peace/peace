@@ -17,7 +17,7 @@ pub struct PPServerApi {
 }
 
 impl PPServerApi {
-    #[inline(always)]
+    #[inline]
     pub fn new(url: String, pp_calc_timeout: u64) -> Self {
         let client = reqwest::Client::builder()
             .connection_verbose(false)
@@ -34,7 +34,7 @@ impl PPServerApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn calc(&self, query: &str) -> Option<PPCalcResult> {
         let start = std::time::Instant::now();
         let res = self
@@ -75,13 +75,13 @@ impl PPServerApi {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn success(&self, delay: usize) {
         self.success_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn failed(&self, delay: usize) {
         self.failed_count.fetch_add(1, Ordering::SeqCst);
         self.delay.swap(delay, Ordering::SeqCst);

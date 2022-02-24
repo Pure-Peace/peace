@@ -37,7 +37,7 @@ pub enum GetBeatmapError {
 }
 
 impl GetBeatmapError {
-    #[inline(always)]
+    #[inline]
     pub fn error_message(&self) -> &'static str {
         match self {
             Self::FileNotFound => "cannot find .osu file",
@@ -45,7 +45,7 @@ impl GetBeatmapError {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn error_status(&self) -> i32 {
         match self {
             Self::FileNotFound => -1,
@@ -76,7 +76,7 @@ pub struct CalcData {
     pub no_miss: Option<i32>,
 }
 
-#[inline(always)]
+#[inline]
 pub async fn calculate_pp(beatmap: &PPbeatmap, data: &CalcData) -> PpResult {
     // Get target mode calculator
     let c = mode_calculator(data.mode.unwrap_or(4), &beatmap);
@@ -105,7 +105,7 @@ pub async fn calculate_pp(beatmap: &PPbeatmap, data: &CalcData) -> PpResult {
     c.calculate().await
 }
 
-#[inline(always)]
+#[inline]
 pub async fn calculate_acc_list(beatmap: &PPbeatmap, data: &CalcData) -> Value {
     let c = mode_calculator(data.mode.unwrap_or(4), &beatmap);
     let mut c = match data.mods {
@@ -138,7 +138,7 @@ pub async fn calculate_acc_list(beatmap: &PPbeatmap, data: &CalcData) -> Value {
     })
 }
 
-#[inline(always)]
+#[inline]
 pub fn mode_calculator(mode: u8, beatmap: &PPbeatmap) -> AnyPP {
     match mode {
         0 => AnyPP::Osu(OsuPP::new(beatmap)),
@@ -149,7 +149,7 @@ pub fn mode_calculator(mode: u8, beatmap: &PPbeatmap) -> AnyPP {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub async fn get_beatmap(
     mut md5: Option<String>,
     mut bid: Option<i32>,
@@ -189,7 +189,7 @@ pub async fn get_beatmap(
     get_beatmap_from_api(md5.as_ref(), bid, sid, file_name.as_ref(), glob).await
 }
 
-#[inline(always)]
+#[inline]
 pub async fn get_beatmap_from_local(
     md5: Option<&String>,
     bid: Option<i32>,
@@ -242,7 +242,7 @@ pub async fn get_beatmap_from_local(
     Err(GetBeatmapError::FileNotFound)
 }
 
-#[inline(always)]
+#[inline]
 pub async fn get_beatmap_from_api(
     request_md5: Option<&String>,
     bid: Option<i32>,
@@ -328,7 +328,7 @@ pub async fn get_beatmap_from_api(
     Some(b)
 }
 
-#[inline(always)]
+#[inline]
 pub async fn write_osu_file(bytes: Bytes, path: String) -> bool {
     match tokio::fs::write(path, bytes).await {
         Ok(_) => true,

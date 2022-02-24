@@ -76,7 +76,7 @@ pub mod writing {
     macro_rules! impl_number {
         ($($t:ty),+) => {
             $(impl OsuWrite for $t {
-                #[inline(always)]
+                #[inline]
                 fn osu_write(&self, buf: &mut Vec<u8>) {
                     buf.extend(self.to_le_bytes())
                 }
@@ -86,7 +86,7 @@ pub mod writing {
 
     macro_rules! impl_number_array {
         ($($t:ty),+) => {$(impl OsuWrite for [$t] {
-            #[inline(always)]
+            #[inline]
             fn osu_write(&self, buf: &mut Vec<u8>) {
                 buf.extend((self.len() as u16).to_le_bytes());
                 for int in self.iter() {
@@ -97,7 +97,7 @@ pub mod writing {
     }
 
     impl OsuWrite for str {
-        #[inline(always)]
+        #[inline]
         fn osu_write(&self, buf: &mut Vec<u8>) {
             let byte_length = self.len();
             if byte_length > 0 {
@@ -111,21 +111,21 @@ pub mod writing {
     }
 
     impl OsuWrite for u8 {
-        #[inline(always)]
+        #[inline]
         fn osu_write(&self, buf: &mut Vec<u8>) {
             buf.push(*self);
         }
     }
 
     impl OsuWrite for [u8] {
-        #[inline(always)]
+        #[inline]
         fn osu_write(&self, buf: &mut Vec<u8>) {
             buf.extend(self);
         }
     }
 
     impl OsuWrite for bool {
-        #[inline(always)]
+        #[inline]
         fn osu_write(&self, buf: &mut Vec<u8>) {
             buf.push(if *self { 1 } else { 0 });
         }

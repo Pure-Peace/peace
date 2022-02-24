@@ -31,12 +31,12 @@ impl OsuApiClient {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn success(&self) {
         self.success_count.fetch_add(1, Ordering::SeqCst);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn failed(&self) {
         self.failed_count.fetch_add(1, Ordering::SeqCst);
     }

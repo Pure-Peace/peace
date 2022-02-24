@@ -19,12 +19,12 @@ pub struct MiniScore {
 }
 
 impl MiniScore {
-    #[inline(always)]
+    #[inline]
     pub fn pp(&self) -> f32 {
         self.pp_v2.unwrap_or(0.0)
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn from_database(
         player_id: i32,
         temp_table: &str,
@@ -86,7 +86,7 @@ pub struct ScroeFromDatabase {
 }
 
 impl ScroeFromDatabase {
-    #[inline(always)]
+    #[inline]
     pub fn to_string(&self, pp_as_score: bool, using_u_name: bool) -> String {
         format!("{id}|{name}|{score}|{combo}|{n50}|{n100}|{n300}|{miss}|{katu}|{geki}|{perfect}|{mods}|{user_id}|{rank}|{create_time}|{has_replay}",
             id = self.id,
@@ -114,7 +114,7 @@ impl ScroeFromDatabase {
         )
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn pp(&self) -> f32 {
         self.pp_v2.unwrap_or(0.0)
     }
@@ -141,7 +141,7 @@ pub struct SubmitModular {
 }
 
 impl SubmitModular {
-    #[inline(always)]
+    #[inline]
     pub fn from_mutipart(mut data: MultipartData) -> Option<Self> {
         Some(Self {
             quit: data.form::<i32>("x")? == 1,
@@ -186,7 +186,7 @@ pub struct ScoreData {
 }
 
 impl ScoreData {
-    #[inline(always)]
+    #[inline]
     pub async fn from_submit_modular(submit_data: &mut SubmitModular) -> Option<Self> {
         use peace_utils::serdes::try_parse;
         let iv = std::mem::replace(&mut submit_data.iv, None);
@@ -293,7 +293,7 @@ impl ScoreData {
         Some(data)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn query(&self) -> String {
         let mut query = format!(
             "md5={}&mode={}&mods={}&n300={}&n100={}&n50={}&katu={}&combo={}&miss={}",
@@ -313,7 +313,7 @@ impl ScoreData {
         query
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn total_obj_count(&self, recalc: bool) -> i32 {
         if self.total_obj.is_some() && !recalc {
             return self.total_obj.unwrap();
@@ -331,7 +331,7 @@ impl ScoreData {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn calc_acc(&self, recalc: bool) -> f32 {
         if self.accuracy.is_some() && !recalc {
             return self.accuracy.unwrap();

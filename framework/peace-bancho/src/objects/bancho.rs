@@ -58,7 +58,7 @@ impl Bancho {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub async fn create_score_table(
         beatmap_md5: &str,
         score_table: &str,

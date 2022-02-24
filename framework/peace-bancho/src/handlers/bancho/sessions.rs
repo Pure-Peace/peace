@@ -3,7 +3,7 @@ use ntex::web::types::Data;
 use crate::objects::Bancho;
 
 /// Auto PlayerSession recycle
-#[inline(always)]
+#[inline]
 pub async fn recycle_handler(bancho: &Data<Bancho>) {
     let session_timeout = read_lock!(bancho.config)
         .data
