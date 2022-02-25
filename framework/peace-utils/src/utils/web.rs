@@ -9,6 +9,7 @@ use {
     ntex_multipart::Multipart,
     std::str::FromStr,
     tokio::sync::RwLock,
+    what_i_want::*,
 };
 
 #[derive(Debug)]
@@ -24,10 +25,7 @@ impl MultipartData {
         T: FromStr,
     {
         let s = self.forms.remove(key)?;
-        match T::from_str(s.as_ref()) {
-            Ok(t) => Some(t),
-            Err(_) => None,
-        }
+        T::from_str(s.as_ref()).ok()
     }
 
     #[inline]
@@ -42,22 +40,20 @@ pub async fn get_mutipart_data(mut mutipart_data: Multipart) -> MultipartData {
     let mut files = HashMap::new();
     let mut forms = HashMap::new();
     while let Some(Ok(mut field)) = mutipart_data.next().await {
-        if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
-            if let Ok(disposition_str) = disposition.to_str() {
-                if let Some(dis) = ContentDisposition::parse(disposition_str) {
-                    if let Some(key) = dis.name {
-                        while let Some(Ok(chunk)) = field.next().await {
-                            if dis.filename.is_some() {
-                                files.insert(key.to_string(), chunk.to_vec());
-                            } else {
-                                forms.insert(
-                                    key.to_string(),
-                                    String::from_utf8(chunk.to_vec()).unwrap_or(String::new()),
-                                );
-                            }
-                        }
-                    }
-                }
+        let disposition = unwrap_or_continue!(field.headers().get(&header::CONTENT_DISPOSITION));
+        let disposition_str = unwrap_or_continue!(disposition.to_str());
+        let dis = unwrap_or_continue!(ContentDisposition::parse(disposition_str));
+        let key = dis.name.map(|s| s.to_string());
+        let has_filename = dis.filename.is_some();
+        let key = unwrap_or_continue!(key);
+        while let Some(Ok(chunk)) = field.next().await {
+            if has_filename {
+                files.insert(key.to_string(), chunk.to_vec());
+            } else {
+                forms.insert(
+                    key.to_string(),
+                    String::from_utf8(chunk.to_vec()).unwrap_or(String::new()),
+                );
             }
         }
     }
@@ -73,18 +69,15 @@ pub async fn simple_get_form_data<T: serde::de::DeserializeOwned>(
 ) -> Result<T, serde_qs::Error> {
     let mut temp: String = String::new();
     while let Some(Ok(mut field)) = form_data.next().await {
-        if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
-            if let Ok(disposition_str) = disposition.to_str() {
-                if let Some(key) = ContentDisposition::get_name(disposition_str) {
-                    while let Some(Ok(chunk)) = field.next().await {
-                        let value = String::from_utf8(chunk.to_vec()).unwrap_or(String::new());
-                        if temp.len() > 0 {
-                            temp.push('&');
-                        }
-                        temp.push_str(&format!("{}={}", key, value));
-                    }
-                }
+        let disposition = unwrap_or_continue!(field.headers().get(&header::CONTENT_DISPOSITION));
+        let disposition_str = unwrap_or_continue!(disposition.to_str());
+        let key = unwrap_or_continue!(ContentDisposition::get_name(disposition_str)).to_string();
+        while let Some(Ok(chunk)) = field.next().await {
+            let value = String::from_utf8(chunk.to_vec()).unwrap_or(String::new());
+            if temp.len() > 0 {
+                temp.push('&');
             }
+            temp.push_str(&format!("{}={}", key, value));
         }
     }
     serde_qs::from_str(&temp)
@@ -103,27 +96,19 @@ pub async fn get_realip(req: &HttpRequest) -> Result<String, ()> {
 
 #[inline]
 pub fn header_checker(req: &HttpRequest, key: &str, value: &str) -> bool {
-    let v = req.headers().get(key);
-    if v.is_none() {
-        return false;
-    }
-    let v = v.unwrap().to_str();
-    if v.is_err() {
-        return false;
-    }
-    if v.unwrap() != value {
-        return false;
-    }
+    let hv = unwrap_or_false!(req.headers().get(key));
+    let v = unwrap_or_false!(hv.to_str());
+    require!(v == value, false);
     true
 }
 
 #[inline]
 /// Get osu version from headers
 pub async fn get_osuver(req: &HttpRequest) -> String {
-    match req.headers().get("osu-version") {
-        Some(version) => version.to_str().unwrap_or("unknown").to_string(),
-        None => "unknown".to_string(),
-    }
+    unwrap_or_val!(req.headers().get("osu-version"), "unknown".to_string())
+        .to_str()
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 #[inline]

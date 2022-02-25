@@ -1,14 +1,14 @@
 use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Debug)]
-pub struct ContentDisposition {
-    pub name: Option<String>,
-    pub filename: Option<String>,
+pub struct ContentDisposition<'a> {
+    pub name: Option<&'a str>,
+    pub filename: Option<&'a str>,
 }
 
-impl ContentDisposition {
+impl<'a> ContentDisposition<'a> {
     #[inline]
-    pub fn parse(s: &str) -> Option<Self> {
+    pub fn parse(s: &'a str) -> Option<Self> {
         let s_last = s.strip_prefix("form-data;")?;
         let mut name = None;
         let mut filename = None;
@@ -18,9 +18,9 @@ impl ContentDisposition {
                     break;
                 }
                 if k == "name" {
-                    name = Some(v.trim_matches('"').into());
+                    name = Some(v.trim_matches('"'));
                 } else if k == "filename" {
-                    filename = Some(v.trim_matches('"').into());
+                    filename = Some(v.trim_matches('"'));
                 }
             }
         }
@@ -31,22 +31,22 @@ impl ContentDisposition {
     }
 
     #[inline]
-    pub fn get_name(s: &str) -> Option<String> {
+    pub fn get_name(s: &'a str) -> Option<&'a str> {
         Self::get_key(s, "name")
     }
 
     #[inline]
-    pub fn get_file_name(s: &str) -> Option<String> {
+    pub fn get_file_name(s: &'a str) -> Option<&'a str> {
         Self::get_key(s, "filename")
     }
 
     #[inline]
-    pub fn get_key(s: &str, key: &str) -> Option<String> {
+    pub fn get_key(s: &'a str, key: &str) -> Option<&'a str> {
         let s_last = s.strip_prefix("form-data;")?;
         for i in s_last.split(";") {
             if let Some((k, v)) = i.trim().split_once("=") {
                 if k == key {
-                    return Some(v.trim_matches('"').into());
+                    return Some(v.trim_matches('"'));
                 }
             }
         }

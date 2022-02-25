@@ -44,7 +44,7 @@ tokio-pg-mapper = "0.2"
 tokio-pg-mapper-derive = "0.2"
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
 uuid = { version = "0.8", features = ["v4"] }
-
+what-i-want = "0.1.1"
 
 peace-constants = { path = "../peace-constants", version = "*" }
 peace-database = { path = "../peace-database", features = ["with_peace"], version = "*" }

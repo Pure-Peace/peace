@@ -15,23 +15,20 @@ pub struct RegisterForm {
 async fn parse_reg_form(mut form_data: Multipart) -> Option<RegisterForm> {
     let (mut username, mut email, mut password, mut check) = (None, None, None, None);
     while let Some(Ok(mut field)) = form_data.next().await {
-        if let Some(disposition) = field.headers().get(&header::CONTENT_DISPOSITION) {
-            if let Ok(disposition_str) = disposition.to_str() {
-                if let Some(name) = ContentDisposition::get_name(disposition_str) {
-                    if let Some(Ok(chunk)) = field.next().await {
-                        if let Ok(value) = String::from_utf8(chunk.to_vec()) {
-                            match name.as_str() {
-                                "user[username]" => username = Some(value),
-                                "user[user_email]" => email = Some(value),
-                                "user[password]" => password = Some(value),
-                                "check" => check = Some(value.parse::<i32>().ok()?),
-                                _ => continue,
-                            }
-                        }
-                    }
-                };
+        let disposition = unwrap_or_continue!(field.headers().get(&header::CONTENT_DISPOSITION));
+        let disposition_str = unwrap_or_continue!(disposition.to_str());
+        let name = unwrap_or_continue!(ContentDisposition::get_name(disposition_str)).to_string();
+        if let Some(Ok(chunk)) = field.next().await {
+            if let Ok(value) = String::from_utf8(chunk.to_vec()) {
+                match name.as_str() {
+                    "user[username]" => username = Some(value),
+                    "user[user_email]" => email = Some(value),
+                    "user[password]" => password = Some(value),
+                    "check" => check = Some(value.parse::<i32>().ok()?),
+                    _ => continue,
+                }
             }
-        };
+        }
     }
     Some(RegisterForm {
         username: username?,
