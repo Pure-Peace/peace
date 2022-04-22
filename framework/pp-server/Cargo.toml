@@ -58,7 +58,7 @@ tokio-postgres = { version = "0.7", features = [
 peace-performance = { version = "0.4.0" }
 
 peace-constants = { path = "../peace-constants" }
-peace-database = { path = "../peace-database", features = [
+peace-database = { path = "../../lib/database", features = [
     "with_peace",
 ], optional = true }
 peace-objects = { path = "../peace-objects", features = [

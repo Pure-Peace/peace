@@ -53,5 +53,5 @@ md-5 = { version = "0.9", optional = true }
 
 
 peace-constants = { path = "../peace-constants" }
-peace-database = { path = "../peace-database", optional = true }
+peace-database = { path = "../../lib/database", optional = true }
 peace-utils = { path = "../peace-utils", features = ["serdes", "macro"] }

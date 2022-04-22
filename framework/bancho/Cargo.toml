@@ -47,8 +47,8 @@ uuid = { version = "0.8", features = ["v4"] }
 what-i-want = "0.1.1"
 
 peace-constants = { path = "../peace-constants", version = "*" }
-peace-database = { path = "../peace-database", features = ["with_peace"], version = "*" }
-bancho-packets = { path = "../bancho-packets", version = "*" }
+peace-database = { path = "../../lib/database", features = ["with_peace"], version = "*" }
+bancho-packets = { path = "../../lib/bancho-packets", version = "*" }
 peace-objects = { path = "../peace-objects", features = ["with_peace"], version = "*" }
 peace-utils = { path = "../peace-utils", features = ["with_peace"], version = "*" }
 peace-settings = { path = "../peace-settings", version = "*" }

@@ -2,16 +2,16 @@
 members = [
     "bin/peace-server",
     "bin/pp-server",
-    "framework/peace-pp-server",
-    "framework/peace-bancho",
-    "framework/peace-database",
+    "framework/pp-server",
+    "framework/bancho",
     "framework/peace-constants",
-    "framework/bancho-packets",
     "framework/peace-objects",
     "framework/peace-utils",
     "framework/peace-settings",
-    "framework/simple-geoip",
-    "framework/simple-rijndael"
+    "lib/bancho-packets",
+    "lib/database",
+    "lib/simple-geoip",
+    "lib/simple-rijndael"
 ]
 
 # link-time-optimization

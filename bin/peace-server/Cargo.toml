@@ -17,6 +17,6 @@ path = "src/main.rs"
 [dependencies]
 ntex = { version = "0.5", features = ["tokio"] }
 
-peace-database = { path = "../../framework/peace-database", features = ["with_peace"], version = "*" }
+peace-database = { path = "../../lib/database", features = ["with_peace"], version = "*" }
 peace-settings = { path = "../../framework/peace-settings", version = "*" }
-peace-bancho = { path = "../../framework/peace-bancho", version = "*" }
+peace-bancho = { path = "../../framework/bancho", version = "*" }

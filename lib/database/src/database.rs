@@ -1,5 +1,4 @@
-pub mod connectors;
-use connectors::*;
+use crate::connectors::*;
 
 use colored::Colorize;
 

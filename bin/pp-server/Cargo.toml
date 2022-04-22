@@ -30,10 +30,10 @@ with_peace = [
 [dependencies]
 ntex = { version = "0.5", features = ["tokio"] }
 
-peace-pp-server = { path = "../../framework/peace-pp-server" }
+peace-pp-server = { path = "../../framework/pp-server" }
 peace-constants = { path = "../../framework/peace-constants" }
 peace-settings = { path = "../../framework/peace-settings" }
 peace-utils = { path = "../../framework/peace-utils", features = ["web", "async_file", "macro"] }
 
-peace-database = { path = "../../framework/peace-database", features = ["with_peace"], optional = true }
+peace-database = { path = "../../lib/database", features = ["with_peace"], optional = true }
 peace-objects = { path = "../../framework/peace-objects", features = ["osu_file_downloader"], optional = true }

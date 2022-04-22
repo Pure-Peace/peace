@@ -79,5 +79,5 @@ md-5 = { version="0.9", optional=true }
 # crypto
 simple-rijndael = { version="0.3.1", optional=true }
 
-peace-database = { path="../peace-database", optional=true }
+peace-database = { path="../../lib/database", optional=true }
 peace-constants = { path="../peace-constants", optional=true }
