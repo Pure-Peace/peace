@@ -1,13 +1,15 @@
 [workspace]
 members = [
-    "bin/peace-server",
+    "bin/bancho",
     "bin/pp-server",
+    "bin/peace",
     "framework/pp-server",
     "framework/bancho",
     "framework/peace-constants",
     "framework/peace-objects",
     "framework/peace-utils",
     "framework/peace-settings",
+    "framework/protocol",
     "lib/bancho-packets",
     "lib/database",
     "lib/simple-geoip",

@@ -1,0 +1,22 @@
+[package]
+name = "peace-bancho-service"
+version = "0.12.2"
+authors = ["PurePeace <940857703@qq.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace"
+description = "osu! server written in Rust."
+default-run = "bancho-service"
+
+[[bin]]
+name = "bancho-service"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ntex = { version = "0.5", features = ["tokio"] }
+
+peace-database = { path = "../../lib/database", features = ["with_peace"], version = "*" }
+peace-settings = { path = "../../framework/peace-settings", version = "*" }
+peace-bancho = { path = "../../framework/bancho", version = "*" }
