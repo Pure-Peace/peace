@@ -12,8 +12,7 @@ members = [
     "framework/protocol",
     "lib/bancho-packets",
     "lib/database",
-    "lib/simple-geoip",
-    "lib/simple-rijndael"
+    "lib/simple-geoip"
 ]
 
 # link-time-optimization
