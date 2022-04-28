@@ -1,14 +1,12 @@
-use std::collections::HashMap;
-
 use once_cell::sync::Lazy;
-use tokio::sync::RwLock;
+use std::{collections::HashMap, ops::Deref};
 
-use crate::{
-    server::Server,
-    types::{Readable, Writeable},
-};
+use crate::server::Server;
 
 pub type SpaceInner = HashMap<&'static str, Server>;
+
+pub struct Space;
+crate::impl_locked_singleton!(SpaceInstance => Space);
 
 #[derive(Debug)]
 pub enum SpaceError {
@@ -26,12 +24,12 @@ impl SpaceInstance {
         }
     }
 
-    pub fn check_exists(&self, key: &'static str) -> bool {
-        self._inner.contains_key(key)
+    pub fn inner(&self) -> &SpaceInner {
+        &self._inner
     }
 
     pub fn regist(&mut self, server: Server) -> Result<&mut Self, SpaceError> {
-        if self.check_exists(server.name()) {
+        if self.contains_key(server.name()) {
             return Err(SpaceError::RegistServerError("Server is already exists"));
         }
         self._inner.insert(server.name(), server);
@@ -39,27 +37,14 @@ impl SpaceInstance {
     }
 }
 
-pub struct Space;
+impl Deref for SpaceInstance {
+    type Target = SpaceInner;
 
-impl Space {
-    #[inline]
-    pub fn get() -> &'static RwLock<SpaceInstance> {
-        static SPACE: Lazy<RwLock<SpaceInstance>> = Lazy::new(|| RwLock::new(SpaceInstance::new()));
-        &SPACE
-    }
-
-    #[inline]
-    pub async fn write() -> Writeable<SpaceInstance> {
-        Self::get().write().await
-    }
-
-    #[inline]
-    pub async fn read() -> Readable<SpaceInstance> {
-        Self::get().read().await
+    fn deref(&self) -> &Self::Target {
+        &self._inner
     }
 }
 
 pub mod prelude {
-    pub use super::Space;
-    pub use crate::{get_space, read_space, write_space};
+    pub use crate::{space::Space, traits::LockedSingleton};
 }

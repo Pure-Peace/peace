@@ -1,5 +1,5 @@
 pub mod macros;
-pub mod space;
-pub mod types;
 pub mod server;
-
+pub mod space;
+pub mod traits;
+pub mod types;

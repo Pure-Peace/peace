@@ -1,20 +1,12 @@
 #[macro_export]
-macro_rules! get_space {
-    () => {
-        Space::get()
-    };
-}
-
-#[macro_export]
-macro_rules! write_space {
-    () => {
-        Space::write().await
-    };
-}
-
-#[macro_export]
-macro_rules! read_space {
-    () => {
-        Space::read().await
+macro_rules! impl_locked_singleton {
+    ($t:ty => $obj:ty) => {
+        use parking_lot::RwLock;
+        impl crate::traits::LockedSingleton<$t> for $obj {
+            fn get() -> &'static RwLock<$t> {
+                static INS: Lazy<RwLock<$t>> = Lazy::new(|| RwLock::new(<$t>::new()));
+                &INS
+            }
+        }
     };
 }
