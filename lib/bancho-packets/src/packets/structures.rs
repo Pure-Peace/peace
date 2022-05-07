@@ -3,6 +3,8 @@
 
 use enum_primitive_derive::Primitive;
 
+use crate::{build, data, out_packet, traits::writing::OsuWrite};
+
 #[derive(Debug)]
 pub struct BanchoMessage {
     pub sender: String,
@@ -28,21 +30,6 @@ pub trait LoginReply {
 }
 
 /// Login replys (i32)
-///
-/// ```rust,ignore
-/// LoginReply {
-///     InvalidCredentials        = -1,
-///     OutdatedClient            = -2,
-///     UserBanned                = -3,
-///     MultiaccountDetected      = -4,
-///     ServerError               = -5,
-///     CuttingEdgeMultiplayer    = -6,
-///     AccountPasswordRest       = -7,
-///     VerificationRequired      = -8
-/// }
-///
-/// ```
-///
 pub enum LoginFailed {
     InvalidCredentials        = -1,
     OutdatedClient            = -2,
@@ -185,4 +172,67 @@ pub enum PacketId {
     OSU_TOURNAMENT_JOIN_MATCH_CHANNEL     = 108,
     OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL    = 109,
     OSU_UNKNOWN_PACKET                    = 255,
+}
+
+pub struct MatchData<'a> {
+    match_id: i32,
+    in_progress: bool,
+    match_type: i8,
+    play_mods: u32,
+    match_name: &'a str,
+    password: Option<&'a str>,
+    beatmap_name: &'a str,
+    beatmap_id: i32,
+    beatmap_md5: &'a str,
+    slot_status: &'a [u8],
+    slot_teams: &'a [u8],
+    slot_players: &'a [i32],
+    host_player_id: i32,
+    match_game_mode: u8,
+    win_condition: u8,
+    team_type: u8,
+    freemods: bool,
+    player_mods: &'a [i32],
+    match_seed: i32,
+}
+
+impl<'a> MatchData<'a> {
+    pub fn build_packets(self, send_password: bool) -> Vec<u8> {
+        let raw_password = if let Some(pw) = self.password {
+            if send_password {
+                let mut buf = Vec::new();
+                pw.osu_write(&mut buf);
+                buf
+            } else {
+                b"\x0b\x00".to_vec()
+            }
+        } else {
+            b"\x00".to_vec()
+        };
+
+        build!(
+            PacketId::BANCHO_MATCH_START,
+            data!(
+                self.match_id as u16,
+                self.in_progress,
+                self.match_type,
+                self.play_mods,
+                self.match_name,
+                raw_password,
+                self.beatmap_name,
+                self.beatmap_id,
+                self.beatmap_md5,
+                self.slot_status,
+                self.slot_teams,
+                self.slot_players,
+                self.host_player_id,
+                self.match_game_mode,
+                self.win_condition,
+                self.team_type,
+                self.freemods,
+                self.player_mods,
+                self.match_seed
+            )
+        )
+    }
 }
