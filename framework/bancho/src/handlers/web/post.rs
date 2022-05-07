@@ -449,7 +449,7 @@ pub async fn osu_submit_modular<'a>(ctx: &Context<'a>, payload: Multipart) -> Ht
     // we should send notification to user
     if s.pass && calc_failed {
         player_w
-            .enqueue(bancho_packets::notification(
+            .enqueue(bancho_packets::server_packet::notification(
                 "PP calculation fails, Peace will auto recalculate it later.",
             ))
             .await;

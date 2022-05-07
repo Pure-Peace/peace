@@ -14,7 +14,7 @@ use {
 };
 
 use {
-    bancho_packets::{LoginFailed, LoginSuccess, PacketBuilder},
+    bancho_packets::{LoginFailed, LoginSuccess, PacketBuilder, server_packet},
     peace_constants::{BanchoPrivileges, Privileges},
     peace_database::Database,
     peace_settings::bancho::model::BanchoConfigData,
@@ -87,7 +87,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(bancho_packets::notification("Not allowed osu! version."))),
+                    Some(resp.add(server_packet::notification("Not allowed osu! version."))),
                 ));
             }
 
@@ -101,7 +101,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(bancho_packets::notification("Invalid osu! version."))),
+                    Some(resp.add(server_packet::notification("Invalid osu! version."))),
                 ));
             }
             let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
@@ -114,7 +114,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(bancho_packets::notification("Not allowed osu! version."))),
+                    Some(resp.add(server_packet::notification("Not allowed osu! version."))),
                 ));
             }
 
@@ -127,7 +127,7 @@ pub async fn login(
                     );
                     return Err((
                         "not_allowed",
-                        Some(resp.add(bancho_packets::notification("Not allowed osu! version."))),
+                        Some(resp.add(server_packet::notification("Not allowed osu! version."))),
                     ));
                 }
             }
@@ -141,7 +141,7 @@ pub async fn login(
                     );
                     return Err((
                         "not_allowed",
-                        Some(resp.add(bancho_packets::notification("osu! version too old."))),
+                        Some(resp.add(server_packet::notification("osu! version too old."))),
                     ));
                 }
             }
@@ -243,8 +243,8 @@ pub async fn login(
         return Err((
             "user_banned",
             Some(
-                resp.add(bancho_packets::notification("you have been slained."))
-                    .add(bancho_packets::login_reply(LoginFailed::UserBanned)),
+                resp.add(server_packet::notification("you have been slained."))
+                    .add(server_packet::login_reply(LoginFailed::UserBanned)),
             ),
         ));
     }
@@ -254,8 +254,8 @@ pub async fn login(
         return Err((
             "maintenance",
             Some(
-                resp.add(bancho_packets::notification(&cfg.maintenance.notification))
-                    .add(bancho_packets::login_reply(LoginFailed::ServerError)),
+                resp.add(server_packet::notification(&cfg.maintenance.notification))
+                    .add(server_packet::login_reply(LoginFailed::ServerError)),
             ),
         ));
     }
@@ -514,28 +514,31 @@ pub async fn login(
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
-        bancho_packets::login_reply(LoginSuccess::Verified(player.id)),
-        bancho_packets::protocol_version(19),
-        bancho_packets::bancho_privileges(player.bancho_privileges),
+        server_packet::login_reply(LoginSuccess::Verified(player.id)),
+        server_packet::protocol_version(19),
+        server_packet::bancho_privileges(player.bancho_privileges),
         if using_u_name {
             &user_data_u
         } else {
             &user_data
         }
         .clone(),
-        bancho_packets::silence_end(0), // TODO: real silence end
-        bancho_packets::friends_list(&player.friends),
+        server_packet::silence_end(0), // TODO: real silence end
+        server_packet::friends_list(&player.friends),
     ]);
 
     // Notifications
     for n in &cfg.login.notifications {
-        resp.add_ref(bancho_packets::notification(n));
+        resp.add_ref(server_packet::notification(n));
     }
 
     // Menu icon
-    if let Some(menu_icon) = &cfg.menu_icon.get() {
-        resp.add_ref(bancho_packets::main_menu_icon(menu_icon));
-    };
+    if cfg.menu_icon.enabled {
+        resp.add_ref(server_packet::main_menu_icon(
+            &cfg.menu_icon.image_url,
+            &cfg.menu_icon.click_url,
+        ));
+    }
 
     let player_id = player.id;
     let player_priv = player.privileges;
@@ -552,8 +555,8 @@ pub async fn login(
             .logout_with_id(user_id, Some(&bancho.channel_list))
             .await;
         // Send notification to current session
-        resp.add_ref(bancho_packets::notification(
-            "There is another person logging in with your account!!\nNow the server has logged out another session.\nIf it is not you, please change your password in time.",
+        resp.add_ref(server_packet::notification(
+            "There is another person logging in with your account!!\nNow the server_packet has logged out another session.\nIf it is not you, please change your password in time.",
         ));
     }
 
@@ -590,7 +593,7 @@ pub async fn login(
         if c.auto_join {
             c.join_by_player_id(player_id, &*player_sessions, true)
                 .await;
-            resp.add_ref(bancho_packets::channel_join(&c.display_name()));
+            resp.add_ref(server_packet::channel_join(&c.display_name()));
         }
 
         // Send channel info to client
@@ -599,7 +602,7 @@ pub async fn login(
     // Release lock
     drop(player_sessions);
 
-    resp.add_ref(bancho_packets::channel_info_end());
+    resp.add_ref(server_packet::channel_info_end());
 
     let login_end = login_start.elapsed();
     info!(

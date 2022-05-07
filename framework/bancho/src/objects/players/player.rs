@@ -6,6 +6,8 @@ use peace_constants::{
 };
 use peace_database::serde_postgres;
 
+use bancho_packets::server_packet;
+
 use crate::objects::{PlayerSettings, PlayerStatus};
 use derivative::Derivative;
 use serde_json::json;
@@ -203,7 +205,7 @@ impl Player {
 
     #[inline]
     pub fn stats_packet(&self) -> PacketData {
-        bancho_packets::user_stats(
+        server_packet::user_stats(
             self.id,
             self.game_status.action.val(),
             &self.game_status.info,
@@ -222,7 +224,7 @@ impl Player {
 
     #[inline]
     pub fn presence_packet(&self, using_u_name: bool) -> PacketData {
-        bancho_packets::user_presence(
+        server_packet::user_presence(
             self.id,
             &self.get_name(using_u_name),
             self.utc_offset,
@@ -430,7 +432,7 @@ impl Player {
 
         // If have, sent notification to player
         if let Some(notification) = notification {
-            self.enqueue(bancho_packets::notification(notification))
+            self.enqueue(server_packet::notification(notification))
                 .await;
         }
 
@@ -631,7 +633,7 @@ impl Player {
     pub async fn once_notification(&mut self, key: &str, notification: &str) {
         if !self.flag_cache.contains_key(key) {
             // send notification to this player once
-            self.enqueue(bancho_packets::notification(notification))
+            self.enqueue(server_packet::notification(notification))
                 .await;
             self.flag_cache.insert(key.to_owned(), None);
         };

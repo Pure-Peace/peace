@@ -45,7 +45,7 @@ pub async fn try_remove_spectator<'a>(
                 // Remove spectating player from spectating channel
                 c.leave(spectating_id, None).await;
             } else {
-                let fellow_data = bancho_packets::fellow_spectator_left(player_id);
+                let fellow_data = server_packet::fellow_spectator_left(player_id);
                 let channel_info = c.channel_info_packet();
 
                 if let Some(spectating_target) = id_map.get(&spectating_id) {
@@ -74,7 +74,7 @@ pub async fn try_remove_spectator<'a>(
 
     if let Some(spectating_target) = id_map.get(&spectating_id) {
         let t = read_lock!(spectating_target);
-        t.enqueue(bancho_packets::spectator_left(player_id)).await;
+        t.enqueue(server_packet::spectator_left(player_id)).await;
         debug!(
             "Player {}({}) is no longer watching {}({}).",
             t.name, t.id, player_name, player_id
@@ -181,8 +181,8 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 
     // Ready to send packet
     {
-        let i_was_joined = bancho_packets::fellow_spectator_joined(ctx.id);
-        let i_was_joined2 = bancho_packets::spectator_joined(ctx.id);
+        let i_was_joined = server_packet::fellow_spectator_joined(ctx.id);
+        let i_was_joined2 = server_packet::spectator_joined(ctx.id);
 
         let id_map = &player_sessions.id_map;
         let (target, player) = (id_map.get(&target_id)?, ctx.weak_player.upgrade()?);
@@ -195,7 +195,7 @@ pub async fn spectate_start<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
                 let s = read_lock!(spectator);
                 s.enqueue(i_was_joined.clone()).await;
                 player
-                    .enqueue(bancho_packets::fellow_spectator_joined(s.id))
+                    .enqueue(server_packet::fellow_spectator_joined(s.id))
                     .await;
             }
         }
@@ -233,7 +233,7 @@ pub async fn spectate_stop<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
 /// #18: OSU_SPECTATE_FRAMES
 ///
 pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let data = bancho_packets::spectator_frames(ctx.payload.to_vec());
+    let data = server_packet::spectator_frames(ctx.payload.to_vec());
 
     let player_sessions = read_lock!(ctx.bancho.player_sessions);
     let id_map = &player_sessions.id_map;
@@ -251,7 +251,7 @@ pub async fn spectate_frames_received<'a>(ctx: &HandlerContext<'a>) -> Option<()
 /// #21: OSU_SPECTATE_CANT (non-payload)
 ///
 pub async fn spectate_cant<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
-    let data = bancho_packets::spectator_cant_spectate(ctx.id);
+    let data = server_packet::spectator_cant_spectate(ctx.id);
     let spectate_target_id = ctx.data.spectating?;
 
     let player_sessions = read_lock!(ctx.bancho.player_sessions);

@@ -6,6 +6,7 @@ use std::{
     },
 };
 
+use bancho_packets::server_packet;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Local};
 use hashbrown::HashMap;
@@ -133,7 +134,7 @@ impl Channel {
             }
             // Send them message
             let p = read_lock!(player);
-            p.enqueue(bancho_packets::send_message(
+            p.enqueue(server_packet::send_message(
                 if p.settings.display_u_name {
                     &sender_u
                 } else {
@@ -149,7 +150,7 @@ impl Channel {
 
     #[inline]
     pub fn channel_info_packet(&self) -> PacketData {
-        bancho_packets::channel_info(
+        server_packet::channel_info(
             &self.display_name(),
             &self.title,
             self.player_count.load(Ordering::SeqCst),
@@ -233,7 +234,7 @@ impl Channel {
 
             // Send it to player's client
             player
-                .enqueue(bancho_packets::channel_join(&self.display_name()))
+                .enqueue(server_packet::channel_join(&self.display_name()))
                 .await;
 
             (player.name.clone(), player.id)
@@ -282,7 +283,7 @@ impl Channel {
             player.channels.remove(&self.name);
             // Send it to player's client
             player
-                .enqueue(bancho_packets::channel_kick(&self.display_name()))
+                .enqueue(server_packet::channel_kick(&self.display_name()))
                 .await;
 
             (player.name.clone(), player.id)

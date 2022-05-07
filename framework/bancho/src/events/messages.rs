@@ -134,7 +134,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             {
                 // Blocked
                 player
-                    .enqueue(bancho_packets::user_dm_blocked(&target_name))
+                    .enqueue(server_packet::user_dm_blocked(&target_name))
                     .await;
                 warn!(
                     "Player {}({}) try send message to blocked-non-friends player: {}({})",
@@ -146,7 +146,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             // TODO: target is slienced
             if false {
                 player
-                    .enqueue(bancho_packets::target_silenced(&target_name))
+                    .enqueue(server_packet::target_silenced(&target_name))
                     .await;
             }
 
@@ -155,7 +155,7 @@ pub async fn private<'a>(ctx: &HandlerContext<'a>) -> Option<()> {
             // TODO: Limit the length of message content?
             // Send message done
             target
-                .enqueue(bancho_packets::send_message(
+                .enqueue(server_packet::send_message(
                     &if target.settings.display_u_name {
                         player.try_u_name()
                     } else {

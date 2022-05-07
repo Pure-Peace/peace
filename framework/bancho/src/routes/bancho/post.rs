@@ -63,7 +63,7 @@ pub async fn handler(
         Err(err) => {
             error!("Failed to get osu-token, error: {:?}", err);
             return HttpResponse::Ok().body(
-                resp.add(bancho_packets::login_reply(LoginFailed::ServerError))
+                resp.add(server_packet::login_reply(LoginFailed::ServerError))
                     .write_out(),
             );
         }
@@ -80,8 +80,8 @@ pub async fn handler(
             return HttpResponse::Ok()
                 .content_type("text/html; charset=UTF-8")
                 .body(
-                    resp.add(bancho_packets::notification("Welcome back!"))
-                        .add(bancho_packets::bancho_restart(0))
+                    resp.add(server_packet::notification("Welcome back!"))
+                        .add(server_packet::bancho_restart(0))
                         .write_out(),
                 );
         }

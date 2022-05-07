@@ -105,7 +105,7 @@ impl PlayerSessions {
                 self.player_count.fetch_sub(1, Ordering::SeqCst);
 
                 // Enqueue logout packet to all players
-                self.enqueue_all(&bancho_packets::user_logout(player_id))
+                self.enqueue_all(&bancho_packets::server_packet::user_logout(player_id))
                     .await;
 
                 if channel_list.is_some() {
