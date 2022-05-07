@@ -131,6 +131,6 @@ pub mod writing {
         }
     }
 
-    impl_number!(u16, i16, i32, u32, i64, u64, f32, f64);
-    impl_number_array!(u16, i16, i32, u32, i64, u64, f32, f64);
+    impl_number!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
+    impl_number_array!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
 }

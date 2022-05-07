@@ -1,11 +1,10 @@
 use crate::{
-    build, data,
-    io::traits::writing::*,
-    out_packet,
     packets::{
-        structures::{LoginReply, PacketId},
+        structures::LoginReply,
         utils::{write_channel, write_message},
     },
+    prelude::*,
+    MatchData,
 };
 
 #[inline]
@@ -34,7 +33,7 @@ pub fn pong() -> Vec<u8> {
 pub fn change_username(username_old: &str, username_new: &str) -> Vec<u8> {
     build!(
         PacketId::BANCHO_HANDLE_IRC_CHANGE_USERNAME,
-        &format!("{}>>>>{}", username_old, username_new)
+        &format!("{username_old}>>>>{username_new}")
     )
 }
 
@@ -126,13 +125,18 @@ pub fn notification(msg: &str) -> Vec<u8> {
 
 #[inline]
 /// #26: BANCHO_UPDATE_MATCH
-/// TODO
-pub fn update_match() {}
+pub fn update_match(match_data: MatchData) -> Vec<u8> {
+    build!(
+        PacketId::BANCHO_UPDATE_MATCH,
+        match_data.build_packets(false)
+    )
+}
 
 #[inline]
 /// #27: BANCHO_NEW_MATCH
-/// TODO
-pub fn new_match() {}
+pub fn new_match(match_data: MatchData) -> Vec<u8> {
+    build!(PacketId::BANCHO_NEW_MATCH, match_data.build_packets(true))
+}
 
 #[inline]
 /// #28: BANCHO_DISBAND_MATCH
@@ -148,8 +152,12 @@ pub fn toggle_block_non_friend_pm() -> Vec<u8> {
 
 #[inline]
 /// #36: BANCHO_MATCH_JOIN_SUCCESS
-/// TODO
-pub fn match_join_success() {}
+pub fn match_join_success(match_data: MatchData) -> Vec<u8> {
+    build!(
+        PacketId::BANCHO_MATCH_JOIN_SUCCESS,
+        match_data.build_packets(true)
+    )
+}
 
 #[inline]
 /// #37: BANCHO_MATCH_JOIN_FAIL
@@ -171,13 +179,50 @@ pub fn fellow_spectator_left(user_id: i32) -> Vec<u8> {
 
 #[inline]
 /// #46: BANCHO_MATCH_START
-/// TODO
-pub fn match_start() {}
+pub fn match_start(match_data: MatchData) -> Vec<u8> {
+    build!(PacketId::BANCHO_MATCH_START, match_data.build_packets(true))
+}
 
 #[inline]
 /// #48: BANCHO_MATCH_SCORE_UPDATE
-/// TODO
-pub fn match_score_update() {}
+pub fn match_score_update(
+    time: i32,
+    id: u8,
+    num300: u16,
+    num100: u16,
+    num50: u16,
+    num_geki: u16,
+    num_katu: u16,
+    num_miss: u16,
+    total_score: i32,
+    current_combo: u16,
+    max_combo: u16,
+    perfect: bool,
+    current_hp: u8,
+    tag_byte: u8,
+    score_v2: bool,
+) -> Vec<u8> {
+    build!(
+        PacketId::BANCHO_MATCH_START,
+        data!(
+            time,
+            id,
+            num300,
+            num100,
+            num50,
+            num_geki,
+            num_katu,
+            num_miss,
+            total_score,
+            current_combo,
+            max_combo,
+            perfect,
+            current_hp,
+            tag_byte,
+            score_v2
+        )
+    )
+}
 
 #[inline]
 /// #50: BANCHO_MATCH_TRANSFER_HOST
@@ -242,7 +287,9 @@ pub fn channel_auto_join(name: &str, title: &str, player_count: i16) -> Vec<u8> 
 #[inline]
 /// #69: BANCHO_BEATMAP_INFO_REPLY
 /// UNUSED
-pub fn beatmap_info_reply() {}
+pub fn beatmap_info_reply() {
+    unimplemented!()
+}
 
 #[inline]
 /// #71: BANCHO_PRIVILEGES
@@ -264,15 +311,19 @@ pub fn protocol_version(version: i32) -> Vec<u8> {
 
 #[inline]
 /// #76: BANCHO_MAIN_MENU_ICON
-/// menu_icon = image_url: &str | click_url: &str
-pub fn main_menu_icon(menu_icon: &str) -> Vec<u8> {
-    build!(PacketId::BANCHO_MAIN_MENU_ICON, menu_icon)
+pub fn main_menu_icon(image_url: &str, link_url: &str) -> Vec<u8> {
+    build!(
+        PacketId::BANCHO_MAIN_MENU_ICON,
+        format!("{image_url}|{link_url}")
+    )
 }
 
 #[inline]
 /// #80: BANCHO_MONITOR
 /// deprecated
-pub fn monitor() {}
+pub fn monitor() -> Vec<u8> {
+    build!(PacketId::BANCHO_MONITOR)
+}
 
 #[inline]
 /// #81: BANCHO_MATCH_PLAYER_SKIPPED
@@ -317,8 +368,16 @@ pub fn bancho_restart(millis: i32) -> Vec<u8> {
 
 #[inline]
 /// #88: BANCHO_MATCH_INVITE
-/// TODO
-pub fn match_invite() {}
+pub fn match_invite(welcome: &str, match_id: i32, match_password: Option<&str>) -> Vec<u8> {
+    build!(
+        PacketId::BANCHO_MATCH_INVITE,
+        format!(
+            "{welcome} osump://{}/{}.",
+            match_id,
+            match_password.unwrap_or("")
+        )
+    )
+}
 
 #[inline]
 /// #89: BANCHO_CHANNEL_INFO_END
@@ -354,8 +413,8 @@ pub fn user_presence_single(user_id: i32) -> Vec<u8> {
 #[inline]
 /// #96: BANCHO_USER_PRESENCE_BUNDLE
 /// UNUSED
-pub fn user_presence_bundle(player_id_list: &Vec<i32>) -> Vec<u8> {
-    build!(PacketId::BANCHO_USER_PRESENCE_BUNDLE, player_id_list)
+pub fn user_presence_bundle(player_ids: &Vec<i32>) -> Vec<u8> {
+    build!(PacketId::BANCHO_USER_PRESENCE_BUNDLE, player_ids)
 }
 
 #[inline]
