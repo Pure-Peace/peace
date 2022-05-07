@@ -1,38 +1,39 @@
-use bancho_packets::{self, LoginFailed, LoginSuccess, PacketReader};
+use bancho_packets::{server_packet, LoginFailed, LoginSuccess, PacketBuilder, PacketReader};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 fn packets_write_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("packets_write");
     group.bench_function("match_join_failed packet", |b| {
-        b.iter(|| bancho_packets::match_join_fail())
+        b.iter(|| server_packet::match_join_fail())
     });
     group.bench_function("match_join_failed packet - 2", |b| {
         b.iter(|| {
-            bancho_packets::PacketBuilder::new()
-                .add(bancho_packets::match_join_fail())
+            PacketBuilder::new()
+                .add(server_packet::match_join_fail())
                 .write_out()
         })
     });
     group.bench_function("notification packet", |b| {
-        b.iter(|| bancho_packets::notification("hello"))
+        b.iter(|| server_packet::notification("hello"))
     });
     group.bench_function("login_reply packet", |b| {
-        b.iter(|| bancho_packets::login_reply(LoginFailed::InvalidCredentials))
+        b.iter(|| server_packet::login_reply(LoginFailed::InvalidCredentials))
     });
     group.bench_function("send massage packet", |b| {
-        b.iter(|| bancho_packets::send_message("PurePeace", 1001, "May you have enough happiness to make you sweet,enough trials to make you strong,enough sorrow to keep you human,enough hope to make you happy? Always put yourself in others’shoes.If you feel that it hurts you,it probably hurts the other person, too. The happiest of people don’t necessarily have the best of everything;they just make the most of everything that comes along their way.Happiness lies for those who cry,those who hurt, those who have searched,and those who have tried,for only they can appreciate the importance of people. Please send this message to those people who mean something to you,to those who have touched your life in one way or another,to those who make you smile when you really need it,to those that make you see the brighter side of things when you are really down,to those who you want to let them know that you appreciate their friendship.And if you don’t, don’t worry,nothing bad will happen to you,you will just miss out on the opportunity to brighten someone’s day with this message.", "osu"))
+        b.iter(|| server_packet::send_message("PurePeace", 1001, "May you have enough happiness to make you sweet,enough trials to make you strong,enough sorrow to keep you human,enough hope to make you happy? Always put yourself in others’shoes.If you feel that it hurts you,it probably hurts the other person, too. The happiest of people don’t necessarily have the best of everything;they just make the most of everything that comes along their way.Happiness lies for those who cry,those who hurt, those who have searched,and those who have tried,for only they can appreciate the importance of people. Please send this message to those people who mean something to you,to those who have touched your life in one way or another,to those who make you smile when you really need it,to those that make you see the brighter side of things when you are really down,to those who you want to let them know that you appreciate their friendship.And if you don’t, don’t worry,nothing bad will happen to you,you will just miss out on the opportunity to brighten someone’s day with this message.", "osu"))
     });
     group.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
-            bancho_packets::PacketBuilder::new()
-                .add(bancho_packets::login_reply(LoginSuccess::Verified(1009)))
-                .add(bancho_packets::protocol_version(19))
-                .add(bancho_packets::notification("Welcome to Peace!"))
-                .add(bancho_packets::main_menu_icon(
-                    "https://i.kafuu.pro/welcome.png|https://www.baidu.com",
+            PacketBuilder::new()
+                .add(server_packet::login_reply(LoginSuccess::Verified(1009)))
+                .add(server_packet::protocol_version(19))
+                .add(server_packet::notification("Welcome to Peace!"))
+                .add(server_packet::main_menu_icon(
+                    "https://i.kafuu.pro/welcome.png",
+                    "https://www.baidu.com",
                 ))
-                .add(bancho_packets::silence_end(0))
-                .add(bancho_packets::channel_info_end())
+                .add(server_packet::silence_end(0))
+                .add(server_packet::channel_info_end())
                 .write_out()
         })
     });

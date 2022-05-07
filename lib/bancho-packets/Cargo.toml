@@ -1,6 +1,6 @@
 [package]
 name = "bancho-packets"
-version = "2.0.0"
+version = "3.0.0"
 authors = ["PurePeace <940857703@qq.com>"]
 edition = "2021"
 license = "MIT"

@@ -168,7 +168,7 @@ mod packets_writing {
     #[test]
     fn test_login_reply() {
         assert_eq!(
-            login_reply(LoginFailed::InvalidCredentials),
+            server_packet::login_reply(LoginFailed::InvalidCredentials),
             vec![5, 0, 0, 4, 0, 0, 0, 255, 255, 255, 255]
         )
     }
@@ -176,7 +176,7 @@ mod packets_writing {
     #[test]
     fn test_login_notfication() {
         assert_eq!(
-            notification("hello"),
+            server_packet::notification("hello"),
             vec![24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111]
         )
     }
@@ -184,7 +184,7 @@ mod packets_writing {
     #[test]
     fn test_send_message() {
         assert_eq!(
-            send_message("PurePeace", 1001, "hello", "osu"),
+            server_packet::send_message("PurePeace", 1001, "hello", "osu"),
             vec![
                 7, 0, 0, 27, 0, 0, 0, 11, 9, 80, 117, 114, 101, 80, 101, 97, 99, 101, 11, 5, 104,
                 101, 108, 108, 111, 11, 3, 111, 115, 117, 233, 3, 0, 0
@@ -195,7 +195,7 @@ mod packets_writing {
     #[test]
     fn test_change_username() {
         assert_eq!(
-            change_username("PurePeace", "peppy"),
+            server_packet::change_username("PurePeace", "peppy"),
             vec![
                 9, 0, 0, 20, 0, 0, 0, 11, 18, 80, 117, 114, 101, 80, 101, 97, 99, 101, 62, 62, 62,
                 62, 112, 101, 112, 112, 121
@@ -206,7 +206,7 @@ mod packets_writing {
     #[test]
     fn test_rtx() {
         assert_eq!(
-            rtx("Peace"),
+            server_packet::rtx("Peace"),
             vec![105, 0, 0, 7, 0, 0, 0, 11, 5, 80, 101, 97, 99, 101]
         )
     }
@@ -215,14 +215,15 @@ mod packets_writing {
     fn test_login() {
         let resp = PacketBuilder::new();
         let resp = resp
-            .add(login_reply(LoginSuccess::Verified(1009)))
-            .add(protocol_version(19))
-            .add(notification("Welcome to Peace!"))
-            .add(main_menu_icon(
-                "https://i.kafuu.pro/welcome.png|https://www.baidu.com",
+            .add(server_packet::login_reply(LoginSuccess::Verified(1009)))
+            .add(server_packet::protocol_version(19))
+            .add(server_packet::notification("Welcome to Peace!"))
+            .add(server_packet::main_menu_icon(
+                "https://i.kafuu.pro/welcome.png",
+                "https://www.baidu.com",
             ))
-            .add(silence_end(0))
-            .add(channel_info_end());
+            .add(server_packet::silence_end(0))
+            .add(server_packet::channel_info_end());
         assert_eq!(
             resp.write_out(),
             vec![
@@ -241,7 +242,7 @@ mod packets_writing {
     fn test_write_i32_list() {
         //let list = utils::write_int_list(&vec![1001, 1002, 1003]);
         assert_eq!(
-            user_presence_bundle(&vec![1001, 1002, 1003]),
+            server_packet::user_presence_bundle(&vec![1001, 1002, 1003]),
             vec![96, 0, 0, 14, 0, 0, 0, 3, 0, 233, 3, 0, 0, 234, 3, 0, 0, 235, 3, 0, 0]
         )
     }
@@ -256,7 +257,7 @@ mod packets_writing {
 
     #[test]
     fn test_user_presence() {
-        let data = user_presence(5, "PurePeace", 8, 48, 1, 1.0, 1.0, 666);
+        let data = server_packet::user_presence(5, "PurePeace", 8, 48, 1, 1.0, 1.0, 666);
         println!("{}", data.len());
         assert_eq!(
             data,
@@ -269,7 +270,7 @@ mod packets_writing {
 
     #[test]
     fn test_user_stats() {
-        let data = user_stats(
+        let data = server_packet::user_stats(
             5,
             1,
             "idle",
@@ -294,6 +295,30 @@ mod packets_writing {
                 0, 0, 128, 150, 152, 0, 0, 0, 0, 0, 40, 131, 35, 60, 16, 39, 0, 0, 0, 225, 245, 5,
                 0, 0, 0, 0, 100, 0, 0, 0, 16, 39
             ]
+        )
+    }
+
+    #[test]
+    fn test_client_packets() {
+        let (t1, t2, t3, t4, t5, t6) = (1, "test", "test", 2, 3, 4);
+        let data = client_packet::user_change_action(t1, t2, t3, t4, t5, t6);
+
+        let mut reader = PacketReader::new(&data);
+        let packet = reader.next().unwrap();
+        let payload = packet.payload.unwrap();
+
+        let mut reader = PayloadReader::new(payload);
+
+        let r1 = reader.read::<u8>().unwrap();
+        let r2 = reader.read::<String>().unwrap();
+        let r3 = reader.read::<String>().unwrap();
+        let r4 = reader.read::<u32>().unwrap();
+        let r5 = reader.read::<u8>().unwrap();
+        let r6 = reader.read::<i32>().unwrap();
+
+        assert_eq!(
+            (t1, t2, t3, t4, t5, t6),
+            (r1, r2.as_str(), r3.as_str(), r4, r5, r6)
         )
     }
 }

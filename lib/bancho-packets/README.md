@@ -38,7 +38,7 @@ while let Some(packet) = reader.next() {
         Some(payload) => {
             // Read payload
             let mut payload_reader = PayloadReader::new(payload);
-            println!("{:?}", payload_reader.read_string());
+            println!("{:?}", payload_reader.read::<String>());
         },
         None => println!("Non-payload"),
     }
@@ -59,24 +59,24 @@ BANCHO_NOTIFICATION: Some("读取完了！！✨")
 ## Writing to osu
 
 ```rust
-use bancho_packets::{LoginFailed, PacketBuilder, self};
+use bancho_packets::{LoginFailed, PacketBuilder, server_packet};
 
 // Single packet
-let data = bancho_packets::login_reply(LoginFailed::InvalidCredentials);
-let data1 = bancho_packets::notification("hello");
+let data = server_packet::login_reply(LoginFailed::InvalidCredentials);
+let data1 = server_packet::notification("hello");
 
 // Multiple packets with Builder
 let data3 = PacketBuilder::new()
-    .add(bancho_packets::login_reply(
-        bancho_packets::LoginSuccess::Verified(1009),
+    .add(server_packet::login_reply(
+        server_packet::LoginSuccess::Verified(1009),
     ))
-    .add(bancho_packets::protocol_version(19))
-    .add(bancho_packets::notification("Welcome to Peace!"))
-    .add(bancho_packets::main_menu_icon(
+    .add(server_packet::protocol_version(19))
+    .add(server_packet::notification("Welcome to Peace!"))
+    .add(server_packet::main_menu_icon(
         "https://xxx.png|https://example.com",
     ))
-    .add(bancho_packets::silence_end(0))
-    .add(bancho_packets::channel_info_end())
+    .add(server_packet::silence_end(0))
+    .add(server_packet::channel_info_end())
     .write_out();
 
 ```
@@ -84,7 +84,7 @@ let data3 = PacketBuilder::new()
 ## Raw (Build your own packet)
 
 ```rust
-use bancho_packets::{PacketId, build, data, out_packet, traits::writing::*};
+use bancho_packets::prelude::*;
 
 // Build simple packet
 let number_data: i32 = 1;

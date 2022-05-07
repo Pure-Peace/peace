@@ -161,7 +161,7 @@ pub mod macros {
     ///
     /// # Examples:
     /// ```
-    /// use bancho_packets::{PacketId, build, data, out_packet, traits::writing::*};
+    /// use bancho_packets::prelude::*;
     ///
     /// // Origin data here (i32)
     /// let data: i32 = 6;
