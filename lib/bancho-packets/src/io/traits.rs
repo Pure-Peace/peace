@@ -1,5 +1,14 @@
 pub mod reading {
-    use crate::{BanchoMessage, PayloadReader};
+    use crate::{BanchoMessage, PayloadReader, ScoreFrame};
+
+    #[macro_export]
+    macro_rules! read_struct {
+        ($reader:ident, $struct:ident { $($field:ident),+ }) => {
+            $struct {
+                $($field: $reader.read()?,)+
+            }
+        };
+    }
 
     pub trait OsuRead<T> {
         fn read(reader: &mut PayloadReader) -> Option<T>;
@@ -21,6 +30,12 @@ pub mod reading {
         }
     }
 
+    impl OsuRead<bool> for bool {
+        fn read(reader: &mut PayloadReader) -> Option<bool> {
+            Some(reader.read::<i8>()? == 1)
+        }
+    }
+
     macro_rules! impl_number {
         ($($t:ty),+) => {
             $(impl OsuRead<$t> for $t {
@@ -37,12 +52,40 @@ pub mod reading {
 
     impl OsuRead<BanchoMessage> for BanchoMessage {
         fn read(reader: &mut PayloadReader) -> Option<BanchoMessage> {
-            Some(BanchoMessage {
-                sender: reader.read()?,
-                content: reader.read()?,
-                target: reader.read()?,
-                sender_id: reader.read()?,
-            })
+            Some(read_struct!(
+                reader,
+                BanchoMessage {
+                    sender,
+                    content,
+                    target,
+                    sender_id
+                }
+            ))
+        }
+    }
+
+    impl OsuRead<ScoreFrame> for ScoreFrame {
+        fn read(reader: &mut PayloadReader) -> Option<ScoreFrame> {
+            Some(read_struct!(
+                reader,
+                ScoreFrame {
+                    timestamp,
+                    id,
+                    n300,
+                    n100,
+                    n50,
+                    geki,
+                    katu,
+                    miss,
+                    score,
+                    combo,
+                    max_combo,
+                    perfect,
+                    hp,
+                    tag_byte,
+                    score_v2
+                }
+            ))
         }
     }
 
