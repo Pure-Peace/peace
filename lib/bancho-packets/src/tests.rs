@@ -215,15 +215,15 @@ mod packets_writing {
     fn test_login() {
         let resp = PacketBuilder::new();
         let resp = resp
-            .add(server_packet::login_reply(LoginSuccess::Verified(1009)))
-            .add(server_packet::protocol_version(19))
-            .add(server_packet::notification("Welcome to Peace!"))
-            .add(server_packet::main_menu_icon(
+            .add(&server_packet::login_reply(LoginSuccess::Verified(1009)))
+            .add(&server_packet::protocol_version(19))
+            .add(&server_packet::notification("Welcome to Peace!"))
+            .add(&server_packet::main_menu_icon(
                 "https://i.kafuu.pro/welcome.png",
                 "https://www.baidu.com",
             ))
-            .add(server_packet::silence_end(0))
-            .add(server_packet::channel_info_end());
+            .add(&server_packet::silence_end(0))
+            .add(&server_packet::channel_info_end());
         assert_eq!(
             resp.write_out(),
             vec![
@@ -240,7 +240,6 @@ mod packets_writing {
 
     #[test]
     fn test_write_i32_list() {
-        //let list = utils::write_int_list(&vec![1001, 1002, 1003]);
         assert_eq!(
             server_packet::user_presence_bundle(&vec![1001, 1002, 1003]),
             vec![96, 0, 0, 14, 0, 0, 0, 3, 0, 233, 3, 0, 0, 234, 3, 0, 0, 235, 3, 0, 0]
@@ -249,8 +248,8 @@ mod packets_writing {
 
     #[test]
     fn test_write_u32_i32() {
-        let int_u32 = utils::osu_write(536870912 as u32);
-        let int_i32 = utils::osu_write(536870912);
+        let int_u32 = PacketBuilder::osu_write(536870912 as u32);
+        let int_i32 = PacketBuilder::osu_write(536870912);
 
         println!("{:?} {:?}", int_u32, int_i32);
     }

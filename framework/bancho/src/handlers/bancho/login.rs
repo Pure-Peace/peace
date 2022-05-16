@@ -14,7 +14,7 @@ use {
 };
 
 use {
-    bancho_packets::{LoginFailed, LoginSuccess, PacketBuilder, server_packet},
+    bancho_packets::{server_packet, LoginFailed, LoginSuccess, PacketBuilder},
     peace_constants::{BanchoPrivileges, Privileges},
     peace_database::Database,
     peace_settings::bancho::model::BanchoConfigData,
@@ -87,7 +87,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(server_packet::notification("Not allowed osu! version."))),
+                    Some(resp.add(&server_packet::notification("Not allowed osu! version."))),
                 ));
             }
 
@@ -101,7 +101,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(server_packet::notification("Invalid osu! version."))),
+                    Some(resp.add(&server_packet::notification("Invalid osu! version."))),
                 ));
             }
             let version_captures: i32 = version_captures.unwrap()[0].parse().unwrap();
@@ -114,7 +114,7 @@ pub async fn login(
                 );
                 return Err((
                     "not_allowed",
-                    Some(resp.add(server_packet::notification("Not allowed osu! version."))),
+                    Some(resp.add(&server_packet::notification("Not allowed osu! version."))),
                 ));
             }
 
@@ -127,7 +127,7 @@ pub async fn login(
                     );
                     return Err((
                         "not_allowed",
-                        Some(resp.add(server_packet::notification("Not allowed osu! version."))),
+                        Some(resp.add(&server_packet::notification("Not allowed osu! version."))),
                     ));
                 }
             }
@@ -141,7 +141,7 @@ pub async fn login(
                     );
                     return Err((
                         "not_allowed",
-                        Some(resp.add(server_packet::notification("osu! version too old."))),
+                        Some(resp.add(&server_packet::notification("osu! version too old."))),
                     ));
                 }
             }
@@ -243,8 +243,8 @@ pub async fn login(
         return Err((
             "user_banned",
             Some(
-                resp.add(server_packet::notification("you have been slained."))
-                    .add(server_packet::login_reply(LoginFailed::UserBanned)),
+                resp.add(&server_packet::notification("you have been slained."))
+                    .add(&server_packet::login_reply(LoginFailed::UserBanned)),
             ),
         ));
     }
@@ -254,8 +254,8 @@ pub async fn login(
         return Err((
             "maintenance",
             Some(
-                resp.add(server_packet::notification(&cfg.maintenance.notification))
-                    .add(server_packet::login_reply(LoginFailed::ServerError)),
+                resp.add(&server_packet::notification(&cfg.maintenance.notification))
+                    .add(&server_packet::login_reply(LoginFailed::ServerError)),
             ),
         ));
     }
@@ -508,33 +508,31 @@ pub async fn login(
 
     // User data packet, including player stats and presence
     let user_stats_packet = player.stats_packet();
-    let user_data =
-        PacketBuilder::merge(&mut [user_stats_packet.clone(), player.presence_packet(false)]);
-    let user_data_u = PacketBuilder::merge(&mut [user_stats_packet, player.presence_packet(true)]);
+    let user_data = PacketBuilder::pack(&mut [&user_stats_packet, &player.presence_packet(false)]);
+    let user_data_u = PacketBuilder::pack(&mut [&user_stats_packet, &player.presence_packet(true)]);
 
     // Add response packet data
     resp.add_multiple_ref(&mut [
-        server_packet::login_reply(LoginSuccess::Verified(player.id)),
-        server_packet::protocol_version(19),
-        server_packet::bancho_privileges(player.bancho_privileges),
+        &server_packet::login_reply(LoginSuccess::Verified(player.id)),
+        &server_packet::protocol_version(19),
+        &server_packet::bancho_privileges(player.bancho_privileges),
         if using_u_name {
             &user_data_u
         } else {
             &user_data
-        }
-        .clone(),
-        server_packet::silence_end(0), // TODO: real silence end
-        server_packet::friends_list(&player.friends),
+        },
+        &server_packet::silence_end(0), // TODO: real silence end
+        &server_packet::friends_list(&player.friends),
     ]);
 
     // Notifications
     for n in &cfg.login.notifications {
-        resp.add_ref(server_packet::notification(n));
+        resp.add_ref(&server_packet::notification(n));
     }
 
     // Menu icon
     if cfg.menu_icon.enabled {
-        resp.add_ref(server_packet::main_menu_icon(
+        resp.add_ref(&server_packet::main_menu_icon(
             &cfg.menu_icon.image_url,
             &cfg.menu_icon.click_url,
         ));
@@ -555,7 +553,7 @@ pub async fn login(
             .logout_with_id(user_id, Some(&bancho.channel_list))
             .await;
         // Send notification to current session
-        resp.add_ref(server_packet::notification(
+        resp.add_ref(&server_packet::notification(
             "There is another person logging in with your account!!\nNow the server_packet has logged out another session.\nIf it is not you, please change your password in time.",
         ));
     }
@@ -578,7 +576,7 @@ pub async fn login(
             )
             .await;
         // Add online players to this new player
-        resp.add_ref(online_player.user_data_packet(using_u_name));
+        resp.add_ref(&online_player.user_data_packet(using_u_name));
     }
 
     // Join player into channel
@@ -593,16 +591,16 @@ pub async fn login(
         if c.auto_join {
             c.join_by_player_id(player_id, &*player_sessions, true)
                 .await;
-            resp.add_ref(server_packet::channel_join(&c.display_name()));
+            resp.add_ref(&server_packet::channel_join(&c.display_name()));
         }
 
         // Send channel info to client
-        resp.add_ref(c.channel_info_packet());
+        resp.add_ref(&c.channel_info_packet());
     }
     // Release lock
     drop(player_sessions);
 
-    resp.add_ref(server_packet::channel_info_end());
+    resp.add_ref(&server_packet::channel_info_end());
 
     let login_end = login_start.elapsed();
     info!(

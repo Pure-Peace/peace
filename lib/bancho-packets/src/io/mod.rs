@@ -1,10 +1,10 @@
 mod reader;
-mod writer;
+mod builder;
 
 pub mod traits;
 
 pub use reader::*;
-pub use writer::*;
+pub use builder::*;
 
 #[inline]
 /// Unsigned to uleb128

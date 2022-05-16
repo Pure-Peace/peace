@@ -67,7 +67,7 @@ pub mod reading {
 }
 
 pub mod writing {
-    use crate::write_uleb128;
+    use crate::{data, write_uleb128, MatchData, MatchDataSerialization, ScoreFrame};
 
     pub trait OsuWrite {
         fn osu_write(&self, buf: &mut Vec<u8>);
@@ -133,4 +133,70 @@ pub mod writing {
 
     impl_number!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
     impl_number_array!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
+
+    impl<'a> OsuWrite for MatchDataSerialization<'a> {
+        fn osu_write(&self, buf: &mut Vec<u8>) {
+            let raw_password = if let Some(pw) = self.0.password {
+                if self.1 {
+                    let mut buf = Vec::new();
+                    pw.osu_write(&mut buf);
+                    buf
+                } else {
+                    b"\x0b\x00".to_vec()
+                }
+            } else {
+                b"\x00".to_vec()
+            };
+
+            buf.extend(data!(
+                self.0.match_id as u16,
+                self.0.in_progress,
+                self.0.match_type,
+                self.0.play_mods,
+                self.0.match_name,
+                raw_password,
+                self.0.beatmap_name,
+                self.0.beatmap_id,
+                self.0.beatmap_md5,
+                self.0.slot_status,
+                self.0.slot_teams,
+                self.0.slot_players,
+                self.0.host_player_id,
+                self.0.match_game_mode,
+                self.0.win_condition,
+                self.0.team_type,
+                self.0.freemods,
+                self.0.player_mods,
+                self.0.match_seed
+            ));
+        }
+    }
+
+    impl<'a> OsuWrite for MatchData<'a> {
+        fn osu_write(&self, buf: &mut Vec<u8>) {
+            MatchDataSerialization(self, true).osu_write(buf);
+        }
+    }
+
+    impl OsuWrite for ScoreFrame {
+        fn osu_write(&self, buf: &mut Vec<u8>) {
+            buf.extend(data!(
+                self.timestamp,
+                self.id,
+                self.n300,
+                self.n100,
+                self.n50,
+                self.geki,
+                self.katu,
+                self.miss,
+                self.score,
+                self.combo,
+                self.max_combo,
+                self.perfect,
+                self.hp,
+                self.tag_byte,
+                self.score_v2
+            ));
+        }
+    }
 }

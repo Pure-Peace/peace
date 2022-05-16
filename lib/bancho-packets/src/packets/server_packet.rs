@@ -1,11 +1,4 @@
-use crate::{
-    packets::{
-        structures::LoginReply,
-        utils::{write_channel, write_message},
-    },
-    prelude::*,
-    MatchData,
-};
+use crate::{prelude::*, LoginReply, MatchData, MatchDataSerialization, ScoreFrame};
 
 #[inline]
 /// #5: BANCHO_USER_LOGIN_REPLY
@@ -18,7 +11,7 @@ pub fn login_reply(reply: impl LoginReply) -> Vec<u8> {
 pub fn send_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     build!(
         PacketId::BANCHO_SEND_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        PacketBuilder::write_message(sender, sender_id, content, target)
     )
 }
 
@@ -128,14 +121,14 @@ pub fn notification(msg: &str) -> Vec<u8> {
 pub fn update_match(match_data: MatchData) -> Vec<u8> {
     build!(
         PacketId::BANCHO_UPDATE_MATCH,
-        match_data.build_packets(false)
+        MatchDataSerialization(&match_data, false)
     )
 }
 
 #[inline]
 /// #27: BANCHO_NEW_MATCH
 pub fn new_match(match_data: MatchData) -> Vec<u8> {
-    build!(PacketId::BANCHO_NEW_MATCH, match_data.build_packets(true))
+    build!(PacketId::BANCHO_NEW_MATCH, match_data)
 }
 
 #[inline]
@@ -153,10 +146,7 @@ pub fn toggle_block_non_friend_pm() -> Vec<u8> {
 #[inline]
 /// #36: BANCHO_MATCH_JOIN_SUCCESS
 pub fn match_join_success(match_data: MatchData) -> Vec<u8> {
-    build!(
-        PacketId::BANCHO_MATCH_JOIN_SUCCESS,
-        match_data.build_packets(true)
-    )
+    build!(PacketId::BANCHO_MATCH_JOIN_SUCCESS, match_data)
 }
 
 #[inline]
@@ -180,48 +170,13 @@ pub fn fellow_spectator_left(user_id: i32) -> Vec<u8> {
 #[inline]
 /// #46: BANCHO_MATCH_START
 pub fn match_start(match_data: MatchData) -> Vec<u8> {
-    build!(PacketId::BANCHO_MATCH_START, match_data.build_packets(true))
+    build!(PacketId::BANCHO_MATCH_START, match_data)
 }
 
 #[inline]
 /// #48: BANCHO_MATCH_SCORE_UPDATE
-pub fn match_score_update(
-    time: i32,
-    id: u8,
-    num300: u16,
-    num100: u16,
-    num50: u16,
-    num_geki: u16,
-    num_katu: u16,
-    num_miss: u16,
-    total_score: i32,
-    current_combo: u16,
-    max_combo: u16,
-    perfect: bool,
-    current_hp: u8,
-    tag_byte: u8,
-    score_v2: bool,
-) -> Vec<u8> {
-    build!(
-        PacketId::BANCHO_MATCH_START,
-        data!(
-            time,
-            id,
-            num300,
-            num100,
-            num50,
-            num_geki,
-            num_katu,
-            num_miss,
-            total_score,
-            current_combo,
-            max_combo,
-            perfect,
-            current_hp,
-            tag_byte,
-            score_v2
-        )
-    )
+pub fn match_score_update(scoreframe: ScoreFrame) -> Vec<u8> {
+    build!(PacketId::BANCHO_MATCH_START, scoreframe)
 }
 
 #[inline]
@@ -265,7 +220,7 @@ pub fn channel_join(channel_name: &str) -> Vec<u8> {
 pub fn channel_info(name: &str, title: &str, player_count: i16) -> Vec<u8> {
     build!(
         PacketId::BANCHO_CHANNEL_INFO,
-        write_channel(name, title, player_count)
+        PacketBuilder::write_channel(name, title, player_count)
     )
 }
 
@@ -280,7 +235,7 @@ pub fn channel_kick(channel_name: &str) -> Vec<u8> {
 pub fn channel_auto_join(name: &str, title: &str, player_count: i16) -> Vec<u8> {
     build!(
         PacketId::BANCHO_CHANNEL_AUTO_JOIN,
-        write_channel(name, title, player_count)
+        PacketBuilder::write_channel(name, title, player_count)
     )
 }
 
@@ -299,7 +254,7 @@ pub fn bancho_privileges(privileges: i32) -> Vec<u8> {
 
 #[inline]
 /// #72: BANCHO_FRIENDS_LIST
-pub fn friends_list(friends: &Vec<i32>) -> Vec<u8> {
+pub fn friends_list(friends: &[i32]) -> Vec<u8> {
     build!(PacketId::BANCHO_FRIENDS_LIST, friends)
 }
 
@@ -413,7 +368,7 @@ pub fn user_presence_single(user_id: i32) -> Vec<u8> {
 #[inline]
 /// #96: BANCHO_USER_PRESENCE_BUNDLE
 /// UNUSED
-pub fn user_presence_bundle(player_ids: &Vec<i32>) -> Vec<u8> {
+pub fn user_presence_bundle(player_ids: &[i32]) -> Vec<u8> {
     build!(PacketId::BANCHO_USER_PRESENCE_BUNDLE, player_ids)
 }
 
@@ -422,7 +377,7 @@ pub fn user_presence_bundle(player_ids: &Vec<i32>) -> Vec<u8> {
 pub fn user_dm_blocked(target: &str) -> Vec<u8> {
     build!(
         PacketId::BANCHO_USER_DM_BLOCKED,
-        write_message("", 0, "", target)
+        PacketBuilder::write_message("", 0, "", target)
     )
 }
 
@@ -431,7 +386,7 @@ pub fn user_dm_blocked(target: &str) -> Vec<u8> {
 pub fn target_silenced(target: &str) -> Vec<u8> {
     build!(
         PacketId::BANCHO_TARGET_IS_SILENCED,
-        write_message("", 0, "", target)
+        PacketBuilder::write_message("", 0, "", target)
     )
 }
 

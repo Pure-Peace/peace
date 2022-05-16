@@ -3,8 +3,6 @@
 
 use enum_primitive_derive::Primitive;
 
-use crate::{build, data, out_packet, traits::writing::OsuWrite};
-
 #[derive(Debug)]
 pub struct BanchoMessage {
     pub sender: String,
@@ -174,65 +172,51 @@ pub enum PacketId {
     OSU_UNKNOWN_PACKET                    = 255,
 }
 
-pub struct MatchData<'a> {
-    match_id: i32,
-    in_progress: bool,
-    match_type: i8,
-    play_mods: u32,
-    match_name: &'a str,
-    password: Option<&'a str>,
-    beatmap_name: &'a str,
-    beatmap_id: i32,
-    beatmap_md5: &'a str,
-    slot_status: &'a [u8],
-    slot_teams: &'a [u8],
-    slot_players: &'a [i32],
-    host_player_id: i32,
-    match_game_mode: u8,
-    win_condition: u8,
-    team_type: u8,
-    freemods: bool,
-    player_mods: &'a [i32],
-    match_seed: i32,
+impl PacketId {
+    #[inline]
+    pub fn val(self) -> u8 {
+        self as u8
+    }
 }
 
-impl<'a> MatchData<'a> {
-    pub fn build_packets(self, send_password: bool) -> Vec<u8> {
-        let raw_password = if let Some(pw) = self.password {
-            if send_password {
-                let mut buf = Vec::new();
-                pw.osu_write(&mut buf);
-                buf
-            } else {
-                b"\x0b\x00".to_vec()
-            }
-        } else {
-            b"\x00".to_vec()
-        };
+pub struct MatchData<'a> {
+    pub match_id: i32,
+    pub in_progress: bool,
+    pub match_type: i8,
+    pub play_mods: u32,
+    pub match_name: &'a str,
+    pub password: Option<&'a str>,
+    pub beatmap_name: &'a str,
+    pub beatmap_id: i32,
+    pub beatmap_md5: &'a str,
+    pub slot_status: &'a [u8],
+    pub slot_teams: &'a [u8],
+    pub slot_players: &'a [i32],
+    pub host_player_id: i32,
+    pub match_game_mode: u8,
+    pub win_condition: u8,
+    pub team_type: u8,
+    pub freemods: bool,
+    pub player_mods: &'a [i32],
+    pub match_seed: i32,
+}
 
-        build!(
-            PacketId::BANCHO_MATCH_START,
-            data!(
-                self.match_id as u16,
-                self.in_progress,
-                self.match_type,
-                self.play_mods,
-                self.match_name,
-                raw_password,
-                self.beatmap_name,
-                self.beatmap_id,
-                self.beatmap_md5,
-                self.slot_status,
-                self.slot_teams,
-                self.slot_players,
-                self.host_player_id,
-                self.match_game_mode,
-                self.win_condition,
-                self.team_type,
-                self.freemods,
-                self.player_mods,
-                self.match_seed
-            )
-        )
-    }
+pub struct MatchDataSerialization<'a>(pub &'a MatchData<'a>, pub bool);
+
+pub struct ScoreFrame {
+    pub timestamp: i32,
+    pub id: u8,
+    pub n300: u16,
+    pub n100: u16,
+    pub n50: u16,
+    pub geki: u16,
+    pub katu: u16,
+    pub miss: u16,
+    pub score: i32,
+    pub combo: u16,
+    pub max_combo: u16,
+    pub perfect: bool,
+    pub hp: u8,
+    pub tag_byte: u8,
+    pub score_v2: bool,
 }

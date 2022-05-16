@@ -1,4 +1,4 @@
-use crate::{packets::utils::write_message, prelude::*};
+use crate::prelude::*;
 
 #[inline]
 /// #0: OSU_USER_CHANGE_ACTION
@@ -28,7 +28,7 @@ pub fn user_change_action(
 pub fn send_public_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     build!(
         PacketId::OSU_SEND_PUBLIC_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        PacketBuilder::write_message(sender, sender_id, content, target)
     )
 }
 
@@ -85,7 +85,7 @@ pub fn spectate_cant() -> Vec<u8> {
 pub fn send_private_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     build!(
         PacketId::OSU_SEND_PRIVATE_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        PacketBuilder::write_message(sender, sender_id, content, target)
     )
 }
 
@@ -313,7 +313,7 @@ pub fn user_receive_updates(filter_val: i32) -> Vec<u8> {
 pub fn user_set_away_message(sender: &str, sender_id: i32, content: &str, target: &str) -> Vec<u8> {
     build!(
         PacketId::OSU_USER_SET_AWAY_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        PacketBuilder::write_message(sender, sender_id, content, target)
     )
 }
 

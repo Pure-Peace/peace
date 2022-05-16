@@ -9,7 +9,7 @@ fn packets_write_benchmark(c: &mut Criterion) {
     group.bench_function("match_join_failed packet - 2", |b| {
         b.iter(|| {
             PacketBuilder::new()
-                .add(server_packet::match_join_fail())
+                .add(&server_packet::match_join_fail())
                 .write_out()
         })
     });
@@ -25,15 +25,15 @@ fn packets_write_benchmark(c: &mut Criterion) {
     group.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             PacketBuilder::new()
-                .add(server_packet::login_reply(LoginSuccess::Verified(1009)))
-                .add(server_packet::protocol_version(19))
-                .add(server_packet::notification("Welcome to Peace!"))
-                .add(server_packet::main_menu_icon(
+                .add(&server_packet::login_reply(LoginSuccess::Verified(1009)))
+                .add(&server_packet::protocol_version(19))
+                .add(&server_packet::notification("Welcome to Peace!"))
+                .add(&server_packet::main_menu_icon(
                     "https://i.kafuu.pro/welcome.png",
                     "https://www.baidu.com",
                 ))
-                .add(server_packet::silence_end(0))
-                .add(server_packet::channel_info_end())
+                .add(&server_packet::silence_end(0))
+                .add(&server_packet::channel_info_end())
                 .write_out()
         })
     });
@@ -42,7 +42,7 @@ fn packets_write_benchmark(c: &mut Criterion) {
 
 fn packets_read_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("packets_read");
-    let packet = vec![
+    let packet = &[
         24, 0, 0, 32, 0, 0, 0, 11, 30, 230, 172, 162, 232, 191, 142, 230, 130, 168, 239, 188, 140,
         233, 171, 152, 232, 180, 181, 231, 154, 132, 230, 146, 146, 230, 179, 188, 231, 137, 185,
         105, 0, 0, 7, 0, 0, 0, 11, 5, 80, 101, 97, 99, 101, 24, 0, 0, 44, 0, 0, 0, 11, 42, 45, 32,
@@ -83,7 +83,7 @@ fn packets_read_benchmark(c: &mut Criterion) {
 
     group.bench_function("big packets read", |b| {
         b.iter(|| {
-            let mut reader = PacketReader::new(&packet);
+            let mut reader = PacketReader::new(packet);
             while let Some(packet) = reader.next() {
                 let _a = packet.id;
                 let _b = packet.payload;

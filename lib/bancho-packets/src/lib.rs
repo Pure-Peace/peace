@@ -8,5 +8,5 @@ pub use io::*;
 pub use packets::*;
 
 pub mod prelude {
-    pub use crate::{build, data, out_packet, traits::writing::*, PacketId};
+    pub use crate::{build, data, out_packet, traits::writing::*, PacketId, PacketBuilder};
 }

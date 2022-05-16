@@ -239,9 +239,9 @@ impl Player {
     #[inline]
     /// presence_packet + stats_packet
     pub fn user_data_packet(&self, using_u_name: bool) -> PacketData {
-        bancho_packets::PacketBuilder::merge(&mut [
-            self.presence_packet(using_u_name),
-            self.stats_packet(),
+        bancho_packets::PacketBuilder::pack(&mut [
+            &self.presence_packet(using_u_name),
+            &self.stats_packet(),
         ])
     }
 
