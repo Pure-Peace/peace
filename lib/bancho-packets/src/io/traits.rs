@@ -136,7 +136,7 @@ pub mod writing {
 
     impl<'a> OsuWrite for MatchDataSerialization<'a> {
         fn osu_write(&self, buf: &mut Vec<u8>) {
-            let raw_password = if let Some(pw) = self.0.password {
+            let raw_password = if let Some(pw) = self.password {
                 if self.1 {
                     let mut buf = Vec::new();
                     pw.osu_write(&mut buf);
@@ -149,25 +149,25 @@ pub mod writing {
             };
 
             buf.extend(data!(
-                self.0.match_id as u16,
-                self.0.in_progress,
-                self.0.match_type,
-                self.0.play_mods,
-                self.0.match_name,
+                self.match_id as u16,
+                self.in_progress,
+                self.match_type,
+                self.play_mods,
+                self.match_name,
                 raw_password,
-                self.0.beatmap_name,
-                self.0.beatmap_id,
-                self.0.beatmap_md5,
-                self.0.slot_status,
-                self.0.slot_teams,
-                self.0.slot_players,
-                self.0.host_player_id,
-                self.0.match_game_mode,
-                self.0.win_condition,
-                self.0.team_type,
-                self.0.freemods,
-                self.0.player_mods,
-                self.0.match_seed
+                self.beatmap_name,
+                self.beatmap_id,
+                self.beatmap_md5,
+                self.slot_status,
+                self.slot_teams,
+                self.slot_players,
+                self.host_player_id,
+                self.match_game_mode,
+                self.win_condition,
+                self.team_type,
+                self.freemods,
+                self.player_mods,
+                self.match_seed
             ));
         }
     }
