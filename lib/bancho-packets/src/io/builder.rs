@@ -240,14 +240,14 @@ pub mod macros {
     ($packet_id:expr) => {
         {
             let mut p = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
-            out_packet!(p)
+            $crate::out_packet!(p)
         }
     };
     ($packet_id:expr,$($data:expr),*) => {
         {
             let mut p = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
             $($data.osu_write(&mut p);)*
-            out_packet!(p)
+            $crate::out_packet!(p)
         }
     }
 }
