@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "services/bancho",
+    "services/gateway",
+    "lib/tools",
+    "frame/peace_logs",
+]
+
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+
+
+[profile.production]
+inherits = "release"
+
+
+[profile.bench]
+inherits = "release"
