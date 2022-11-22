@@ -1,0 +1,31 @@
+[req]
+default_bits = 2048
+default_keyfile = key.pem
+encrypt_key = no
+default_md = sha256
+x509_extensions = v3_req
+prompt = no
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+organizationName = osu_dev
+commonName = *.peace.local
+emailAddress = osu_dev@local.com
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.0 = osu.peace.local
+DNS.1 = c.peace.local
+DNS.2 = a.peace.local
+DNS.3 = peace.local
+DNS.4 = ce.peace.local
+DNS.5 = c1.peace.local
+DNS.6 = c2.peace.local
+DNS.7 = c3.peace.local
+DNS.8 = c4.peace.local
+DNS.9 = c5.peace.local
+DNS.10 = c6.peace.local
+DNS.11 = s.peace.local
+DNS.12 = i.peace.local
