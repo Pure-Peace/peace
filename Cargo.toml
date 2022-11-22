@@ -10,9 +10,11 @@ members = [
 
 
 [profile.release]
-lto = true
-codegen-units = 1
-opt-level = 3
+panic = "abort"   # Strip expensive panic clean-up logic
+codegen-units = 1 # Compile crates one after another so the compiler can optimize better
+lto = true        # Enables link to optimizations
+opt-level = "s"   # Optimize for binary size
+strip = true
 
 
 [profile.production]
@@ -21,3 +23,4 @@ inherits = "release"
 
 [profile.bench]
 inherits = "release"
+opt-level = 3

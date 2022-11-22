@@ -17,7 +17,7 @@ pub async fn main() -> Result<(), std::io::Error> {
 
     info!("\n\n{}\n", tools::pkg_metadata!(),);
     info!(
-        ">> Routing method: {}",
+        ">> Routing method: [{}]",
         if args.hostname_router { "hostname" } else { "path" }
     );
 
@@ -29,6 +29,8 @@ pub async fn main() -> Result<(), std::io::Error> {
         } else {
             tokio::join!(components::launch_http_server(app, args), https);
         }
+    } else {
+        components::launch_http_server(app, args).await;
     }
 
     #[cfg(not(feature = "tls"))]
