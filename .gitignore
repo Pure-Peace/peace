@@ -15,3 +15,9 @@ Cargo.lock
 
 # configs
 /.idea/
+
+# certs
+*.cer
+*.pem
+*.crt
+*.key

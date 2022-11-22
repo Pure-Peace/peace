@@ -7,6 +7,9 @@ authors = ["Pure-Peace"]
 repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
+[features]
+default = ["tls"]
+tls = ["axum-server", "axum/http2"]
 
 [[bin]]
 name = "gateway-server"
@@ -15,18 +18,19 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.5"
+axum = { version = "0.5" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 clap = { version = "4.0", features = ["derive"] }
-tower = { version = "0.4", features = [
-    "load-shed",
-] }
+tower = { version = "0.4", features = ["load-shed"] }
 tower-http = { version = "0.3", features = ["limit", "trace"] }
 tower-layer = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+once_cell = "1.16"
+
+axum-server = { version = "0.4", features = ["tls-rustls"], optional = true }
 
 
 peace_logs = { path = "../../frame/peace_logs", features = ["api", "cli"] }

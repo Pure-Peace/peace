@@ -1,4 +1,4 @@
-use crate::cmd::PeaceGatewayArgs;
+use crate::cmd::{self, PeaceGatewayArgs};
 use crate::routes;
 
 use tokio::signal;
@@ -12,27 +12,55 @@ use axum::{
     handler::Handler,
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
-    Router,
+    routing::{any, get, post},
+    Router, Server,
 };
 
 pub fn app(args: &PeaceGatewayArgs) -> Router {
-    Router::new()
+    let router = if args.hostname_router {
+        hostname_based_router()
+    } else {
+        path_based_router(args)
+    };
+
+    let router = router.layer(
+        ServiceBuilder::new()
+            .layer(HandleErrorLayer::new(handle_error))
+            .load_shed()
+            .concurrency_limit(args.concurrency_limit)
+            .timeout(Duration::from_secs(args.req_timeout))
+            .layer(TraceLayer::new_for_http()),
+    );
+
+    if !args.hostname_router {
+        router.fallback(handler_404.into_service())
+    } else {
+        router
+    }
+}
+
+pub fn path_based_router(args: &PeaceGatewayArgs) -> Router {
+    let router = Router::new()
         .route("/", get(routes::root))
-        .route("/bancho", post(routes::bancho))
-        .nest(
+        .route("/bancho", post(routes::bancho));
+
+    if args.admin_api {
+        router.nest(
             "/admin",
             peace_logs::api::admin_routers(args.admin_token.as_deref()),
         )
-        .layer(
-            ServiceBuilder::new()
-                .layer(HandleErrorLayer::new(handle_error))
-                .load_shed()
-                .concurrency_limit(args.concurrency_limit)
-                .timeout(Duration::from_secs(args.req_timeout))
-                .layer(TraceLayer::new_for_http()),
-        )
-        .fallback(handler_404.into_service())
+    } else {
+        router
+    }
+}
+
+pub fn hostname_based_router() -> Router {
+    Router::new().route("/*path", any(routes::any_path))
+}
+
+pub async fn launch_http_server(app: Router, args: &cmd::PeaceGatewayArgs) {
+    info!(">> [HTTP] listening on: {}", args.http_addr);
+    Server::bind(&args.http_addr).serve(app.into_make_service()).await.unwrap();
 }
 
 async fn handler_404() -> impl IntoResponse {

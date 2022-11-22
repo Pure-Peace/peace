@@ -9,7 +9,7 @@ macro_rules! pkg_metadata {
             const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
             const VERSION: &str = env!("CARGO_PKG_VERSION");
             format!(
-                ">> PACKAGE METADATA <<\n  - NAME: {}\n  - AUTHORS: {}\n  - DESCRIPTION: {}\n  - HOMEPAGE: {}\n  - REPOSITORY: {}\n  - VERSION: v{}",
+                ">> PACKAGE METADATA <<\n\n  - NAME: {}\n  - AUTHORS: {}\n  - DESCRIPTION: {}\n  - HOMEPAGE: {}\n  - REPOSITORY: {}\n  - VERSION: v{}",
                 NAME,
                 AUTHORS,
                 DESCRIPTION,
@@ -23,7 +23,7 @@ macro_rules! pkg_metadata {
 
 #[macro_export]
 macro_rules! listening {
-    ($addr: tt) => {
+    ($addr: expr) => {
         format!("\n\n{}\n\n>> listening on {}", $crate::pkg_metadata!(), $addr)
     };
 }
