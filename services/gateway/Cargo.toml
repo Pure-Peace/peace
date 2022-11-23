@@ -18,22 +18,32 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = { version = "0.5" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# core
+futures = "0.3"
+axum = { version = "0.6.0-rc.5" }
 tokio = { version = "1.0", features = ["full"] }
-clap = { version = "4.0", features = ["derive"] }
+hyper = { version = "0.14" }
+
+# extension
 tower = { version = "0.4", features = ["load-shed"] }
 tower-http = { version = "0.3", features = ["limit", "trace"] }
 tower-layer = "0.3"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# serde
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# utils
+clap = { version = "4.0", features = ["derive"] }
 once_cell = "1.16"
+matchit = "0.7"
+thiserror = "1.0"
+anyhow = "1.0"
 
 # tls optional
 axum-server = { version = "0.4", features = ["tls-rustls"], optional = true }
 
-# ---
+# local crates
 peace_logs = { path = "../../frame/peace_logs", features = ["api", "cli"] }
 tools = { path = "../../lib/tools" }
 bancho = { path = "../bancho" }
