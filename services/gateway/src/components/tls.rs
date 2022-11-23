@@ -1,8 +1,8 @@
-use crate::cmd::PeaceGatewayArgs;
+use crate::components::cmd::PeaceGatewayArgs;
 
 use axum::{
     extract::Host,
-    handler::Handler,
+    handler::HandlerWithoutStateExt,
     http::{StatusCode, Uri},
     response::Redirect,
     BoxError, Router, Server,
@@ -43,7 +43,7 @@ pub async fn launch_ssl_redirect_server(args: &PeaceGatewayArgs) {
         }
     };
 
-    info!(">> [HTTPS] (only redirect) listening on: {}", args.https_addr);
+    info!(">> [HTTP] (only redirect) listening on: {}", args.https_addr);
     Server::bind(&args.http_addr)
         .serve(redirect.into_make_service())
         .await
@@ -62,7 +62,7 @@ pub async fn launch_https_server(app: Router, args: &PeaceGatewayArgs) {
     .await
     .unwrap();
 
-    info!(">> [HTTP] listening on: {}", args.https_addr);
+    info!(">> [HTTPS] listening on: {}", args.https_addr);
     axum_server::bind_rustls(args.https_addr, config)
         .serve(app.into_make_service())
         .await

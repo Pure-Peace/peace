@@ -22,10 +22,6 @@ pub struct PeaceGatewayArgs {
     #[arg(short = 'S', long, default_value = "127.0.0.1:443")]
     pub https_addr: SocketAddr,
 
-    /// Use `hostname-based` router instead of path router.
-    #[arg(short = 'N', long, default_value_t = false)]
-    pub hostname_router: bool,
-
     /// Logging level.
     #[arg(short = 'L', long, value_enum, default_value = "info")]
     pub log_level: peace_logs::LogLevel,
@@ -49,6 +45,10 @@ pub struct PeaceGatewayArgs {
     /// Fail requests that take longer than timeout (secs).
     #[arg(short, long, default_value_t = 10)]
     pub req_timeout: u64,
+
+    /// Enabled `hostname-based` routing.
+    #[arg(short = 'N', long, default_value_t = false)]
+    pub hostname_routing: bool,
 
     /// Enabled `tls` support.
     #[cfg(feature = "tls")]
