@@ -63,14 +63,14 @@ pub async fn debug_mode(
 /// Admin routers [`Router`]
 ///
 ///
-/// [`reload_level`] : `GET` `<base_path>/reload_level`
+/// [`reload_level`] : `GET` `/admin/logs/reload_level`
 ///
-/// [`debug_mode`] : `GET` `<base_path>/debug_mode`
+/// [`debug_mode`] : `GET` `/admin/logs/debug_mode`
 ///
 pub fn admin_routers(admin_token: Option<&str>) -> Router {
     let router = Router::new()
-        .route("/logs/reload_level", get(reload_level))
-        .route("/logs/debug_mode", get(debug_mode));
+        .route("/admin/logs/reload_level", get(reload_level))
+        .route("/admin/logs/debug_mode", get(debug_mode));
 
     if let Some(token) = &admin_token {
         router.layer(RequireAuthorizationLayer::bearer(token))

@@ -41,7 +41,7 @@ pub fn app_router(args: &PeaceGatewayArgs) -> Router {
         .nest("/bancho", bancho::routers::bancho_client_routes());
 
     let router = if args.admin_api {
-        router.nest("/admin", admin_routers(args.admin_token.as_deref()))
+        router.merge(admin_routers(args.admin_token.as_deref()))
     } else {
         router
     };
