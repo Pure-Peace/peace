@@ -85,7 +85,7 @@ impl Error {
 
 impl From<Error> for Response {
     fn from(err: Error) -> Self {
-        err.into()
+        err.into_response()
     }
 }
 
