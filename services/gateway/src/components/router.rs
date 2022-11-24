@@ -1,6 +1,7 @@
 use crate::{
     bancho,
     components::{cmd::PeaceGatewayArgs, responder},
+    openapi::GatewayApiDocs,
 };
 use axum::{
     body::Body,
@@ -14,6 +15,8 @@ use peace_logs::api::admin_routers;
 use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Clone)]
 pub struct AnyPathRouters {
@@ -37,6 +40,10 @@ pub fn app(args: &PeaceGatewayArgs) -> Router {
 /// App router
 pub fn app_router(args: &PeaceGatewayArgs) -> Router {
     let router = Router::new()
+        .merge(
+            SwaggerUi::new(args.swagger_path.clone())
+                .url(args.openapi_json.clone(), GatewayApiDocs::openapi()),
+        )
         .route("/", get(responder::app_root))
         .nest("/bancho", bancho::routers::bancho_client_routes());
 

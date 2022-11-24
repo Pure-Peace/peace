@@ -4,6 +4,7 @@ use axum_server::AddrIncomingConfig;
 use std::{net::SocketAddr, time::Duration};
 use tokio::signal;
 
+
 /// Start service.
 pub async fn serve(args: &PeaceGatewayArgs) {
     let app = router::app(args);

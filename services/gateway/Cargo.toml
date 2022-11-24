@@ -30,6 +30,14 @@ tower = { version = "0.4", features = ["load-shed"] }
 tower-http = { version = "0.3", features = ["limit", "trace"] }
 tower-layer = "0.3"
 
+# openapi
+utoipa = { git = "https://github.com/Pure-Peace/utoipa", branch = "axum-0.6.0-rc5", features = [
+    "axum_extras",
+] }
+utoipa-swagger-ui = { git = "https://github.com/Pure-Peace/utoipa", branch = "axum-0.6.0-rc5", features = [
+    "axum",
+] }
+
 # serde
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -41,6 +49,6 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # local crates
-peace_logs = { path = "../../frame/peace_logs", features = ["api", "cli"] }
+peace_logs = { path = "../../frame/peace_logs", features = ["openapi_axum", "cli"] }
 tools = { path = "../../lib/tools" }
 bancho = { path = "../bancho" }

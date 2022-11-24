@@ -8,6 +8,8 @@ use axum::{
 };
 use tower::{load_shed, timeout, BoxError, ServiceExt};
 
+use super::cmd::PeaceGatewayArgs;
+
 /// Route `/` handler.
 pub async fn app_root() -> Response {
     tools::pkg_metadata!().into_response()
@@ -22,8 +24,8 @@ pub async fn any_path(
     // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert panic.
     req.extensions_mut().remove::<axum::extract::MatchedPath>();
 
-    let result = match hostname.as_str() {
-        "c.peace.local" | "osu.peace.local" => {
+    let result = match hostname {
+        n if PeaceGatewayArgs::get().bancho_hostname.contains(&n) => {
             call_router(any_routers.bancho, req).await
         },
         _ => return Error::NotFound.into(),

@@ -5,8 +5,9 @@ edition = "2021"
 
 [features]
 default = []
+openapi_axum = ["api_axum", "utoipa/axum_extras", "utoipa-swagger-ui/axum"]
+api_axum = ["axum", "serde", "serde_json", "tower-http"]
 grpc = ["tonic", "prost", "tonic-build"]
-api = ["axum", "serde", "serde_json", "tower-http"]
 cli = ["clap"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -28,6 +29,10 @@ tower-http = { version = "0.3", features = ["auth"], optional = true }
 
 # cli optional
 clap = { version = "4.0", features = ["derive"], optional = true }
+
+# openapi optional
+utoipa = { git = "https://github.com/Pure-Peace/utoipa", branch = "axum-0.6.0-rc5", optional = true }
+utoipa-swagger-ui = { git = "https://github.com/Pure-Peace/utoipa", branch = "axum-0.6.0-rc5", optional = true }
 
 
 [build-dependencies]

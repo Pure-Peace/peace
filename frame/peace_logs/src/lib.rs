@@ -1,4 +1,4 @@
-#[cfg(any(feature = "grpc", feature = "api"))]
+#[cfg(any(feature = "grpc", feature = "api_axum"))]
 #[macro_use]
 extern crate tracing;
 
@@ -10,7 +10,7 @@ pub mod logs_rpc {
 #[cfg(feature = "grpc")]
 pub mod grpc;
 
-#[cfg(feature = "api")]
+#[cfg(feature = "api_axum")]
 pub mod api;
 
 pub use tracing::*;

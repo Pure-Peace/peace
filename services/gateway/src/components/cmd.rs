@@ -1,6 +1,6 @@
 use clap::Parser;
 use once_cell::sync::OnceCell;
-use std::{net::SocketAddr, path::PathBuf, time::Duration};
+use std::{net::SocketAddr, path::PathBuf};
 
 /// Command Line Interface (CLI) for Peace-Gateway service.
 #[derive(Parser, Debug, Clone)]
@@ -49,6 +49,10 @@ pub struct PeaceGatewayArgs {
     #[arg(short = 'N', long, default_value_t = false)]
     pub hostname_routing: bool,
 
+    /// A list of hostnames to route to the bancho service.
+    #[arg(short = 'B', long)]
+    pub bancho_hostname: Vec<String>,
+
     /// Enabled `tls` support.
     #[cfg(feature = "tls")]
     #[arg(short, long, default_value_t = false)]
@@ -90,6 +94,14 @@ pub struct PeaceGatewayArgs {
     /// Set the number of retransmissions to be carried out before declaring that remote end is not available.
     #[arg(long)]
     pub tcp_keepalive_retries: Option<u32>,
+
+    /// The `swagger ui` base uri path.
+    #[arg(long, default_value = "/swagger-ui/")]
+    pub swagger_path: String,
+
+    /// The `openapi.json` uri path.
+    #[arg(long, default_value = "/api-doc/openapi.json")]
+    pub openapi_json: String
 }
 
 impl PeaceGatewayArgs {

@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-use std::str::FromStr;
-
 use axum::{
     extract::Query,
     http::StatusCode,
@@ -8,13 +5,18 @@ use axum::{
     routing::get,
     Json, Router,
 };
-
-use tower_http::auth::RequireAuthorizationLayer;
-
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::str::FromStr;
+use tower_http::auth::RequireAuthorizationLayer;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::reload;
+
+#[cfg(feature = "openapi_axum")]
+use utoipa::{
+    openapi::security::{self, SecurityScheme},
+    IntoParams, Modify, ToSchema,
+};
 
 #[derive(Debug)]
 pub enum AppError {
@@ -23,26 +25,58 @@ pub enum AppError {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "openapi_axum", derive(ToSchema))]
 pub struct CommonResponse {
     pub status: bool,
     pub msg: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ReloadLevel {
+#[cfg_attr(feature = "openapi_axum", derive(IntoParams))]
+pub struct ReloadLevelQuery {
+    /// ```
+    /// Values in: ["error", "warn", "info", "debug", "trace", "off"]
+    /// ```
     pub level: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct DebugMode {
+#[cfg_attr(feature = "openapi_axum", derive(IntoParams))]
+pub struct DebugModeQuery {
     pub enabled: bool,
 }
 
+#[cfg(feature = "openapi_axum")]
+pub struct AdminAuth;
+
+#[cfg(feature = "openapi_axum")]
+impl Modify for AdminAuth {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "admin_token",
+                SecurityScheme::Http(security::Http::new(
+                    security::HttpAuthScheme::Bearer,
+                )),
+            )
+        }
+    }
+}
+
 /// Web api for reload [`LevelFilter`].
+#[cfg_attr(feature = "openapi_axum", utoipa::path(
+    get,
+    path = "/admin/logs/reload_level",
+    responses(
+        (status = 200, description = "Reload successfully", body = [CommonResponse]),
+    ),
+    params(ReloadLevelQuery),
+    security(("admin_token" = []))
+))]
 pub async fn reload_level(
-    Query(params): Query<ReloadLevel>,
+    Query(query): Query<ReloadLevelQuery>,
 ) -> Result<Json<CommonResponse>, AppError> {
-    let level = LevelFilter::from_str(&params.level)
+    let level = LevelFilter::from_str(&query.level)
         .map_err(|err| AppError::ParamError(err.to_string()))?;
     crate::reload_level(level)?;
 
@@ -51,12 +85,21 @@ pub async fn reload_level(
 }
 
 /// Web api for set log debug mode.
+#[cfg_attr(feature = "openapi_axum", utoipa::path(
+    get,
+    path = "/admin/logs/debug_mode",
+    responses(
+        (status = 200, description = "Debug mode toggle successfully", body = [CommonResponse]),
+    ),
+    params(DebugModeQuery),
+    security(("admin_token" = []))
+))]
 pub async fn debug_mode(
-    Query(params): Query<DebugMode>,
+    Query(query): Query<DebugModeQuery>,
 ) -> Result<Json<CommonResponse>, AppError> {
-    crate::debug_mode(params.enabled)?;
+    crate::debug_mode(query.enabled)?;
 
-    info!("<LogsRpc> Toggle debug mode: [{}]", params.enabled);
+    info!("<LogsRpc> Toggle debug mode: [{}]", query.enabled);
     Ok(Json(CommonResponse { status: true, msg: None }))
 }
 
@@ -104,25 +147,37 @@ impl IntoResponse for AppError {
 
 #[cfg(test)]
 mod test {
-    use crate::api::{debug_mode, reload_level, DebugMode, ReloadLevel};
+    use crate::api::{
+        debug_mode, reload_level, DebugModeQuery, ReloadLevelQuery,
+    };
     use axum::extract::Query;
 
     #[tokio::test]
     async fn try_reload_level() {
-        assert!(reload_level(Query(ReloadLevel { level: "info".to_string() }))
-            .await
-            .is_ok());
-        assert!(reload_level(Query(ReloadLevel { level: "3".to_string() }))
-            .await
-            .is_ok());
-        assert!(reload_level(Query(ReloadLevel { level: "xxx".to_string() }))
-            .await
-            .is_err());
+        assert!(reload_level(Query(ReloadLevelQuery {
+            level: "info".to_string()
+        }))
+        .await
+        .is_ok());
+        assert!(reload_level(Query(ReloadLevelQuery {
+            level: "3".to_string()
+        }))
+        .await
+        .is_ok());
+        assert!(reload_level(Query(ReloadLevelQuery {
+            level: "xxx".to_string()
+        }))
+        .await
+        .is_err());
     }
 
     #[tokio::test]
     async fn try_debug_mode() {
-        assert!(debug_mode(Query(DebugMode { enabled: true })).await.is_ok());
-        assert!(debug_mode(Query(DebugMode { enabled: false })).await.is_ok());
+        assert!(debug_mode(Query(DebugModeQuery { enabled: true }))
+            .await
+            .is_ok());
+        assert!(debug_mode(Query(DebugModeQuery { enabled: false }))
+            .await
+            .is_ok());
     }
 }
