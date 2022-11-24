@@ -11,7 +11,7 @@ pub mod client {
     pub async fn download_beatmapset(
         Path(beatmapset_id): Path<i32>,
     ) -> Response {
-        format!("got beatmapset_id: {}", beatmapset_id).into_response()
+        unimplemented!()
     }
 
     pub async fn client_register() -> Response {
@@ -27,7 +27,7 @@ pub mod client {
     }
 
     pub mod web {
-        use axum::response::Response;
+        use axum::response::{IntoResponse, Response};
 
         pub async fn osu_error() -> Response {
             unimplemented!()

@@ -6,11 +6,11 @@ pub mod router;
 #[cfg(feature = "tls")]
 pub mod tls;
 
+use crate::components::cmd::PeaceGatewayArgs;
 use axum::{Router, Server};
 use tokio::signal;
 
-use crate::components::cmd::PeaceGatewayArgs;
-
+/// Start service.
 pub async fn serve(args: &PeaceGatewayArgs) {
     let app = router::app(args);
 

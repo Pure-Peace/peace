@@ -1,5 +1,4 @@
-use std::{convert::Infallible, marker::PhantomData};
-
+use crate::components::{error::Error, router::AnyPathRouters};
 use axum::{
     body::{Body, BoxBody},
     extract::Host,
@@ -8,22 +7,26 @@ use axum::{
     response::{IntoResponse, Response},
     Router,
 };
+use std::{convert::Infallible, marker::PhantomData};
+use tower::{load_shed, timeout, BoxError, ServiceExt};
 
-use tower::{load_shed, timeout, BoxError, Service};
-
-use crate::bancho;
-use crate::components::error::Error;
-
-pub async fn app_root() -> String {
-    tools::pkg_metadata!()
+/// Route `/` handler.
+pub async fn app_root() -> Response {
+    tools::pkg_metadata!().into_response()
 }
 
-pub async fn any_path(Host(hostname): Host, req: Request<Body>) -> Response {
-    println!("hostname ----- {:?} \n\nreq -----{:?}", hostname, req);
+/// Route `/*path` handler.
+pub async fn any_path(
+    Host(hostname): Host,
+    mut req: Request<Body>,
+    any_routers: AnyPathRouters,
+) -> Response {
+    // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert panic.
+    req.extensions_mut().remove::<axum::extract::MatchedPath>();
 
     let result = match hostname.as_str() {
         "c.peace.local" | "osu.peace.local" => {
-            call_router(bancho::routers::bancho_client_routes(), req).await
+            call_router(any_routers.bancho, req).await
         },
         _ => return Error::NotFound.into(),
     };
@@ -31,15 +34,15 @@ pub async fn any_path(Host(hostname): Host, req: Request<Body>) -> Response {
     result.into_response()
 }
 
+pub async fn handle_404() -> Response {
+    Error::NotFound.into()
+}
+
 pub async fn call_router(
     router: Router,
     req: Request<Body>,
-) -> Result<Response<BoxBody>, ()> {
-    router.into_service().call(req).await.map_err(|_| ())
-}
-
-pub async fn handler_404() -> Response {
-    Error::NotFound.into()
+) -> Response<BoxBody> {
+    router.into_service().oneshot(req).await.into_response()
 }
 
 pub async fn handle_error(error: BoxError) -> Error {
@@ -54,6 +57,7 @@ pub async fn handle_error(error: BoxError) -> Error {
     anyhow::anyhow!("Unhandled internal error: {:?}", error).into()
 }
 
+/// The axum [`Handler`] can be wrapped into this structure.
 pub struct HandlerWrapper<S = (), B = Body, E = Infallible> {
     boxed_handler: Box<dyn Send>,
     _a: PhantomData<B>,
@@ -81,12 +85,17 @@ impl<S, B> HandlerWrapper<S, B, Infallible> {
     }
 }
 
-#[test]
-fn wrap_handler() {
+#[cfg(test)]
+mod test {
     use crate::bancho::impls::client;
+    use crate::components::responder::HandlerWrapper;
     use std::collections::HashMap;
 
-    let mut map = HashMap::<&str, HandlerWrapper>::new();
-    map.insert("handler1", HandlerWrapper::new(client::ask_peppy));
-    map.insert("handler2", HandlerWrapper::new(client::web::check_updates));
+    #[test]
+    fn wrap_handler() {
+        let mut map = HashMap::<&str, HandlerWrapper>::new();
+
+        map.insert("handler1", HandlerWrapper::new(client::ask_peppy));
+        map.insert("handler2", HandlerWrapper::new(client::web::check_updates));
+    }
 }

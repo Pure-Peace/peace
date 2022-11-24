@@ -1,5 +1,4 @@
 use crate::components::cmd::PeaceGatewayArgs;
-
 use axum::{
     extract::Host,
     handler::HandlerWithoutStateExt,
@@ -9,6 +8,7 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 
+/// Redirect `http` to `https`.
 pub fn redirect_replace(
     host: String,
     uri: Uri,
@@ -29,6 +29,7 @@ pub fn redirect_replace(
     Ok(Uri::from_parts(parts)?)
 }
 
+/// Start server that redirects `http` to `https`.
 pub async fn launch_ssl_redirect_server(args: &PeaceGatewayArgs) {
     let http_port = args.http_addr.port().to_string();
     let https_port = args.https_addr.port().to_string();

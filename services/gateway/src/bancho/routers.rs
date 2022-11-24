@@ -43,24 +43,36 @@ pub fn bancho_client_web_routes() -> Router {
         .route("/maps/:beatmap_file_name", get(client::web::update_beatmap))
 }
 
-#[tokio::test]
-async fn mock_request() {
-    use axum::{body::Body, http::Request};
-    use tower::Service;
+#[cfg(test)]
+mod test {
+    use axum::routing::get;
+    use axum::Router;
+    use axum::{body::Body, extract::Path, http::Request};
+    use tower::ServiceExt;
 
-    use crate::bancho::routers;
-
-    let mut router = routers::bancho_client_routes().into_service();
-    let res = router
-        .call(
-            Request::builder()
-                .method("GET")
-                .uri("/d/1123")
-                .header("X-Custom-Foo", "Bar")
-                .body(Body::empty())
-                .unwrap(),
-        )
-        .await;
-    let body = hyper::body::to_bytes(res.unwrap().into_body()).await.unwrap();
-    println!("res body: {:?}", body);
+    #[tokio::test]
+    async fn mock_request() {
+        let svr =
+            Router::new()
+                .route(
+                    "/d/:id",
+                    get(|Path(id): Path<i32>| async move {
+                        format!("got id {}", id)
+                    }),
+                )
+                .into_service();
+        let res = svr
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/d/1123")
+                    .header("X-Custom-Foo", "Bar")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        let body =
+            hyper::body::to_bytes(res.unwrap().into_body()).await.unwrap();
+        println!("res body: {:?}", body);
+    }
 }
