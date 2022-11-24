@@ -3,4 +3,3 @@ extern crate peace_logs;
 
 pub mod bancho;
 pub mod components;
-pub mod openapi;

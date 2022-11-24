@@ -1,7 +1,6 @@
 use crate::{
     bancho,
-    components::{cmd::PeaceGatewayArgs, responder},
-    openapi::GatewayApiDocs,
+    components::{cmd::PeaceGatewayArgs, openapi::GatewayApiDocs, responder},
 };
 use axum::{
     body::Body,
