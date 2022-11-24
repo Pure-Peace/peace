@@ -123,7 +123,7 @@ pub mod tls {
             }
         };
 
-        info!(">> [HTTP] (only redirect) listening on: {}", args.https_addr);
+        info!(">> [HTTP] (only redirect) listening on: {}", args.http_addr);
         axum_server::bind(args.http_addr)
             .serve(redirect.into_make_service())
             .await
