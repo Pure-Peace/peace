@@ -5,5 +5,5 @@ pub async fn main() {
     let args = components::cmd::PeaceGatewayArgs::get();
     peace_logs::init_with_args(args);
 
-    components::serve(args).await
+    components::http::serve(args).await
 }
