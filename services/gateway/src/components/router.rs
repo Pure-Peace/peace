@@ -1,9 +1,6 @@
 use crate::{
     bancho,
-    components::{
-        cmd::PeaceGatewayArgs,
-        responder::{self, HandlerWrapper},
-    },
+    components::{cmd::PeaceGatewayArgs, responder},
 };
 use axum::{
     body::Body,
@@ -13,12 +10,8 @@ use axum::{
     routing::{any, get},
     Router as AxumRouter,
 };
-use matchit::Router;
 use peace_logs::api::admin_routers;
-use std::{
-    ops::{Deref, DerefMut},
-    time::Duration,
-};
+use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
@@ -64,36 +57,5 @@ pub fn app_router(args: &PeaceGatewayArgs) -> AxumRouter {
         )
     } else {
         router
-    }
-}
-
-/// This structure provides the ability to create a custom router \
-/// and store the [`axum::handler::Handler`] into [`matchit::Router`]
-pub struct HandlerRouter {
-    inner: Router<HandlerWrapper>,
-}
-
-impl HandlerRouter {
-    pub fn new() -> Self {
-        HandlerRouter { inner: Router::new() }
-    }
-
-    pub fn route(mut self, route: &str, dest: HandlerWrapper) -> Self {
-        self.inner.insert(route, dest).unwrap();
-        self
-    }
-}
-
-impl Deref for HandlerRouter {
-    type Target = Router<HandlerWrapper>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl DerefMut for HandlerRouter {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
     }
 }
