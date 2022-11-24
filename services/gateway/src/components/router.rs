@@ -8,7 +8,7 @@ use axum::{
     extract::Host,
     http::Request,
     routing::{any, get},
-    Router as AxumRouter,
+    Router,
 };
 use peace_logs::api::admin_routers;
 use std::time::Duration;
@@ -17,11 +17,11 @@ use tower_http::trace::TraceLayer;
 
 #[derive(Clone)]
 pub struct AnyPathRouters {
-    pub bancho: AxumRouter<()>,
+    pub bancho: Router<()>,
 }
 
 /// App router with some middleware.
-pub fn app(args: &PeaceGatewayArgs) -> AxumRouter {
+pub fn app(args: &PeaceGatewayArgs) -> Router {
     app_router(args)
         .layer(
             ServiceBuilder::new()
@@ -35,8 +35,8 @@ pub fn app(args: &PeaceGatewayArgs) -> AxumRouter {
 }
 
 /// App router
-pub fn app_router(args: &PeaceGatewayArgs) -> AxumRouter {
-    let router = AxumRouter::new()
+pub fn app_router(args: &PeaceGatewayArgs) -> Router {
+    let router = Router::new()
         .route("/", get(responder::app_root))
         .nest("/bancho", bancho::routers::bancho_client_routes());
 

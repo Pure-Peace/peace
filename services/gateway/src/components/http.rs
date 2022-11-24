@@ -1,33 +1,50 @@
 use crate::components::{cmd::PeaceGatewayArgs, router};
 use axum::Router;
+use axum_server::AddrIncomingConfig;
+use std::{net::SocketAddr, time::Duration};
 use tokio::signal;
 
 /// Start service.
 pub async fn serve(args: &PeaceGatewayArgs) {
     let app = router::app(args);
 
+    let config = AddrIncomingConfig::new()
+        .tcp_nodelay(args.tcp_nodelay)
+        .tcp_sleep_on_accept_errors(args.tcp_sleep_on_accept_errors)
+        .tcp_keepalive(args.tcp_keepalive.map(|i| Duration::from_secs(i)))
+        .tcp_keepalive_interval(
+            args.tcp_keepalive_interval.map(|i| Duration::from_secs(i)),
+        )
+        .tcp_keepalive_retries(args.tcp_keepalive_retries)
+        .build();
+
     info!("\n\n{}\n", tools::pkg_metadata!());
 
     #[cfg(feature = "tls")]
     if args.tls {
-        let https = tls::launch_https_server(app.clone(), args);
+        let https = tls::launch_https_server(app.clone(), args, config.clone());
         if args.force_https {
             tokio::join!(tls::launch_ssl_redirect_server(args), https);
         } else {
-            tokio::join!(launch_http_server(app, args), https);
+            tokio::join!(launch_http_server(app, args, config), https);
         }
     } else {
-        launch_http_server(app, args).await;
+        launch_http_server(app, args, config).await;
     }
 
     #[cfg(not(feature = "tls"))]
-    launch_http_server(app, args).await;
+    launch_http_server(app, args, config).await;
 }
 
-pub async fn launch_http_server(app: Router, args: &PeaceGatewayArgs) {
+pub async fn launch_http_server(
+    app: Router,
+    args: &PeaceGatewayArgs,
+    incoming_config: AddrIncomingConfig,
+) {
     info!(">> [HTTP] listening on: {}", args.http_addr);
     axum_server::bind(args.http_addr)
-        .serve(app.into_make_service())
+        .addr_incoming_config(incoming_config)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
 }
@@ -66,7 +83,8 @@ pub mod tls {
         response::Redirect,
         BoxError, Router,
     };
-    use axum_server::tls_rustls::RustlsConfig;
+    use axum_server::{tls_rustls::RustlsConfig, AddrIncomingConfig};
+    use std::net::SocketAddr;
 
     /// Redirect `http` to `https`.
     pub fn redirect_replace(
@@ -111,8 +129,12 @@ pub mod tls {
             .unwrap();
     }
 
-    pub async fn launch_https_server(app: Router, args: &PeaceGatewayArgs) {
-        let config = RustlsConfig::from_pem_file(
+    pub async fn launch_https_server(
+        app: Router,
+        args: &PeaceGatewayArgs,
+        incoming_config: AddrIncomingConfig,
+    ) {
+        let tls_config = RustlsConfig::from_pem_file(
             args.ssl_cert.as_ref().expect(
                 "ERROR: tls: Please make sure `--ssl-cert` are passed in.",
             ),
@@ -124,8 +146,9 @@ pub mod tls {
         .unwrap();
 
         info!(">> [HTTPS] listening on: {}", args.https_addr);
-        axum_server::bind_rustls(args.https_addr, config)
-            .serve(app.into_make_service())
+        axum_server::bind_rustls(args.https_addr, tls_config)
+            .addr_incoming_config(incoming_config)
+            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
             .await
             .unwrap();
     }

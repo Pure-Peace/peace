@@ -1,7 +1,6 @@
-use std::{net::SocketAddr, path::PathBuf};
-
 use clap::Parser;
 use once_cell::sync::OnceCell;
+use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 /// Command Line Interface (CLI) for Peace-Gateway service.
 #[derive(Parser, Debug, Clone)]
@@ -69,6 +68,28 @@ pub struct PeaceGatewayArgs {
     #[cfg(feature = "tls")]
     #[arg(short, long, default_value_t = false)]
     pub force_https: bool,
+
+    /// Set the value of TCP_NODELAY option for accepted connections.
+    #[arg(long, default_value_t = false)]
+    pub tcp_nodelay: bool,
+
+    /// Set whether to sleep on accept errors, to avoid exhausting file descriptor limits.
+    #[arg(long, default_value_t = true)]
+    pub tcp_sleep_on_accept_errors: bool,
+
+    /// Set how often to send TCP keepalive probes.
+    /// By default TCP keepalive probes is disabled.
+    #[arg(long)]
+    pub tcp_keepalive: Option<u64>,
+
+    /// Set the duration between two successive TCP keepalive retransmissions,
+    /// if acknowledgement to the previous keepalive transmission is not received.
+    #[arg(long)]
+    pub tcp_keepalive_interval: Option<u64>,
+
+    /// Set the number of retransmissions to be carried out before declaring that remote end is not available.
+    #[arg(long)]
+    pub tcp_keepalive_retries: Option<u32>,
 }
 
 impl PeaceGatewayArgs {
