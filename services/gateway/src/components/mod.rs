@@ -7,7 +7,7 @@ pub mod router;
 pub mod tls;
 
 use crate::components::cmd::PeaceGatewayArgs;
-use axum::{Router, Server};
+use axum::Router;
 use tokio::signal;
 
 /// Start service.
@@ -34,7 +34,10 @@ pub async fn serve(args: &PeaceGatewayArgs) {
 
 pub async fn launch_http_server(app: Router, args: &PeaceGatewayArgs) {
     info!(">> [HTTP] listening on: {}", args.http_addr);
-    Server::bind(&args.http_addr).serve(app.into_make_service()).await.unwrap();
+    axum_server::bind(args.http_addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
 
 pub async fn shutdown_signal() {

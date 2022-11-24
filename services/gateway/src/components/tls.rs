@@ -4,7 +4,7 @@ use axum::{
     handler::HandlerWithoutStateExt,
     http::{StatusCode, Uri},
     response::Redirect,
-    BoxError, Router, Server,
+    BoxError, Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
 
@@ -45,7 +45,7 @@ pub async fn launch_ssl_redirect_server(args: &PeaceGatewayArgs) {
     };
 
     info!(">> [HTTP] (only redirect) listening on: {}", args.https_addr);
-    Server::bind(&args.http_addr)
+    axum_server::bind(args.http_addr)
         .serve(redirect.into_make_service())
         .await
         .unwrap();
