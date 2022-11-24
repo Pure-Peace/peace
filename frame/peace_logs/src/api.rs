@@ -1,13 +1,12 @@
 use axum::{
-    extract::Query,
+    extract::Path,
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::get,
+    routing::put,
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::str::FromStr;
 use tower_http::auth::RequireAuthorizationLayer;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::reload;
@@ -18,6 +17,8 @@ use utoipa::{
     IntoParams, Modify, ToSchema,
 };
 
+use crate::LogLevel;
+
 #[derive(Debug)]
 pub enum AppError {
     ParamError(String),
@@ -27,22 +28,23 @@ pub enum AppError {
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "openapi_axum", derive(ToSchema))]
 pub struct CommonResponse {
-    pub status: bool,
+    pub success: bool,
     pub msg: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "openapi_axum", derive(IntoParams))]
-pub struct ReloadLevelQuery {
+pub struct SetLogLevelParam {
     /// ```
-    /// Values in: ["error", "warn", "info", "debug", "trace", "off"]
+    /// `level` in: ["error", "warn", "info", "debug", "trace", "off"]
     /// ```
-    pub level: String,
+    #[param(inline, value_type = LogLevel)]
+    pub level: LogLevel,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "openapi_axum", derive(IntoParams))]
-pub struct DebugModeQuery {
+pub struct ToggleDebugModeParam {
     pub enabled: bool,
 }
 
@@ -63,57 +65,62 @@ impl Modify for AdminAuth {
     }
 }
 
-/// Web api for reload [`LevelFilter`].
+/// Set the log level.
 #[cfg_attr(feature = "openapi_axum", utoipa::path(
-    get,
-    path = "/admin/logs/reload_level",
+    put,
+    context_path = "/admin",
+    path = "/logs/set_level/{level}",
+    tag = "admin",
     responses(
         (status = 200, description = "Reload successfully", body = [CommonResponse]),
     ),
-    params(ReloadLevelQuery),
+    params(SetLogLevelParam),
     security(("admin_token" = []))
 ))]
-pub async fn reload_level(
-    Query(query): Query<ReloadLevelQuery>,
+pub async fn set_level(
+    Path(param): Path<LogLevel>,
 ) -> Result<Json<CommonResponse>, AppError> {
-    let level = LevelFilter::from_str(&query.level)
-        .map_err(|err| AppError::ParamError(err.to_string()))?;
-    crate::reload_level(level)?;
+    let level = LevelFilter::from(param);
+    crate::set_level(level)?;
 
     info!("<LogsApi> Reload log level to: [{}]", level);
-    Ok(Json(CommonResponse { status: true, msg: None }))
+    Ok(Json(CommonResponse { success: true, msg: None }))
 }
 
-/// Web api for set log debug mode.
+/// Toggle debug mode.
+///
+/// Turning on debug will display information such as code line number, source file, thread id, etc.
 #[cfg_attr(feature = "openapi_axum", utoipa::path(
-    get,
-    path = "/admin/logs/debug_mode",
+    put,
+    context_path = "/admin",
+    path = "/logs/debug_mode/{enabled}",
+    tag = "admin",
     responses(
         (status = 200, description = "Debug mode toggle successfully", body = [CommonResponse]),
     ),
-    params(DebugModeQuery),
+    params(ToggleDebugModeParam),
     security(("admin_token" = []))
 ))]
 pub async fn debug_mode(
-    Query(query): Query<DebugModeQuery>,
+    Path(param): Path<ToggleDebugModeParam>,
 ) -> Result<Json<CommonResponse>, AppError> {
-    crate::debug_mode(query.enabled)?;
+    crate::toggle_debug_mode(param.enabled)?;
 
-    info!("<LogsRpc> Toggle debug mode: [{}]", query.enabled);
-    Ok(Json(CommonResponse { status: true, msg: None }))
+    info!("<LogsApi> Toggle debug mode: [{}]", param.enabled);
+    Ok(Json(CommonResponse { success: true, msg: None }))
 }
 
 /// Admin routers [`Router`]
 ///
 ///
-/// [`reload_level`] : `GET` `/admin/logs/reload_level`
+/// [`set_level`] : `PUT` `/admin/logs/set_level/:level`
 ///
-/// [`debug_mode`] : `GET` `/admin/logs/debug_mode`
+/// [`debug_mode`] : `PUT` `/admin/logs/debug_mode/:enabled`
 ///
 pub fn admin_routers(admin_token: Option<&str>) -> Router {
     let router = Router::new()
-        .route("/admin/logs/reload_level", get(reload_level))
-        .route("/admin/logs/debug_mode", get(debug_mode));
+        .route("/admin/logs/set_level/:level", put(set_level))
+        .route("/admin/logs/debug_mode/:enabled", put(debug_mode));
 
     if let Some(token) = &admin_token {
         router.layer(RequireAuthorizationLayer::bearer(token))
@@ -147,36 +154,23 @@ impl IntoResponse for AppError {
 
 #[cfg(test)]
 mod test {
-    use crate::api::{
-        debug_mode, reload_level, DebugModeQuery, ReloadLevelQuery,
+    use crate::{
+        api::{debug_mode, set_level, ToggleDebugModeParam},
+        LogLevel,
     };
-    use axum::extract::Query;
+    use axum::extract::Path;
 
     #[tokio::test]
-    async fn try_reload_level() {
-        assert!(reload_level(Query(ReloadLevelQuery {
-            level: "info".to_string()
-        }))
-        .await
-        .is_ok());
-        assert!(reload_level(Query(ReloadLevelQuery {
-            level: "3".to_string()
-        }))
-        .await
-        .is_ok());
-        assert!(reload_level(Query(ReloadLevelQuery {
-            level: "xxx".to_string()
-        }))
-        .await
-        .is_err());
+    async fn try_set_level() {
+        assert!(set_level(Path(LogLevel::Debug)).await.is_ok());
     }
 
     #[tokio::test]
     async fn try_debug_mode() {
-        assert!(debug_mode(Query(DebugModeQuery { enabled: true }))
+        assert!(debug_mode(Path(ToggleDebugModeParam { enabled: true }))
             .await
             .is_ok());
-        assert!(debug_mode(Query(DebugModeQuery { enabled: false }))
+        assert!(debug_mode(Path(ToggleDebugModeParam { enabled: false }))
             .await
             .is_ok());
     }

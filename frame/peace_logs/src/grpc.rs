@@ -10,30 +10,30 @@ pub struct LogsRpcService {}
 
 #[tonic::async_trait]
 impl LogsRpc for LogsRpcService {
-    async fn reload_level(
+    async fn set_level(
         &self,
         request: Request<ReloadLevelRequest>,
     ) -> Result<Response<CommonRpcResult>, Status> {
         let level = crate::level_from_int(request.into_inner().level).map_err(
             |_| Status::invalid_argument("Failed to convert level from int."),
         )?;
-        crate::reload_level(level)
+        crate::set_level(level)
             .map_err(|err| Status::internal(err.to_string()))?;
 
         info!("<LogsRpc> Reload log level to: [{}]", level);
-        Ok(Response::new(CommonRpcResult { status: true, msg: None }))
+        Ok(Response::new(CommonRpcResult { success: true, msg: None }))
     }
 
-    async fn debug_mode(
+    async fn toggle_debug_mode(
         &self,
         request: Request<DebugModeRequest>,
     ) -> Result<Response<CommonRpcResult>, Status> {
         let enabled = request.into_inner().enabled;
-        crate::debug_mode(enabled)
+        crate::toggle_debug_mode(enabled)
             .map_err(|err| Status::internal(err.to_string()))?;
 
         info!("<LogsRpc> Toggle debug mode: [{}]", enabled);
-        Ok(Response::new(CommonRpcResult { status: true, msg: None }))
+        Ok(Response::new(CommonRpcResult { success: true, msg: None }))
     }
 }
 
@@ -46,15 +46,15 @@ mod test {
     use crate::grpc::LogsRpcService;
 
     #[tokio::test]
-    async fn try_reload_level() {
+    async fn try_set_level() {
         let s = LogsRpcService {};
         let req = tonic::Request::new(ReloadLevelRequest {
             level: Level::Info as i32,
         });
-        assert!(s.reload_level(req).await.is_ok());
+        assert!(s.set_level(req).await.is_ok());
 
         let req = tonic::Request::new(ReloadLevelRequest { level: -1 });
-        assert!(s.reload_level(req).await.is_err());
+        assert!(s.set_level(req).await.is_err());
     }
 
     #[tokio::test]

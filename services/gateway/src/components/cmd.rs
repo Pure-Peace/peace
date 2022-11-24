@@ -25,7 +25,7 @@ pub struct PeaceGatewayArgs {
     #[arg(short = 'L', long, value_enum, default_value = "info")]
     pub log_level: peace_logs::LogLevel,
 
-    /// Debug mode (extremely verbose logs).
+    /// Turning on debug will display information such as code line number, source file, thread id, etc.
     #[arg(short, long, default_value_t = false)]
     pub debug: bool,
 
@@ -101,7 +101,7 @@ pub struct PeaceGatewayArgs {
 
     /// The `openapi.json` uri path.
     #[arg(long, default_value = "/api-doc/openapi.json")]
-    pub openapi_json: String
+    pub openapi_json: String,
 }
 
 impl PeaceGatewayArgs {

@@ -6,7 +6,7 @@ use utoipa::{OpenApi, ToSchema};
 #[openapi(
     paths(
         peace_logs::api::debug_mode,
-        peace_logs::api::reload_level
+        peace_logs::api::set_level
     ),
     components(
         schemas(peace_logs::api::CommonResponse)

@@ -2,8 +2,8 @@ syntax = "proto3";
 package logs_rpc;
 
 service LogsRpc {
-  rpc ReloadLevel(ReloadLevelRequest) returns (CommonRpcResult);
-  rpc DebugMode(DebugModeRequest) returns (CommonRpcResult);
+  rpc ReloadLogLevel(ReloadLevelRequest) returns (CommonRpcResult);
+  rpc ToggleDebugMode(DebugModeRequest) returns (CommonRpcResult);
 }
 
 enum Level {
@@ -15,11 +15,11 @@ enum Level {
   TRACE = 5;
 }
 
-message ReloadLevelRequest { Level level = 1; }
+message ReloadLevelRequest { Level log_level = 1; }
 
 message DebugModeRequest { bool enabled = 1; }
 
 message CommonRpcResult {
-  bool status = 1;
+  bool success = 1;
   optional string msg = 2;
 }

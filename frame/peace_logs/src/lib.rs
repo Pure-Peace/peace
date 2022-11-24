@@ -13,6 +13,7 @@ pub mod grpc;
 #[cfg(feature = "api_axum")]
 pub mod api;
 
+use serde::{Deserialize, Serialize};
 pub use tracing::*;
 pub use tracing_subscriber::*;
 
@@ -71,16 +72,18 @@ pub fn tracing() -> &'static ReloadHandles {
 /// ```rust
 /// use peace_logs;
 /// let _ = peace_logs::tracing();
-/// peace_logs::reload_level(peace_logs::level_filters::LevelFilter::WARN).unwrap();
+/// peace_logs::set_level(peace_logs::level_filters::LevelFilter::WARN).unwrap();
 /// ```
 ///
-pub fn reload_level(level: LevelFilter) -> Result<(), reload::Error> {
+pub fn set_level(level: LevelFilter) -> Result<(), reload::Error> {
     let handles = tracing();
     handles.filter_reload.modify(|f| *f = level)
 }
 
 /// Toggle debug (verbose) mode.
-pub fn debug_mode(enabled: bool) -> Result<(), reload::Error> {
+///
+/// Turning on debug will display information such as code line number, source file, thread id, etc.
+pub fn toggle_debug_mode(enabled: bool) -> Result<(), reload::Error> {
     let handles = tracing();
     let layer = LayerF::new();
     handles.fmt_reload.reload(if enabled {
@@ -108,8 +111,10 @@ pub fn level_from_int(level: i32) -> Result<LevelFilter, ()> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+#[cfg_attr(feature = "openapi_axum", derive(utoipa::ToSchema))]
 pub enum LogLevel {
     /// Designates that trace instrumentation should be completely disabled.
     Off,
@@ -125,9 +130,9 @@ pub enum LogLevel {
     Trace,
 }
 
-impl Into<LevelFilter> for LogLevel {
-    fn into(self) -> LevelFilter {
-        match self {
+impl From<LogLevel> for LevelFilter {
+    fn from(level: LogLevel) -> Self {
+        match level {
             LogLevel::Off => LevelFilter::OFF,
             LogLevel::Error => LevelFilter::ERROR,
             LogLevel::Warn => LevelFilter::WARN,
@@ -152,6 +157,6 @@ pub fn init_with_args(args: &impl LoggerArgs) {
     // Init logger
     tracing();
     if args.debug() {
-        debug_mode(true).unwrap();
+        toggle_debug_mode(true).unwrap();
     }
 }
