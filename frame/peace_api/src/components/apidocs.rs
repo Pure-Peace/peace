@@ -1,7 +1,6 @@
 use peace_logs::api::AdminAuth;
-use utoipa::OpenApi;
-
 use peace_logs::api::CommonHandleResponse;
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -9,7 +8,8 @@ use peace_logs::api::CommonHandleResponse;
         peace_logs::api::config,
         peace_logs::api::debug_mode,
         peace_logs::api::set_env_filter,
-        peace_logs::api::set_level
+        peace_logs::api::set_level,
+        crate::components::responder::shutdown_server
     ),
     components(
         schemas(CommonHandleResponse)

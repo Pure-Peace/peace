@@ -1,14 +1,20 @@
 use crate::components::{cmd::PeaceApiArgs, responder};
 use axum::{
-    body::Body, error_handling::HandleErrorLayer, extract::Host, http::Request,
-    routing::any, Router,
+    body::Body,
+    error_handling::HandleErrorLayer,
+    extract::Host,
+    http::Request,
+    routing::{any, delete},
+    Router,
 };
 use peace_logs::api::admin_routers;
 use std::{sync::Arc, time::Duration};
 use tower::ServiceBuilder;
-use tower_http::trace::TraceLayer;
+use tower_http::{auth::RequireAuthorizationLayer, trace::TraceLayer};
 use utoipa::openapi::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+
+use super::responder::shutdown_server;
 
 pub trait Application: Clone + Send + Sync + 'static {
     fn framework_args(&self) -> Arc<PeaceApiArgs>;
@@ -49,7 +55,13 @@ pub fn app_router(app: impl Application) -> Router {
         openapi_router(app.openapi(), args.as_ref()).merge(app.router());
 
     let router = if args.admin_api {
-        router.merge(admin_routers(args.admin_token.as_deref()))
+        router.merge(admin_routers(
+            args.admin_token.as_deref(),
+            Some(
+                Router::new()
+                    .route("/admin/server/shutdown", delete(shutdown_server)),
+            ),
+        ))
     } else {
         router
     };

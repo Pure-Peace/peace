@@ -155,8 +155,17 @@ pub async fn debug_mode(
 /// [`set_env_filter`] : `PUT` `/admin/logs/set_env_filter/:filter`
 /// [`debug_mode`] : `PUT` `/admin/logs/debug_mode/:enabled`
 ///
-pub fn admin_routers(admin_token: Option<&str>) -> Router {
-    let router = Router::new()
+pub fn admin_routers(
+    admin_token: Option<&str>,
+    others_router: Option<Router>,
+) -> Router {
+    let router = if let Some(r) = others_router {
+        Router::new().merge(r)
+    } else {
+        Router::new()
+    };
+
+    let router = router
         .route("/admin/logs/set_level/:level", put(set_level))
         .route("/admin/logs/set_env_filter/:filter", put(set_env_filter))
         .route("/admin/logs/config", get(config))

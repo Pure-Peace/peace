@@ -3,7 +3,8 @@ use crate::components::{
     router::{self, Application},
 };
 use axum::Router;
-use axum_server::AddrIncomingConfig;
+use axum_server::{AddrIncomingConfig, Handle};
+use once_cell::sync::OnceCell;
 use std::{net::SocketAddr, time::Duration};
 use tokio::signal;
 
@@ -39,6 +40,12 @@ pub async fn serve(app_cfg: impl Application) {
 
     #[cfg(not(feature = "tls"))]
     launch_http_server(app, args, config).await;
+    warn!("server stopped")
+}
+
+pub fn server_handle() -> Handle {
+    static HANDLE: OnceCell<Handle> = OnceCell::new();
+    HANDLE.get_or_init(|| Handle::new()).clone()
 }
 
 pub async fn launch_http_server(
@@ -48,6 +55,7 @@ pub async fn launch_http_server(
 ) {
     info!(">> [HTTP] listening on: {}", args.http_addr);
     axum_server::bind(args.http_addr)
+        .handle(server_handle())
         .addr_incoming_config(incoming_config)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
@@ -80,7 +88,7 @@ pub async fn shutdown_signal() {
 
 #[cfg(feature = "tls")]
 pub mod tls {
-    use crate::components::cmd::PeaceApiArgs;
+    use crate::components::{cmd::PeaceApiArgs, http::server_handle};
     use axum::{
         extract::Host,
         handler::HandlerWithoutStateExt,
@@ -133,6 +141,7 @@ pub mod tls {
             args.http_addr
         );
         axum_server::bind(args.http_addr)
+            .handle(server_handle())
             .serve(redirect.into_make_service())
             .await
             .unwrap();
@@ -156,6 +165,7 @@ pub mod tls {
 
         info!(">> [HTTPS] listening on: {}", args.https_addr);
         axum_server::bind_rustls(args.https_addr, tls_config)
+            .handle(server_handle())
             .addr_incoming_config(incoming_config)
             .serve(app.into_make_service_with_connect_info::<SocketAddr>())
             .await

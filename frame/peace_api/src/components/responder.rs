@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::components::{error::Error, router::Application};
 use axum::{
     body::{Body, BoxBody},
@@ -8,9 +10,28 @@ use axum::{
 };
 use tower::{load_shed, timeout, BoxError, ServiceExt};
 
+use super::http::server_handle;
+
 /// Route `/` handler.
 pub async fn app_root() -> Response {
     tools::pkg_metadata!().into_response()
+}
+
+/// Route `/admin/server/shutdown` handler.
+#[utoipa::path(
+    delete,
+    context_path = "/admin",
+    path = "/server/shutdown",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Success"),
+    ),
+    security(("admin_token" = []))
+)]
+pub async fn shutdown_server() -> Response {
+    warn!("!!! [api::shutdown_server]: The server will stop in 3 seconds !!!");
+    server_handle().graceful_shutdown(Some(Duration::from_secs(3)));
+    "ok".into_response()
 }
 
 /// Route `/*path` handler.
