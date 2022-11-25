@@ -15,6 +15,6 @@ use peace_logs::api::CommonHandleResponse;
     components(
         schemas(CommonHandleResponse)
     ),
-    modifiers(&AdminAuth, &AdminAuth)
+    modifiers(&AdminAuth)
 )]
 pub struct GatewayApiDocs;

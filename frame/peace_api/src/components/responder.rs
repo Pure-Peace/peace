@@ -1,4 +1,4 @@
-use crate::components::{error::Error, router::AnyPathRouters};
+use crate::components::{error::Error, router::Application};
 use axum::{
     body::{Body, BoxBody},
     extract::Host,
@@ -8,8 +8,6 @@ use axum::{
 };
 use tower::{load_shed, timeout, BoxError, ServiceExt};
 
-use super::cmd::PeaceGatewayArgs;
-
 /// Route `/` handler.
 pub async fn app_root() -> Response {
     tools::pkg_metadata!().into_response()
@@ -17,21 +15,17 @@ pub async fn app_root() -> Response {
 
 /// Route `/*path` handler.
 pub async fn any_path(
-    Host(hostname): Host,
+    host: Host,
     mut req: Request<Body>,
-    any_routers: AnyPathRouters,
+    app: impl Application,
 ) -> Response {
     // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert panic.
     req.extensions_mut().remove::<axum::extract::MatchedPath>();
 
-    let result = match hostname {
-        n if PeaceGatewayArgs::get().bancho_hostname.contains(&n) => {
-            call_router(any_routers.bancho, req).await
-        },
-        _ => return Error::NotFound.into(),
-    };
-
-    result.into_response()
+    match app.match_hostname(host, &req) {
+        Some(router) => call_router(router, req).await,
+        None => Error::NotFound.into_response(),
+    }
 }
 
 pub async fn handle_404() -> Response {

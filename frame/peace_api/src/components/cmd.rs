@@ -1,17 +1,11 @@
 use clap::Parser;
 use once_cell::sync::OnceCell;
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
-/// Command Line Interface (CLI) for Peace-Gateway service.
+/// Base Command Line Interface (CLI) for Peace-api framework.
 #[derive(Parser, Debug, Clone)]
-#[command(
-    name = "peace-gateway",
-    author,
-    version,
-    about,
-    propagate_version = true
-)]
-pub struct PeaceGatewayArgs {
+#[command(name = "peace-api", author, version, about, propagate_version = true)]
+pub struct PeaceApiArgs {
     /// The address and port the `http` server listens on.
     #[arg(short = 'H', long, default_value = "127.0.0.1:8000")]
     pub http_addr: SocketAddr,
@@ -52,10 +46,6 @@ pub struct PeaceGatewayArgs {
     /// Enabled `hostname-based` routing.
     #[arg(short = 'N', long, default_value_t = false)]
     pub hostname_routing: bool,
-
-    /// A list of hostnames to route to the bancho service.
-    #[arg(short = 'B', long)]
-    pub bancho_hostname: Vec<String>,
 
     /// Enabled `tls` support.
     #[cfg(feature = "tls")]
@@ -108,15 +98,15 @@ pub struct PeaceGatewayArgs {
     pub openapi_json: String,
 }
 
-impl PeaceGatewayArgs {
-    /// Get or init [`PeaceGatewayArgs`]
-    pub fn get() -> &'static Self {
-        static ARGS: OnceCell<PeaceGatewayArgs> = OnceCell::new();
-        ARGS.get_or_init(|| PeaceGatewayArgs::parse())
+impl PeaceApiArgs {
+    /// Get or init [`PeaceApiArgs`]
+    pub fn get() -> Arc<PeaceApiArgs> {
+        static ARGS: OnceCell<Arc<PeaceApiArgs>> = OnceCell::new();
+        ARGS.get_or_init(|| Arc::new(PeaceApiArgs::parse())).clone()
     }
 }
 
-impl peace_logs::LoggerArgs for PeaceGatewayArgs {
+impl peace_logs::LoggerArgs for PeaceApiArgs {
     fn log_level(&self) -> peace_logs::LogLevel {
         self.log_level
     }
