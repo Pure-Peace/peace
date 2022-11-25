@@ -25,6 +25,10 @@ pub struct PeaceGatewayArgs {
     #[arg(short = 'L', long, value_enum, default_value = "info")]
     pub log_level: peace_logs::LogLevel,
 
+    /// Logging env filter.
+    #[arg(short = 'F', long, value_enum)]
+    pub log_env_filter: Option<String>,
+
     /// Turning on debug will display information such as code line number, source file, thread id, etc.
     #[arg(short, long, default_value_t = false)]
     pub debug: bool,
@@ -115,6 +119,10 @@ impl PeaceGatewayArgs {
 impl peace_logs::LoggerArgs for PeaceGatewayArgs {
     fn log_level(&self) -> peace_logs::LogLevel {
         self.log_level
+    }
+
+    fn env_filter(&self) -> Option<String> {
+        self.log_env_filter.clone()
     }
 
     fn debug(&self) -> bool {

@@ -2,7 +2,7 @@ use axum::{
     extract::Path,
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::put,
+    routing::{get, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ pub enum AppError {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "openapi_axum", derive(ToSchema))]
-pub struct CommonResponse {
+pub struct CommonHandleResponse {
     pub success: bool,
     pub msg: Option<String>,
 }
@@ -65,26 +65,64 @@ impl Modify for AdminAuth {
     }
 }
 
-/// Set the log level.
+/// Set the global log level.
 #[cfg_attr(feature = "openapi_axum", utoipa::path(
     put,
     context_path = "/admin",
     path = "/logs/set_level/{level}",
     tag = "admin",
     responses(
-        (status = 200, description = "Reload successfully", body = [CommonResponse]),
+        (status = 200, description = "Success", body = [CommonHandleResponse]),
     ),
     params(SetLogLevelParam),
     security(("admin_token" = []))
 ))]
 pub async fn set_level(
     Path(param): Path<LogLevel>,
-) -> Result<Json<CommonResponse>, AppError> {
+) -> Result<Json<CommonHandleResponse>, AppError> {
     let level = LevelFilter::from(param);
     crate::set_level(level)?;
 
     info!("<LogsApi> Reload log level to: [{}]", level);
-    Ok(Json(CommonResponse { success: true, msg: None }))
+    Ok(Json(CommonHandleResponse { success: true, msg: None }))
+}
+
+/// Set the log env filter.
+#[cfg_attr(feature = "openapi_axum", utoipa::path(
+    put,
+    context_path = "/admin",
+    path = "/logs/set_env_filter/{filter}",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Success", body = [CommonHandleResponse]),
+    ),
+    params(
+        ("filter" = String, Path, description = "env filter string", example = "peace_logs::api=info")
+    ),
+    security(("admin_token" = []))
+))]
+pub async fn set_env_filter(
+    Path(filter): Path<String>,
+) -> Result<Json<CommonHandleResponse>, AppError> {
+    crate::set_env_filter(&filter)?;
+
+    info!("<LogsApi> Set env filter to: [{}]", filter);
+    Ok(Json(CommonHandleResponse { success: true, msg: None }))
+}
+
+/// Get current log configs.
+#[cfg_attr(feature = "openapi_axum", utoipa::path(
+    get,
+    context_path = "/admin",
+    path = "/logs/config",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Success", body = [String]),
+    ),
+    security(("admin_token" = []))
+))]
+pub async fn config() -> Result<String, AppError> {
+    Ok(crate::env_filter(None).to_string())
 }
 
 /// Toggle debug mode.
@@ -96,30 +134,32 @@ pub async fn set_level(
     path = "/logs/debug_mode/{enabled}",
     tag = "admin",
     responses(
-        (status = 200, description = "Debug mode toggle successfully", body = [CommonResponse]),
+        (status = 200, description = "Debug mode toggle successfully", body = [CommonHandleResponse]),
     ),
     params(ToggleDebugModeParam),
     security(("admin_token" = []))
 ))]
 pub async fn debug_mode(
     Path(param): Path<ToggleDebugModeParam>,
-) -> Result<Json<CommonResponse>, AppError> {
+) -> Result<Json<CommonHandleResponse>, AppError> {
     crate::toggle_debug_mode(param.enabled)?;
 
     info!("<LogsApi> Toggle debug mode: [{}]", param.enabled);
-    Ok(Json(CommonResponse { success: true, msg: None }))
+    Ok(Json(CommonHandleResponse { success: true, msg: None }))
 }
 
 /// Admin routers [`Router`]
 ///
 ///
 /// [`set_level`] : `PUT` `/admin/logs/set_level/:level`
-///
+/// [`set_env_filter`] : `PUT` `/admin/logs/set_env_filter/:filter`
 /// [`debug_mode`] : `PUT` `/admin/logs/debug_mode/:enabled`
 ///
 pub fn admin_routers(admin_token: Option<&str>) -> Router {
     let router = Router::new()
         .route("/admin/logs/set_level/:level", put(set_level))
+        .route("/admin/logs/set_env_filter/:filter", put(set_env_filter))
+        .route("/admin/logs/config", get(config))
         .route("/admin/logs/debug_mode/:enabled", put(debug_mode));
 
     if let Some(token) = &admin_token {
