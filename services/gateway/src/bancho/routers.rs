@@ -8,7 +8,7 @@ use crate::bancho::impls::client;
 pub fn bancho_client_routes() -> Router {
     Router::new()
         .route("/", post(client::bancho_post))
-        .route("/ss/:screenshot", get(client::web::get_screenshot))
+        .route("/ss/:screenshot", get(client::get_screenshot))
         .route("/d/:beatmapset_id", get(client::download_beatmapset))
         .route("/users", post(client::client_register))
         .route("/p/doyoureallywanttoaskpeppy", get(client::ask_peppy))

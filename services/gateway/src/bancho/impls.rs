@@ -26,6 +26,10 @@ pub mod client {
         unimplemented!()
     }
 
+    pub async fn get_screenshot() -> Response {
+        unimplemented!()
+    }
+
     pub mod web {
         use axum::response::{IntoResponse, Response};
 
@@ -102,10 +106,6 @@ pub mod client {
         }
 
         pub async fn update_beatmap() -> Response {
-            unimplemented!()
-        }
-
-        pub async fn get_screenshot() -> Response {
             unimplemented!()
         }
     }
