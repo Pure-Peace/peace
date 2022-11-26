@@ -52,15 +52,10 @@ mod test {
 
     #[tokio::test]
     async fn mock_request() {
-        let svr =
-            Router::new()
-                .route(
-                    "/d/:id",
-                    get(|Path(id): Path<i32>| async move {
-                        format!("got id {}", id)
-                    }),
-                )
-                .into_service();
+        let svr = Router::new().route(
+            "/d/:id",
+            get(|Path(id): Path<i32>| async move { format!("got id {}", id) }),
+        );
         let res = svr
             .oneshot(
                 Request::builder()

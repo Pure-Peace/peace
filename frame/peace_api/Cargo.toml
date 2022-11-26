@@ -17,7 +17,7 @@ tls = ["axum-server/tls-rustls", "axum/http2"]
 [dependencies]
 # core
 futures = "0.3"
-axum = { version = "0.6.0-rc.5" }
+axum = { version = "0.6.0" }
 axum-server = { version = "0.4" }
 tokio = { version = "1.0", features = ["full"] }
 hyper = { version = "0.14" }
@@ -28,12 +28,8 @@ tower-http = { version = "0.3", features = ["limit", "trace"] }
 tower-layer = "0.3"
 
 # openapi
-utoipa = { git = "https://github.com/Pure-Peace/utoipa", branch = "axum-0.6.0-rc5", features = [
-    "axum_extras",
-] }
-utoipa-swagger-ui = { git = "https://github.com/Pure-Peace/utoipa", branch = "axum-0.6.0-rc5", features = [
-    "axum",
-] }
+utoipa = { version = "2.4.2", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "3.0.1", features = ["axum"] }
 
 # serde
 serde = { version = "1.0", features = ["derive"] }

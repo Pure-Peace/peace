@@ -17,7 +17,7 @@ pub async fn app_root() -> Response {
     tools::pkg_metadata!().into_response()
 }
 
-/// Route `/admin/server/shutdown/{grace_period_secs}` handler.
+/// Stop the server within a specified time `grace_period_secs`.
 #[utoipa::path(
     delete,
     context_path = "/admin",
@@ -64,7 +64,7 @@ pub async fn call_router(
     router: Router,
     req: Request<Body>,
 ) -> Response<BoxBody> {
-    router.into_service().oneshot(req).await.into_response()
+    router.oneshot(req).await.into_response()
 }
 
 pub async fn handle_error(error: BoxError) -> Error {
