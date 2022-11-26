@@ -1,6 +1,7 @@
-use std::time::Duration;
-
-use crate::components::{error::Error, router::Application};
+use crate::{
+    components::{error::Error, http::server_handle},
+    Application,
+};
 use axum::{
     body::{Body, BoxBody},
     extract::Host,
@@ -8,9 +9,8 @@ use axum::{
     response::{IntoResponse, Response},
     Router,
 };
+use std::time::Duration;
 use tower::{load_shed, timeout, BoxError, ServiceExt};
-
-use super::http::server_handle;
 
 /// Route `/` handler.
 pub async fn app_root() -> Response {

@@ -5,7 +5,7 @@ pub mod cmd;
 use apidocs::GatewayApiDocs;
 use axum::{body::Body, extract::Host, http::Request, routing::get, Router};
 use cmd::PeaceGatewayArgs;
-use peace_api::components::{cmd::PeaceApiArgs, router::Application};
+use peace_api::{components::cmd::PeaceApiArgs, Application};
 use std::sync::Arc;
 use utoipa::OpenApi;
 
@@ -31,7 +31,7 @@ impl Application for App {
             .nest("/bancho", bancho::routers::bancho_client_routes())
     }
 
-    fn openapi(&self) -> utoipa::openapi::OpenApi {
+    fn apidocs(&self) -> utoipa::openapi::OpenApi {
         GatewayApiDocs::openapi()
     }
 

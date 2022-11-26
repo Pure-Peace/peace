@@ -1,4 +1,7 @@
-use crate::components::{cmd::PeaceApiArgs, responder};
+use crate::{
+    components::{cmd::PeaceApiArgs, responder, responder::shutdown_server},
+    Application,
+};
 use axum::{
     body::Body,
     error_handling::HandleErrorLayer,
@@ -7,25 +10,11 @@ use axum::{
     routing::{any, delete},
     Router,
 };
-use peace_logs::api::admin_routers;
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use tower::ServiceBuilder;
-use tower_http::{auth::RequireAuthorizationLayer, trace::TraceLayer};
+use tower_http::trace::TraceLayer;
 use utoipa::openapi::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-
-use super::responder::shutdown_server;
-
-pub trait Application: Clone + Send + Sync + 'static {
-    fn framework_args(&self) -> Arc<PeaceApiArgs>;
-
-    fn router(&self) -> Router;
-
-    fn openapi(&self) -> OpenApi;
-
-    fn match_hostname(&self, host: Host, req: &Request<Body>)
-        -> Option<Router>;
-}
 
 /// App router with some middleware.
 pub fn app(app: impl Application) -> Router {
@@ -48,20 +37,28 @@ pub fn openapi_router(openapi: OpenApi, args: &PeaceApiArgs) -> Router {
         .into()
 }
 
+/// The `admin_routers` provides some api endpoints for managing the server,
+/// such as setting the log level and stopping the server.
+///
+/// You can pass in admin_token to add a layer of Authorization authentication (using Bearer).
+pub fn admin_routers(admin_token: Option<&str>) -> Router {
+    peace_logs::api::admin_routers(
+        admin_token,
+        Some(
+            Router::new()
+                .route("/admin/server/shutdown", delete(shutdown_server)),
+        ),
+    )
+}
+
 /// App router
 pub fn app_router(app: impl Application) -> Router {
     let args = app.framework_args();
     let router =
-        openapi_router(app.openapi(), args.as_ref()).merge(app.router());
+        openapi_router(app.apidocs(), args.as_ref()).merge(app.router());
 
     let router = if args.admin_api {
-        router.merge(admin_routers(
-            args.admin_token.as_deref(),
-            Some(
-                Router::new()
-                    .route("/admin/server/shutdown", delete(shutdown_server)),
-            ),
-        ))
+        router.merge(admin_routers(args.admin_token.as_deref()))
     } else {
         router
     };

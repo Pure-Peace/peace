@@ -1,6 +1,6 @@
-use crate::components::{
-    cmd::PeaceApiArgs,
-    router::{self, Application},
+use crate::{
+    components::{cmd::PeaceApiArgs, router},
+    Application,
 };
 use axum::Router;
 use axum_server::{AddrIncomingConfig, Handle};
