@@ -40,7 +40,7 @@ pub async fn serve(app_cfg: impl Application) {
 
     #[cfg(not(feature = "tls"))]
     launch_http_server(app, args, config).await;
-    warn!("server stopped")
+    warn!("!!! SERVER STOPPED !!!")
 }
 
 pub fn server_handle() -> Handle {

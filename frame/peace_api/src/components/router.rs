@@ -44,10 +44,10 @@ pub fn openapi_router(openapi: OpenApi, args: &PeaceApiArgs) -> Router {
 pub fn admin_routers(admin_token: Option<&str>) -> Router {
     peace_logs::api::admin_routers(
         admin_token,
-        Some(
-            Router::new()
-                .route("/admin/server/shutdown", delete(shutdown_server)),
-        ),
+        Some(Router::new().route(
+            "/admin/server/shutdown/:grace_period_secs",
+            delete(shutdown_server),
+        )),
     )
 }
 

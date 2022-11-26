@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::{
     body::{Body, BoxBody},
-    extract::Host,
+    extract::{Host, Path},
     http::Request,
     response::{IntoResponse, Response},
     Router,
@@ -17,20 +17,27 @@ pub async fn app_root() -> Response {
     tools::pkg_metadata!().into_response()
 }
 
-/// Route `/admin/server/shutdown` handler.
+/// Route `/admin/server/shutdown/{grace_period_secs}` handler.
 #[utoipa::path(
     delete,
     context_path = "/admin",
-    path = "/server/shutdown",
+    path = "/server/shutdown/{grace_period_secs}",
     tag = "admin",
     responses(
         (status = 200, description = "Success"),
     ),
+    params(
+        ("grace_period_secs" = u64, Path, description = "shutdown grace period seconds", example = "3")
+    ),
     security(("admin_token" = []))
 )]
-pub async fn shutdown_server() -> Response {
-    warn!("!!! [api::shutdown_server]: The server will stop in 3 seconds !!!");
-    server_handle().graceful_shutdown(Some(Duration::from_secs(3)));
+pub async fn shutdown_server(Path(grace_period_secs): Path<u64>) -> Response {
+    warn!(
+        "!!! [api::shutdown_server]: The server will stop in [{}] seconds !!!",
+        grace_period_secs
+    );
+    server_handle()
+        .graceful_shutdown(Some(Duration::from_secs(grace_period_secs)));
     "ok".into_response()
 }
 
