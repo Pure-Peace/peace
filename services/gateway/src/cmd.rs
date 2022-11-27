@@ -1,10 +1,10 @@
 use clap::Parser;
-use once_cell::sync::OnceCell;
-use peace_api::components::cmd::PeaceApiArgs;
-use std::sync::Arc;
+use clap_serde_derive::ClapSerde;
+use peace_api::{cmd::PeaceApiArgs, impl_args};
+use serde::{Deserialize, Serialize};
 
 /// Command Line Interface (CLI) for Peace gateway service.
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 #[command(
     name = "peace-gateway",
     author,
@@ -21,10 +21,4 @@ pub struct PeaceGatewayArgs {
     pub api_framework_args: PeaceApiArgs,
 }
 
-impl PeaceGatewayArgs {
-    /// Get or init [`PeaceGatewayArgs`]
-    pub fn get() -> Arc<PeaceGatewayArgs> {
-        static ARGS: OnceCell<Arc<PeaceGatewayArgs>> = OnceCell::new();
-        ARGS.get_or_init(|| Arc::new(PeaceGatewayArgs::parse())).clone()
-    }
-}
+impl_args!(PeaceGatewayArgs);

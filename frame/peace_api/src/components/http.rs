@@ -10,7 +10,7 @@ use tokio::signal;
 
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
-    let args = app_cfg.framework_args();
+    let args = app_cfg.frame_args_arc();
     let app = router::app(app_cfg);
 
     let config = AddrIncomingConfig::new()
@@ -22,8 +22,6 @@ pub async fn serve(app_cfg: impl Application) {
         )
         .tcp_keepalive_retries(args.tcp_keepalive_retries)
         .build();
-
-    info!("\n\n{}\n", tools::pkg_metadata!());
 
     #[cfg(feature = "tls")]
     if args.tls {

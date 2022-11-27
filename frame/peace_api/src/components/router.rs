@@ -18,7 +18,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 /// App router with some middleware.
 pub fn app(app: impl Application) -> Router {
-    let args = app.framework_args();
+    let args = app.frame_args_arc();
     app_router(app)
         .layer(
             ServiceBuilder::new()
@@ -53,7 +53,7 @@ pub fn admin_routers(admin_token: Option<&str>) -> Router {
 
 /// App router
 pub fn app_router(app: impl Application) -> Router {
-    let args = app.framework_args();
+    let args = app.frame_args_arc();
     let router =
         openapi_router(app.apidocs(), args.as_ref()).merge(app.router());
 

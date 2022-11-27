@@ -5,7 +5,7 @@ pub mod cmd;
 use apidocs::GatewayApiDocs;
 use axum::{body::Body, extract::Host, http::Request, routing::get, Router};
 use cmd::PeaceGatewayArgs;
-use peace_api::{components::cmd::PeaceApiArgs, Application};
+use peace_api::{cmd::PeaceApiArgs, Application};
 use std::sync::Arc;
 use utoipa::OpenApi;
 
@@ -21,13 +21,13 @@ impl App {
 }
 
 impl Application for App {
-    fn framework_args(&self) -> Arc<PeaceApiArgs> {
-        Arc::new(self.args.api_framework_args.clone())
+    fn frame_args(&self) -> &PeaceApiArgs {
+        &self.args.api_framework_args
     }
 
     fn router(&self) -> Router {
         Router::new()
-            .route("/", get(peace_api::components::responder::app_root))
+            .route("/", get(peace_api::responder::app_root))
             .nest("/bancho", bancho::routers::bancho_client_routes())
     }
 

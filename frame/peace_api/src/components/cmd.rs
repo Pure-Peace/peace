@@ -1,6 +1,62 @@
 use clap::Parser;
 use once_cell::sync::OnceCell;
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::default::Default;
+use std::{fs::File, net::SocketAddr, path::PathBuf, sync::Arc};
+
+#[derive(Parser)]
+pub struct ArgsFromFile<T>
+where
+    T: Parser + ClapSerde + clap::Args,
+{
+    /// Using configuration file.
+    #[arg(short = 'c', long = "config", default_value = "config.yml")]
+    pub config_path: PathBuf,
+
+    /// Rest of arguments
+    #[clap(flatten)]
+    pub config: T,
+}
+
+pub fn parse<T>() -> T
+where
+    T: Parser + ClapSerde + clap::Args,
+{
+    let args = ArgsFromFile::<T>::parse();
+    if let Ok(f) = File::open(&args.config_path) {
+        match serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(f) {
+            Ok(mut from_file) => args.config.merge(&mut from_file),
+            Err(err) => {
+                panic!("Error in configuration file:\n{}", err)
+            },
+        }
+    } else {
+        args.config
+    }
+}
+
+pub mod macros {
+    pub use once_cell::sync::OnceCell;
+
+    #[macro_export]
+    macro_rules! macro_impl_args {
+        ($t: ty) => {
+            impl $t {
+                /// Get or init args (only initialized once).
+                pub fn get() -> std::sync::Arc<$t> {
+                    static ARGS: $crate::cmd::macros::OnceCell<
+                        std::sync::Arc<$t>,
+                    > = $crate::cmd::macros::OnceCell::<
+                        std::sync::Arc<$t>,
+                    >::new();
+                    ARGS.get_or_init(|| {
+                        std::sync::Arc::new($crate::cmd::parse())
+                    })
+                    .clone()
+                }
+            }
+        };
+    }
+}
 
 /// Base Command Line Interface (CLI) for Peace-api framework.
 #[derive(Parser, Debug, Clone)]

@@ -11,7 +11,7 @@ use peace_logs::api::CommonHandleResponse;
         peace_logs::api::debug_mode,
         peace_logs::api::set_env_filter,
         peace_logs::api::set_level,
-        peace_api::components::responder::shutdown_server
+        peace_api::responder::shutdown_server
     ),
     components(
         schemas(CommonHandleResponse)
