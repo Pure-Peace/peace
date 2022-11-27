@@ -1,4 +1,5 @@
 use clap::Parser;
+use clap_serde_derive::ClapSerde;
 use once_cell::sync::OnceCell;
 use std::default::Default;
 use std::{fs::File, net::SocketAddr, path::PathBuf, sync::Arc};
@@ -59,19 +60,22 @@ pub mod macros {
 }
 
 /// Base Command Line Interface (CLI) for Peace-api framework.
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 #[command(name = "peace-api", author, version, about, propagate_version = true)]
 pub struct PeaceApiArgs {
     /// The address and port the `http` server listens on.
+    #[default("127.0.0.1:8000".parse().unwrap())]
     #[arg(short = 'H', long, default_value = "127.0.0.1:8000")]
     pub http_addr: SocketAddr,
 
     /// The address and port the `https` server listens on.
     #[cfg(feature = "tls")]
+    #[default("127.0.0.1:443".parse().unwrap())]
     #[arg(short = 'S', long, default_value = "127.0.0.1:443")]
     pub https_addr: SocketAddr,
 
     /// Logging level.
+    #[default(peace_logs::LogLevel::Info)]
     #[arg(short = 'L', long, value_enum, default_value = "info")]
     pub log_level: peace_logs::LogLevel,
 
@@ -80,11 +84,13 @@ pub struct PeaceApiArgs {
     pub log_env_filter: Option<String>,
 
     /// Turning on debug will display information such as code line number, source file, thread id, etc.
-    #[arg(short, long, default_value_t = false)]
+    #[default(false)]
+    #[arg(short, long)]
     pub debug: bool,
 
     /// Enabled admin api.
-    #[arg(short = 'A', long, default_value_t = true)]
+    #[default(true)]
+    #[arg(short = 'A', long)]
     pub admin_api: bool,
 
     /// Admin api `Authorization` `bearer` token.
@@ -92,20 +98,24 @@ pub struct PeaceApiArgs {
     pub admin_token: Option<String>,
 
     /// Limit the max number of in-flight requests.
-    #[arg(short, long, default_value_t = 1024)]
+    #[default(1024)]
+    #[arg(long, default_value = "1024")]
     pub concurrency_limit: usize,
 
     /// Fail requests that take longer than timeout (secs).
-    #[arg(short, long, default_value_t = 10)]
+    #[default(10)]
+    #[arg(short, long, default_value = "10")]
     pub req_timeout: u64,
 
     /// Enabled `hostname-based` routing.
-    #[arg(short = 'N', long, default_value_t = false)]
+    #[default(false)]
+    #[arg(short = 'N', long)]
     pub hostname_routing: bool,
 
     /// Enabled `tls` support.
     #[cfg(feature = "tls")]
-    #[arg(short, long, default_value_t = false)]
+    #[default(false)]
+    #[arg(short, long)]
     pub tls: bool,
 
     /// SSL certificate path.
@@ -120,15 +130,18 @@ pub struct PeaceApiArgs {
 
     /// Redirect http to https.
     #[cfg(feature = "tls")]
-    #[arg(short, long, default_value_t = false)]
+    #[default(false)]
+    #[arg(short, long)]
     pub force_https: bool,
 
     /// Set the value of TCP_NODELAY option for accepted connections.
-    #[arg(long, default_value_t = false)]
+    #[default(false)]
+    #[arg(long)]
     pub tcp_nodelay: bool,
 
     /// Set whether to sleep on accept errors, to avoid exhausting file descriptor limits.
-    #[arg(long, default_value_t = true)]
+    #[default(true)]
+    #[arg(long)]
     pub tcp_sleep_on_accept_errors: bool,
 
     /// Set how often to send TCP keepalive probes.
