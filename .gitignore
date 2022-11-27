@@ -15,6 +15,9 @@ Cargo.lock
 
 # configs
 /.idea/
+config.yml
+config.json
+config.toml
 
 # certs
 *.cer
