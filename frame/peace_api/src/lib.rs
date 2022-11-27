@@ -3,11 +3,11 @@ extern crate peace_logs;
 
 mod components;
 
-pub use crate::macro_impl_args as impl_args;
+pub use crate::macro_impl_config as impl_config;
 pub use components::*;
 
 use axum::{body::Body, extract::Host, http::Request, Router};
-use cmd::PeaceApiArgs;
+use cfg::ApiFrameConfig;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use utoipa::openapi::OpenApi;
@@ -15,13 +15,13 @@ use utoipa::openapi::OpenApi;
 /// We can build app using peace_api,
 /// just use [`Application`] and implement this trait for App.
 pub trait Application: Clone + Send + Sync + 'static {
-    /// App args should inherit [`PeaceApiArgs`], so this function is used to return it.
-    fn frame_args(&self) -> &PeaceApiArgs;
+    /// App cfg should inherit [`ApiFrameConfig`], so this function is used to return it.
+    fn frame_cfg(&self) -> &ApiFrameConfig;
 
-    fn frame_args_arc(&self) -> Arc<PeaceApiArgs> {
-        static FRAME_ARGS: OnceCell<Arc<PeaceApiArgs>> = OnceCell::new();
-        FRAME_ARGS
-            .get_or_init(|| Arc::new(self.frame_args().clone()))
+    fn frame_cfg_arc(&self) -> Arc<ApiFrameConfig> {
+        static FRAME_CFG: OnceCell<Arc<ApiFrameConfig>> = OnceCell::new();
+        FRAME_CFG
+            .get_or_init(|| Arc::new(self.frame_cfg().clone()))
             .clone()
     }
 

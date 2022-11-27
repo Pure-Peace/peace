@@ -172,23 +172,23 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
-pub trait LoggerArgs {
+pub trait LoggerConfig {
     fn log_level(&self) -> LogLevel;
     fn env_filter(&self) -> Option<String>;
     fn debug(&self) -> bool;
 }
 
-/// Configure with [`LoggerArgs`].
-pub fn init_with_args(args: &impl LoggerArgs) {
+/// Configure with [`LoggerConfig`].
+pub fn init(cfg: &impl LoggerConfig) {
     env_filter(Some(&format!(
         "{},{}",
-        LevelFilter::from(args.log_level()),
-        args.env_filter().unwrap_or("".to_string())
+        LevelFilter::from(cfg.log_level()),
+        cfg.env_filter().unwrap_or("".to_string())
     )));
 
     // Init logger
     tracing();
-    if args.debug() {
+    if cfg.debug() {
         toggle_debug_mode(true).unwrap();
     }
 }

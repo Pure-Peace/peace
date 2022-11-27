@@ -1,28 +1,28 @@
 pub mod apidocs;
 pub mod bancho;
-pub mod cmd;
+pub mod cfg;
 
 use apidocs::GatewayApiDocs;
 use axum::{body::Body, extract::Host, http::Request, routing::get, Router};
-use cmd::PeaceGatewayArgs;
-use peace_api::{cmd::PeaceApiArgs, Application};
+use cfg::GatewayConfig;
+use peace_api::{cfg::ApiFrameConfig, Application};
 use std::sync::Arc;
 use utoipa::OpenApi;
 
 #[derive(Clone)]
 pub struct App {
-    pub args: Arc<PeaceGatewayArgs>,
+    pub cfg: Arc<GatewayConfig>,
 }
 
 impl App {
-    pub fn new(args: Arc<PeaceGatewayArgs>) -> Self {
-        Self { args }
+    pub fn new(cfg: Arc<GatewayConfig>) -> Self {
+        Self { cfg }
     }
 }
 
 impl Application for App {
-    fn frame_args(&self) -> &PeaceApiArgs {
-        &self.args.api_framework_args
+    fn frame_cfg(&self) -> &ApiFrameConfig {
+        &self.cfg.frame_cfg
     }
 
     fn router(&self) -> Router {
@@ -41,7 +41,7 @@ impl Application for App {
         req: &Request<Body>,
     ) -> Option<Router> {
         match hostname {
-            n if self.args.bancho_hostname.contains(&n) => {
+            n if self.cfg.bancho_hostname.contains(&n) => {
                 Some(bancho::routers::bancho_client_routes())
             },
             _ => None,

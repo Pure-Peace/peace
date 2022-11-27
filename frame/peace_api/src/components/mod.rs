@@ -1,5 +1,5 @@
 pub mod apidocs;
-pub mod cmd;
+pub mod cfg;
 pub mod error;
 pub mod http;
 pub mod responder;

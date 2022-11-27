@@ -1,6 +1,6 @@
 use crate::{
-    components::{cmd::PeaceApiArgs, responder, responder::shutdown_server},
     Application,
+    {cfg::ApiFrameConfig, responder, responder::shutdown_server},
 };
 use axum::{
     body::Body,
@@ -18,22 +18,22 @@ use utoipa_swagger_ui::SwaggerUi;
 
 /// App router with some middleware.
 pub fn app(app: impl Application) -> Router {
-    let args = app.frame_args_arc();
+    let cfg = app.frame_cfg_arc();
     app_router(app)
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(responder::handle_error))
                 .load_shed()
-                .concurrency_limit(args.concurrency_limit)
-                .timeout(Duration::from_secs(args.req_timeout))
+                .concurrency_limit(cfg.concurrency_limit)
+                .timeout(Duration::from_secs(cfg.req_timeout))
                 .layer(TraceLayer::new_for_http()),
         )
         .fallback(responder::handle_404)
 }
 
-pub fn openapi_router(openapi: OpenApi, args: &PeaceApiArgs) -> Router {
-    SwaggerUi::new(args.swagger_path.clone())
-        .url(args.openapi_json.clone(), openapi)
+pub fn openapi_router(openapi: OpenApi, cfg: &ApiFrameConfig) -> Router {
+    SwaggerUi::new(cfg.swagger_path.clone())
+        .url(cfg.openapi_json.clone(), openapi)
         .into()
 }
 
@@ -53,17 +53,16 @@ pub fn admin_routers(admin_token: Option<&str>) -> Router {
 
 /// App router
 pub fn app_router(app: impl Application) -> Router {
-    let args = app.frame_args_arc();
-    let router =
-        openapi_router(app.apidocs(), args.as_ref()).merge(app.router());
+    let cfg = app.frame_cfg();
+    let router = openapi_router(app.apidocs(), cfg).merge(app.router());
 
-    let router = if args.admin_api {
-        router.merge(admin_routers(args.admin_token.as_deref()))
+    let router = if cfg.admin_api {
+        router.merge(admin_routers(cfg.admin_token.as_deref()))
     } else {
         router
     };
 
-    if args.hostname_routing {
+    if cfg.hostname_routing {
         router.route(
             "/*path",
             any(move |host: Host, req: Request<Body>| {

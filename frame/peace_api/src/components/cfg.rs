@@ -1,13 +1,14 @@
-use clap::Parser;
+use clap::{Args, Parser};
 use clap_serde_derive::ClapSerde;
 use once_cell::sync::OnceCell;
+use peace_logs::{LogLevel, LoggerConfig};
 use std::default::Default;
 use std::{fs::File, net::SocketAddr, path::PathBuf, sync::Arc};
 
 #[derive(Parser)]
-pub struct ArgsFromFile<T>
+pub struct ConfigFromFile<T>
 where
-    T: Parser + ClapSerde + clap::Args,
+    T: Parser + ClapSerde + Args,
 {
     /// Using configuration file.
     #[arg(short = 'c', long = "config", default_value = "config.yml")]
@@ -20,18 +21,18 @@ where
 
 pub fn parse<T>() -> T
 where
-    T: Parser + ClapSerde + clap::Args,
+    T: Parser + ClapSerde + Args,
 {
-    let args = ArgsFromFile::<T>::parse();
-    if let Ok(f) = File::open(&args.config_path) {
+    let cfg = ConfigFromFile::<T>::parse();
+    if let Ok(f) = File::open(&cfg.config_path) {
         match serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(f) {
-            Ok(mut from_file) => args.config.merge(&mut from_file),
+            Ok(mut from_file) => cfg.config.merge(&mut from_file),
             Err(err) => {
                 panic!("Error in configuration file:\n{}", err)
             },
         }
     } else {
-        args.config
+        cfg.config
     }
 }
 
@@ -39,19 +40,16 @@ pub mod macros {
     pub use once_cell::sync::OnceCell;
 
     #[macro_export]
-    macro_rules! macro_impl_args {
+    macro_rules! macro_impl_config {
         ($t: ty) => {
             impl $t {
-                /// Get or init args (only initialized once).
+                /// Get or init configs (only initialized once).
                 pub fn get() -> std::sync::Arc<$t> {
-                    static ARGS: $crate::cmd::macros::OnceCell<
-                        std::sync::Arc<$t>,
-                    > = $crate::cmd::macros::OnceCell::<
-                        std::sync::Arc<$t>,
-                    >::new();
-                    ARGS.get_or_init(|| {
-                        std::sync::Arc::new($crate::cmd::parse())
-                    })
+                    static CFG: $crate::cfg::macros::OnceCell<std::sync::Arc<$t>> =
+                        $crate::cfg::macros::OnceCell::<std::sync::Arc<$t>>::new();
+                    CFG.get_or_init(
+                        || std::sync::Arc::new($crate::cfg::parse()),
+                    )
                     .clone()
                 }
             }
@@ -62,7 +60,7 @@ pub mod macros {
 /// Base Command Line Interface (CLI) for Peace-api framework.
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 #[command(name = "peace-api", author, version, about, propagate_version = true)]
-pub struct PeaceApiArgs {
+pub struct ApiFrameConfig {
     /// The address and port the `http` server listens on.
     #[default("127.0.0.1:8000".parse().unwrap())]
     #[arg(short = 'H', long, default_value = "127.0.0.1:8000")]
@@ -75,9 +73,9 @@ pub struct PeaceApiArgs {
     pub https_addr: SocketAddr,
 
     /// Logging level.
-    #[default(peace_logs::LogLevel::Info)]
+    #[default(LogLevel::Info)]
     #[arg(short = 'L', long, value_enum, default_value = "info")]
-    pub log_level: peace_logs::LogLevel,
+    pub log_level: LogLevel,
 
     /// Logging env filter.
     #[arg(short = 'F', long, value_enum)]
@@ -167,16 +165,16 @@ pub struct PeaceApiArgs {
     pub openapi_json: String,
 }
 
-impl PeaceApiArgs {
-    /// Get or init [`PeaceApiArgs`]
-    pub fn get() -> Arc<PeaceApiArgs> {
-        static ARGS: OnceCell<Arc<PeaceApiArgs>> = OnceCell::new();
-        ARGS.get_or_init(|| Arc::new(PeaceApiArgs::parse())).clone()
+impl ApiFrameConfig {
+    /// Get or init [`ApiFrameConfig`]
+    pub fn get() -> Arc<ApiFrameConfig> {
+        static CFG: OnceCell<Arc<ApiFrameConfig>> = OnceCell::new();
+        CFG.get_or_init(|| Arc::new(ApiFrameConfig::parse())).clone()
     }
 }
 
-impl peace_logs::LoggerArgs for PeaceApiArgs {
-    fn log_level(&self) -> peace_logs::LogLevel {
+impl LoggerConfig for ApiFrameConfig {
+    fn log_level(&self) -> LogLevel {
         self.log_level
     }
 

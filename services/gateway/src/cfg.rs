@@ -1,6 +1,6 @@
 use clap::Parser;
 use clap_serde_derive::ClapSerde;
-use peace_api::{cmd::PeaceApiArgs, impl_args};
+use peace_api::{cfg::ApiFrameConfig, impl_config};
 use serde::{Deserialize, Serialize};
 
 /// Command Line Interface (CLI) for Peace gateway service.
@@ -12,13 +12,13 @@ use serde::{Deserialize, Serialize};
     about,
     propagate_version = true
 )]
-pub struct PeaceGatewayArgs {
+pub struct GatewayConfig {
     /// A list of hostnames to route to the bancho service.
     #[arg(short = 'B', long)]
     pub bancho_hostname: Vec<String>,
 
     #[command(flatten)]
-    pub api_framework_args: PeaceApiArgs,
+    pub frame_cfg: ApiFrameConfig,
 }
 
-impl_args!(PeaceGatewayArgs);
+impl_config!(GatewayConfig);
