@@ -44,7 +44,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # local crates
-peace_logs = { path = "../../frame/peace_logs", features = [
+peace_logs = { path = "../../frame/logs", features = [
     "openapi_axum",
     "cli",
 ] }

@@ -40,10 +40,10 @@ once_cell = "1.16"
 
 
 # local crates
-peace_logs = { path = "../../frame/peace_logs", features = [
+peace_logs = { path = "../../frame/logs", features = [
     "openapi_axum",
     "cli",
 ] }
-peace_api = { path = "../../frame/peace_api" }
+peace_api = { path = "../../frame/api" }
 tools = { path = "../../lib/tools" }
 bancho = { path = "../bancho" }
