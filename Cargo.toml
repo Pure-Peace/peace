@@ -8,6 +8,7 @@ members = [
     "lib/tools",
     "frame/logs",
     "frame/api",
+    "frame/dal",
     "frame/pb",
 ]
 
