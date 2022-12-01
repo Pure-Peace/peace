@@ -22,7 +22,7 @@ where
     pub save_as_config: bool,
 
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 
     /// Rest of arguments
     #[clap(flatten)]
@@ -270,7 +270,7 @@ where
         .map(|c| T::from(c))
         .unwrap_or(cfg.config);
 
-    if let Commands::CreateConfig(create) = cfg.command {
+    if let Some(Commands::CreateConfig(create)) = cfg.command {
         let f = ConfigFile::new(&create.config_path);
         write_config(&f, &cfg_t);
         println!(
