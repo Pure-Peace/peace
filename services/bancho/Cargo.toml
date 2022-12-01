@@ -9,18 +9,13 @@ homepage = "https://github.com/pure-peace/peace"
 
 [[bin]]
 name = "bancho-server"
-path = "src/server.rs"
+path = "src/main.rs"
 
-[[bin]]
-name = "bancho-client"
-path = "src/client.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 tonic = "0.8"
-prost = "0.11"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
-[build-dependencies]
-tonic-build = "0.8"
+peace_pb = { path = "../../frame/pb", features = ["bancho", "db"] }
