@@ -67,7 +67,7 @@ pub struct ApiFrameConfig {
     pub debug: bool,
 
     /// Enabled admin api.
-    #[default(true)]
+    #[default(false)]
     #[arg(short = 'A', long)]
     pub admin_api: bool,
 
@@ -119,7 +119,7 @@ pub struct ApiFrameConfig {
 
     /// Set whether to sleep on accept errors, to avoid exhausting file descriptor limits.
     #[default(true)]
-    #[arg(long)]
+    #[arg(long, default_value = "true")]
     pub tcp_sleep_on_accept_errors: bool,
 
     /// Set how often to send TCP keepalive probes.
@@ -256,7 +256,6 @@ where
         )
     })
 }
-
 
 /// Parses args from the command line,
 /// performs a `command` or returns a loaded app configuration.

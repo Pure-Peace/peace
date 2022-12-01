@@ -33,7 +33,25 @@ pub fn app(app: impl Application) -> Router {
 
 pub fn openapi_router(openapi: OpenApi, cfg: &ApiFrameConfig) -> Router {
     SwaggerUi::new(cfg.swagger_path.clone())
-        .url(cfg.openapi_json.clone(), openapi)
+        .url(
+            cfg.openapi_json.clone(),
+            if cfg.admin_api {
+                openapi
+            } else {
+                let mut openapi = openapi;
+                let admin_pathes = openapi
+                    .paths
+                    .paths
+                    .keys()
+                    .filter(|k| k.starts_with("/admin"))
+                    .map(|k| k.to_string())
+                    .collect::<Vec<String>>();
+                for key in admin_pathes {
+                    openapi.paths.paths.remove(&key);
+                }
+                openapi
+            },
+        )
         .into()
 }
 
