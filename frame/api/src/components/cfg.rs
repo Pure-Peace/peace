@@ -13,7 +13,7 @@ pub struct BaseConfig<T>
 where
     T: Parser + ClapSerde + Args + serde::Serialize,
 {
-    /// Using configuration file.
+    /// Configuration file path (Support `.yml`, `.json`).
     #[arg(short = 'c', long = "config", default_value = "config.yml")]
     pub config_path: PathBuf,
 
@@ -147,7 +147,7 @@ pub struct ApiFrameConfig {
 
 #[derive(Args)]
 struct CreateConfig {
-    /// Configuration file path.
+    /// Configuration file path (Support `.yml`, `.json`).
     #[arg(short = 'c', long = "config", default_value = "config.yml")]
     pub config_path: PathBuf,
 }
@@ -202,7 +202,7 @@ where
         match ext {
             "yml" => Self::Yaml,
             "json" => Self::Json,
-            _ => panic!("Unsupported config file type \"{}\"", ext),
+            _ => panic!("Unsupported config file type \".{}\"", ext),
         }
     }
 }
@@ -216,9 +216,9 @@ macro_rules! cfg_from_reader {
 }
 
 macro_rules! cfg_to_string {
-    ($file_type: expr, $cfg: expr, $(($typ: ident, $serde: ident)),*) => {
+    ($file_type: expr, $cfg: expr, $(($typ: ident, $serde: ident, $fn: ident)),*) => {
         match $file_type {
-            $(ConfigFileType::$typ => $serde::to_string($cfg).unwrap(),)*
+            $(ConfigFileType::$typ => $serde::$fn($cfg).unwrap(),)*
         }
     };
 }
@@ -233,8 +233,8 @@ where
             cfg_to_string!(
                 f.ext_type,
                 &content,
-                (Yaml, serde_yaml),
-                (Json, serde_json)
+                (Yaml, serde_yaml, to_string),
+                (Json, serde_json, to_string_pretty)
             )
             .as_bytes(),
         )

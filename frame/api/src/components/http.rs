@@ -23,6 +23,7 @@ pub async fn serve(app_cfg: impl Application) {
         .tcp_keepalive_retries(cfg.tcp_keepalive_retries)
         .build();
 
+    print_api_docs(&cfg);
     #[cfg(feature = "tls")]
     if cfg.tls {
         let https = tls::launch_https_server(app.clone(), &cfg, config.clone());
@@ -58,13 +59,23 @@ pub async fn launch_http_server(
     cfg: &ApiFrameConfig,
     incoming_config: AddrIncomingConfig,
 ) {
-    info!(">> [HTTP] listening on: {}", cfg.http_addr);
+    info!(">> [HTTP SERVER] listening on: http://{}", cfg.http_addr);
     axum_server::bind(cfg.http_addr)
         .handle(server_handle())
         .addr_incoming_config(incoming_config)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
+}
+
+pub fn print_api_docs(cfg: &ApiFrameConfig) {
+    let addr = if cfg.tls {
+        format!("https://{}", cfg.https_addr)
+    } else {
+        format!("http://{}", cfg.http_addr)
+    };
+    info!(">> [Swagger UI]: {}{}", addr, cfg.swagger_path);
+    info!(">> [openapi.json]: {}{}", addr, cfg.openapi_json);
 }
 
 pub async fn shutdown_signal() {
@@ -88,7 +99,7 @@ pub async fn shutdown_signal() {
         _ = terminate => "TERMINATE",
     };
 
-    warn!("[{}] Signal received, shutdown.", s);
+    warn!(">> [{}] Signal received, shutdown.", s);
     server_handle().shutdown();
 }
 
@@ -143,7 +154,7 @@ pub mod tls {
 
         info!(">> Force https enabled");
         info!(
-            ">> [HTTP] (only redirect http to https) listening on: {}",
+            ">> [HTTP SERVER] (only redirect http to https) listening on: http://{}",
             cfg.http_addr
         );
         axum_server::bind(cfg.http_addr)
@@ -169,7 +180,7 @@ pub mod tls {
         .await
         .unwrap();
 
-        info!(">> [HTTPS] listening on: {}", cfg.https_addr);
+        info!(">> [HTTPS SERVER] listening on: https://{}", cfg.https_addr);
         axum_server::bind_rustls(cfg.https_addr, tls_config)
             .handle(server_handle())
             .addr_incoming_config(incoming_config)
