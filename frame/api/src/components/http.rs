@@ -27,16 +27,24 @@ pub async fn serve(app_cfg: impl Application) {
     if cfg.tls {
         let https = tls::launch_https_server(app.clone(), &cfg, config.clone());
         if cfg.force_https {
-            tokio::join!(tls::launch_ssl_redirect_server(&cfg), https);
+            tokio::join!(
+                tls::launch_ssl_redirect_server(&cfg),
+                https,
+                shutdown_signal()
+            );
         } else {
-            tokio::join!(launch_http_server(app, &cfg, config), https);
+            tokio::join!(
+                launch_http_server(app, &cfg, config),
+                https,
+                shutdown_signal()
+            );
         }
     } else {
-        launch_http_server(app, &cfg, config).await;
+        tokio::join!(launch_http_server(app, &cfg, config), shutdown_signal());
     }
 
     #[cfg(not(feature = "tls"))]
-    launch_http_server(app, cfg, config).await;
+    tokio::join!(launch_http_server(app, &cfg, config), shutdown_signal());
     warn!("!!! SERVER STOPPED !!!")
 }
 
@@ -81,6 +89,7 @@ pub async fn shutdown_signal() {
     };
 
     warn!("[{}] Signal received, shutdown.", s);
+    server_handle().shutdown();
 }
 
 #[cfg(feature = "tls")]
