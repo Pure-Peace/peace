@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package peace.frame.logs;
+
+service LogsRPC {
+  rpc SetLogLevel(SetLogLevelRequest) returns (CommonRpcResult);
+  rpc ToggleDebugMode(ToggleStatusRequest) returns (CommonRpcResult);
+}
+
+enum LogLevel {
+  OFF = 0;
+  ERROR = 1;
+  WARN = 2;
+  INFO = 3;
+  DEBUG = 4;
+  TRACE = 5;
+}
+
+message SetLogLevelRequest { LogLevel log_level = 1; }
+
+message ToggleStatusRequest { bool enabled = 1; }
+
+message CommonRpcResult {
+  bool success = 1;
+  optional string msg = 2;
+}

@@ -1,0 +1,30 @@
+[package]
+name = "peace_pb"
+description = "Peace Protocol Buffers (PB)"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+[features]
+default = []
+
+all = ["frame", "services"]
+
+frame = ["logs"]
+logs = []
+
+services = ["bancho", "db"]
+bancho = []
+db = []
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tonic = "0.8"
+prost = "0.11"
+
+[build-dependencies]
+tonic-build = "0.8"
