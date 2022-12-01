@@ -1,0 +1,21 @@
+[package]
+name = "peace_db"
+description = "Peace Database gRPC Service"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+[[bin]]
+name = "db-server"
+path = "src/main.rs"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tonic = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+peace_pb = { path = "../../frame/pb", features = ["db"] }

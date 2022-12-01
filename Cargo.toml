@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "services/bancho",
     "services/gateway",
+    "services/db",
     "lib/tools",
     "frame/logs",
     "frame/api",
