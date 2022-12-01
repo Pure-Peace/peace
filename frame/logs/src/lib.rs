@@ -3,11 +3,6 @@
 extern crate tracing;
 
 #[cfg(feature = "grpc")]
-pub mod logs_rpc {
-    tonic::include_proto!("logs_rpc");
-}
-
-#[cfg(feature = "grpc")]
 pub mod grpc;
 
 #[cfg(feature = "api_axum")]

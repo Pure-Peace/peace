@@ -1,22 +1,22 @@
-use crate::logs_rpc;
-
+use peace_pb::frame::logs::{
+    logs_rpc_server::LogsRpc, CommonRpcResult, SetLogLevelRequest,
+    ToggleStatusRequest,
+};
 use tonic::{Request, Response, Status};
-
-use logs_rpc::logs_rpc_server::LogsRpc;
-use logs_rpc::{CommonRpcResult, DebugModeRequest, ReloadLevelRequest};
 
 #[derive(Debug, Default)]
 pub struct LogsRpcService {}
 
 #[tonic::async_trait]
 impl LogsRpc for LogsRpcService {
-    async fn set_level(
+    async fn set_log_level(
         &self,
-        request: Request<ReloadLevelRequest>,
+        request: Request<SetLogLevelRequest>,
     ) -> Result<Response<CommonRpcResult>, Status> {
-        let level = crate::level_from_int(request.into_inner().level).map_err(
-            |_| Status::invalid_argument("Failed to convert level from int."),
-        )?;
+        let level = crate::level_from_int(request.into_inner().log_level)
+            .map_err(|_| {
+                Status::invalid_argument("Failed to convert level from int.")
+            })?;
         crate::set_level(level)
             .map_err(|err| Status::internal(err.to_string()))?;
 
@@ -26,7 +26,7 @@ impl LogsRpc for LogsRpcService {
 
     async fn toggle_debug_mode(
         &self,
-        request: Request<DebugModeRequest>,
+        request: Request<ToggleStatusRequest>,
     ) -> Result<Response<CommonRpcResult>, Status> {
         let enabled = request.into_inner().enabled;
         crate::toggle_debug_mode(enabled)
@@ -39,8 +39,9 @@ impl LogsRpc for LogsRpcService {
 
 #[cfg(test)]
 mod test {
-    use crate::logs_rpc::{
-        logs_rpc_server::LogsRpc, DebugModeRequest, Level, ReloadLevelRequest,
+    use peace_pb::frame::logs::{
+        logs_rpc_server::LogsRpc, LogLevel, SetLogLevelRequest,
+        ToggleStatusRequest,
     };
 
     use crate::grpc::LogsRpcService;
@@ -48,22 +49,22 @@ mod test {
     #[tokio::test]
     async fn try_set_level() {
         let s = LogsRpcService {};
-        let req = tonic::Request::new(ReloadLevelRequest {
-            level: Level::Info as i32,
+        let req = tonic::Request::new(SetLogLevelRequest {
+            log_level: LogLevel::Info as i32,
         });
-        assert!(s.set_level(req).await.is_ok());
+        assert!(s.set_log_level(req).await.is_ok());
 
-        let req = tonic::Request::new(ReloadLevelRequest { level: -1 });
-        assert!(s.set_level(req).await.is_err());
+        let req = tonic::Request::new(SetLogLevelRequest { log_level: -1 });
+        assert!(s.set_log_level(req).await.is_err());
     }
 
     #[tokio::test]
     async fn try_debug_mode() {
         let s = LogsRpcService {};
-        let req = tonic::Request::new(DebugModeRequest { enabled: true });
-        assert!(s.debug_mode(req).await.is_ok());
+        let req = tonic::Request::new(ToggleStatusRequest { enabled: true });
+        assert!(s.toggle_debug_mode(req).await.is_ok());
 
-        let req = tonic::Request::new(DebugModeRequest { enabled: false });
-        assert!(s.debug_mode(req).await.is_ok());
+        let req = tonic::Request::new(ToggleStatusRequest { enabled: false });
+        assert!(s.toggle_debug_mode(req).await.is_ok());
     }
 }
