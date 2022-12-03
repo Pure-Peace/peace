@@ -12,6 +12,8 @@ use std::sync::Arc;
 use tonic::transport::{server::Router, Server};
 use tower_layer::Identity;
 
+pub type DescriptorBuf<'a> = &'a [u8];
+
 /// We can build app using `peace_rpc`,
 /// just use [`Application`] and implement this trait for your App.
 pub trait Application: Clone + Send + Sync + 'static {
@@ -25,7 +27,7 @@ pub trait Application: Clone + Send + Sync + 'static {
 
     /// In order to implement reflection, the descriptor needs to be returned in this method.
     #[cfg(feature = "reflection")]
-    fn service_descriptor(&self) -> Option<&[u8]>;
+    fn service_descriptors(&self) -> Option<&[DescriptorBuf]>;
 
     fn service(&self, configured_server: Server) -> Router<Identity>;
 }

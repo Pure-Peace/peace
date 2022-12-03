@@ -8,24 +8,20 @@ use tools::async_collections::{shutdown_signal, SignalHandle};
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
     let cfg = app_cfg.frame_cfg_arc();
-    let svr = app_cfg.service(server(&cfg));
+    let mut svr = app_cfg.service(server(&cfg));
 
     #[cfg(feature = "reflection")]
-    let svr = if cfg.reflection && app_cfg.service_descriptor().is_some() {
-        add_reflection(svr, &app_cfg)
-    } else {
-        svr
+    if cfg.reflection {
+        svr = add_reflection(svr, &app_cfg)
     };
 
     #[cfg(feature = "admin_rpc")]
-    let svr = if cfg.admin_rpc {
-        svr.add_service(
+    if cfg.admin_rpc {
+        svr = svr.add_service(
             peace_pb::frame::logs::logs_rpc_server::LogsRpcServer::new(
                 peace_logs::grpc::LogsRpcService::default(),
             ),
         )
-    } else {
-        svr
     };
 
     let _ = tokio::join!(launch_server(svr, &cfg), shutdown_signal(shutdown));
@@ -73,7 +69,7 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
     #[cfg(feature = "tls")]
     let svr = if cfg.tls { tls_server(cfg) } else { Server::builder() };
 
-    let svr = svr
+    let mut svr = svr
         .accept_http1(cfg.accept_http1)
         .http2_adaptive_window(cfg.http2_adaptive_window)
         .http2_keepalive_interval(
@@ -89,16 +85,12 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
         .tcp_keepalive(cfg.tcp_keepalive.map(Duration::from_secs))
         .tcp_nodelay(cfg.tcp_nodelay);
 
-    let svr = if let Some(limit) = cfg.concurrency_limit_per_connection {
-        svr.concurrency_limit_per_connection(limit)
-    } else {
-        svr
+    if let Some(limit) = cfg.concurrency_limit_per_connection {
+        svr = svr.concurrency_limit_per_connection(limit)
     };
 
-    let svr = if let Some(timeout) = cfg.req_timeout {
-        svr.timeout(Duration::from_secs(timeout))
-    } else {
-        svr
+    if let Some(timeout) = cfg.req_timeout {
+        svr = svr.timeout(Duration::from_secs(timeout))
     };
 
     svr
@@ -126,14 +118,22 @@ pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
 }
 
 pub fn add_reflection(svr: Router, app_cfg: &impl Application) -> Router {
-    svr.add_service(
-        tonic_reflection::server::Builder::configure()
-            .register_encoded_file_descriptor_set(
-                app_cfg.service_descriptor().unwrap(),
-            )
-            .build()
-            .unwrap(),
-    )
+    let mut reflection = tonic_reflection::server::Builder::configure();
+
+    #[cfg(feature = "admin_rpc")]
+    if app_cfg.frame_cfg().admin_rpc {
+        reflection = reflection.register_encoded_file_descriptor_set(
+            peace_pb::frame::logs::LOGS_DESCRIPTOR_SET,
+        );
+    };
+
+    if let Some(descriptors) = app_cfg.service_descriptors() {
+        for i in descriptors {
+            reflection = reflection.register_encoded_file_descriptor_set(i);
+        }
+    }
+
+    svr.add_service(reflection.build().unwrap())
 }
 
 pub fn server_handle() -> SignalHandle {

@@ -2,7 +2,7 @@ pub mod cfg;
 pub mod rpc;
 
 use cfg::DbConfig;
-use peace_pb::services::db::db_rpc_server::DbRpcServer;
+use peace_pb::services::db::{db_rpc_server::DbRpcServer, DB_DESCRIPTOR_SET};
 use peace_rpc::{cfg::RpcFrameConfig, Application};
 use rpc::Db;
 use std::sync::Arc;
@@ -24,8 +24,8 @@ impl Application for App {
         &self.cfg.frame_cfg
     }
 
-    fn service_descriptor(&self) -> Option<&[u8]> {
-        todo!()
+    fn service_descriptors(&self) -> Option<&[&[u8]]> {
+        Some(&[DB_DESCRIPTOR_SET])
     }
 
     fn service(&self, mut configured_server: Server) -> Router {

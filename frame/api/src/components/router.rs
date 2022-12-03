@@ -31,28 +31,29 @@ pub fn app(app: impl Application) -> Router {
         .fallback(responder::handle_404)
 }
 
-pub fn openapi_router(openapi: OpenApi, cfg: &ApiFrameConfig) -> Router {
+pub fn openapi_router(mut openapi: OpenApi, cfg: &ApiFrameConfig) -> Router {
+    if !cfg.admin_api {
+        openapi = remove_admin_routes(openapi)
+    }
     SwaggerUi::new(cfg.swagger_path.clone())
-        .url(
-            cfg.openapi_json.clone(),
-            if cfg.admin_api {
-                openapi
-            } else {
-                let mut openapi = openapi;
-                let admin_pathes = openapi
-                    .paths
-                    .paths
-                    .keys()
-                    .filter(|k| k.starts_with("/admin"))
-                    .map(|k| k.to_string())
-                    .collect::<Vec<String>>();
-                for key in admin_pathes {
-                    openapi.paths.paths.remove(&key);
-                }
-                openapi
-            },
-        )
+        .url(cfg.openapi_json.clone(), openapi)
         .into()
+}
+
+pub fn remove_admin_routes(mut openapi: OpenApi) -> OpenApi {
+    let admin_pathes = openapi
+        .paths
+        .paths
+        .keys()
+        .filter(|k| k.starts_with("/admin"))
+        .map(|k| k.to_string())
+        .collect::<Vec<String>>();
+
+    for key in admin_pathes {
+        openapi.paths.paths.remove(&key);
+    }
+
+    openapi
 }
 
 /// The `admin_routers` provides some api endpoints for managing the server,
@@ -72,22 +73,20 @@ pub fn admin_routers(admin_token: Option<&str>) -> Router {
 /// App router
 pub fn app_router(app: impl Application) -> Router {
     let cfg = app.frame_cfg();
-    let router = openapi_router(app.apidocs(), cfg).merge(app.router());
+    let mut router = openapi_router(app.apidocs(), cfg).merge(app.router());
 
-    let router = if cfg.admin_api {
-        router.merge(admin_routers(cfg.admin_token.as_deref()))
-    } else {
-        router
+    if cfg.admin_api {
+        router = router.merge(admin_routers(cfg.admin_token.as_deref()))
     };
 
     if cfg.hostname_routing {
-        router.route(
+        router = router.route(
             "/*path",
             any(move |host: Host, req: Request<Body>| {
                 responder::any_path(host, req, app)
             }),
         )
-    } else {
-        router
-    }
+    };
+
+    router
 }
