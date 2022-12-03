@@ -2,6 +2,7 @@
 pub mod logs {
     tonic::include_proto!("peace.frame.logs");
 
+    #[cfg(feature = "reflection")]
     pub const LOGS_DESCRIPTOR_SET: &[u8] =
         tonic::include_file_descriptor_set!("logs_descriptor");
 }

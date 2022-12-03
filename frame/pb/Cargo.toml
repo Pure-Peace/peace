@@ -9,8 +9,9 @@ homepage = "https://github.com/pure-peace/peace"
 
 [features]
 default = []
+reflection = []
 
-all = ["frame", "services"]
+all = ["reflection", "frame", "services"]
 
 frame = ["logs"]
 logs = []
