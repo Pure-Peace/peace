@@ -42,7 +42,8 @@ once_cell = "1.16"
 
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["cli"] }
-tools = { path = "../../lib/tools", features = ["cfg", "async_collections"] }
+peace_cfg = { path = "../../frame/cfg" }
+tools = { path = "../../lib/tools", features = ["async_collections"] }
 peace_pb = { path = "../../frame/pb", optional = true }
 
 

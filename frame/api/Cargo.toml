@@ -45,4 +45,5 @@ anyhow = "1.0"
 
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }
-tools = { path = "../../lib/tools", features = ["cfg", "async_collections"] }
+peace_cfg = { path = "../../frame/cfg" }
+tools = { path = "../../lib/tools", features = ["async_collections"] }

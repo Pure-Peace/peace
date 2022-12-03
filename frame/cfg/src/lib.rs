@@ -1,3 +1,5 @@
+pub use crate::macro_impl_config as impl_config;
+
 use clap::{Args, Parser, Subcommand};
 use clap_serde_derive::ClapSerde;
 use std::{
@@ -188,12 +190,10 @@ pub mod macros {
             impl $t {
                 /// Get or init configs (only initialized once).
                 pub fn get() -> std::sync::Arc<$t> {
-                    static CFG: $crate::cfg::macros::OnceCell<std::sync::Arc<$t>> =
-                        $crate::cfg::macros::OnceCell::<std::sync::Arc<$t>>::new();
-                    CFG.get_or_init(
-                        || std::sync::Arc::new($crate::cfg::parse()),
-                    )
-                    .clone()
+                    static CFG: $crate::macros::OnceCell<std::sync::Arc<$t>> =
+                        $crate::macros::OnceCell::<std::sync::Arc<$t>>::new();
+                    CFG.get_or_init(|| std::sync::Arc::new($crate::parse()))
+                        .clone()
                 }
             }
         };

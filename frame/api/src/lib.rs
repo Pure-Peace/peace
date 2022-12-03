@@ -3,7 +3,7 @@ extern crate peace_logs;
 
 mod components;
 
-pub use tools::macro_impl_config as impl_config;
+pub use peace_cfg::macro_impl_config as impl_config;
 pub use components::*;
 
 use axum::{body::Body, extract::Host, http::Request, Router};

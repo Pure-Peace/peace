@@ -1,0 +1,22 @@
+[package]
+name = "peace_cfg"
+description = "Peace configuration platform"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+# cfg
+clap = { version = "4.0", features = ["derive"] }
+clap-serde-derive = { version = "0.2.0" }
+once_cell = { version = "1.16" }
+toml = { version = "0.5" }
+
+
+# serde
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+serde_yaml = { version = "0.9" }
+
+# async
+tokio = { version = "1.0" }

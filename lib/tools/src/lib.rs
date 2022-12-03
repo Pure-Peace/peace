@@ -1,9 +1,3 @@
-#[cfg(feature = "cfg")]
-pub mod cfg;
-
-#[cfg(feature = "cfg")]
-pub use crate::macro_impl_config as impl_config;
-
 #[cfg(feature = "async_collections")]
 pub mod async_collections;
 

@@ -4,7 +4,7 @@ extern crate peace_logs;
 mod components;
 
 pub use components::*;
-pub use tools::macro_impl_config as impl_config;
+pub use peace_cfg::macro_impl_config as impl_config;
 
 use cfg::RpcFrameConfig;
 use once_cell::sync::OnceCell;
