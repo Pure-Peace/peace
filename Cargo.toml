@@ -10,6 +10,7 @@ members = [
     "frame/api",
     "frame/dal",
     "frame/pb",
+    "frame/rpc",
 ]
 
 
