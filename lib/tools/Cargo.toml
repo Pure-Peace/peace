@@ -16,6 +16,7 @@ cfg = [
     "serde",
     "serde_json",
     "serde_yaml",
+    "toml",
 ]
 async_collections = ["tokio"]
 
@@ -25,6 +26,7 @@ async_collections = ["tokio"]
 clap = { version = "4.0", features = ["derive"], optional = true }
 clap-serde-derive = { version = "0.2.0", optional = true }
 once_cell = { version = "1.16", optional = true }
+toml = { version = "0.5", optional = true }
 
 
 # serde
@@ -32,4 +34,5 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 serde_yaml = { version = "0.9", optional = true }
 
+# async
 tokio = { version = "1.0", optional = true }

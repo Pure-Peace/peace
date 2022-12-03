@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use clap_serde_derive::ClapSerde;
 use std::{
     fs::File,
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process,
 };
@@ -38,8 +38,8 @@ enum Commands {
 
 #[derive(Args)]
 struct CreateConfig {
-    /// Configuration file path (Support `.yml`, `.json`).
-    #[arg(short = 'c', long = "config", default_value = "config.yml")]
+    /// Configuration file path (Support `.yml`, `.json`, `toml`).
+    #[arg(short = 'c', long = "config", default_value = "config.toml")]
     pub config_path: PathBuf,
 }
 
@@ -47,6 +47,7 @@ struct CreateConfig {
 pub enum ConfigFileType {
     Yaml,
     Json,
+    Toml,
 }
 
 #[derive(Debug, Clone)]
@@ -71,17 +72,10 @@ where
         match ext {
             "yml" => Self::Yaml,
             "json" => Self::Json,
+            "toml" => Self::Toml,
             _ => panic!("Unsupported config file type \".{}\"", ext),
         }
     }
-}
-
-macro_rules! cfg_from_reader {
-    ($file_type: expr, $file: expr, $(($typ: ident, $reader: ident)),*) => {
-        match $file_type {
-            $(ConfigFileType::$typ => $reader::from_reader::<_, <T as ClapSerde>::Opt>($file).expect("Error in configuration file"),)*
-        }
-    };
 }
 
 macro_rules! cfg_to_string {
@@ -103,7 +97,8 @@ where
                 f.ext_type,
                 &content,
                 (Yaml, serde_yaml, to_string),
-                (Json, serde_json, to_string_pretty)
+                (Json, serde_json, to_string_pretty),
+                (Toml, toml, to_string)
             )
             .as_bytes(),
         )
@@ -116,13 +111,18 @@ pub fn read_config_from_file<T>(
 where
     T: ClapSerde,
 {
-    File::open(f.path).map(|file| {
-        cfg_from_reader!(
-            f.ext_type,
-            file,
-            (Yaml, serde_yaml),
-            (Json, serde_json)
-        )
+    File::open(f.path).map(|mut file| match f.ext_type {
+        ConfigFileType::Yaml => {
+            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
+        },
+        ConfigFileType::Json => {
+            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
+        },
+        ConfigFileType::Toml => {
+            let mut buf = Vec::new();
+            file.read_to_end(&mut buf).unwrap();
+            toml::from_slice(&buf).unwrap()
+        },
     })
 }
 
