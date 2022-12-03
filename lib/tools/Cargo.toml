@@ -2,3 +2,34 @@
 name = "tools"
 version = "0.1.0"
 edition = "2021"
+
+
+[features]
+default = []
+
+all = ["cfg", "async_collections"]
+
+cfg = [
+    "clap",
+    "clap-serde-derive",
+    "once_cell",
+    "serde",
+    "serde_json",
+    "serde_yaml",
+]
+async_collections = ["tokio"]
+
+
+[dependencies]
+# cfg
+clap = { version = "4.0", features = ["derive"], optional = true }
+clap-serde-derive = { version = "0.2.0", optional = true }
+once_cell = { version = "1.16", optional = true }
+
+
+# serde
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+serde_yaml = { version = "0.9", optional = true }
+
+tokio = { version = "1.0", optional = true }

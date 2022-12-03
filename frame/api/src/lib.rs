@@ -3,7 +3,7 @@ extern crate peace_logs;
 
 mod components;
 
-pub use crate::macro_impl_config as impl_config;
+pub use tools::macro_impl_config as impl_config;
 pub use components::*;
 
 use axum::{body::Body, extract::Host, http::Request, Router};
@@ -12,7 +12,7 @@ use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use utoipa::openapi::OpenApi;
 
-/// We can build app using peace_api,
+/// We can build app using `peace_api`,
 /// just use [`Application`] and implement this trait for App.
 pub trait Application: Clone + Send + Sync + 'static {
     /// App cfg should inherit [`ApiFrameConfig`], so this function is used to return it.

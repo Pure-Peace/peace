@@ -8,7 +8,7 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 [features]
-default = ["tls"]
+default = []
 tls = ["axum-server/tls-rustls", "axum/http2"]
 
 
@@ -44,8 +44,5 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # local crates
-peace_logs = { path = "../../frame/logs", features = [
-    "openapi_axum",
-    "cli",
-] }
-tools = { path = "../../lib/tools" }
+peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }
+tools = { path = "../../lib/tools", features = ["cfg", "async_collections"] }

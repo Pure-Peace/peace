@@ -6,7 +6,7 @@ use axum::Router;
 use axum_server::{AddrIncomingConfig, Handle};
 use once_cell::sync::OnceCell;
 use std::{net::SocketAddr, time::Duration};
-use tokio::signal;
+use tools::async_collections::shutdown_signal;
 
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
@@ -16,9 +16,9 @@ pub async fn serve(app_cfg: impl Application) {
     let config = AddrIncomingConfig::new()
         .tcp_nodelay(cfg.tcp_nodelay)
         .tcp_sleep_on_accept_errors(cfg.tcp_sleep_on_accept_errors)
-        .tcp_keepalive(cfg.tcp_keepalive.map(|i| Duration::from_secs(i)))
+        .tcp_keepalive(cfg.tcp_keepalive.map(Duration::from_secs))
         .tcp_keepalive_interval(
-            cfg.tcp_keepalive_interval.map(|i| Duration::from_secs(i)),
+            cfg.tcp_keepalive_interval.map(Duration::from_secs),
         )
         .tcp_keepalive_retries(cfg.tcp_keepalive_retries)
         .build();
@@ -31,17 +31,20 @@ pub async fn serve(app_cfg: impl Application) {
             tokio::join!(
                 tls::launch_ssl_redirect_server(&cfg),
                 https,
-                shutdown_signal()
+                shutdown_signal(shutdown)
             );
         } else {
             tokio::join!(
                 launch_http_server(app, &cfg, config),
                 https,
-                shutdown_signal()
+                shutdown_signal(shutdown)
             );
         }
     } else {
-        tokio::join!(launch_http_server(app, &cfg, config), shutdown_signal());
+        tokio::join!(
+            launch_http_server(app, &cfg, config),
+            shutdown_signal(shutdown)
+        );
     }
 
     #[cfg(not(feature = "tls"))]
@@ -69,38 +72,17 @@ pub async fn launch_http_server(
 }
 
 pub fn print_api_docs(cfg: &ApiFrameConfig) {
-    let addr = if cfg.tls {
-        format!("https://{}", cfg.https_addr)
-    } else {
-        format!("http://{}", cfg.http_addr)
-    };
+    let addr = addr(cfg);
     info!(">> [Swagger UI]: {}{}", addr, cfg.swagger_path);
     info!(">> [openapi.json]: {}{}", addr, cfg.openapi_json);
 }
 
-pub async fn shutdown_signal() {
-    let ctrl_c = async {
-        signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    let s = tokio::select! {
-        _ = ctrl_c => "CONTROL_C",
-        _ = terminate => "TERMINATE",
-    };
-
-    warn!(">> [{}] Signal received, shutdown.", s);
-    server_handle().shutdown();
+pub fn addr(cfg: &ApiFrameConfig) -> String {
+    if cfg.tls {
+        format!("https://{}", cfg.https_addr)
+    } else {
+        format!("http://{}", cfg.http_addr)
+    }
 }
 
 #[cfg(feature = "tls")]
@@ -188,4 +170,9 @@ pub mod tls {
             .await
             .unwrap();
     }
+}
+
+fn shutdown(s: &str) {
+    warn!(">> [{}] Signal received, shutdown.", s);
+    server_handle().shutdown();
 }
