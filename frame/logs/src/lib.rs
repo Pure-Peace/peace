@@ -8,22 +8,21 @@ pub mod grpc;
 #[cfg(feature = "api_axum")]
 pub mod api;
 
+use once_cell::sync::OnceCell;
+use serde::{Deserialize, Serialize};
 use std::{
     str::FromStr,
     sync::{Arc, Mutex},
 };
-
-use serde::{Deserialize, Serialize};
+use tracing::level_filters::LevelFilter;
 pub use tracing::*;
 pub use tracing_subscriber::*;
-
-use once_cell::sync::OnceCell;
 use tracing_subscriber::{
     fmt, layer::Layered, prelude::*, reload, reload::Handle, reload::Layer,
     Registry,
 };
 
-use tracing::level_filters::LevelFilter;
+pub use crate::macro_impl_logger_config as impl_logger_config;
 
 pub struct ReloadHandles<
     R = Registry,
@@ -185,5 +184,26 @@ pub fn init(cfg: &impl LoggerConfig) {
     tracing();
     if cfg.debug() {
         toggle_debug_mode(true).unwrap();
+    }
+}
+
+pub mod macros {
+    #[macro_export]
+    macro_rules! macro_impl_logger_config {
+        ($t: ty) => {
+            impl $crate::LoggerConfig for $t {
+                fn log_level(&self) -> $crate::LogLevel {
+                    self.log_level
+                }
+
+                fn env_filter(&self) -> Option<String> {
+                    self.log_env_filter.clone()
+                }
+
+                fn debug(&self) -> bool {
+                    self.debug
+                }
+            }
+        };
     }
 }
