@@ -39,7 +39,7 @@ enum Commands {
 #[derive(Args)]
 struct CreateConfig {
     /// Configuration file path (Support `.yml`, `.json`, `toml`).
-    #[arg(short = 'c', long = "config", default_value = "config.toml")]
+    #[arg(short = 'c', long = "config", default_value = "config.json")]
     pub config_path: PathBuf,
 }
 
@@ -98,7 +98,7 @@ where
                 &content,
                 (Yaml, serde_yaml, to_string),
                 (Json, serde_json, to_string_pretty),
-                (Toml, toml, to_string)
+                (Toml, toml, to_string_pretty)
             )
             .as_bytes(),
         )
