@@ -13,6 +13,13 @@ pub struct RpcFrameConfig {
     #[arg(short = 'H', long, default_value = "127.0.0.1:50051")]
     pub addr: SocketAddr,
 
+    /// Using unix domain socket instead of TCP/IP socket.
+    /// Only for unix systems.
+    ///
+    /// If configured, `uds` will be preferred over `addr`.
+    #[arg(long)]
+    pub uds: Option<PathBuf>,
+
     /// Logging level.
     #[default(LogLevel::Info)]
     #[arg(short = 'L', long, value_enum, default_value = "info")]

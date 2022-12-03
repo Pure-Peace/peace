@@ -35,10 +35,34 @@ pub async fn serve(app_cfg: impl Application) {
 pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
     let handle = server_handle();
     info!(">> [gRPC SERVER] listening on: {}", addr(cfg));
+
+    #[cfg(unix)]
+    if let Some(path) = cfg.uds {
+        tokio::fs::create_dir_all(
+            std::path::Path::new(&path).parent().unwrap(),
+        )
+        .await
+        .unwrap();
+
+        let uds = tokio::net::UnixListener::bind(path).unwrap();
+        let uds_stream = tokio_stream::wrappers::UnixListenerStream::new(uds);
+        svr.serve_with_incoming_shutdown(uds_stream, handle.wait_signal())
+            .await
+            .unwrap();
+    } else {
+        svr.serve_with_shutdown(cfg.addr, handle.wait_signal()).await.unwrap();
+    }
+
+    #[cfg(not(unix))]
     svr.serve_with_shutdown(cfg.addr, handle.wait_signal()).await.unwrap();
 }
 
 pub fn addr(cfg: &RpcFrameConfig) -> String {
+    #[cfg(unix)]
+    if let Some(path) = cfg.uds {
+        return format!("{}", path);
+    }
+
     format!("{}://{}", if cfg.tls { "https" } else { "http" }, cfg.addr)
 }
 

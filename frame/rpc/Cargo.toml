@@ -16,6 +16,7 @@ admin_rpc = ["peace_logs/grpc", "peace_pb/logs"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
 # core
 tonic = "0.8"
@@ -26,6 +27,7 @@ futures-util = "0.3"
 
 # reflection
 tonic-reflection = { version = "0.6", optional = true }
+
 
 # serde
 serde = { version = "1.0", features = ["derive"] }
@@ -41,5 +43,8 @@ once_cell = "1.16"
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["cli"] }
 tools = { path = "../../lib/tools", features = ["cfg", "async_collections"] }
-
 peace_pb = { path = "../../frame/pb", optional = true }
+
+
+[target.'cfg(unix)'.dependencies]
+tokio-stream = "0.1"
