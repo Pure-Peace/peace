@@ -40,6 +40,10 @@ pub struct RpcFrameConfig {
     #[arg(short = 'A', long)]
     pub admin_rpc: bool,
 
+    /// Admin rpc service `Authorization` `Bearer` token.
+    #[arg(short = 'T', long)]
+    pub admin_token: Option<String>,
+
     /// Enable reflection service.
     #[cfg(feature = "reflection")]
     #[default(false)]

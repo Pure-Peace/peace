@@ -2,8 +2,14 @@ use std::time::Duration;
 
 use crate::{cfg::RpcFrameConfig, Application};
 use once_cell::sync::OnceCell;
-use tonic::transport::{server::Router, Server};
+use tonic::{
+    metadata::MetadataValue,
+    transport::{server::Router, Server},
+};
 use tools::async_collections::{shutdown_signal, SignalHandle};
+
+#[cfg(feature = "admin_rpc")]
+use peace_pb::frame::logs::logs_rpc_server::LogsRpcServer;
 
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
@@ -17,11 +23,19 @@ pub async fn serve(app_cfg: impl Application) {
 
     #[cfg(feature = "admin_rpc")]
     if cfg.admin_rpc {
-        svr = svr.add_service(
-            peace_pb::frame::logs::logs_rpc_server::LogsRpcServer::new(
-                peace_logs::grpc::LogsRpcService::default(),
-            ),
-        )
+        let svc = peace_logs::grpc::LogsRpcService::default();
+        if let Some(token) = cfg.admin_token.clone() {
+            svr = svr.add_service(LogsRpcServer::with_interceptor(
+                svc,
+                move |req| {
+                    let token: MetadataValue<_> =
+                        format!("Bearer {token}").parse().unwrap();
+                    crate::interceptor::check_auth(req, token)
+                },
+            ))
+        } else {
+            svr = svr.add_service(LogsRpcServer::new(svc))
+        }
     };
 
     let _ = tokio::join!(launch_server(svr, &cfg), shutdown_signal(shutdown));
