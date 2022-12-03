@@ -3,7 +3,7 @@ use peace_pb::services::bancho::{
 };
 use tonic::{Request, Response, Status};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Bancho {}
 
 #[tonic::async_trait]
