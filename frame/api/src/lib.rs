@@ -3,8 +3,8 @@ extern crate peace_logs;
 
 mod components;
 
-pub use peace_cfg::macro_impl_config as impl_config;
 pub use components::*;
+pub use peace_cfg::{macro_impl_config as impl_config, ParseConfig};
 
 use axum::{body::Body, extract::Host, http::Request, Router};
 use cfg::ApiFrameConfig;
@@ -20,9 +20,7 @@ pub trait Application: Clone + Send + Sync + 'static {
 
     fn frame_cfg_arc(&self) -> Arc<ApiFrameConfig> {
         static FRAME_CFG: OnceCell<Arc<ApiFrameConfig>> = OnceCell::new();
-        FRAME_CFG
-            .get_or_init(|| Arc::new(self.frame_cfg().clone()))
-            .clone()
+        FRAME_CFG.get_or_init(|| Arc::new(self.frame_cfg().clone())).clone()
     }
 
     /// Returns the [`Router`] for this app

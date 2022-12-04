@@ -136,33 +136,39 @@ where
     })
 }
 
-/// Parses args from the command line,
-/// performs a `command` or returns a loaded app configuration.
-pub fn parse<T>() -> T
+pub trait ParseConfig<T> {
+    fn parse() -> T;
+}
+
+impl<T> ParseConfig<T> for T
 where
     T: Parser + ClapSerde + Args + serde::Serialize,
 {
-    let cfg = BaseConfig::<T>::parse();
-    let f = ConfigFile::new(&cfg.config_path);
-    let cfg_t = read_config_from_file::<T>(&f)
-        .map(|c| T::from(c))
-        .unwrap_or(cfg.config);
+    /// Parses args from the command line,
+    /// performs a `command` or returns a loaded app configuration.
+    fn parse() -> T {
+        let cfg = BaseConfig::<T>::parse();
+        let f = ConfigFile::new(&cfg.config_path);
+        let cfg_t = read_config_from_file::<T>(&f)
+            .map(|c| T::from(c))
+            .unwrap_or(cfg.config);
 
-    if let Some(Commands::CreateConfig(path)) = cfg.command {
-        let f = ConfigFile::new(&path);
-        write_config(&f, &cfg_t);
-        println!(
-            "[OK] Configuration files have been written to: `{}`",
-            f.path.to_str().unwrap()
-        );
-        process::exit(0)
+        if let Some(Commands::CreateConfig(path)) = cfg.command {
+            let f = ConfigFile::new(&path);
+            write_config(&f, &cfg_t);
+            println!(
+                "[OK] Configuration files have been written to: `{}`",
+                f.path.to_str().unwrap()
+            );
+            process::exit(0)
+        }
+
+        if cfg.save_as_config {
+            write_config(&f, &cfg_t);
+        }
+
+        cfg_t
     }
-
-    if cfg.save_as_config {
-        write_config(&f, &cfg_t);
-    }
-
-    cfg_t
 }
 
 pub mod macros {
@@ -200,7 +206,7 @@ pub mod macros {
                 pub fn get() -> std::sync::Arc<$t> {
                     static CFG: $crate::macros::OnceCell<std::sync::Arc<$t>> =
                         $crate::macros::OnceCell::<std::sync::Arc<$t>>::new();
-                    CFG.get_or_init(|| std::sync::Arc::new($crate::parse()))
+                    CFG.get_or_init(|| std::sync::Arc::new(<$t>::parse()))
                         .clone()
                 }
             }
