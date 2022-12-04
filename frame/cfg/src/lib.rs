@@ -5,6 +5,7 @@ use clap_serde_derive::ClapSerde;
 use std::{
     fs::File,
     io::{Read, Write},
+    ops::Deref,
     path::{Path, PathBuf},
     process,
 };
@@ -14,9 +15,8 @@ pub struct BaseConfig<T>
 where
     T: Parser + ClapSerde + Args + serde::Serialize,
 {
-    /// Configuration file path (Support `.yml`, `.json`).
-    #[arg(short = 'c', long = "config", default_value = "config.yml")]
-    pub config_path: PathBuf,
+    #[clap(flatten)]
+    pub config_path: ConfigPath,
 
     /// Save the current parameters as a configuration file.
     #[arg(long, default_value = "false")]
@@ -35,14 +35,22 @@ enum Commands {
     /// Start service.
     Run,
     /// Create default configuration file.
-    CreateConfig(CreateConfig),
+    CreateConfig(ConfigPath),
 }
 
 #[derive(Args)]
-struct CreateConfig {
+pub struct ConfigPath {
     /// Configuration file path (Support `.yml`, `.json`, `toml`).
     #[arg(short = 'c', long = "config", default_value = "config.json")]
-    pub config_path: PathBuf,
+    pub path: PathBuf,
+}
+
+impl Deref for ConfigPath {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        self.path.as_path()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,13 +143,13 @@ where
     T: Parser + ClapSerde + Args + serde::Serialize,
 {
     let cfg = BaseConfig::<T>::parse();
-    let f = ConfigFile::new(cfg.config_path.as_path());
+    let f = ConfigFile::new(&cfg.config_path);
     let cfg_t = read_config_from_file::<T>(&f)
         .map(|c| T::from(c))
         .unwrap_or(cfg.config);
 
-    if let Some(Commands::CreateConfig(create)) = cfg.command {
-        let f = ConfigFile::new(&create.config_path);
+    if let Some(Commands::CreateConfig(path)) = cfg.command {
+        let f = ConfigFile::new(&path);
         write_config(&f, &cfg_t);
         println!(
             "[OK] Configuration files have been written to: `{}`",
