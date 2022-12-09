@@ -25,7 +25,7 @@ pub async fn serve(app_cfg: impl Application) {
 
     print_api_docs(&cfg);
     #[cfg(feature = "tls")]
-    if cfg.tls {
+    if cfg.tls_config.tls {
         let https = tls::launch_https_server(app.clone(), &cfg, config.clone());
         if cfg.force_https {
             tokio::join!(
@@ -78,7 +78,7 @@ pub fn print_api_docs(cfg: &ApiFrameConfig) {
 }
 
 pub fn addr(cfg: &ApiFrameConfig) -> String {
-    if cfg.tls {
+    if cfg.tls_config.tls {
         format!("https://{}", cfg.https_addr)
     } else {
         format!("http://{}", cfg.http_addr)
@@ -152,10 +152,10 @@ pub mod tls {
         incoming_config: AddrIncomingConfig,
     ) {
         let tls_config = RustlsConfig::from_pem_file(
-            cfg.ssl_cert.as_ref().expect(
+            cfg.tls_config.ssl_cert.as_ref().expect(
                 "ERROR: tls: Please make sure `--ssl-cert` are passed in.",
             ),
-            cfg.ssl_key.as_ref().expect(
+            cfg.tls_config.ssl_key.as_ref().expect(
                 "ERROR: tls: Please make sure `--ssl-key` are passed in.",
             ),
         )

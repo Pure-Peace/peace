@@ -32,7 +32,7 @@ pub fn app(app: impl Application) -> Router {
 }
 
 pub fn openapi_router(mut openapi: OpenApi, cfg: &ApiFrameConfig) -> Router {
-    if !cfg.admin_api {
+    if !cfg.admin_endpoints {
         openapi = remove_admin_routes(openapi)
     }
     SwaggerUi::new(cfg.swagger_path.clone())
@@ -75,7 +75,7 @@ pub fn app_router(app: impl Application) -> Router {
     let cfg = app.frame_cfg();
     let mut router = openapi_router(app.apidocs(), cfg).merge(app.router());
 
-    if cfg.admin_api {
+    if cfg.admin_endpoints {
         router = router.merge(admin_routers(cfg.admin_token.as_deref()))
     };
 
