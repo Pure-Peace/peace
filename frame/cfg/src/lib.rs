@@ -196,7 +196,6 @@ pub mod macros {
     /// ```rust
     /// use clap::Parser;
     /// use clap_serde_derive::ClapSerde;
-    /// use peace_api::{cfg::ApiFrameConfig, impl_config};
     /// use serde::{Deserialize, Serialize};
     ///
     /// #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
@@ -204,12 +203,9 @@ pub mod macros {
     ///     /// A list of hostnames to route to the bancho service.
     ///     #[arg(short = 'B', long)]
     ///     pub bancho_hostname: Vec<String>,
-    ///
-    ///     #[command(flatten)]
-    ///     pub frame_cfg: ApiFrameConfig,
     /// }
     ///
-    /// impl_config!(GatewayConfig);
+    /// peace_cfg::impl_config!(GatewayConfig);
     ///
     /// fn main() {
     ///     GatewayConfig::get();

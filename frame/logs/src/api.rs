@@ -35,9 +35,7 @@ pub struct CommonHandleResponse {
 #[derive(Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "openapi_axum", derive(IntoParams))]
 pub struct SetLogLevelParam {
-    /// ```
-    /// `level` in: ["error", "warn", "info", "debug", "trace", "off"]
-    /// ```
+    /// `level` in: `["error", "warn", "info", "debug", "trace", "off"]`
     #[param(inline, value_type = LogLevel)]
     pub level: LogLevel,
 }

@@ -59,9 +59,10 @@ pub fn env_filter(set_env: Option<&str>) -> EnvFilter {
 ///
 /// ```rust
 /// use peace_logs;
-/// peace_logs::default_level(Some(peace_logs::level_filters::LevelFilter::INFO));
-/// let handles = peace_logs::tracing();
-/// handles.fmt_reload.reload(peace_logs::fmt::layer().with_file(true).with_line_number(true)).unwrap();
+///
+/// peace_logs::set_level(peace_logs::log::LevelFilter::Info);
+/// let reload_handles = peace_logs::tracing();
+/// reload_handles.env_filter_reload.reload("debug").unwrap();
 /// ```
 ///
 pub fn tracing() -> &'static ReloadHandles {
@@ -80,8 +81,9 @@ pub fn tracing() -> &'static ReloadHandles {
 ///
 /// ```rust
 /// use peace_logs;
+///
 /// let _ = peace_logs::tracing();
-/// peace_logs::set_level(peace_logs::level_filters::LevelFilter::WARN).unwrap();
+/// peace_logs::set_level(peace_logs::log::LevelFilter::Warn).unwrap();
 /// ```
 ///
 pub fn set_level(level: LevelFilter) -> Result<(), reload::Error> {
@@ -96,6 +98,7 @@ pub fn set_level(level: LevelFilter) -> Result<(), reload::Error> {
 ///
 /// ```rust
 /// use peace_logs;
+///
 /// let _ = peace_logs::tracing();
 /// peace_logs::set_env_filter("ENV").unwrap();
 /// ```
