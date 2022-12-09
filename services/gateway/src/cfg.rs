@@ -13,12 +13,12 @@ use serde::{Deserialize, Serialize};
     propagate_version = true
 )]
 pub struct GatewayConfig {
+    #[command(flatten)]
+    pub frame_cfg: ApiFrameConfig,
+
     /// A list of hostnames to route to the bancho service.
     #[arg(short = 'B', long)]
     pub bancho_hostname: Vec<String>,
-
-    #[command(flatten)]
-    pub frame_cfg: ApiFrameConfig,
 }
 
 impl_config!(GatewayConfig);
