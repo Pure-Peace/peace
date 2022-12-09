@@ -8,7 +8,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tower_http::auth::RequireAuthorizationLayer;
-use tracing::level_filters::LevelFilter;
+use tracing::log::LevelFilter;
 use tracing_subscriber::reload;
 
 #[cfg(feature = "openapi_axum")]
