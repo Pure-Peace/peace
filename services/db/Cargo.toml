@@ -36,3 +36,4 @@ peace_rpc = { path = "../../frame/rpc", features = [
     "admin_endpoints",
     "reflection",
 ] }
+peace_dal = { path = "../../frame/dal" }

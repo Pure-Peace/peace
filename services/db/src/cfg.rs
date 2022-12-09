@@ -1,5 +1,7 @@
 use clap::Parser;
 use clap_serde_derive::ClapSerde;
+use peace_dal::cfg::PeaceDbConfig;
+use peace_rpc::{cfg::RpcFrameConfig, impl_config};
 use serde::{Deserialize, Serialize};
 
 /// Command Line Interface (CLI) for DB service.
@@ -8,6 +10,9 @@ use serde::{Deserialize, Serialize};
 pub struct DbServiceConfig {
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
+
+    #[command(flatten)]
+    pub peace_db: PeaceDbConfig,
 }
 
-impl_config!(DbConfig);
+impl_config!(DbServiceConfig);
