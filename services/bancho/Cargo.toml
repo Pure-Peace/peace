@@ -37,6 +37,6 @@ peace_pb = { path = "../../frame/pb", features = [
 ] }
 peace_rpc = { path = "../../frame/rpc", features = [
     "tls",
-    "admin_rpc",
+    "admin_endpoints",
     "reflection",
 ] }
