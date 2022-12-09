@@ -1,15 +1,15 @@
 use clap::Parser;
 use clap_serde_derive::ClapSerde;
 use peace_cfg::TlsConfig;
-use peace_logs::LoggerConfigArgs;
+use peace_logs::LoggingConfigArgs;
 use std::{default::Default, net::SocketAddr, ops::Deref, path::PathBuf};
 
 /// Basic configuration items for `peace-rpc` framework.
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 pub struct RpcFrameConfig {
-    /// Logger configurations.
+    /// Logging configurations.
     #[clap(flatten)]
-    pub logger: LoggerConfigArgs,
+    pub logging: LoggingConfigArgs,
 
     #[clap(flatten)]
     pub rpc: RpcServiceConfig,
@@ -23,7 +23,7 @@ impl Deref for RpcFrameConfig {
     }
 }
 
-impl_logger_config!(RpcFrameConfig);
+impl_logging_config!(RpcFrameConfig);
 
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 pub struct RpcServiceConfig {

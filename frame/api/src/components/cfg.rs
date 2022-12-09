@@ -1,15 +1,15 @@
 use clap::Parser;
 use clap_serde_derive::ClapSerde;
 use peace_cfg::TlsConfig;
-use peace_logs::LoggerConfigArgs;
+use peace_logs::LoggingConfigArgs;
 use std::{default::Default, net::SocketAddr, ops::Deref};
 
 /// Basic configuration items for `peace-api` framework.
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 pub struct ApiFrameConfig {
-    /// Logger configurations.
+    /// Logging configurations.
     #[clap(flatten)]
-    pub logger: LoggerConfigArgs,
+    pub logging: LoggingConfigArgs,
 
     #[clap(flatten)]
     pub api: ApiServiceConfig,
@@ -23,7 +23,7 @@ impl Deref for ApiFrameConfig {
     }
 }
 
-impl_logger_config!(ApiFrameConfig);
+impl_logging_config!(ApiFrameConfig);
 
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 pub struct ApiServiceConfig {

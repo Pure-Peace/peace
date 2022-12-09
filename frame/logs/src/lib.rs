@@ -24,7 +24,7 @@ use tracing_subscriber::{
     Registry,
 };
 
-pub use crate::macro_impl_logger_config as impl_logger_config;
+pub use crate::macro_impl_logging_config as impl_logging_config;
 
 pub struct ReloadHandles<
     R = Registry,
@@ -172,7 +172,7 @@ impl From<LogLevel> for LevelFilter {
 }
 
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
-pub struct LoggerConfigArgs {
+pub struct LoggingConfigArgs {
     /// Logging level.
     #[default(LogLevel::Info)]
     #[arg(short = 'L', long, value_enum, default_value = "info")]
@@ -188,21 +188,21 @@ pub struct LoggerConfigArgs {
     pub debug: bool,
 }
 
-pub trait LoggerConfig {
+pub trait LoggingConfig {
     fn log_level(&self) -> LogLevel;
     fn env_filter(&self) -> Option<String>;
     fn debug(&self) -> bool;
 }
 
-/// Configure with [`LoggerConfig`].
-pub fn init(cfg: &impl LoggerConfig) {
+/// Configure with [`LoggingConfig`].
+pub fn init(cfg: &impl LoggingConfig) {
     env_filter(Some(&format!(
         "{},{}",
         LevelFilter::from(cfg.log_level()),
         cfg.env_filter().unwrap_or("".to_string())
     )));
 
-    // Init logger
+    // Init logging
     tracing();
     if cfg.debug() {
         toggle_debug_mode(true).unwrap();
@@ -211,19 +211,19 @@ pub fn init(cfg: &impl LoggerConfig) {
 
 pub mod macros {
     #[macro_export]
-    macro_rules! macro_impl_logger_config {
+    macro_rules! macro_impl_logging_config {
         ($t: ty) => {
-            impl $crate::LoggerConfig for $t {
+            impl $crate::LoggingConfig for $t {
                 fn log_level(&self) -> $crate::LogLevel {
-                    self.logger.log_level
+                    self.logging.log_level
                 }
 
                 fn env_filter(&self) -> Option<String> {
-                    self.logger.log_env_filter.clone()
+                    self.logging.log_env_filter.clone()
                 }
 
                 fn debug(&self) -> bool {
-                    self.logger.debug
+                    self.logging.debug
                 }
             }
         };
