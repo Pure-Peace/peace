@@ -1,2 +1,2 @@
 pub mod cfg;
-pub mod database;
+pub mod macros;

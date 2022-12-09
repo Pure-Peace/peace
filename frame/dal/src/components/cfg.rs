@@ -1,13 +1,16 @@
-use clap::Parser;
-use clap_serde_derive::ClapSerde;
-use peace_logs::LogLevel;
-use serde::{Deserialize, Serialize};
-use std::default::Default;
-use std::{net::SocketAddr, path::PathBuf};
+use crate::define_db_config;
+use async_trait::async_trait;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 
-/// Base Command Line Interface (CLI) for Peace-dal framework.
-#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
-#[command(name = "peace-dal", author, version, about, propagate_version = true)]
-pub struct DbConfig {}
+#[async_trait]
+pub trait DbConfig {
+    /// Returns a configured [`ConnectOptions`]
+    fn configured_opt(&self) -> ConnectOptions;
 
-crate::impl_config!(DbConfig);
+    /// Connect to database.
+    async fn connect(&self) -> Result<DatabaseConnection, DbErr> {
+        Database::connect(self.configured_opt()).await
+    }
+}
+
+define_db_config!(PeaceDbConfig, peace);
