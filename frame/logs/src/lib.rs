@@ -8,6 +8,8 @@ pub mod grpc;
 #[cfg(feature = "api_axum")]
 pub mod api;
 
+use clap::Parser;
+use clap_serde_derive::ClapSerde;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -166,6 +168,21 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
+#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+pub struct LoggerConfigArgs {
+    /// Logging level.
+    #[default(LogLevel::Info)]
+    #[arg(short = 'L', long, value_enum, default_value = "info")]
+    pub log_level: LogLevel,
+
+    /// Logging env filter.
+    #[arg(short = 'F', long)]
+    pub log_env_filter: Option<String>,
+
+    /// Turning on debug will display information such as code line number, source file, thread id, etc.
+    #[default(false)]
+    #[arg(short, long)]
+    pub debug: bool,
 }
 
 pub trait LoggerConfig {
