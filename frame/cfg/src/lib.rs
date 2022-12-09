@@ -2,6 +2,7 @@ pub use crate::macro_impl_config as impl_config;
 
 use clap::{Args, Parser, Subcommand};
 use clap_serde_derive::ClapSerde;
+use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::{Read, Write},
@@ -36,6 +37,23 @@ enum Commands {
     Run,
     /// Create default configuration file.
     CreateConfig(ConfigPath),
+}
+
+#[derive(Args, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+
+pub struct TlsConfig {
+    /// Enabled `tls` support.
+    #[default(false)]
+    #[arg(short, long)]
+    pub tls: bool,
+
+    /// SSL certificate path.
+    #[arg(short = 'C', long)]
+    pub ssl_cert: Option<PathBuf>,
+
+    /// SSL certificate key path.
+    #[arg(short = 'K', long)]
+    pub ssl_key: Option<PathBuf>,
 }
 
 #[derive(Args)]
