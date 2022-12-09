@@ -1,7 +1,7 @@
 pub mod cfg;
 pub mod rpc;
 
-use cfg::DbConfig;
+use cfg::DbServiceConfig;
 use peace_pb::services::db::{db_rpc_server::DbRpcServer, DB_DESCRIPTOR_SET};
 use peace_rpc::{cfg::RpcFrameConfig, Application};
 use rpc::Db;
@@ -10,11 +10,11 @@ use tonic::transport::{server::Router, Server};
 
 #[derive(Clone)]
 pub struct App {
-    pub cfg: Arc<DbConfig>,
+    pub cfg: Arc<DbServiceConfig>,
 }
 
 impl App {
-    pub fn new(cfg: Arc<DbConfig>) -> Self {
+    pub fn new(cfg: Arc<DbServiceConfig>) -> Self {
         Self { cfg }
     }
 }
