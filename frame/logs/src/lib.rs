@@ -212,15 +212,15 @@ pub mod macros {
         ($t: ty) => {
             impl $crate::LoggerConfig for $t {
                 fn log_level(&self) -> $crate::LogLevel {
-                    self.log_level
+                    self.logger.log_level
                 }
 
                 fn env_filter(&self) -> Option<String> {
-                    self.log_env_filter.clone()
+                    self.logger.log_env_filter.clone()
                 }
 
                 fn debug(&self) -> bool {
-                    self.debug
+                    self.logger.debug
                 }
             }
         };
