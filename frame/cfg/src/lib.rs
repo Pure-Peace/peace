@@ -155,7 +155,7 @@ where
 }
 
 pub trait ParseConfig<T> {
-    fn parse() -> T;
+    fn parse_cfg() -> T;
 }
 
 impl<T> ParseConfig<T> for T
@@ -164,12 +164,11 @@ where
 {
     /// Parses args from the command line,
     /// performs a `command` or returns a loaded app configuration.
-    fn parse() -> T {
+    fn parse_cfg() -> T {
         let cfg = BaseConfig::<T>::parse();
         let f = ConfigFile::new(&cfg.config_path);
-        let cfg_t = read_config_from_file::<T>(&f)
-            .map(|c| T::from(c))
-            .unwrap_or(cfg.config);
+        let cfg_t =
+            read_config_from_file::<T>(&f).map(T::from).unwrap_or(cfg.config);
 
         if let Some(Commands::CreateConfig(path)) = cfg.command {
             let f = ConfigFile::new(&path);
@@ -222,9 +221,10 @@ pub mod macros {
             impl $t {
                 /// Get or init configs (only initialized once).
                 pub fn get() -> std::sync::Arc<$t> {
+                    use $crate::ParseConfig;
                     static CFG: $crate::macros::OnceCell<std::sync::Arc<$t>> =
                         $crate::macros::OnceCell::<std::sync::Arc<$t>>::new();
-                    CFG.get_or_init(|| std::sync::Arc::new(<$t>::parse()))
+                    CFG.get_or_init(|| std::sync::Arc::new(<$t>::parse_cfg()))
                         .clone()
                 }
             }
