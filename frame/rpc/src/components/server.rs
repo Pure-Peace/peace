@@ -8,7 +8,7 @@ use tonic::{
 };
 use tools::async_collections::{shutdown_signal, SignalHandle};
 
-#[cfg(feature = "admin_rpc")]
+#[cfg(feature = "admin_endpoints")]
 use peace_pb::frame::logs::logs_rpc_server::LogsRpcServer;
 
 /// Start service.
@@ -17,14 +17,14 @@ pub async fn serve(app_cfg: impl Application) {
     let mut svr = app_cfg.service(server(&cfg));
 
     #[cfg(feature = "reflection")]
-    if cfg.reflection {
+    if cfg.rpc_reflection {
         svr = add_reflection(svr, &app_cfg)
     };
 
-    #[cfg(feature = "admin_rpc")]
-    if cfg.admin_rpc {
+    #[cfg(feature = "admin_endpoints")]
+    if cfg.rpc_admin_endpoints {
         let svc = peace_logs::grpc::LogsRpcService::default();
-        if let Some(token) = cfg.admin_token.clone() {
+        if let Some(token) = cfg.rpc_admin_token.clone() {
             svr = svr.add_service(LogsRpcServer::with_interceptor(
                 svc,
                 move |req| {
@@ -47,7 +47,7 @@ pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
     info!(">> [gRPC SERVER] listening on: {}", addr(cfg));
 
     #[cfg(unix)]
-    if let Some(path) = cfg.uds {
+    if let Some(path) = cfg.rpc_uds {
         tokio::fs::create_dir_all(
             std::path::Path::new(&path).parent().unwrap(),
         )
@@ -60,11 +60,13 @@ pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
             .await
             .unwrap();
     } else {
-        svr.serve_with_shutdown(cfg.addr, handle.wait_signal()).await.unwrap();
+        svr.serve_with_shutdown(cfg.rpc_addr, handle.wait_signal())
+            .await
+            .unwrap();
     }
 
     #[cfg(not(unix))]
-    svr.serve_with_shutdown(cfg.addr, handle.wait_signal()).await.unwrap();
+    svr.serve_with_shutdown(cfg.rpc_addr, handle.wait_signal()).await.unwrap();
 }
 
 pub fn addr(cfg: &RpcFrameConfig) -> String {
@@ -73,7 +75,11 @@ pub fn addr(cfg: &RpcFrameConfig) -> String {
         return format!("{}", path);
     }
 
-    format!("{}://{}", if cfg.tls { "https" } else { "http" }, cfg.addr)
+    format!(
+        "{}://{}",
+        if cfg.rpc_tls_config.tls { "https" } else { "http" },
+        cfg.rpc_addr
+    )
 }
 
 pub fn server(cfg: &RpcFrameConfig) -> Server {
@@ -81,29 +87,33 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
     let svr = Server::builder();
 
     #[cfg(feature = "tls")]
-    let svr = if cfg.tls { tls_server(cfg) } else { Server::builder() };
+    let svr = if cfg.rpc_tls_config.tls {
+        tls_server(cfg)
+    } else {
+        Server::builder()
+    };
 
     let mut svr = svr
-        .accept_http1(cfg.accept_http1)
-        .http2_adaptive_window(cfg.http2_adaptive_window)
+        .accept_http1(cfg.rpc_accept_http1)
+        .http2_adaptive_window(cfg.rpc_http2_adaptive_window)
         .http2_keepalive_interval(
-            cfg.http2_keepalive_interval.map(Duration::from_secs),
+            cfg.rpc_http2_keepalive_interval.map(Duration::from_secs),
         )
         .http2_keepalive_timeout(
-            cfg.http2_keepalive_timeout.map(Duration::from_secs),
+            cfg.rpc_http2_keepalive_timeout.map(Duration::from_secs),
         )
-        .initial_connection_window_size(cfg.initial_connection_window_size)
-        .initial_stream_window_size(cfg.initial_stream_window_size)
-        .max_concurrent_streams(cfg.max_concurrent_streams)
-        .max_frame_size(cfg.max_frame_size)
-        .tcp_keepalive(cfg.tcp_keepalive.map(Duration::from_secs))
-        .tcp_nodelay(cfg.tcp_nodelay);
+        .initial_connection_window_size(cfg.rpc_initial_connection_window_size)
+        .initial_stream_window_size(cfg.rpc_initial_stream_window_size)
+        .max_concurrent_streams(cfg.rpc_max_concurrent_streams)
+        .max_frame_size(cfg.rpc_max_frame_size)
+        .tcp_keepalive(cfg.rpc_tcp_keepalive.map(Duration::from_secs))
+        .tcp_nodelay(cfg.rpc_tcp_nodelay);
 
-    if let Some(limit) = cfg.concurrency_limit_per_connection {
+    if let Some(limit) = cfg.rpc_concurrency_limit_per_connection {
         svr = svr.concurrency_limit_per_connection(limit)
     };
 
-    if let Some(timeout) = cfg.req_timeout {
+    if let Some(timeout) = cfg.rpc_req_timeout {
         svr = svr.timeout(Duration::from_secs(timeout))
     };
 
@@ -113,12 +123,13 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
 #[cfg(feature = "tls")]
 pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
     let cert =
-        std::fs::read(cfg.ssl_cert.as_ref().expect(
+        std::fs::read(cfg.rpc_tls_config.ssl_cert.as_ref().expect(
             "ERROR: tls: Please make sure `--ssl-cert` are passed in.",
         ))
         .unwrap();
     let key = std::fs::read(
-        cfg.ssl_key
+        cfg.rpc_tls_config
+            .ssl_key
             .as_ref()
             .expect("ERROR: tls: Please make sure `--ssl-key` are passed in."),
     )
@@ -134,8 +145,8 @@ pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
 pub fn add_reflection(svr: Router, app_cfg: &impl Application) -> Router {
     let mut reflection = tonic_reflection::server::Builder::configure();
 
-    #[cfg(feature = "admin_rpc")]
-    if app_cfg.frame_cfg().admin_rpc {
+    #[cfg(feature = "admin_endpoints")]
+    if app_cfg.frame_cfg().rpc_admin_endpoints {
         reflection = reflection.register_encoded_file_descriptor_set(
             peace_pb::frame::logs::LOGS_DESCRIPTOR_SET,
         );

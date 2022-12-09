@@ -12,7 +12,7 @@ default = []
 
 tls = ["tonic/tls"]
 reflection = ["tonic-reflection"]
-admin_rpc = ["peace_logs/grpc", "peace_pb/logs"]
+admin_endpoints = ["peace_logs/grpc", "peace_pb/logs"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
