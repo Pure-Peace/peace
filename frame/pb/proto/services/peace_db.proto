@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package peace.services.db;
+package peace.services.db.peace;
 
-service DbRPC { rpc SayHello(HelloRequest) returns (HelloReply); }
+service PeaceDbRPC { rpc SayHello(HelloRequest) returns (HelloReply); }
 
 message HelloRequest { string name = 1; }
 

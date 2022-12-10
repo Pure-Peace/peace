@@ -16,9 +16,9 @@ all = ["reflection", "frame", "services"]
 frame = ["logs"]
 logs = []
 
-services = ["bancho", "db"]
+services = ["bancho", "peace_db"]
 bancho = []
-db = []
+peace_db = []
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

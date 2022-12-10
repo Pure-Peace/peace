@@ -2,9 +2,11 @@ pub mod cfg;
 pub mod rpc;
 
 use cfg::DbServiceConfig;
-use peace_pb::services::db::{db_rpc_server::DbRpcServer, DB_DESCRIPTOR_SET};
+use peace_pb::services::peace_db::{
+    peace_db_rpc_server::PeaceDbRpcServer, PEACE_DB_DESCRIPTOR_SET,
+};
 use peace_rpc::{cfg::RpcFrameConfig, Application};
-use rpc::Db;
+use rpc::peace_db::PeaceDbService;
 use std::sync::Arc;
 use tonic::transport::{server::Router, Server};
 
@@ -25,11 +27,11 @@ impl Application for App {
     }
 
     fn service_descriptors(&self) -> Option<&[&[u8]]> {
-        Some(&[DB_DESCRIPTOR_SET])
+        Some(&[PEACE_DB_DESCRIPTOR_SET])
     }
 
     fn service(&self, mut configured_server: Server) -> Router {
-        let svc = Db::default();
-        configured_server.add_service(DbRpcServer::new(svc))
+        let svc = PeaceDbService::default();
+        configured_server.add_service(PeaceDbRpcServer::new(svc))
     }
 }
