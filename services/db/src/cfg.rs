@@ -1,6 +1,6 @@
 use clap::Parser;
 use clap_serde_derive::ClapSerde;
-use peace_dal::cfg::PeaceDbConfig;
+use peace_dal::db::peace::PeaceDbConfig;
 use peace_rpc::{cfg::RpcFrameConfig, impl_config};
 use serde::{Deserialize, Serialize};
 

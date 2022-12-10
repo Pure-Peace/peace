@@ -89,7 +89,7 @@ macro_rules! define_db_config {
 macro_rules! impl_db_config {
     ($struct_name: ident, $prefix: ident) => {
         $crate::macros::paste::paste! {
-            impl $crate::cfg::DbConfig for $struct_name {
+            impl $crate::DbConfig for $struct_name {
                 fn configured_opt(&self) -> $crate::macros::ConnectOptions {
                     let mut opt = $crate::macros::ConnectOptions::new(self.[<$prefix _db_url>].clone());
 

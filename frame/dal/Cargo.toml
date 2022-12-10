@@ -7,8 +7,16 @@ authors = ["Pure-Peace"]
 repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
+[features]
+default = ["migration"]
+migration = ["sea-orm-migration", "tokio"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "peace-migration"
+path = "src/db/peace/migration/migrate.rs"
+required-features = ["migration"]
+
 
 [dependencies]
 sea-orm = { version = "^0", features = [
@@ -26,6 +34,11 @@ clap = { version = "4.0", features = ["derive"] }
 clap-serde-derive = "0.2.0"
 async-trait = "0.1"
 paste = "1.0"
+
+# optional
+tokio = { version = "1", optional = true }
+sea-orm-migration = { version = "0.10.5", optional = true }
+
 
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["cli"] }
