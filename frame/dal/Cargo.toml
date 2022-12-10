@@ -21,7 +21,7 @@ required-features = ["migration"]
 [[bin]]
 name = "db-cli"
 path = "src/cli.rs"
-required-features = ["migration"]
+required-features = ["cli"]
 
 
 [dependencies]
@@ -51,10 +51,7 @@ sea-orm-cli = { version = "*", optional = true, default-features = false, featur
     "cli",
     "runtime-tokio-rustls",
 ] }
-clap_3 = { package = "clap", version = "^3.2", features = [
-    "env",
-    "derive",
-], optional = true }
+clap_3 = { package = "clap", version = "^3.2", optional = true }
 dotenvy = { version = "^0.15", optional = true }
 
 
