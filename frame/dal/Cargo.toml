@@ -8,13 +8,19 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 [features]
-default = ["migration"]
+default = ["cli", "migration"]
 migration = ["sea-orm-migration", "tokio"]
+cli = ["sea-orm-cli", "clap_3", "dotenvy", "tokio"]
 
 
 [[bin]]
-name = "peace-migration"
+name = "db-peace-migrate"
 path = "src/db/peace/migration/migrate.rs"
+required-features = ["migration"]
+
+[[bin]]
+name = "db-cli"
+path = "src/cli.rs"
 required-features = ["migration"]
 
 
@@ -37,7 +43,19 @@ paste = "1.0"
 
 # optional
 tokio = { version = "1", optional = true }
-sea-orm-migration = { version = "0.10.5", optional = true }
+sea-orm-migration = { version = "0.10.5", optional = true, features = [
+    "runtime-tokio-rustls",
+] }
+sea-orm-cli = { version = "*", optional = true, default-features = false, features = [
+    "codegen",
+    "cli",
+    "runtime-tokio-rustls",
+] }
+clap_3 = { package = "clap", version = "^3.2", features = [
+    "env",
+    "derive",
+], optional = true }
+dotenvy = { version = "^0.15", optional = true }
 
 
 # local crates
