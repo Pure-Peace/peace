@@ -11,14 +11,25 @@ impl MigrationTrait for Migration {
             users::create(),
             bancho_client_hardware_records::create(),
             favourite_beatmaps::create(),
+            friend_relationships::create(),
         ];
 
         let create_foreign_key_stmts = vec![
-            bancho_client_hardware_records::create_foreign_key(),
-            favourite_beatmaps::create_foreign_key(),
-        ];
+            bancho_client_hardware_records::create_foreign_keys(),
+            favourite_beatmaps::create_foreign_keys(),
+            friend_relationships::create_foreign_keys(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
-        let create_index_stmts = vec![favourite_beatmaps::create_index()];
+        let create_index_stmts = vec![
+            favourite_beatmaps::create_indexes(),
+            friend_relationships::create_indexes(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
         let create_type_stmts = vec![];
 
@@ -48,14 +59,25 @@ impl MigrationTrait for Migration {
             users::drop(),
             bancho_client_hardware_records::drop(),
             favourite_beatmaps::drop(),
+            friend_relationships::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
-            bancho_client_hardware_records::drop_foreign_key(),
-            favourite_beatmaps::drop_foreign_key(),
-        ];
+            bancho_client_hardware_records::drop_foreign_keys(),
+            favourite_beatmaps::drop_foreign_keys(),
+            friend_relationships::drop_foreign_keys(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
-        let drop_index_stmts = vec![favourite_beatmaps::drop_index()];
+        let drop_index_stmts = vec![
+            favourite_beatmaps::drop_indexes(),
+            friend_relationships::drop_indexes(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
         let drop_type_stmts = vec![];
 
@@ -269,8 +291,8 @@ pub mod bancho_client_hardware_records {
         Table::drop().table(BanchoClientHardwareRecords::Table).to_owned()
     }
 
-    pub fn create_foreign_key() -> ForeignKeyCreateStatement {
-        sea_query::ForeignKey::create()
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![sea_query::ForeignKey::create()
             .name(FOREIGN_KEY_USER_ID)
             .from(
                 BanchoClientHardwareRecords::Table,
@@ -279,14 +301,14 @@ pub mod bancho_client_hardware_records {
             .to(Users::Table, Users::Id)
             .on_delete(ForeignKeyAction::Cascade)
             .on_update(ForeignKeyAction::Cascade)
-            .to_owned()
+            .to_owned()]
     }
 
-    pub fn drop_foreign_key() -> ForeignKeyDropStatement {
-        sea_query::ForeignKey::drop()
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![sea_query::ForeignKey::drop()
             .name(FOREIGN_KEY_USER_ID)
             .table(BanchoClientHardwareRecords::Table)
-            .to_owned()
+            .to_owned()]
     }
 }
 
@@ -324,7 +346,7 @@ pub mod favourite_beatmaps {
                     .timestamp_with_time_zone()
                     .not_null(),
             )
-            .index(
+            .primary_key(
                 sea_query::Index::create()
                     .col(FavouriteBeatmaps::UserId)
                     .col(FavouriteBeatmaps::MapId),
@@ -336,32 +358,132 @@ pub mod favourite_beatmaps {
         Table::drop().table(FavouriteBeatmaps::Table).to_owned()
     }
 
-    pub fn create_foreign_key() -> ForeignKeyCreateStatement {
-        sea_query::ForeignKey::create()
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![sea_query::ForeignKey::create()
             .name(FOREIGN_KEY_USER_ID)
             .from(FavouriteBeatmaps::Table, FavouriteBeatmaps::UserId)
             .to(Users::Table, Users::Id)
             .on_delete(ForeignKeyAction::Cascade)
             .on_update(ForeignKeyAction::Cascade)
-            .to_owned()
+            .to_owned()]
     }
 
-    pub fn drop_foreign_key() -> ForeignKeyDropStatement {
-        sea_query::ForeignKey::drop()
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![sea_query::ForeignKey::drop()
             .name(FOREIGN_KEY_USER_ID)
             .table(FavouriteBeatmaps::Table)
-            .to_owned()
+            .to_owned()]
     }
 
-    pub fn create_index() -> IndexCreateStatement {
-        sea_query::Index::create()
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
             .name(INDEX_USER_ID)
             .table(FavouriteBeatmaps::Table)
             .col(FavouriteBeatmaps::UserId)
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop().name(INDEX_USER_ID).to_owned()]
+    }
+}
+
+pub mod friend_relationships {
+    use sea_orm_migration::prelude::*;
+
+    use super::users::Users;
+
+    const FOREIGN_KEY_USER_ID: &str = "FK_friend_relationships_user_id";
+    const FOREIGN_KEY_FRIEND_ID: &str = "FK_friend_relationships_friend_id";
+    const INDEX_USER_ID: &str = "IDX_friend_relationships_user_id";
+
+    #[derive(Iden)]
+    pub enum FriendRelationships {
+        Table,
+        UserId,
+        FriendId,
+        Remark,
+        CreatedAt,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(FriendRelationships::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(FriendRelationships::UserId)
+                    .integer()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(FriendRelationships::FriendId)
+                    .integer()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(FriendRelationships::Remark)
+                    .string()
+                    .string_len(16)
+                    .null(),
+            )
+            .col(
+                ColumnDef::new(FriendRelationships::CreatedAt)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .primary_key(
+                sea_query::Index::create()
+                    .col(FriendRelationships::UserId)
+                    .col(FriendRelationships::FriendId),
+            )
             .to_owned()
     }
 
-    pub fn drop_index() -> IndexDropStatement {
-        sea_query::Index::drop().name(INDEX_USER_ID).to_owned()
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(FriendRelationships::Table).to_owned()
+    }
+
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_USER_ID)
+                .from(FriendRelationships::Table, FriendRelationships::UserId)
+                .to(Users::Table, Users::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_FRIEND_ID)
+                .from(FriendRelationships::Table, FriendRelationships::FriendId)
+                .to(Users::Table, Users::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_USER_ID)
+                .table(FriendRelationships::Table)
+                .to_owned(),
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_FRIEND_ID)
+                .table(FriendRelationships::Table)
+                .to_owned(),
+        ]
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
+            .name(INDEX_USER_ID)
+            .table(FriendRelationships::Table)
+            .col(FriendRelationships::UserId)
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop().name(INDEX_USER_ID).to_owned()]
     }
 }
