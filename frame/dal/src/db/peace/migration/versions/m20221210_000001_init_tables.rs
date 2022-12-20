@@ -7,13 +7,18 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        let create_table_stmts =
-            vec![users::create(), bancho_client_hardware_records::create()];
+        let create_table_stmts = vec![
+            users::create(),
+            bancho_client_hardware_records::create(),
+            favourite_beatmaps::create(),
+        ];
 
-        let create_foreign_key_stmts =
-            vec![bancho_client_hardware_records::create_foreign_key()];
+        let create_foreign_key_stmts = vec![
+            bancho_client_hardware_records::create_foreign_key(),
+            favourite_beatmaps::create_foreign_key(),
+        ];
 
-        let create_index_stmts = vec![];
+        let create_index_stmts = vec![favourite_beatmaps::create_index()];
 
         let create_type_stmts = vec![];
 
@@ -39,13 +44,18 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        let drop_table_stmts =
-            vec![users::drop(), bancho_client_hardware_records::drop()];
+        let drop_table_stmts = vec![
+            users::drop(),
+            bancho_client_hardware_records::drop(),
+            favourite_beatmaps::drop(),
+        ];
 
-        let drop_foreign_key_stmts =
-            vec![bancho_client_hardware_records::drop_foreign_key()];
+        let drop_foreign_key_stmts = vec![
+            bancho_client_hardware_records::drop_foreign_key(),
+            favourite_beatmaps::drop_foreign_key(),
+        ];
 
-        let drop_index_stmts = vec![];
+        let drop_index_stmts = vec![favourite_beatmaps::drop_index()];
 
         let drop_type_stmts = vec![];
 
@@ -277,5 +287,81 @@ pub mod bancho_client_hardware_records {
             .name(FOREIGN_KEY_USER_ID)
             .table(BanchoClientHardwareRecords::Table)
             .to_owned()
+    }
+}
+
+pub mod favourite_beatmaps {
+    use sea_orm_migration::prelude::*;
+
+    use super::users::Users;
+
+    const FOREIGN_KEY_USER_ID: &str = "FK_favourite_beatmaps_user_id";
+    const INDEX_USER_ID: &str = "IDX_favourite_beatmaps_user_id";
+
+    #[derive(Iden)]
+    pub enum FavouriteBeatmaps {
+        Table,
+        UserId,
+        MapId,
+        Comment,
+        CreatedAt,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(FavouriteBeatmaps::Table)
+            .if_not_exists()
+            .col(ColumnDef::new(FavouriteBeatmaps::UserId).integer().not_null())
+            .col(ColumnDef::new(FavouriteBeatmaps::MapId).integer().not_null())
+            .col(
+                ColumnDef::new(FavouriteBeatmaps::Comment)
+                    .string()
+                    .string_len(15)
+                    .null(),
+            )
+            .col(
+                ColumnDef::new(FavouriteBeatmaps::CreatedAt)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .index(
+                sea_query::Index::create()
+                    .col(FavouriteBeatmaps::UserId)
+                    .col(FavouriteBeatmaps::MapId),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(FavouriteBeatmaps::Table).to_owned()
+    }
+
+    pub fn create_foreign_key() -> ForeignKeyCreateStatement {
+        sea_query::ForeignKey::create()
+            .name(FOREIGN_KEY_USER_ID)
+            .from(FavouriteBeatmaps::Table, FavouriteBeatmaps::UserId)
+            .to(Users::Table, Users::Id)
+            .on_delete(ForeignKeyAction::Cascade)
+            .on_update(ForeignKeyAction::Cascade)
+            .to_owned()
+    }
+
+    pub fn drop_foreign_key() -> ForeignKeyDropStatement {
+        sea_query::ForeignKey::drop()
+            .name(FOREIGN_KEY_USER_ID)
+            .table(FavouriteBeatmaps::Table)
+            .to_owned()
+    }
+
+    pub fn create_index() -> IndexCreateStatement {
+        sea_query::Index::create()
+            .name(INDEX_USER_ID)
+            .table(FavouriteBeatmaps::Table)
+            .col(FavouriteBeatmaps::UserId)
+            .to_owned()
+    }
+
+    pub fn drop_index() -> IndexDropStatement {
+        sea_query::Index::drop().name(INDEX_USER_ID).to_owned()
     }
 }
