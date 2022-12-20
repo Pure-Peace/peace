@@ -12,12 +12,14 @@ impl MigrationTrait for Migration {
             bancho_client_hardware_records::create(),
             favourite_beatmaps::create(),
             friend_relationships::create(),
+            custom_settings::create(),
         ];
 
         let create_foreign_key_stmts = vec![
             bancho_client_hardware_records::create_foreign_keys(),
             favourite_beatmaps::create_foreign_keys(),
             friend_relationships::create_foreign_keys(),
+            custom_settings::create_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -60,12 +62,14 @@ impl MigrationTrait for Migration {
             bancho_client_hardware_records::drop(),
             favourite_beatmaps::drop(),
             friend_relationships::drop(),
+            custom_settings::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
             bancho_client_hardware_records::drop_foreign_keys(),
             favourite_beatmaps::drop_foreign_keys(),
             friend_relationships::drop_foreign_keys(),
+            custom_settings::drop_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -485,5 +489,80 @@ pub mod friend_relationships {
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
         vec![sea_query::Index::drop().name(INDEX_USER_ID).to_owned()]
+    }
+}
+
+pub mod custom_settings {
+    use sea_orm_migration::prelude::*;
+
+    use super::users::Users;
+
+    const FOREIGN_KEY_USER_ID: &str = "FK_custom_settings_user_id";
+
+    #[derive(Iden)]
+    pub enum CustomSettings {
+        Table,
+        UserId,
+        DisplayUnicodeName,
+        PpScoreboard,
+        InvisibleOnline,
+        UpdatedAt,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(CustomSettings::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(CustomSettings::UserId)
+                    .integer()
+                    .not_null()
+                    .primary_key(),
+            )
+            .col(
+                ColumnDef::new(CustomSettings::DisplayUnicodeName)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(
+                ColumnDef::new(CustomSettings::PpScoreboard)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(
+                ColumnDef::new(CustomSettings::InvisibleOnline)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(
+                ColumnDef::new(CustomSettings::UpdatedAt)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(CustomSettings::Table).to_owned()
+    }
+
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![sea_query::ForeignKey::create()
+            .name(FOREIGN_KEY_USER_ID)
+            .from(CustomSettings::Table, CustomSettings::UserId)
+            .to(Users::Table, Users::Id)
+            .on_delete(ForeignKeyAction::Cascade)
+            .on_update(ForeignKeyAction::Cascade)
+            .to_owned()]
+    }
+
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![sea_query::ForeignKey::drop()
+            .name(FOREIGN_KEY_USER_ID)
+            .table(CustomSettings::Table)
+            .to_owned()]
     }
 }
