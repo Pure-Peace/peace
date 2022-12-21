@@ -444,7 +444,10 @@ pub mod favourite_beatmaps {
     }
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
-        vec![sea_query::Index::drop().name(INDEX_USER_ID).to_owned()]
+        vec![sea_query::Index::drop()
+            .table(FavouriteBeatmaps::Table)
+            .name(INDEX_USER_ID)
+            .to_owned()]
     }
 }
 
@@ -544,7 +547,10 @@ pub mod friend_relationships {
     }
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
-        vec![sea_query::Index::drop().name(INDEX_USER_ID).to_owned()]
+        vec![sea_query::Index::drop()
+            .table(FriendRelationships::Table)
+            .name(INDEX_USER_ID)
+            .to_owned()]
     }
 }
 
@@ -795,6 +801,7 @@ pub mod beatmaps {
                 .name(INDEX_MD5)
                 .table(Beatmaps::Table)
                 .col(Beatmaps::Md5)
+                .unique()
                 .to_owned(),
             sea_query::Index::create()
                 .name(INDEX_FILE_NAME)
@@ -811,10 +818,22 @@ pub mod beatmaps {
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
         vec![
-            sea_query::Index::drop().name(INDEX_SID).to_owned(),
-            sea_query::Index::drop().name(INDEX_MD5).to_owned(),
-            sea_query::Index::drop().name(INDEX_FILE_NAME).to_owned(),
-            sea_query::Index::drop().name(INDEX_RANK_STATUS).to_owned(),
+            sea_query::Index::drop()
+                .table(Beatmaps::Table)
+                .name(INDEX_SID)
+                .to_owned(),
+            sea_query::Index::drop()
+                .table(Beatmaps::Table)
+                .name(INDEX_MD5)
+                .to_owned(),
+            sea_query::Index::drop()
+                .table(Beatmaps::Table)
+                .name(INDEX_FILE_NAME)
+                .to_owned(),
+            sea_query::Index::drop()
+                .table(Beatmaps::Table)
+                .name(INDEX_RANK_STATUS)
+                .to_owned(),
         ]
     }
 }
@@ -844,8 +863,8 @@ pub mod beatmap_ratings {
             .col(ColumnDef::new(BeatmapRatings::UserId).integer().not_null())
             .col(
                 ColumnDef::new(BeatmapRatings::MapMd5)
-                    .string()
-                    .string_len(32)
+                    .char()
+                    .char_len(32)
                     .not_null(),
             )
             .col(
@@ -911,6 +930,10 @@ pub mod beatmap_ratings {
     }
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
-        vec![sea_query::Index::drop().name(INDEX_MD5).to_owned()]
+        vec![sea_query::Index::drop()
+            .table(BeatmapRatings::Table)
+            .name(INDEX_MD5)
+            .to_owned()]
+    }
     }
 }
