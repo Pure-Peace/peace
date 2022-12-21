@@ -13,6 +13,7 @@ impl MigrationTrait for Migration {
             favourite_beatmaps::create(),
             friend_relationships::create(),
             custom_settings::create(),
+            beatmaps::create(),
         ];
 
         let create_foreign_key_stmts = vec![
@@ -28,6 +29,7 @@ impl MigrationTrait for Migration {
         let create_index_stmts = vec![
             favourite_beatmaps::create_indexes(),
             friend_relationships::create_indexes(),
+            beatmaps::create_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -63,6 +65,7 @@ impl MigrationTrait for Migration {
             favourite_beatmaps::drop(),
             friend_relationships::drop(),
             custom_settings::drop(),
+            beatmaps::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
@@ -78,6 +81,7 @@ impl MigrationTrait for Migration {
         let drop_index_stmts = vec![
             favourite_beatmaps::drop_indexes(),
             friend_relationships::drop_indexes(),
+            beatmaps::drop_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -237,8 +241,8 @@ pub mod bancho_client_hardware_records {
             )
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::PathHash)
-                    .string()
-                    .string_len(32)
+                    .char()
+                    .char_len(32)
                     .not_null(),
             )
             .col(
@@ -248,20 +252,20 @@ pub mod bancho_client_hardware_records {
             )
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::AdaptersHash)
-                    .string()
-                    .string_len(32)
+                    .char()
+                    .char_len(32)
                     .not_null(),
             )
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::UninstallId)
-                    .string()
-                    .string_len(32)
+                    .char()
+                    .char_len(32)
                     .not_null(),
             )
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::DiskId)
-                    .string()
-                    .string_len(32)
+                    .char()
+                    .char_len(32)
                     .not_null(),
             )
             .col(
@@ -564,5 +568,199 @@ pub mod custom_settings {
             .name(FOREIGN_KEY_USER_ID)
             .table(CustomSettings::Table)
             .to_owned()]
+    }
+}
+
+pub mod beatmaps {
+    use sea_orm_migration::prelude::*;
+
+    const INDEX_SID: &str = "IDX_beatmaps_sid";
+    const INDEX_MD5: &str = "IDX_beatmaps_md5";
+    const INDEX_TITLE: &str = "IDX_beatmaps_title";
+    const INDEX_RANK_STATUS: &str = "IDX_beatmaps_rank_status";
+
+    #[derive(Iden)]
+    pub enum Beatmaps {
+        Table,
+        Bid,
+        Sid,
+        Md5,
+        Title,
+        Artist,
+        DiffName,
+        OriginServer,
+        MapperName,
+        MapperId,
+        RankStatus,
+        GameMode,
+        Stars,
+        Bpm,
+        Cs,
+        Od,
+        Ar,
+        Hp,
+        Length,
+        LengthDrain,
+        Source,
+        Tags,
+        GenreId,
+        LanguageId,
+        Storyboard,
+        Video,
+        ObjectCount,
+        SliderCount,
+        SpinnerCount,
+        MaxCombo,
+        Immutable,
+        LastUpdate,
+        UploadTime,
+        ApprovedTime,
+        UpdatedAt,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(Beatmaps::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(Beatmaps::Bid)
+                    .integer()
+                    .not_null()
+                    .primary_key(),
+            )
+            .col(ColumnDef::new(Beatmaps::Sid).integer().not_null())
+            .col(
+                ColumnDef::new(Beatmaps::Md5)
+                    .char()
+                    .char_len(32)
+                    .not_null()
+                    .unique_key(),
+            )
+            .col(ColumnDef::new(Beatmaps::Title).string().not_null())
+            .col(ColumnDef::new(Beatmaps::Artist).string().not_null())
+            .col(ColumnDef::new(Beatmaps::DiffName).string().not_null())
+            .col(ColumnDef::new(Beatmaps::OriginServer).string().not_null())
+            .col(ColumnDef::new(Beatmaps::MapperName).string().not_null())
+            .col(ColumnDef::new(Beatmaps::MapperId).string().not_null())
+            .col(
+                ColumnDef::new(Beatmaps::RankStatus)
+                    .integer()
+                    .not_null()
+                    .default(0),
+            )
+            .col(ColumnDef::new(Beatmaps::GameMode).small_integer().not_null())
+            .col(
+                ColumnDef::new(Beatmaps::Stars)
+                    .decimal()
+                    .decimal_len(16, 2)
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::Bpm)
+                    .decimal()
+                    .decimal_len(16, 2)
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::Cs)
+                    .decimal()
+                    .decimal_len(4, 2)
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::Od)
+                    .decimal()
+                    .decimal_len(4, 2)
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::Ar)
+                    .decimal()
+                    .decimal_len(4, 2)
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::Hp)
+                    .decimal()
+                    .decimal_len(4, 2)
+                    .not_null(),
+            )
+            .col(ColumnDef::new(Beatmaps::Length).integer().not_null())
+            .col(ColumnDef::new(Beatmaps::LengthDrain).integer().not_null())
+            .col(ColumnDef::new(Beatmaps::Source).string().null())
+            .col(ColumnDef::new(Beatmaps::Tags).string().null())
+            .col(ColumnDef::new(Beatmaps::GenreId).small_integer().null())
+            .col(ColumnDef::new(Beatmaps::LanguageId).small_integer().null())
+            .col(ColumnDef::new(Beatmaps::Storyboard).boolean().null())
+            .col(ColumnDef::new(Beatmaps::Video).boolean().null())
+            .col(ColumnDef::new(Beatmaps::ObjectCount).integer().null())
+            .col(ColumnDef::new(Beatmaps::SliderCount).integer().null())
+            .col(ColumnDef::new(Beatmaps::SpinnerCount).integer().null())
+            .col(ColumnDef::new(Beatmaps::MaxCombo).integer().null())
+            .col(
+                ColumnDef::new(Beatmaps::Immutable)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::LastUpdate)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::UploadTime)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::ApprovedTime)
+                    .timestamp_with_time_zone()
+                    .null(),
+            )
+            .col(
+                ColumnDef::new(Beatmaps::UpdatedAt)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(Beatmaps::Table).to_owned()
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![
+            sea_query::Index::create()
+                .name(INDEX_SID)
+                .table(Beatmaps::Table)
+                .col(Beatmaps::Sid)
+                .to_owned(),
+            sea_query::Index::create()
+                .name(INDEX_MD5)
+                .table(Beatmaps::Table)
+                .col(Beatmaps::Md5)
+                .to_owned(),
+            sea_query::Index::create()
+                .name(INDEX_TITLE)
+                .table(Beatmaps::Table)
+                .col(Beatmaps::Title)
+                .to_owned(),
+            sea_query::Index::create()
+                .name(INDEX_RANK_STATUS)
+                .table(Beatmaps::Table)
+                .col(Beatmaps::RankStatus)
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![
+            sea_query::Index::drop().name(INDEX_SID).to_owned(),
+            sea_query::Index::drop().name(INDEX_MD5).to_owned(),
+            sea_query::Index::drop().name(INDEX_TITLE).to_owned(),
+            sea_query::Index::drop().name(INDEX_RANK_STATUS).to_owned(),
+        ]
     }
 }
