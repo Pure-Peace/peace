@@ -30,7 +30,7 @@ pub enum ScoreStatus {
 #[derive(Iden)]
 enum ScoreGrade {
     #[iden = "score_grade"]
-    Enum,
+    Enum = -1,
     #[iden = "A"]
     A,
     #[iden = "B"]
@@ -101,6 +101,14 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::create(),
             user_stats_taiko_relax::create(),
             user_stats_fruits_relax::create(),
+            leaders_standard::create(),
+            leaders_taiko::create(),
+            leaders_fruits::create(),
+            leaders_mania::create(),
+            leaders_standard_relax::create(),
+            leaders_standard_autopilot::create(),
+            leaders_taiko_relax::create(),
+            leaders_fruits_relax::create(),
         ];
 
         let create_foreign_key_stmts = vec![
@@ -125,6 +133,14 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::create_foreign_keys(),
             user_stats_taiko_relax::create_foreign_keys(),
             user_stats_fruits_relax::create_foreign_keys(),
+            leaders_standard::create_foreign_keys(),
+            leaders_taiko::create_foreign_keys(),
+            leaders_fruits::create_foreign_keys(),
+            leaders_mania::create_foreign_keys(),
+            leaders_standard_relax::create_foreign_keys(),
+            leaders_standard_autopilot::create_foreign_keys(),
+            leaders_taiko_relax::create_foreign_keys(),
+            leaders_fruits_relax::create_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -144,6 +160,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::create_indexes(),
             scores_taiko_relax::create_indexes(),
             scores_fruits_relax::create_indexes(),
+            leaders_standard::create_indexes(),
+            leaders_taiko::create_indexes(),
+            leaders_fruits::create_indexes(),
+            leaders_mania::create_indexes(),
+            leaders_standard_relax::create_indexes(),
+            leaders_standard_autopilot::create_indexes(),
+            leaders_taiko_relax::create_indexes(),
+            leaders_fruits_relax::create_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -241,6 +265,14 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::drop(),
             user_stats_taiko_relax::drop(),
             user_stats_fruits_relax::drop(),
+            leaders_standard::drop(),
+            leaders_taiko::drop(),
+            leaders_fruits::drop(),
+            leaders_mania::drop(),
+            leaders_standard_relax::drop(),
+            leaders_standard_autopilot::drop(),
+            leaders_taiko_relax::drop(),
+            leaders_fruits_relax::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
@@ -265,6 +297,14 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::drop_foreign_keys(),
             user_stats_taiko_relax::drop_foreign_keys(),
             user_stats_fruits_relax::drop_foreign_keys(),
+            leaders_standard::drop_foreign_keys(),
+            leaders_taiko::drop_foreign_keys(),
+            leaders_fruits::drop_foreign_keys(),
+            leaders_mania::drop_foreign_keys(),
+            leaders_standard_relax::drop_foreign_keys(),
+            leaders_standard_autopilot::drop_foreign_keys(),
+            leaders_taiko_relax::drop_foreign_keys(),
+            leaders_fruits_relax::drop_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -284,6 +324,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::drop_indexes(),
             scores_taiko_relax::drop_indexes(),
             scores_fruits_relax::drop_indexes(),
+            leaders_standard::drop_indexes(),
+            leaders_taiko::drop_indexes(),
+            leaders_fruits::drop_indexes(),
+            leaders_mania::drop_indexes(),
+            leaders_standard_relax::drop_indexes(),
+            leaders_standard_autopilot::drop_indexes(),
+            leaders_taiko_relax::drop_indexes(),
+            leaders_fruits_relax::drop_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -1561,3 +1609,141 @@ define_user_stats!(user_stats_standard_relax, UserStatsStandardRelax);
 define_user_stats!(user_stats_standard_autopilot, UserStatsStandardAutopilot);
 define_user_stats!(user_stats_taiko_relax, UserStatsTaikoRelax);
 define_user_stats!(user_stats_fruits_relax, UserStatsFruitsRelax);
+
+macro_rules! define_leaders {
+    ($table_name: ident, $iden: ident, $relate_table: ident :: $relate_iden: ident) => {
+        pub mod $table_name {
+            use sea_orm_migration::prelude::*;
+
+            use super::users::Users;
+            use super::$relate_table::$relate_iden;
+
+            const FOREIGN_KEY_USER_ID: &str =
+                concat!("FK_", stringify!($table_name), "_user_id");
+            const FOREIGN_KEY_SCORE_ID: &str =
+                concat!("FK_", stringify!($table_name), "_score_id");
+            const INDEX_USER_ID: &str =
+                concat!("IDX_", stringify!($table_name), "_user_id");
+            const INDEX_SCORE_ID: &str =
+                concat!("IDX_", stringify!($table_name), "_score_id");
+
+            #[derive(Iden)]
+            pub enum $iden {
+                Table,
+                BeatmapId,
+                UserId,
+                ScoreId,
+            }
+
+            pub fn create() -> TableCreateStatement {
+                Table::create()
+                    .table($iden::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new($iden::BeatmapId)
+                            .integer()
+                            .primary_key()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new($iden::UserId).integer().not_null())
+                    .col(
+                        ColumnDef::new($iden::ScoreId).big_integer().not_null(),
+                    )
+                    .to_owned()
+            }
+
+            pub fn drop() -> TableDropStatement {
+                Table::drop().table($iden::Table).to_owned()
+            }
+
+            pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+                vec![
+                    sea_query::ForeignKey::create()
+                        .name(FOREIGN_KEY_USER_ID)
+                        .from($iden::Table, $iden::UserId)
+                        .to(Users::Table, Users::Id)
+                        .on_delete(ForeignKeyAction::Cascade)
+                        .on_update(ForeignKeyAction::Cascade)
+                        .to_owned(),
+                    sea_query::ForeignKey::create()
+                        .name(FOREIGN_KEY_SCORE_ID)
+                        .from($iden::Table, $iden::ScoreId)
+                        .to($relate_iden::Table, $relate_iden::Id)
+                        .on_delete(ForeignKeyAction::Cascade)
+                        .on_update(ForeignKeyAction::Cascade)
+                        .to_owned(),
+                ]
+            }
+
+            pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+                vec![
+                    sea_query::ForeignKey::drop()
+                        .name(FOREIGN_KEY_USER_ID)
+                        .table($iden::Table)
+                        .to_owned(),
+                    sea_query::ForeignKey::drop()
+                        .name(FOREIGN_KEY_SCORE_ID)
+                        .table($iden::Table)
+                        .to_owned(),
+                ]
+            }
+
+            pub fn create_indexes() -> Vec<IndexCreateStatement> {
+                vec![
+                    sea_query::Index::create()
+                        .name(INDEX_USER_ID)
+                        .table($iden::Table)
+                        .col($iden::UserId)
+                        .to_owned(),
+                    sea_query::Index::create()
+                        .name(INDEX_SCORE_ID)
+                        .table($iden::Table)
+                        .col($iden::ScoreId)
+                        .to_owned(),
+                ]
+            }
+
+            pub fn drop_indexes() -> Vec<IndexDropStatement> {
+                vec![
+                    sea_query::Index::drop()
+                        .table($iden::Table)
+                        .name(INDEX_USER_ID)
+                        .to_owned(),
+                    sea_query::Index::drop()
+                        .table($iden::Table)
+                        .name(INDEX_SCORE_ID)
+                        .to_owned(),
+                ]
+            }
+        }
+    };
+}
+
+define_leaders!(
+    leaders_standard,
+    LeadersStandard,
+    scores_standard::ScoresStandard
+);
+define_leaders!(leaders_taiko, LeadersTaiko, scores_taiko::ScoresTaiko);
+define_leaders!(leaders_fruits, LeadersFruits, scores_fruits::ScoresFruits);
+define_leaders!(leaders_mania, LeadersMania, scores_mania::ScoresMania);
+define_leaders!(
+    leaders_standard_relax,
+    LeadersStandardRelax,
+    scores_standard_relax::ScoresStandardRelax
+);
+define_leaders!(
+    leaders_standard_autopilot,
+    LeadersStandardAutopilot,
+    scores_standard_autopilot::ScoresStandardAutopilot
+);
+define_leaders!(
+    leaders_taiko_relax,
+    LeadersTaikoRelax,
+    scores_taiko_relax::ScoresTaikoRelax
+);
+define_leaders!(
+    leaders_fruits_relax,
+    LeadersFruitsRelax,
+    scores_fruits_relax::ScoresFruitsRelax
+);
