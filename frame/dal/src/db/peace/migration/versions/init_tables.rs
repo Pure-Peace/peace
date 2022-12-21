@@ -93,6 +93,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::create(),
             scores_taiko_relax::create(),
             scores_fruits_relax::create(),
+            user_stats_standard::create(),
+            user_stats_taiko::create(),
+            user_stats_fruits::create(),
+            user_stats_mania::create(),
+            user_stats_standard_relax::create(),
+            user_stats_standard_autopilot::create(),
+            user_stats_taiko_relax::create(),
+            user_stats_fruits_relax::create(),
         ];
 
         let create_foreign_key_stmts = vec![
@@ -109,6 +117,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::create_foreign_keys(),
             scores_taiko_relax::create_foreign_keys(),
             scores_fruits_relax::create_foreign_keys(),
+            user_stats_standard::create_foreign_keys(),
+            user_stats_taiko::create_foreign_keys(),
+            user_stats_fruits::create_foreign_keys(),
+            user_stats_mania::create_foreign_keys(),
+            user_stats_standard_relax::create_foreign_keys(),
+            user_stats_standard_autopilot::create_foreign_keys(),
+            user_stats_taiko_relax::create_foreign_keys(),
+            user_stats_fruits_relax::create_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -217,6 +233,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::drop(),
             scores_taiko_relax::drop(),
             scores_fruits_relax::drop(),
+            user_stats_standard::drop(),
+            user_stats_taiko::drop(),
+            user_stats_fruits::drop(),
+            user_stats_mania::drop(),
+            user_stats_standard_relax::drop(),
+            user_stats_standard_autopilot::drop(),
+            user_stats_taiko_relax::drop(),
+            user_stats_fruits_relax::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
@@ -233,6 +257,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::drop_foreign_keys(),
             scores_taiko_relax::drop_foreign_keys(),
             scores_fruits_relax::drop_foreign_keys(),
+            user_stats_standard::drop_foreign_keys(),
+            user_stats_taiko::drop_foreign_keys(),
+            user_stats_fruits::drop_foreign_keys(),
+            user_stats_mania::drop_foreign_keys(),
+            user_stats_standard_relax::drop_foreign_keys(),
+            user_stats_standard_autopilot::drop_foreign_keys(),
+            user_stats_taiko_relax::drop_foreign_keys(),
+            user_stats_fruits_relax::drop_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -1174,7 +1206,7 @@ macro_rules! define_scores {
                 Invisible,
                 VerifyAt,
                 CreateAt,
-                UpdateAt,
+                UpdatedAt,
             }
 
             pub fn create() -> TableCreateStatement {
@@ -1295,7 +1327,7 @@ macro_rules! define_scores {
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new($iden::UpdateAt)
+                        ColumnDef::new($iden::UpdatedAt)
                             .timestamp_with_time_zone()
                             .not_null(),
                     )
@@ -1362,3 +1394,170 @@ define_scores!(scores_standard_relax, ScoresStandardRelax);
 define_scores!(scores_standard_autopilot, ScoresStandardAutopilot);
 define_scores!(scores_taiko_relax, ScoresTaikoRelax);
 define_scores!(scores_fruits_relax, ScoresFruitsRelax);
+
+macro_rules! define_user_stats {
+    ($table_name: ident, $iden: ident) => {
+        pub mod $table_name {
+            use sea_orm_migration::prelude::*;
+
+            use super::users::Users;
+
+            const FOREIGN_KEY_USER_ID: &str =
+                concat!("FK_", stringify!($table_name), "_user_id");
+
+            #[derive(Iden)]
+            pub enum $iden {
+                Table,
+                UserId,
+                TotalScore,
+                RankedScore,
+                Performance,
+                Playcount,
+                TotalHits,
+                Accuracy,
+                MaxCombo,
+                TotalSecondsPlayed,
+                Count300,
+                Count100,
+                Count50,
+                CountMiss,
+                CountFailed,
+                CountQuit,
+                UpdatedAt,
+            }
+
+            pub fn create() -> TableCreateStatement {
+                Table::create()
+                    .table($iden::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new($iden::UserId)
+                            .integer()
+                            .primary_key()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new($iden::TotalScore)
+                            .big_integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::RankedScore)
+                            .big_integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Performance)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Playcount)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::TotalHits)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Accuracy)
+                            .decimal()
+                            .decimal_len(6, 2)
+                            .not_null()
+                            .default(0.0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::MaxCombo)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::TotalSecondsPlayed)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Count300)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Count100)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Count50)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::CountMiss)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::CountFailed)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::CountQuit)
+                            .integer()
+                            .not_null()
+                            .default(0),
+                    )
+                    .col(
+                        ColumnDef::new($iden::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .to_owned()
+            }
+
+            pub fn drop() -> TableDropStatement {
+                Table::drop().table($iden::Table).to_owned()
+            }
+
+            pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+                vec![sea_query::ForeignKey::create()
+                    .name(FOREIGN_KEY_USER_ID)
+                    .from($iden::Table, $iden::UserId)
+                    .to(Users::Table, Users::Id)
+                    .on_delete(ForeignKeyAction::Cascade)
+                    .on_update(ForeignKeyAction::Cascade)
+                    .to_owned()]
+            }
+
+            pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+                vec![sea_query::ForeignKey::drop()
+                    .name(FOREIGN_KEY_USER_ID)
+                    .table($iden::Table)
+                    .to_owned()]
+            }
+        }
+    };
+}
+
+define_user_stats!(user_stats_standard, UserStatsStandard);
+define_user_stats!(user_stats_taiko, UserStatsTaiko);
+define_user_stats!(user_stats_fruits, UserStatsFruits);
+define_user_stats!(user_stats_mania, UserStatsMania);
+define_user_stats!(user_stats_standard_relax, UserStatsStandardRelax);
+define_user_stats!(user_stats_standard_autopilot, UserStatsStandardAutopilot);
+define_user_stats!(user_stats_taiko_relax, UserStatsTaikoRelax);
+define_user_stats!(user_stats_fruits_relax, UserStatsFruitsRelax);
