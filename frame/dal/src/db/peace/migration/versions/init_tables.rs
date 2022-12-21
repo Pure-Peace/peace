@@ -40,6 +40,12 @@ impl MigrationTrait for Migration {
 
         let create_type_stmts = vec![];
 
+        if manager.get_database_backend() == DbBackend::Postgres {
+            for stmt in create_type_stmts {
+                manager.create_type(stmt).await?;
+            }
+        }
+
         for stmt in create_table_stmts {
             manager.create_table(stmt).await?;
         }
@@ -50,12 +56,6 @@ impl MigrationTrait for Migration {
 
         for stmt in create_index_stmts {
             manager.create_index(stmt).await?;
-        }
-
-        if manager.get_database_backend() == DbBackend::Postgres {
-            for stmt in create_type_stmts {
-                manager.create_type(stmt).await?;
-            }
         }
 
         Ok(())
@@ -582,7 +582,7 @@ pub mod beatmaps {
 
     const INDEX_SID: &str = "IDX_beatmaps_sid";
     const INDEX_MD5: &str = "IDX_beatmaps_md5";
-    const INDEX_TITLE: &str = "IDX_beatmaps_title";
+    const INDEX_FILE_NAME: &str = "IDX_beatmaps_file_name";
     const INDEX_RANK_STATUS: &str = "IDX_beatmaps_rank_status";
 
     #[derive(Iden)]
@@ -592,6 +592,7 @@ pub mod beatmaps {
         Sid,
         Md5,
         Title,
+        FileName,
         Artist,
         DiffName,
         OriginServer,
@@ -643,6 +644,7 @@ pub mod beatmaps {
                     .unique_key(),
             )
             .col(ColumnDef::new(Beatmaps::Title).string().not_null())
+            .col(ColumnDef::new(Beatmaps::FileName).string().not_null())
             .col(ColumnDef::new(Beatmaps::Artist).string().not_null())
             .col(ColumnDef::new(Beatmaps::DiffName).string().not_null())
             .col(ColumnDef::new(Beatmaps::OriginServer).string().not_null())
@@ -749,9 +751,9 @@ pub mod beatmaps {
                 .col(Beatmaps::Md5)
                 .to_owned(),
             sea_query::Index::create()
-                .name(INDEX_TITLE)
+                .name(INDEX_FILE_NAME)
                 .table(Beatmaps::Table)
-                .col(Beatmaps::Title)
+                .col(Beatmaps::FileName)
                 .to_owned(),
             sea_query::Index::create()
                 .name(INDEX_RANK_STATUS)
@@ -765,7 +767,7 @@ pub mod beatmaps {
         vec![
             sea_query::Index::drop().name(INDEX_SID).to_owned(),
             sea_query::Index::drop().name(INDEX_MD5).to_owned(),
-            sea_query::Index::drop().name(INDEX_TITLE).to_owned(),
+            sea_query::Index::drop().name(INDEX_FILE_NAME).to_owned(),
             sea_query::Index::drop().name(INDEX_RANK_STATUS).to_owned(),
         ]
     }
