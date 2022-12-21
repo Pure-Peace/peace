@@ -29,6 +29,7 @@ impl MigrationTrait for Migration {
         .collect::<Vec<_>>();
 
         let create_index_stmts = vec![
+            users::create_indexes(),
             favourite_beatmaps::create_indexes(),
             friend_relationships::create_indexes(),
             beatmaps::create_indexes(),
@@ -84,6 +85,7 @@ impl MigrationTrait for Migration {
         .collect::<Vec<_>>();
 
         let drop_index_stmts = vec![
+            users::drop_indexes(),
             favourite_beatmaps::drop_indexes(),
             friend_relationships::drop_indexes(),
             beatmaps::drop_indexes(),
@@ -119,6 +121,10 @@ impl MigrationTrait for Migration {
 
 pub mod users {
     use sea_orm_migration::prelude::*;
+
+    const INDEX_NAME_SAFE: &str = "IDX_users_name_safe";
+    const INDEX_NAME_UNICODE_SAFE: &str = "IDX_users_name_unicode_safe";
+    const INDEX_EMAIL: &str = "IDX_users_email";
 
     #[derive(Iden)]
     pub enum Users {
@@ -205,6 +211,46 @@ pub mod users {
 
     pub fn drop() -> TableDropStatement {
         Table::drop().table(Users::Table).to_owned()
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![
+            sea_query::Index::create()
+                .name(INDEX_NAME_SAFE)
+                .table(Users::Table)
+                .col(Users::NameSafe)
+                .unique()
+                .to_owned(),
+            sea_query::Index::create()
+                .name(INDEX_NAME_UNICODE_SAFE)
+                .table(Users::Table)
+                .col(Users::NameUnicodeSafe)
+                .unique()
+                .to_owned(),
+            sea_query::Index::create()
+                .name(INDEX_EMAIL)
+                .table(Users::Table)
+                .col(Users::Email)
+                .unique()
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![
+            sea_query::Index::drop()
+                .table(Users::Table)
+                .name(INDEX_NAME_SAFE)
+                .to_owned(),
+            sea_query::Index::drop()
+                .table(Users::Table)
+                .name(INDEX_NAME_UNICODE_SAFE)
+                .to_owned(),
+            sea_query::Index::drop()
+                .table(Users::Table)
+                .name(INDEX_EMAIL)
+                .to_owned(),
+        ]
     }
 }
 

@@ -24,3 +24,5 @@ config.toml
 *.pem
 *.crt
 *.key
+
+.vscode
