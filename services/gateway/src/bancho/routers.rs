@@ -5,7 +5,7 @@ use axum::{
 
 use crate::bancho::impls::client;
 
-pub fn bancho_client_routes() -> Router {
+pub fn bancho_client_routes<T: Clone + Sync + Send + 'static>() -> Router<T> {
     Router::new()
         .route("/", post(client::bancho_post))
         .route("/ss/:screenshot", get(client::get_screenshot))
@@ -17,7 +17,8 @@ pub fn bancho_client_routes() -> Router {
 }
 
 /// osu! bancho `/web` routes.
-pub fn bancho_client_web_routes() -> Router {
+pub fn bancho_client_web_routes<T: Clone + Sync + Send + 'static>() -> Router<T>
+{
     Router::new()
         .route("/osu-error.php", post(client::web::osu_error))
         .route("/osu-screenshot.php", post(client::web::osu_screenshot))

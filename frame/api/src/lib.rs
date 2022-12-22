@@ -24,7 +24,7 @@ pub trait Application: Clone + Send + Sync + 'static {
     }
 
     /// Returns the [`Router`] for this app
-    fn router(&self) -> Router;
+    fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T, Body>;
 
     /// Returns the OpenApi documentation for this app.
     fn apidocs(&self) -> OpenApi;

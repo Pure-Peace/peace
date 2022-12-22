@@ -25,7 +25,7 @@ impl Application for App {
         &self.cfg.frame_cfg
     }
 
-    fn router(&self) -> Router {
+    fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
         Router::new()
             .route("/", get(peace_api::responder::app_root))
             .nest("/bancho", bancho::routers::bancho_client_routes())
