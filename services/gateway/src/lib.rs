@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate peace_logs;
+
 pub mod apidocs;
 pub mod bancho;
 pub mod cfg;
@@ -29,6 +32,7 @@ impl App {
     pub async fn connect_bancho_service(
         &self,
     ) -> Result<BanchoRpcClient<Channel>, anyhow::Error> {
+        info!("Connecting bancho gRPC service...");
         #[cfg(unix)]
         if let Some(uds) = self.cfg.bancho_uds {
             let channel =
@@ -68,7 +72,7 @@ impl Application for App {
         let bancho_handlers = self.connect_bancho_service().await.unwrap();
 
         Router::new()
-            .route("/", get(|| async { tools::pkg_metadata!() }))
+            .route("/", get(handler::bancho_get))
             .route("/", post(handler::bancho_post))
             .route("/ss/:screenshot", get(handler::get_screenshot))
             .route("/d/:beatmapset_id", get(handler::download_beatmapset))
