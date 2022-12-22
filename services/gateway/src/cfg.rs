@@ -22,8 +22,8 @@ pub struct GatewayConfig {
     pub bancho_hostname: Vec<String>,
 
     /// Bancho service address.
-    #[default("http://[::1]:50051".to_owned())]
-    #[arg(long, default_value = "http://[::1]:50051")]
+    #[default("http://127.0.0.1:50051".to_owned())]
+    #[arg(long, default_value = "http://127.0.0.1:50051")]
     pub bancho_addr: String,
 
     /// Bancho service unix domain socket path.

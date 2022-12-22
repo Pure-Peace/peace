@@ -39,5 +39,7 @@ pub trait Application: Clone + Send + Sync + 'static {
         &self,
         host: Host,
         req: &Request<Body>,
-    ) -> Option<Router>;
+    ) -> Option<Router> {
+        None
+    }
 }

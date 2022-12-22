@@ -4,8 +4,11 @@ pub mod cfg;
 
 use apidocs::GatewayApiDocs;
 use axum::{
-    async_trait, body::Body, extract::Host, http::Request, routing::get, Router,
+    async_trait,
+    routing::{get, post},
+    Router,
 };
+use bancho::handler;
 use cfg::GatewayConfig;
 use peace_api::{cfg::ApiFrameConfig, Application};
 use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
@@ -62,28 +65,51 @@ impl Application for App {
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
-        let bancho_client = self.connect_bancho_service().await.unwrap();
+        let bancho_handlers = self.connect_bancho_service().await.unwrap();
 
         Router::new()
-            .route("/", get(peace_api::responder::app_root))
-            .nest("/bancho", bancho::routers::bancho_client_routes())
-            .with_state(bancho_client)
+            .route("/", get(|| async { tools::pkg_metadata!() }))
+            .route("/", post(handler::bancho_post))
+            .route("/ss/:screenshot", get(handler::get_screenshot))
+            .route("/d/:beatmapset_id", get(handler::download_beatmapset))
+            .route("/users", post(handler::client_register))
+            .route("/p/doyoureallywanttoaskpeppy", get(handler::ask_peppy))
+            .route("/difficulty-rating", get(handler::difficulty_rating))
+            .route("/web/osu-error.php", post(handler::osu_error))
+            .route("/web/osu-screenshot.php", post(handler::osu_screenshot))
+            .route("/web/osu-getfriends.php", get(handler::osu_getfriends))
+            .route(
+                "/web/osu-getbeatmapinfo.php",
+                get(handler::osu_getbeatmapinfo),
+            )
+            .route(
+                "/web/osu-getfavourites.php",
+                get(handler::osu_getfavourites),
+            )
+            .route("/web/osu-addfavourite.php", get(handler::osu_addfavourite))
+            .route("/web/lastfm.php", get(handler::lastfm))
+            .route("/web/osu-search.php", get(handler::osu_search))
+            .route("/web/osu-search-set.php", get(handler::osu_search_set))
+            .route(
+                "/web/osu-submit-modular-selector.php",
+                post(handler::osu_submit_modular_selector),
+            )
+            .route("/web/osu-getreplay.php", get(handler::osu_getreplay))
+            .route("/web/osu-rate.php", get(handler::osu_rate))
+            .route(
+                "/web/osu-osz2-getscores.php",
+                get(handler::osu_osz2_getscores),
+            )
+            .route("/web/osu-comment.php", post(handler::osu_comment))
+            .route("/web/osu-markasread.php", get(handler::osu_markasread))
+            .route("/web/osu-getseasonal.php", get(handler::osu_getseasonal))
+            .route("/web/bancho_connect.php", get(handler::bancho_connect))
+            .route("/web/check-updates", get(handler::check_updates))
+            .route("/web/maps/:beatmap_file_name", get(handler::update_beatmap))
+            .with_state(bancho_handlers)
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {
         GatewayApiDocs::openapi()
-    }
-
-    async fn match_hostname(
-        &self,
-        Host(hostname): Host,
-        req: &Request<Body>,
-    ) -> Option<Router> {
-        match hostname {
-            n if self.cfg.bancho_hostname.contains(&n) => {
-                Some(bancho::routers::bancho_client_routes())
-            },
-            _ => None,
-        }
     }
 }
