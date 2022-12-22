@@ -50,7 +50,7 @@ pub async fn any_path(
     // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert panic.
     req.extensions_mut().remove::<axum::extract::MatchedPath>();
 
-    match app.match_hostname(host, &req) {
+    match app.match_hostname(host, &req).await {
         Some(router) => call_router(router, req).await,
         None => Error::NotFound.into_response(),
     }

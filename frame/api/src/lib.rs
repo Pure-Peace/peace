@@ -6,7 +6,7 @@ mod components;
 pub use components::*;
 pub use peace_cfg::{macro_impl_config as impl_config, ParseConfig};
 
-use axum::{body::Body, extract::Host, http::Request, Router};
+use axum::{async_trait, body::Body, extract::Host, http::Request, Router};
 use cfg::ApiFrameConfig;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -14,6 +14,7 @@ use utoipa::openapi::OpenApi;
 
 /// We can build app using `peace_api`,
 /// just use [`Application`] and implement this trait for App.
+#[async_trait]
 pub trait Application: Clone + Send + Sync + 'static {
     /// App cfg should inherit [`ApiFrameConfig`], so this function is used to return it.
     fn frame_cfg(&self) -> &ApiFrameConfig;
@@ -24,7 +25,8 @@ pub trait Application: Clone + Send + Sync + 'static {
     }
 
     /// Returns the [`Router`] for this app
-    fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T, Body>;
+    async fn router<T: Clone + Sync + Send + 'static>(&self)
+        -> Router<T, Body>;
 
     /// Returns the OpenApi documentation for this app.
     fn apidocs(&self) -> OpenApi;
@@ -33,6 +35,9 @@ pub trait Application: Clone + Send + Sync + 'static {
     ///
     /// Match the hostname with the specified service, and return a router,
     /// and the server will try to execute the corresponding implementation according to the path.
-    fn match_hostname(&self, host: Host, req: &Request<Body>)
-        -> Option<Router>;
+    async fn match_hostname(
+        &self,
+        host: Host,
+        req: &Request<Body>,
+    ) -> Option<Router>;
 }

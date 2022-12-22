@@ -17,9 +17,10 @@ use utoipa::openapi::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 /// App router with some middleware.
-pub fn app(app: impl Application) -> Router {
+pub async fn app(app: impl Application) -> Router {
     let cfg = app.frame_cfg_arc();
     app_router(app)
+        .await
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(responder::handle_error))
@@ -71,9 +72,10 @@ pub fn admin_routers(admin_token: Option<&str>) -> Router {
 }
 
 /// App router
-pub fn app_router(app: impl Application) -> Router {
+pub async fn app_router(app: impl Application) -> Router {
     let cfg = app.frame_cfg();
-    let mut router = openapi_router(app.apidocs(), cfg).merge(app.router());
+    let mut router =
+        openapi_router(app.apidocs(), cfg).merge(app.router().await);
 
     if cfg.admin_endpoints {
         router = router.merge(admin_routers(cfg.admin_token.as_deref()))
