@@ -14,7 +14,7 @@ use peace_pb::frame::logs::logs_rpc_server::LogsRpcServer;
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
     let cfg = app_cfg.frame_cfg_arc();
-    let mut svr = app_cfg.service(server(&cfg));
+    let mut svr = app_cfg.service(server(&cfg)).await;
 
     #[cfg(feature = "reflection")]
     if cfg.rpc_reflection {

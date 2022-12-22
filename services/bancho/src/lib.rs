@@ -9,7 +9,10 @@ use peace_pb::services::bancho::{
 use peace_rpc::{cfg::RpcFrameConfig, Application};
 use rpc::Bancho;
 use std::sync::Arc;
-use tonic::transport::{server::Router, Server};
+use tonic::{
+    async_trait,
+    transport::{server::Router, Server},
+};
 
 #[derive(Clone)]
 pub struct App {
@@ -22,6 +25,7 @@ impl App {
     }
 }
 
+#[async_trait]
 impl Application for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
@@ -31,7 +35,7 @@ impl Application for App {
         Some(&[BANCHO_DESCRIPTOR_SET])
     }
 
-    fn service(&self, mut configured_server: Server) -> Router {
+    async fn service(&self, mut configured_server: Server) -> Router {
         let svc = Bancho::default();
         configured_server.add_service(BanchoRpcServer::new(svc))
     }

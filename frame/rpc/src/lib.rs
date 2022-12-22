@@ -9,13 +9,17 @@ pub use peace_cfg::{macro_impl_config as impl_config, ParseConfig};
 use cfg::RpcFrameConfig;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
-use tonic::transport::{server::Router, Server};
+use tonic::{
+    async_trait,
+    transport::{server::Router, Server},
+};
 use tower_layer::Identity;
 
 pub type DescriptorBuf<'a> = &'a [u8];
 
 /// We can build app using `peace_rpc`,
 /// just use [`Application`] and implement this trait for your App.
+#[async_trait]
 pub trait Application: Clone + Send + Sync + 'static {
     /// App cfg should inherit [`RpcFrameConfig`], so this function is used to return it.
     fn frame_cfg(&self) -> &RpcFrameConfig;
@@ -29,5 +33,5 @@ pub trait Application: Clone + Send + Sync + 'static {
     #[cfg(feature = "reflection")]
     fn service_descriptors(&self) -> Option<&[DescriptorBuf]>;
 
-    fn service(&self, configured_server: Server) -> Router<Identity>;
+    async fn service(&self, configured_server: Server) -> Router<Identity>;
 }

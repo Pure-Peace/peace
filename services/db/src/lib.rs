@@ -8,7 +8,10 @@ use peace_pb::services::peace_db::{
 use peace_rpc::{cfg::RpcFrameConfig, Application};
 use rpc::peace_db::PeaceDbService;
 use std::sync::Arc;
-use tonic::transport::{server::Router, Server};
+use tonic::{
+    async_trait,
+    transport::{server::Router, Server},
+};
 
 #[derive(Clone)]
 pub struct App {
@@ -21,6 +24,7 @@ impl App {
     }
 }
 
+#[async_trait]
 impl Application for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
@@ -30,7 +34,7 @@ impl Application for App {
         Some(&[PEACE_DB_DESCRIPTOR_SET])
     }
 
-    fn service(&self, mut configured_server: Server) -> Router {
+    async fn service(&self, mut configured_server: Server) -> Router {
         let svc = PeaceDbService::default();
         configured_server.add_service(PeaceDbRpcServer::new(svc))
     }
