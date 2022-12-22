@@ -2,4 +2,35 @@
 
 pub mod prelude;
 
-pub mod posts;
+pub mod bancho_client_hardware_records;
+pub mod beatmap_ratings;
+pub mod beatmaps;
+pub mod custom_settings;
+pub mod favourite_beatmaps;
+pub mod friend_relationships;
+pub mod leaders_fruits;
+pub mod leaders_fruits_relax;
+pub mod leaders_mania;
+pub mod leaders_standard;
+pub mod leaders_standard_autopilot;
+pub mod leaders_standard_relax;
+pub mod leaders_taiko;
+pub mod leaders_taiko_relax;
+pub mod scores_fruits;
+pub mod scores_fruits_relax;
+pub mod scores_mania;
+pub mod scores_standard;
+pub mod scores_standard_autopilot;
+pub mod scores_standard_relax;
+pub mod scores_taiko;
+pub mod scores_taiko_relax;
+pub mod sea_orm_active_enums;
+pub mod user_stats_fruits;
+pub mod user_stats_fruits_relax;
+pub mod user_stats_mania;
+pub mod user_stats_standard;
+pub mod user_stats_standard_autopilot;
+pub mod user_stats_standard_relax;
+pub mod user_stats_taiko;
+pub mod user_stats_taiko_relax;
+pub mod users;
