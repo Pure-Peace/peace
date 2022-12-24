@@ -6,6 +6,7 @@ members = [
     "services/gateway",
     "services/db",
     "lib/tools",
+    "lib/bancho-packets",
     "frame/logs",
     "frame/api",
     "frame/dal",

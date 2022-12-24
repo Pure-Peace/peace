@@ -1,0 +1,26 @@
+[package]
+name = "bancho-packets"
+version = "4.0.0"
+authors = ["PurePeace <purepeace_@outlook.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/pure-peace/peace"
+description = "osu! bancho packet reading & writing utilities."
+readme = "README.md"
+
+[features]
+default = ["serde"]
+
+[dependencies]
+num-traits = "0.2"
+enum-primitive-derive = "0.2"
+
+serde = { version = "1.0.151", features = ["derive"], optional = true }
+
+[dev-dependencies]
+criterion = "0.3"
+
+
+[[bench]]
+name = "packet_bench"
+harness = false
