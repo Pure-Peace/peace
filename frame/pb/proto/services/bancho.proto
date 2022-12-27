@@ -2,8 +2,63 @@ syntax = "proto3";
 
 package peace.services.bancho;
 
-service BanchoRPC { rpc SayHello(HelloRequest) returns (HelloReply); }
+service BanchoRPC {
+  rpc Ping(PingRequest) returns (CommonReply);
+  rpc Login(LoginRequest) returns (LoginReply);
+  rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (CommonReply);
+  rpc PresenceRequestAll(PresenceRequestAllRequest) returns (CommonReply);
+  rpc SpectateStop(SpectateStopRequest) returns (CommonReply);
+  rpc SpectateCant(SpectateCantRequest) returns (CommonReply);
+  rpc LobbyPart(LobbyPartRequest) returns (CommonReply);
+  rpc LobbyJoin(LobbyJoinRequest) returns (CommonReply);
+}
 
-message HelloRequest { string name = 1; }
+enum RpcStatus {
+  OK = 0;
+  Err = 1;
+}
 
-message HelloReply { string message = 1; }
+message CommonReply {
+  RpcStatus status = 1;
+  optional bytes packet = 2;
+  optional string err = 3;
+}
+
+message PingRequest { string token = 1; }
+
+message ClientHashes {
+  string path_hash = 1;
+  string adapters = 2;
+  string adapters_hash = 3;
+  string uninstall_id = 4;
+  string disk_id = 5;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  string client_version = 3;
+  ClientHashes client_hashes = 4;
+  int32 utc_offset = 5;
+  bool display_city = 6;
+  bool only_friend_pm_allowed = 7;
+}
+
+message LoginReply {
+  RpcStatus status = 1;
+  optional string token = 2;
+  optional string protocol = 3;
+  optional bytes packet = 4;
+}
+
+message RequestStatusUpdateRequest { string token = 1; }
+
+message PresenceRequestAllRequest { string token = 1; }
+
+message SpectateStopRequest { string token = 1; }
+
+message SpectateCantRequest { string token = 1; }
+
+message LobbyPartRequest { string token = 1; }
+
+message LobbyJoinRequest { string token = 1; }
