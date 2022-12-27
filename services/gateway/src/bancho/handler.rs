@@ -1,15 +1,16 @@
 use axum::{
-    body::Body,
-    extract::{Path, RawBody, State},
-    http::Request,
+    extract::{Path, State},
     response::{IntoResponse, Response},
 };
 
-use peace_api::extractors::{ClientIp, OsuClientBody, OsuToken, OsuVersion};
-use peace_pb::services::bancho::{
-    bancho_rpc_client::BanchoRpcClient, LoginRequest,
+use peace_api::{
+    error,
+    extractors::{ClientIp, OsuClientBody, OsuToken, OsuVersion},
 };
+use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
 use tonic::transport::Channel;
+
+use super::parser;
 
 /// Bancho get handler
 #[utoipa::path(
@@ -37,25 +38,24 @@ pub async fn bancho_post(
     OsuToken(osu_token): OsuToken,
     OsuVersion(osu_version): OsuVersion,
     ClientIp(ip): ClientIp,
-    State(bancho): State<BanchoRpcClient<Channel>>,
+    State(mut bancho): State<BanchoRpcClient<Channel>>,
     OsuClientBody(body): OsuClientBody,
-) -> Response {
+) -> Result<Response, Response> {
     if osu_token.is_none() {
-        /* return bancho.login(LoginRequest{
-            username
-            password
-            client_version
-            client_hashes
-            utc_offset
-            display_city
-            only_friend_pm_allowed
-        }).await; */
+        let lines = parser::parse_osu_login_data_lines(body.to_vec())?;
+        let request = parser::parse_osu_login_request_data(lines)?;
+        let resp = bancho.login(request).await.map_err(|err| {
+            error!("{:?}", err);
+            error::Error::Anyhow(anyhow!("{}", err.message())).into_response()
+        })?;
+
+        println!("{:?}", resp)
     }
 
-    println!("{:?} {} {}", osu_token, osu_version, ip);
-    println!("{:?}", body);
+    /* println!("{:?} {} {}", osu_token, osu_version, ip);
+    println!("{:?}", body); */
 
-    "ok".into_response()
+    Ok("ok".into_response())
 }
 
 /// Bancho get_screenshot

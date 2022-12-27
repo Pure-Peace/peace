@@ -129,3 +129,7 @@ impl IntoResponse for Error {
         (self.status_code(), self.to_string()).into_response()
     }
 }
+
+pub fn map_err(err: impl std::fmt::Display) -> crate::error::Error {
+    Error::Anyhow(anyhow!("{}", err))
+}
