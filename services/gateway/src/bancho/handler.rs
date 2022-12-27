@@ -2,6 +2,8 @@ use axum::{
     extract::{Path, State},
     response::{IntoResponse, Response},
 };
+
+use peace_api::extrators::{ClientIp, OsuToken, OsuVersion};
 use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
 use tonic::transport::Channel;
 
@@ -28,9 +30,14 @@ pub async fn bancho_get() -> Response {
     )
 )]
 pub async fn bancho_post(
+    OsuToken(osu_token): OsuToken,
+    OsuVersion(osu_version): OsuVersion,
+    ClientIp(ip): ClientIp,
     State(bancho): State<BanchoRpcClient<Channel>>,
 ) -> Response {
-    unimplemented!()
+    println!("{:?} {} {}", osu_token, osu_version, ip);
+
+    "ok".into_response()
 }
 
 /// Bancho get_screenshot
@@ -290,7 +297,7 @@ pub async fn osu_comment() -> Response {
     )
 )]
 pub async fn osu_markasread() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }
 
 /// Bancho osu_getseasonal
@@ -303,7 +310,7 @@ pub async fn osu_markasread() -> Response {
     )
 )]
 pub async fn osu_getseasonal() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }
 
 /// Bancho bancho_connect
@@ -316,7 +323,7 @@ pub async fn osu_getseasonal() -> Response {
     )
 )]
 pub async fn bancho_connect() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }
 
 /// Bancho check_updates
@@ -329,7 +336,7 @@ pub async fn bancho_connect() -> Response {
     )
 )]
 pub async fn check_updates() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }
 
 /// Bancho update_beatmap
@@ -342,5 +349,5 @@ pub async fn check_updates() -> Response {
     )
 )]
 pub async fn update_beatmap() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }

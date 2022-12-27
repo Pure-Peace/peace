@@ -32,9 +32,9 @@ impl App {
     pub async fn connect_bancho_service(
         &self,
     ) -> Result<BanchoRpcClient<Channel>, anyhow::Error> {
-        info!("Connecting bancho gRPC service...");
         #[cfg(unix)]
         if let Some(uds) = self.cfg.bancho_uds {
+            info!("Connecting bancho gRPC service: {}", uds);
             let channel =
                 tonic::transport::Endpoint::try_from("http://[::]:50051")?
                     .connect_with_connector(tower::service_fn(|_| {
@@ -44,6 +44,7 @@ impl App {
             return BanchoRpcClient::new(channel);
         }
 
+        info!("Connecting bancho gRPC service: {}", self.cfg.bancho_addr);
         if self.cfg.bancho_tls {
             let pem =
                 tokio::fs::read(self.cfg.bancho_ssl_cert.as_ref().unwrap())
