@@ -1,7 +1,14 @@
-use std::convert::Infallible;
-
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use crate::error::Error;
+use axum::{
+    async_trait,
+    body::Bytes,
+    extract::{FromRequest, FromRequestParts},
+    http::{request::Parts, Request},
+    response::{IntoResponse, Response},
+};
 pub use axum_client_ip::ClientIp;
+use hyper::header::USER_AGENT;
+use std::convert::Infallible;
 
 pub const OSU_VERSION: &str = "osu-version";
 pub const OSU_TOKEN: &str = "osu-token";
@@ -14,7 +21,7 @@ impl<S> FromRequestParts<S> for OsuVersion
 where
     S: Send + Sync,
 {
-    type Rejection = crate::error::Error;
+    type Rejection = Error;
 
     async fn from_request_parts(
         parts: &mut Parts,
@@ -51,5 +58,40 @@ where
             .and_then(|s| Some(s.to_owned()));
 
         Ok(Self(token))
+    }
+}
+
+#[derive(Debug)]
+pub struct OsuClientBody(pub Bytes);
+
+#[async_trait]
+impl<S, B> FromRequest<S, B> for OsuClientBody
+where
+    Bytes: FromRequest<S, B>,
+    B: Send + 'static,
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request(
+        req: Request<B>,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        if !req
+            .headers()
+            .get(USER_AGENT)
+            .and_then(|hv| hv.to_str().ok())
+            .map(|ua| ua == "osu!")
+            .unwrap_or(false)
+        {
+            return Err(Error::Anyhow(anyhow!("Invalid client user-agent."))
+                .into_response());
+        }
+
+        Ok(Self(
+            Bytes::from_request(req, state)
+                .await
+                .map_err(IntoResponse::into_response)?,
+        ))
     }
 }

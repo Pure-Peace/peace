@@ -1,10 +1,14 @@
 use axum::{
-    extract::{Path, State},
+    body::Body,
+    extract::{Path, RawBody, State},
+    http::Request,
     response::{IntoResponse, Response},
 };
 
-use peace_api::extrators::{ClientIp, OsuToken, OsuVersion};
-use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
+use peace_api::extrators::{ClientIp, OsuClientBody, OsuToken, OsuVersion};
+use peace_pb::services::bancho::{
+    bancho_rpc_client::BanchoRpcClient, LoginRequest,
+};
 use tonic::transport::Channel;
 
 /// Bancho get handler
@@ -34,8 +38,22 @@ pub async fn bancho_post(
     OsuVersion(osu_version): OsuVersion,
     ClientIp(ip): ClientIp,
     State(bancho): State<BanchoRpcClient<Channel>>,
+    OsuClientBody(body): OsuClientBody,
 ) -> Response {
+    if osu_token.is_none() {
+        /* bancho.login(LoginRequest{
+            username
+            password
+            client_version
+            client_hashes
+            utc_offset
+            display_city
+            only_friend_pm_allowed
+        }); */
+    }
+
     println!("{:?} {} {}", osu_token, osu_version, ip);
+    println!("{:?}", body);
 
     "ok".into_response()
 }
