@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate peace_logs;
+#[macro_use]
+extern crate anyhow;
 
 pub mod apidocs;
 pub mod bancho;

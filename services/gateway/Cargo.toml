@@ -22,7 +22,7 @@ path = "src/main.rs"
 axum = { version = "0.6.0" }
 tokio = { version = "1.0" }
 tower = { version = "0.4" }
-tonic = { version = "0.8" }
+tonic = { version = "0.8", features = ["tls"] }
 anyhow = { version = "1.0" }
 
 # openapi
