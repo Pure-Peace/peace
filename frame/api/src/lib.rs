@@ -4,7 +4,7 @@ extern crate peace_logs;
 extern crate anyhow;
 
 mod components;
-pub mod extrators;
+pub mod extractors;
 
 pub use components::*;
 pub use peace_cfg::{macro_impl_config as impl_config, ParseConfig};

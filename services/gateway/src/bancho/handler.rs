@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use peace_api::extrators::{ClientIp, OsuClientBody, OsuToken, OsuVersion};
+use peace_api::extractors::{ClientIp, OsuClientBody, OsuToken, OsuVersion};
 use peace_pb::services::bancho::{
     bancho_rpc_client::BanchoRpcClient, LoginRequest,
 };
@@ -41,7 +41,7 @@ pub async fn bancho_post(
     OsuClientBody(body): OsuClientBody,
 ) -> Response {
     if osu_token.is_none() {
-        /* bancho.login(LoginRequest{
+        /* return bancho.login(LoginRequest{
             username
             password
             client_version
@@ -49,7 +49,7 @@ pub async fn bancho_post(
             utc_offset
             display_city
             only_friend_pm_allowed
-        }); */
+        }).await; */
     }
 
     println!("{:?} {} {}", osu_token, osu_version, ip);
