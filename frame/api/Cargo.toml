@@ -17,7 +17,7 @@ tls = ["axum-server/tls-rustls", "axum/http2"]
 [dependencies]
 # core
 futures = "0.3"
-axum = { version = "0.6.0" }
+axum = { version = "0.6.0", features = ["headers"] }
 axum-server = { version = "0.4" }
 tokio = { version = "1.0", features = ["full"] }
 hyper = { version = "0.14" }
@@ -42,6 +42,8 @@ clap-serde-derive = "0.2.0"
 once_cell = "1.16"
 thiserror = "1.0"
 anyhow = "1.0"
+axum-client-ip = "0.3.0"
+
 
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }
