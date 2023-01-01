@@ -10,9 +10,10 @@ use axum::{
     routing::{any, delete},
     Router,
 };
+use peace_logs::Level;
 use std::time::Duration;
 use tower::ServiceBuilder;
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{DefaultOnFailure, TraceLayer};
 use utoipa::openapi::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -27,7 +28,11 @@ pub async fn app(app: impl Application) -> Router {
                 .load_shed()
                 .concurrency_limit(cfg.concurrency_limit)
                 .timeout(Duration::from_secs(cfg.req_timeout))
-                .layer(TraceLayer::new_for_http()),
+                .layer(
+                    TraceLayer::new_for_http().on_failure(
+                        DefaultOnFailure::new().level(Level::DEBUG),
+                    ),
+                ),
         )
         .fallback(responder::handle_404)
 }

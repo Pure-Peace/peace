@@ -118,9 +118,7 @@ impl IntoResponse for Error {
                     .into_response();
             },
 
-            Self::Anyhow(ref e) => {
-                error!("Generic error: {:?}", e);
-            },
+            Self::Anyhow(ref _e) => {},
 
             // Other errors get mapped normally.
             _ => (),
