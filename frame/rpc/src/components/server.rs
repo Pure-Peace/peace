@@ -30,7 +30,7 @@ pub async fn serve(app_cfg: impl Application) {
                 move |req| {
                     let token: MetadataValue<_> =
                         format!("Bearer {token}").parse().unwrap();
-                    crate::interceptor::check_auth(req, token)
+                    crate::interceptor::admin_endpoints_authorization(req, token)
                 },
             ))
         } else {

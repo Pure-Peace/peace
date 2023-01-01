@@ -3,7 +3,8 @@ use tonic::{
     Request, Status,
 };
 
-pub fn check_auth(
+
+pub fn admin_endpoints_authorization(
     req: Request<()>,
     token: MetadataValue<Ascii>,
 ) -> Result<Request<()>, Status> {
