@@ -42,9 +42,11 @@ pub async fn bancho_post(
     OsuClientBody(body): OsuClientBody,
 ) -> Result<Response, Error> {
     if osu_token.is_none() {
-        let request = parser::parse_osu_login_request_body(body.into())?;
-        let resp = bancho
-            .login(request)
+        let mut req =
+            Request::new(parser::parse_osu_login_request_body(body.into())?);
+
+        req.metadata_mut()
+            .insert("client-ip", ip.to_string().parse().map_err(map_err)?);
             .await
             .map_err(|err| {
                 error!("{:?}", err);

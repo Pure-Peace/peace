@@ -4,6 +4,7 @@ use peace_pb::services::bancho::{
     PresenceRequestAllRequest, RequestStatusUpdateRequest, SpectateCantRequest,
     SpectateStopRequest,
 };
+use peace_rpc::extensions::ClientIp;
 use tonic::{Request, Response, Status};
 
 #[derive(Debug, Default, Clone)]
@@ -26,7 +27,12 @@ impl BanchoRpc for Bancho {
         &self,
         request: Request<LoginRequest>,
     ) -> Result<Response<LoginReply>, Status> {
-        println!("Got a request: {:?}", request);
+        let client_ip = request
+            .extensions()
+            .get::<ClientIp>()
+            .ok_or(Status::internal("No client ip"))?;
+
+        println!("Got a request: {:?}, ip: {:?}", request, client_ip);
 
         let reply = LoginReply { token: None, packet: None };
 
