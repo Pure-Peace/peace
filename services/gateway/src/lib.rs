@@ -18,7 +18,7 @@ use cfg::GatewayConfig;
 use peace_api::{cfg::ApiFrameConfig, Application};
 use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
 use std::sync::Arc;
-use tonic::transport::{Certificate, Channel, ClientTlsConfig};
+use tonic::transport::{Certificate, Channel, ClientTlsConfig, Endpoint};
 use utoipa::OpenApi;
 
 #[derive(Clone)]
@@ -34,34 +34,59 @@ impl App {
     pub async fn connect_bancho_service(
         &self,
     ) -> Result<BanchoRpcClient<Channel>, anyhow::Error> {
+        async fn connect_endpoint(
+            endpoint: Endpoint,
+            lazy_connect: bool,
+        ) -> Result<Channel, anyhow::Error> {
+            Ok(if lazy_connect {
+                endpoint.connect_lazy()
+            } else {
+                info!("Attempting to connect to bancho gRPC endpoint...");
+                endpoint.connect().await?
+            })
+        }
+
         #[cfg(unix)]
         if let Some(uds) = self.cfg.bancho_uds {
-            info!("Connecting bancho gRPC service: {}", uds);
-            let channel =
-                tonic::transport::Endpoint::try_from("http://[::]:50051")?
-                    .connect_with_connector(tower::service_fn(|_| {
-                        tokio::net::UnixStream::connect(uds)
-                    }))
-                    .await?;
+            info!("Bancho gRPC service: {}", uds);
+            let service_factory =
+                tower::service_fn(|_| tokio::net::UnixStream::connect(uds));
+            let endpoint =
+                tonic::transport::Endpoint::try_from("http://[::]:50051")?;
+
+            let channel = if self.cfg.bancho_lazy_connect {
+                endpoint.connect_with_connector_lazy(service_factory)
+            } else {
+                info!("Attempting to connect to bancho gRPC endpoint...");
+                endpoint.connect_with_connector(service_factory).await?
+            };
             return BanchoRpcClient::new(channel);
         }
 
-        info!("Connecting bancho gRPC service: {}", self.cfg.bancho_addr);
+        info!("Bancho gRPC service: {}", self.cfg.bancho_addr);
         if self.cfg.bancho_tls {
             let pem =
                 tokio::fs::read(self.cfg.bancho_ssl_cert.as_ref().unwrap())
                     .await?;
             let ca = Certificate::from_pem(pem);
             let tls = ClientTlsConfig::new().ca_certificate(ca);
-            let channel = Channel::from_shared(self.cfg.bancho_addr.clone())?
-                .tls_config(tls)?
-                .connect()
-                .await?;
-
-            return Ok(BanchoRpcClient::new(channel));
+            return Ok(BanchoRpcClient::new(
+                connect_endpoint(
+                    Channel::from_shared(self.cfg.bancho_addr.clone())?
+                        .tls_config(tls)?,
+                    self.cfg.bancho_lazy_connect,
+                )
+                .await?,
+            ));
         }
 
-        Ok(BanchoRpcClient::connect(self.cfg.bancho_addr.clone()).await?)
+        Ok(BanchoRpcClient::new(
+            connect_endpoint(
+                Channel::from_shared(self.cfg.bancho_addr.clone())?,
+                self.cfg.bancho_lazy_connect,
+            )
+            .await?,
+        ))
     }
 }
 
@@ -72,7 +97,11 @@ impl Application for App {
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
-        let bancho_handlers = self.connect_bancho_service().await.unwrap();
+        let bancho_handlers =
+            self.connect_bancho_service().await.unwrap_or_else(|err| {
+                error!("Unable to connect to the bancho gRPC service, please make sure the service is started.");
+                panic!("{}", err)
+            });
 
         Router::new()
             .route("/", get(handler::bancho_get))

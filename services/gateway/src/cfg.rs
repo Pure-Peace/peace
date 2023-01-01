@@ -41,6 +41,11 @@ pub struct GatewayConfig {
     /// SSL certificate path.
     #[arg(long)]
     pub bancho_ssl_cert: Option<PathBuf>,
+
+    /// Not attempt to connect to the bancho endpoint until first use.
+    #[default(false)]
+    #[arg(long)]
+    pub bancho_lazy_connect: bool,
 }
 
 impl_config!(GatewayConfig);
