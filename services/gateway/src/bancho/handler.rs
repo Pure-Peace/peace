@@ -4,13 +4,18 @@ use axum::{
 };
 
 use peace_api::{
-    error::Error,
+    error::{map_err, Error},
     extractors::{ClientIp, OsuClientBody, OsuToken, OsuVersion},
 };
-use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
-use tonic::transport::Channel;
+use peace_pb::services::bancho::{
+    bancho_rpc_client::BanchoRpcClient, LoginReply,
+};
+use tonic::{transport::Channel, Request};
 
-use super::parser;
+use super::{
+    constants::{CHO_PROTOCOL, CLIENT_IP_HEADER},
+    parser,
+};
 
 /// Bancho get handler
 #[utoipa::path(
@@ -46,15 +51,30 @@ pub async fn bancho_post(
             Request::new(parser::parse_osu_login_request_body(body.into())?);
 
         req.metadata_mut()
-            .insert("client-ip", ip.to_string().parse().map_err(map_err)?);
+            .insert(CLIENT_IP_HEADER, ip.to_string().parse().map_err(map_err)?);
+
+        let LoginReply { token, packet } = bancho
+            .login(req)
             .await
             .map_err(|err| {
-                error!("{:?}", err);
+                debug!("login rpc call failed with: {}", err);
                 Error::Anyhow(anyhow!("{}", err.message()))
             })?
             .into_inner();
 
-        println!("{:?}", resp)
+        if let Some(token) = token {
+            return Ok((
+                [("cho-token", token.as_str()), CHO_PROTOCOL],
+                packet.unwrap_or("ok".into()),
+            )
+                .into_response());
+        }
+
+        return Ok((
+            [("cho-token", "failed"), CHO_PROTOCOL],
+            packet.unwrap_or("failed".into()),
+        )
+            .into_response());
     }
 
     /* println!("{:?} {} {}", osu_token, osu_version, ip);
