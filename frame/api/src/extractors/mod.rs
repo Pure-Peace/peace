@@ -8,7 +8,6 @@ use axum::{
 };
 pub use axum_client_ip::ClientIp;
 use hyper::header::USER_AGENT;
-use std::convert::Infallible;
 
 pub const OSU_VERSION: &str = "osu-version";
 pub const OSU_TOKEN: &str = "osu-token";

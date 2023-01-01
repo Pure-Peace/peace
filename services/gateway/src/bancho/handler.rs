@@ -57,8 +57,8 @@ pub async fn bancho_post(
             .login(req)
             .await
             .map_err(|err| {
-                debug!("login rpc call failed with: {}", err);
-                Error::Anyhow(anyhow!("{}", err.message()))
+                error!("login rpc call failed with: {}", err);
+                Error::Internal
             })?
             .into_inner();
 
@@ -158,7 +158,7 @@ pub async fn difficulty_rating() -> Response {
     )
 )]
 pub async fn osu_error() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }
 
 /// Bancho osu_screenshot
@@ -236,7 +236,7 @@ pub async fn osu_addfavourite() -> Response {
     )
 )]
 pub async fn lastfm() -> Response {
-    unimplemented!()
+    "ok".into_response()
 }
 
 /// Bancho osu_search

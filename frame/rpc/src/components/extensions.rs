@@ -1,10 +1,10 @@
-use std::{net::SocketAddr, ops::Deref};
+use std::{net::IpAddr, ops::Deref};
 
 #[derive(Debug, Clone)]
-pub struct ClientIp(pub Option<SocketAddr>);
+pub struct ClientIp(pub IpAddr);
 
 impl Deref for ClientIp {
-    type Target = Option<SocketAddr>;
+    type Target = IpAddr;
 
     fn deref(&self) -> &Self::Target {
         &self.0

@@ -40,8 +40,16 @@ pub enum Error {
     #[error("service is overloaded, try again later")]
     Unavailable,
 
+    /// Return `500 Internal Server Error`
+    #[error("an internal server error occurred")]
+    Internal,
+
     /// Return `500 Internal Server Error` on a `anyhow::Error`.
     #[error("an internal server error occurred")]
+    RpcError(anyhow::Error),
+
+    /// Return `500 Internal Server Error` on a `anyhow::Error`.
+    #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
 }
 
@@ -78,6 +86,8 @@ impl Error {
             Self::UnprocessableEntity { .. } => {
                 StatusCode::UNPROCESSABLE_ENTITY
             },
+            Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::RpcError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -118,8 +128,9 @@ impl IntoResponse for Error {
                     .into_response();
             },
 
-            Self::Anyhow(ref _e) => {},
-
+            Self::RpcError(ref e) => {
+                error!("[RPC error]: {}", e)
+            },
             // Other errors get mapped normally.
             _ => (),
         }

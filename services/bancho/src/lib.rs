@@ -6,7 +6,7 @@ use cfg::BanchoConfig;
 use peace_pb::services::bancho::{
     bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET,
 };
-use peace_rpc::{cfg::RpcFrameConfig, Application};
+use peace_rpc::{cfg::RpcFrameConfig, interceptor::client_ip, Application};
 use rpc::Bancho;
 use std::sync::Arc;
 use tonic::{
@@ -36,7 +36,8 @@ impl Application for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let svc = Bancho::default();
-        configured_server.add_service(BanchoRpcServer::new(svc))
+        let bancho = Bancho::default();
+        configured_server
+            .add_service(BanchoRpcServer::with_interceptor(bancho, client_ip))
     }
 }
