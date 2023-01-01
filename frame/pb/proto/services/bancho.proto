@@ -3,26 +3,17 @@ syntax = "proto3";
 package peace.services.bancho;
 
 service BanchoRPC {
-  rpc Ping(PingRequest) returns (CommonReply);
+  rpc Ping(PingRequest) returns (BanchoReply);
   rpc Login(LoginRequest) returns (LoginReply);
-  rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (CommonReply);
-  rpc PresenceRequestAll(PresenceRequestAllRequest) returns (CommonReply);
-  rpc SpectateStop(SpectateStopRequest) returns (CommonReply);
-  rpc SpectateCant(SpectateCantRequest) returns (CommonReply);
-  rpc LobbyPart(LobbyPartRequest) returns (CommonReply);
-  rpc LobbyJoin(LobbyJoinRequest) returns (CommonReply);
+  rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (BanchoReply);
+  rpc PresenceRequestAll(PresenceRequestAllRequest) returns (BanchoReply);
+  rpc SpectateStop(SpectateStopRequest) returns (BanchoReply);
+  rpc SpectateCant(SpectateCantRequest) returns (BanchoReply);
+  rpc LobbyPart(LobbyPartRequest) returns (BanchoReply);
+  rpc LobbyJoin(LobbyJoinRequest) returns (BanchoReply);
 }
 
-enum RpcStatus {
-  OK = 0;
-  Err = 1;
-}
-
-message CommonReply {
-  RpcStatus status = 1;
-  optional bytes packet = 2;
-  optional string err = 3;
-}
+message BanchoReply { optional bytes packet = 1; }
 
 message PingRequest { string token = 1; }
 
@@ -38,17 +29,15 @@ message LoginRequest {
   string username = 1;
   string password = 2;
   string client_version = 3;
-  ClientHashes client_hashes = 4;
-  int32 utc_offset = 5;
-  bool display_city = 6;
-  bool only_friend_pm_allowed = 7;
+  int32 utc_offset = 4;
+  bool display_city = 5;
+  bool only_friend_pm_allowed = 6;
+  ClientHashes client_hashes = 7;
 }
 
 message LoginReply {
-  RpcStatus status = 1;
-  optional string token = 2;
-  optional string protocol = 3;
-  optional bytes packet = 4;
+  optional string token = 1;
+  optional bytes packet = 2;
 }
 
 message RequestStatusUpdateRequest { string token = 1; }
