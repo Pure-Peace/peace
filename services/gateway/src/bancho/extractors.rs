@@ -25,8 +25,6 @@ where
     ) -> Result<Self, Self::Rejection> {
         let body = OsuClientBody::from_request(req, state).await?.0;
 
-        let lines = parser::parse_osu_login_data_lines(body.to_vec())?;
-
-        Ok(Self(parser::parse_osu_login_request_data(lines)?))
+        Ok(Self(parser::parse_osu_login_request_body(body.into())?))
     }
 }

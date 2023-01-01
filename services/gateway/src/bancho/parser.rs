@@ -1,42 +1,33 @@
-use axum::response::Response;
 use peace_api::error::{map_err, Error};
 use peace_pb::services::bancho::{ClientHashes, LoginRequest};
 
-pub fn parse_osu_login_data_lines(
+pub fn parse_osu_login_request_body(
     body: Vec<u8>,
-) -> Result<Vec<String>, Response> {
+) -> Result<LoginRequest, Error> {
     let body = String::from_utf8(body).map_err(map_err)?;
 
-    let lines = body
+    let mut lines = body
         .split('\n')
         .filter(|i| i != &"")
         .map(|s| s.to_owned())
         .collect::<Vec<String>>();
 
     if lines.len() < 3 {
-        return Err(Error::Anyhow(anyhow!("Invalid login data.")).into());
+        return Err(Error::Anyhow(anyhow!("Invalid login data.")));
     }
 
-    Ok(lines)
-}
-
-pub fn parse_osu_login_request_data(
-    mut lines: Vec<String>,
-) -> Result<LoginRequest, Response> {
     let username = std::mem::take(&mut lines[0]);
     let password = std::mem::take(&mut lines[1]);
 
     if username.len() < 2 || password.len() != 32 {
-        return Err(
-            Error::Anyhow(anyhow!("Invalid username or password.")).into()
-        );
+        return Err(Error::Anyhow(anyhow!("Invalid username or password.")));
     }
 
     let mut client_info =
         lines[2].split('|').map(|s| s.to_owned()).collect::<Vec<String>>();
 
     if client_info.len() < 5 {
-        return Err(Error::Anyhow(anyhow!("Invalid client info.")).into());
+        return Err(Error::Anyhow(anyhow!("Invalid client info.")));
     }
 
     let client_version = std::mem::take(&mut client_info[0]);
@@ -55,7 +46,7 @@ pub fn parse_osu_login_request_data(
         .collect::<Vec<String>>();
 
     if client_hashes.len() < 5 {
-        return Err(Error::Anyhow(anyhow!("Invalid client hashes.")).into());
+        return Err(Error::Anyhow(anyhow!("Invalid client hashes.")));
     }
 
     // Only allow friend's pm
@@ -71,6 +62,9 @@ pub fn parse_osu_login_request_data(
         username,
         password,
         client_version,
+        utc_offset,
+        display_city,
+        only_friend_pm_allowed,
         client_hashes: Some(ClientHashes {
             path_hash,
             adapters,
@@ -78,8 +72,5 @@ pub fn parse_osu_login_request_data(
             uninstall_id,
             disk_id,
         }),
-        utc_offset,
-        display_city,
-        only_friend_pm_allowed,
     })
 }

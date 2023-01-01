@@ -4,7 +4,7 @@ use axum::{
 };
 
 use peace_api::{
-    error,
+    error::Error,
     extractors::{ClientIp, OsuClientBody, OsuToken, OsuVersion},
 };
 use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
@@ -40,14 +40,17 @@ pub async fn bancho_post(
     ClientIp(ip): ClientIp,
     State(mut bancho): State<BanchoRpcClient<Channel>>,
     OsuClientBody(body): OsuClientBody,
-) -> Result<Response, Response> {
+) -> Result<Response, Error> {
     if osu_token.is_none() {
-        let lines = parser::parse_osu_login_data_lines(body.to_vec())?;
-        let request = parser::parse_osu_login_request_data(lines)?;
-        let resp = bancho.login(request).await.map_err(|err| {
-            error!("{:?}", err);
-            error::Error::Anyhow(anyhow!("{}", err.message())).into_response()
-        })?;
+        let request = parser::parse_osu_login_request_body(body.into())?;
+        let resp = bancho
+            .login(request)
+            .await
+            .map_err(|err| {
+                error!("{:?}", err);
+                Error::Anyhow(anyhow!("{}", err.message()))
+            })?
+            .into_inner();
 
         println!("{:?}", resp)
     }
