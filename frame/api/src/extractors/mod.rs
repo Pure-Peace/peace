@@ -38,26 +38,26 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct OsuToken(pub Option<String>);
+pub struct OsuToken(pub String);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for OsuToken
 where
     S: Send + Sync,
 {
-    type Rejection = Infallible;
+    type Rejection = Error;
 
     async fn from_request_parts(
         parts: &mut Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let token = parts
+        parts
             .headers
             .get(OSU_TOKEN)
             .and_then(|hv| hv.to_str().ok())
-            .and_then(|s| Some(s.to_owned()));
-
-        Ok(Self(token))
+            .and_then(|s| Some(s.to_owned()))
+            .map(Self)
+            .ok_or(anyhow!("osu-token header is required.").into())
     }
 }
 

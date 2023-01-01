@@ -35,7 +35,7 @@ pub async fn bancho_get() -> Response {
     )
 )]
 pub async fn bancho_post(
-    OsuToken(osu_token): OsuToken,
+    osu_token: Option<OsuToken>,
     OsuVersion(osu_version): OsuVersion,
     ClientIp(ip): ClientIp,
     State(mut bancho): State<BanchoRpcClient<Channel>>,
