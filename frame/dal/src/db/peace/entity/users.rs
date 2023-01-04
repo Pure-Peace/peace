@@ -94,6 +94,8 @@ pub enum Relation {
     UserStatsStandardAutopilot,
     #[sea_orm(has_many = "super::user_stats_standard_relax::Entity")]
     UserStatsStandardRelax,
+    #[sea_orm(has_many = "super::user_stats_standard_score_v2::Entity")]
+    UserStatsStandardScoreV2,
     #[sea_orm(has_many = "super::user_stats_taiko::Entity")]
     UserStatsTaiko,
     #[sea_orm(has_many = "super::user_stats_taiko_relax::Entity")]
@@ -295,6 +297,12 @@ impl Related<super::user_stats_standard_autopilot::Entity> for Entity {
 impl Related<super::user_stats_standard_relax::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::UserStatsStandardRelax.def()
+    }
+}
+
+impl Related<super::user_stats_standard_score_v2::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserStatsStandardScoreV2.def()
     }
 }
 

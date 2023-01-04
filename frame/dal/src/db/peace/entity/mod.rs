@@ -47,6 +47,7 @@ pub mod user_stats_mania;
 pub mod user_stats_standard;
 pub mod user_stats_standard_autopilot;
 pub mod user_stats_standard_relax;
+pub mod user_stats_standard_score_v2;
 pub mod user_stats_taiko;
 pub mod user_stats_taiko_relax;
 pub mod users;

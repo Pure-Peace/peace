@@ -44,6 +44,7 @@ pub use super::user_stats_mania::Entity as UserStatsMania;
 pub use super::user_stats_standard::Entity as UserStatsStandard;
 pub use super::user_stats_standard_autopilot::Entity as UserStatsStandardAutopilot;
 pub use super::user_stats_standard_relax::Entity as UserStatsStandardRelax;
+pub use super::user_stats_standard_score_v2::Entity as UserStatsStandardScoreV2;
 pub use super::user_stats_taiko::Entity as UserStatsTaiko;
 pub use super::user_stats_taiko_relax::Entity as UserStatsTaikoRelax;
 pub use super::users::Entity as Users;
