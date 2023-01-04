@@ -15,6 +15,18 @@ pub enum GameMode {
     Taiko,
 }
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "Enum",
+    enum_name = "performance_version"
+)]
+pub enum PerformanceVersion {
+    #[sea_orm(string_value = "v1")]
+    V1,
+    #[sea_orm(string_value = "v2")]
+    V2,
+}
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "rank_status")]
 pub enum RankStatus {
     #[sea_orm(string_value = "Approved")]
@@ -31,6 +43,18 @@ pub enum RankStatus {
     Ranked,
     #[sea_orm(string_value = "Wip")]
     Wip,
+}
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "ranking_type")]
+pub enum RankingType {
+    #[sea_orm(string_value = "performance_v1")]
+    PerformanceV1,
+    #[sea_orm(string_value = "performance_v2")]
+    PerformanceV2,
+    #[sea_orm(string_value = "score_v1")]
+    ScoreV1,
+    #[sea_orm(string_value = "score_v2")]
+    ScoreV2,
 }
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "score_grade")]
@@ -63,4 +87,12 @@ pub enum ScoreStatus {
     High,
     #[sea_orm(string_value = "Passed")]
     Passed,
+}
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "score_version")]
+pub enum ScoreVersion {
+    #[sea_orm(string_value = "v1")]
+    V1,
+    #[sea_orm(string_value = "v2")]
+    V2,
 }

@@ -9,7 +9,6 @@ pub struct Model {
     pub user_id: i32,
     pub total_score: i64,
     pub ranked_score: i64,
-    pub performance: i32,
     pub playcount: i32,
     pub total_hits: i32,
     #[sea_orm(column_type = "Decimal(Some((6, 2)))")]

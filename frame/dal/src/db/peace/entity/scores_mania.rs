@@ -2,6 +2,7 @@
 
 use super::sea_orm_active_enums::ScoreGrade;
 use super::sea_orm_active_enums::ScoreStatus;
+use super::sea_orm_active_enums::ScoreVersion;
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
@@ -13,9 +14,8 @@ pub struct Model {
     #[sea_orm(unique)]
     pub score_md5: String,
     pub map_md5: String,
+    pub score_version: ScoreVersion,
     pub score: i32,
-    #[sea_orm(column_type = "Decimal(Some((16, 2)))")]
-    pub performance: Decimal,
     #[sea_orm(column_type = "Decimal(Some((6, 2)))")]
     pub accuracy: Decimal,
     pub combo: i32,
@@ -42,8 +42,10 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::leaders_mania::Entity")]
-    LeadersMania,
+    #[sea_orm(has_many = "super::leaderboard_mania::Entity")]
+    LeaderboardMania,
+    #[sea_orm(has_many = "super::score_performances_mania::Entity")]
+    ScorePerformancesMania,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -54,9 +56,15 @@ pub enum Relation {
     Users,
 }
 
-impl Related<super::leaders_mania::Entity> for Entity {
+impl Related<super::leaderboard_mania::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::LeadersMania.def()
+        Relation::LeaderboardMania.def()
+    }
+}
+
+impl Related<super::score_performances_mania::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ScorePerformancesMania.def()
     }
 }
 

@@ -53,7 +53,72 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_many = "super::leaderboard_fruits::Entity")]
+    LeaderboardFruits,
+    #[sea_orm(has_many = "super::leaderboard_fruits_relax::Entity")]
+    LeaderboardFruitsRelax,
+    #[sea_orm(has_many = "super::leaderboard_mania::Entity")]
+    LeaderboardMania,
+    #[sea_orm(has_many = "super::leaderboard_standard::Entity")]
+    LeaderboardStandard,
+    #[sea_orm(has_many = "super::leaderboard_standard_autopilot::Entity")]
+    LeaderboardStandardAutopilot,
+    #[sea_orm(has_many = "super::leaderboard_standard_relax::Entity")]
+    LeaderboardStandardRelax,
+    #[sea_orm(has_many = "super::leaderboard_taiko::Entity")]
+    LeaderboardTaiko,
+    #[sea_orm(has_many = "super::leaderboard_taiko_relax::Entity")]
+    LeaderboardTaikoRelax,
+}
+
+impl Related<super::leaderboard_fruits::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardFruits.def()
+    }
+}
+
+impl Related<super::leaderboard_fruits_relax::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardFruitsRelax.def()
+    }
+}
+
+impl Related<super::leaderboard_mania::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardMania.def()
+    }
+}
+
+impl Related<super::leaderboard_standard::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardStandard.def()
+    }
+}
+
+impl Related<super::leaderboard_standard_autopilot::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardStandardAutopilot.def()
+    }
+}
+
+impl Related<super::leaderboard_standard_relax::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardStandardRelax.def()
+    }
+}
+
+impl Related<super::leaderboard_taiko::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardTaiko.def()
+    }
+}
+
+impl Related<super::leaderboard_taiko_relax::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::LeaderboardTaikoRelax.def()
+    }
+}
 
 impl Related<super::users::Entity> for Entity {
     fn to() -> RelationDef {
