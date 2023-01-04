@@ -71,6 +71,40 @@ pub enum RankStatus {
     Loved,
 }
 
+#[derive(Iden)]
+pub enum PerformanceVersion {
+    #[iden = "performance_version"]
+    Enum = -1,
+    #[iden = "v1"]
+    V1,
+    #[iden = "v2"]
+    V2,
+}
+
+#[derive(Iden)]
+pub enum ScoreVersion {
+    #[iden = "score_version"]
+    Enum = -1,
+    #[iden = "v1"]
+    V1,
+    #[iden = "v2"]
+    V2,
+}
+
+#[derive(Iden)]
+pub enum RankingType {
+    #[iden = "ranking_type"]
+    Enum = -1,
+    #[iden = "score_v1"]
+    ScoreV1,
+    #[iden = "score_v2"]
+    ScoreV2,
+    #[iden = "performance_v1"]
+    PerformanceV1,
+    #[iden = "performance_v2"]
+    PerformanceV2,
+}
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -93,6 +127,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::create(),
             scores_taiko_relax::create(),
             scores_fruits_relax::create(),
+            score_performances_standard::create(),
+            score_performances_taiko::create(),
+            score_performances_fruits::create(),
+            score_performances_mania::create(),
+            score_performances_standard_relax::create(),
+            score_performances_standard_autopilot::create(),
+            score_performances_taiko_relax::create(),
+            score_performances_fruits_relax::create(),
             user_stats_standard::create(),
             user_stats_taiko::create(),
             user_stats_fruits::create(),
@@ -101,14 +143,22 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::create(),
             user_stats_taiko_relax::create(),
             user_stats_fruits_relax::create(),
-            leaders_standard::create(),
-            leaders_taiko::create(),
-            leaders_fruits::create(),
-            leaders_mania::create(),
-            leaders_standard_relax::create(),
-            leaders_standard_autopilot::create(),
-            leaders_taiko_relax::create(),
-            leaders_fruits_relax::create(),
+            user_performances_standard::create(),
+            user_performances_taiko::create(),
+            user_performances_fruits::create(),
+            user_performances_mania::create(),
+            user_performances_standard_relax::create(),
+            user_performances_standard_autopilot::create(),
+            user_performances_taiko_relax::create(),
+            user_performances_fruits_relax::create(),
+            leaderboard_standard::create(),
+            leaderboard_taiko::create(),
+            leaderboard_fruits::create(),
+            leaderboard_mania::create(),
+            leaderboard_standard_relax::create(),
+            leaderboard_standard_autopilot::create(),
+            leaderboard_taiko_relax::create(),
+            leaderboard_fruits_relax::create(),
         ];
 
         let create_foreign_key_stmts = vec![
@@ -125,6 +175,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::create_foreign_keys(),
             scores_taiko_relax::create_foreign_keys(),
             scores_fruits_relax::create_foreign_keys(),
+            score_performances_standard::create_foreign_keys(),
+            score_performances_taiko::create_foreign_keys(),
+            score_performances_fruits::create_foreign_keys(),
+            score_performances_mania::create_foreign_keys(),
+            score_performances_standard_relax::create_foreign_keys(),
+            score_performances_standard_autopilot::create_foreign_keys(),
+            score_performances_taiko_relax::create_foreign_keys(),
+            score_performances_fruits_relax::create_foreign_keys(),
             user_stats_standard::create_foreign_keys(),
             user_stats_taiko::create_foreign_keys(),
             user_stats_fruits::create_foreign_keys(),
@@ -133,14 +191,22 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::create_foreign_keys(),
             user_stats_taiko_relax::create_foreign_keys(),
             user_stats_fruits_relax::create_foreign_keys(),
-            leaders_standard::create_foreign_keys(),
-            leaders_taiko::create_foreign_keys(),
-            leaders_fruits::create_foreign_keys(),
-            leaders_mania::create_foreign_keys(),
-            leaders_standard_relax::create_foreign_keys(),
-            leaders_standard_autopilot::create_foreign_keys(),
-            leaders_taiko_relax::create_foreign_keys(),
-            leaders_fruits_relax::create_foreign_keys(),
+            user_performances_standard::create_foreign_keys(),
+            user_performances_taiko::create_foreign_keys(),
+            user_performances_fruits::create_foreign_keys(),
+            user_performances_mania::create_foreign_keys(),
+            user_performances_standard_relax::create_foreign_keys(),
+            user_performances_standard_autopilot::create_foreign_keys(),
+            user_performances_taiko_relax::create_foreign_keys(),
+            user_performances_fruits_relax::create_foreign_keys(),
+            leaderboard_standard::create_foreign_keys(),
+            leaderboard_taiko::create_foreign_keys(),
+            leaderboard_fruits::create_foreign_keys(),
+            leaderboard_mania::create_foreign_keys(),
+            leaderboard_standard_relax::create_foreign_keys(),
+            leaderboard_standard_autopilot::create_foreign_keys(),
+            leaderboard_taiko_relax::create_foreign_keys(),
+            leaderboard_fruits_relax::create_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -160,14 +226,30 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::create_indexes(),
             scores_taiko_relax::create_indexes(),
             scores_fruits_relax::create_indexes(),
-            leaders_standard::create_indexes(),
-            leaders_taiko::create_indexes(),
-            leaders_fruits::create_indexes(),
-            leaders_mania::create_indexes(),
-            leaders_standard_relax::create_indexes(),
-            leaders_standard_autopilot::create_indexes(),
-            leaders_taiko_relax::create_indexes(),
-            leaders_fruits_relax::create_indexes(),
+            score_performances_standard::create_indexes(),
+            score_performances_taiko::create_indexes(),
+            score_performances_fruits::create_indexes(),
+            score_performances_mania::create_indexes(),
+            score_performances_standard_relax::create_indexes(),
+            score_performances_standard_autopilot::create_indexes(),
+            score_performances_taiko_relax::create_indexes(),
+            score_performances_fruits_relax::create_indexes(),
+            user_performances_standard::create_indexes(),
+            user_performances_taiko::create_indexes(),
+            user_performances_fruits::create_indexes(),
+            user_performances_mania::create_indexes(),
+            user_performances_standard_relax::create_indexes(),
+            user_performances_standard_autopilot::create_indexes(),
+            user_performances_taiko_relax::create_indexes(),
+            user_performances_fruits_relax::create_indexes(),
+            leaderboard_standard::create_indexes(),
+            leaderboard_taiko::create_indexes(),
+            leaderboard_fruits::create_indexes(),
+            leaderboard_mania::create_indexes(),
+            leaderboard_standard_relax::create_indexes(),
+            leaderboard_standard_autopilot::create_indexes(),
+            leaderboard_taiko_relax::create_indexes(),
+            leaderboard_fruits_relax::create_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -217,6 +299,23 @@ impl MigrationTrait for Migration {
                     ScoreGrade::F,
                 ])
                 .to_owned(),
+            extension::postgres::Type::create()
+                .as_enum(PerformanceVersion::Enum)
+                .values([PerformanceVersion::V1, PerformanceVersion::V2])
+                .to_owned(),
+            extension::postgres::Type::create()
+                .as_enum(ScoreVersion::Enum)
+                .values([ScoreVersion::V1, ScoreVersion::V2])
+                .to_owned(),
+            extension::postgres::Type::create()
+                .as_enum(RankingType::Enum)
+                .values([
+                    RankingType::ScoreV1,
+                    RankingType::ScoreV2,
+                    RankingType::PerformanceV1,
+                    RankingType::PerformanceV2,
+                ])
+                .to_owned(),
         ];
 
         if manager.get_database_backend() == DbBackend::Postgres {
@@ -257,6 +356,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::drop(),
             scores_taiko_relax::drop(),
             scores_fruits_relax::drop(),
+            score_performances_standard::drop(),
+            score_performances_taiko::drop(),
+            score_performances_fruits::drop(),
+            score_performances_mania::drop(),
+            score_performances_standard_relax::drop(),
+            score_performances_standard_autopilot::drop(),
+            score_performances_taiko_relax::drop(),
+            score_performances_fruits_relax::drop(),
             user_stats_standard::drop(),
             user_stats_taiko::drop(),
             user_stats_fruits::drop(),
@@ -265,14 +372,22 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::drop(),
             user_stats_taiko_relax::drop(),
             user_stats_fruits_relax::drop(),
-            leaders_standard::drop(),
-            leaders_taiko::drop(),
-            leaders_fruits::drop(),
-            leaders_mania::drop(),
-            leaders_standard_relax::drop(),
-            leaders_standard_autopilot::drop(),
-            leaders_taiko_relax::drop(),
-            leaders_fruits_relax::drop(),
+            user_performances_standard::drop(),
+            user_performances_taiko::drop(),
+            user_performances_fruits::drop(),
+            user_performances_mania::drop(),
+            user_performances_standard_relax::drop(),
+            user_performances_standard_autopilot::drop(),
+            user_performances_taiko_relax::drop(),
+            user_performances_fruits_relax::drop(),
+            leaderboard_standard::drop(),
+            leaderboard_taiko::drop(),
+            leaderboard_fruits::drop(),
+            leaderboard_mania::drop(),
+            leaderboard_standard_relax::drop(),
+            leaderboard_standard_autopilot::drop(),
+            leaderboard_taiko_relax::drop(),
+            leaderboard_fruits_relax::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
@@ -289,6 +404,14 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::drop_foreign_keys(),
             scores_taiko_relax::drop_foreign_keys(),
             scores_fruits_relax::drop_foreign_keys(),
+            score_performances_standard::drop_foreign_keys(),
+            score_performances_taiko::drop_foreign_keys(),
+            score_performances_fruits::drop_foreign_keys(),
+            score_performances_mania::drop_foreign_keys(),
+            score_performances_standard_relax::drop_foreign_keys(),
+            score_performances_standard_autopilot::drop_foreign_keys(),
+            score_performances_taiko_relax::drop_foreign_keys(),
+            score_performances_fruits_relax::drop_foreign_keys(),
             user_stats_standard::drop_foreign_keys(),
             user_stats_taiko::drop_foreign_keys(),
             user_stats_fruits::drop_foreign_keys(),
@@ -297,14 +420,22 @@ impl MigrationTrait for Migration {
             user_stats_standard_autopilot::drop_foreign_keys(),
             user_stats_taiko_relax::drop_foreign_keys(),
             user_stats_fruits_relax::drop_foreign_keys(),
-            leaders_standard::drop_foreign_keys(),
-            leaders_taiko::drop_foreign_keys(),
-            leaders_fruits::drop_foreign_keys(),
-            leaders_mania::drop_foreign_keys(),
-            leaders_standard_relax::drop_foreign_keys(),
-            leaders_standard_autopilot::drop_foreign_keys(),
-            leaders_taiko_relax::drop_foreign_keys(),
-            leaders_fruits_relax::drop_foreign_keys(),
+            user_performances_standard::drop_foreign_keys(),
+            user_performances_taiko::drop_foreign_keys(),
+            user_performances_fruits::drop_foreign_keys(),
+            user_performances_mania::drop_foreign_keys(),
+            user_performances_standard_relax::drop_foreign_keys(),
+            user_performances_standard_autopilot::drop_foreign_keys(),
+            user_performances_taiko_relax::drop_foreign_keys(),
+            user_performances_fruits_relax::drop_foreign_keys(),
+            leaderboard_standard::drop_foreign_keys(),
+            leaderboard_taiko::drop_foreign_keys(),
+            leaderboard_fruits::drop_foreign_keys(),
+            leaderboard_mania::drop_foreign_keys(),
+            leaderboard_standard_relax::drop_foreign_keys(),
+            leaderboard_standard_autopilot::drop_foreign_keys(),
+            leaderboard_taiko_relax::drop_foreign_keys(),
+            leaderboard_fruits_relax::drop_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -324,14 +455,30 @@ impl MigrationTrait for Migration {
             scores_standard_autopilot::drop_indexes(),
             scores_taiko_relax::drop_indexes(),
             scores_fruits_relax::drop_indexes(),
-            leaders_standard::drop_indexes(),
-            leaders_taiko::drop_indexes(),
-            leaders_fruits::drop_indexes(),
-            leaders_mania::drop_indexes(),
-            leaders_standard_relax::drop_indexes(),
-            leaders_standard_autopilot::drop_indexes(),
-            leaders_taiko_relax::drop_indexes(),
-            leaders_fruits_relax::drop_indexes(),
+            score_performances_standard::drop_indexes(),
+            score_performances_taiko::drop_indexes(),
+            score_performances_fruits::drop_indexes(),
+            score_performances_mania::drop_indexes(),
+            score_performances_standard_relax::drop_indexes(),
+            score_performances_standard_autopilot::drop_indexes(),
+            score_performances_taiko_relax::drop_indexes(),
+            score_performances_fruits_relax::drop_indexes(),
+            user_performances_standard::drop_indexes(),
+            user_performances_taiko::drop_indexes(),
+            user_performances_fruits::drop_indexes(),
+            user_performances_mania::drop_indexes(),
+            user_performances_standard_relax::drop_indexes(),
+            user_performances_standard_autopilot::drop_indexes(),
+            user_performances_taiko_relax::drop_indexes(),
+            user_performances_fruits_relax::drop_indexes(),
+            leaderboard_standard::drop_indexes(),
+            leaderboard_taiko::drop_indexes(),
+            leaderboard_fruits::drop_indexes(),
+            leaderboard_mania::drop_indexes(),
+            leaderboard_standard_relax::drop_indexes(),
+            leaderboard_standard_autopilot::drop_indexes(),
+            leaderboard_taiko_relax::drop_indexes(),
+            leaderboard_fruits_relax::drop_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -344,6 +491,15 @@ impl MigrationTrait for Migration {
                 .name(ScoreStatus::Enum)
                 .to_owned(),
             extension::postgres::Type::drop().name(ScoreGrade::Enum).to_owned(),
+            extension::postgres::Type::drop()
+                .name(PerformanceVersion::Enum)
+                .to_owned(),
+            extension::postgres::Type::drop()
+                .name(ScoreVersion::Enum)
+                .to_owned(),
+            extension::postgres::Type::drop()
+                .name(RankingType::Enum)
+                .to_owned(),
         ];
 
         for stmt in drop_foreign_key_stmts {
@@ -633,7 +789,7 @@ pub mod favourite_beatmaps {
     pub enum FavouriteBeatmaps {
         Table,
         UserId,
-        MapId,
+        BeatmapsetId,
         Comment,
         CreatedAt,
     }
@@ -643,7 +799,11 @@ pub mod favourite_beatmaps {
             .table(FavouriteBeatmaps::Table)
             .if_not_exists()
             .col(ColumnDef::new(FavouriteBeatmaps::UserId).integer().not_null())
-            .col(ColumnDef::new(FavouriteBeatmaps::MapId).integer().not_null())
+            .col(
+                ColumnDef::new(FavouriteBeatmaps::BeatmapsetId)
+                    .integer()
+                    .not_null(),
+            )
             .col(
                 ColumnDef::new(FavouriteBeatmaps::Comment)
                     .string()
@@ -658,7 +818,7 @@ pub mod favourite_beatmaps {
             .primary_key(
                 sea_query::Index::create()
                     .col(FavouriteBeatmaps::UserId)
-                    .col(FavouriteBeatmaps::MapId),
+                    .col(FavouriteBeatmaps::BeatmapsetId),
             )
             .to_owned()
     }
@@ -807,6 +967,7 @@ pub mod custom_settings {
     use sea_orm_migration::prelude::*;
 
     use super::users::Users;
+    use super::RankingType;
 
     const FOREIGN_KEY_USER_ID: &str = "FK_custom_settings_user_id";
 
@@ -815,7 +976,7 @@ pub mod custom_settings {
         Table,
         UserId,
         DisplayUnicodeName,
-        PpScoreboard,
+        ScoreboardRankingType,
         InvisibleOnline,
         UpdatedAt,
     }
@@ -837,10 +998,18 @@ pub mod custom_settings {
                     .default(false),
             )
             .col(
-                ColumnDef::new(CustomSettings::PpScoreboard)
-                    .boolean()
+                ColumnDef::new(CustomSettings::ScoreboardRankingType)
+                    .enumeration(
+                        RankingType::Enum,
+                        [
+                            RankingType::ScoreV1,
+                            RankingType::ScoreV2,
+                            RankingType::PerformanceV1,
+                            RankingType::PerformanceV2,
+                        ],
+                    )
                     .not_null()
-                    .default(false),
+                    .default(RankingType::ScoreV1.to_string()),
             )
             .col(
                 ColumnDef::new(CustomSettings::InvisibleOnline)
@@ -1211,12 +1380,12 @@ pub mod beatmap_ratings {
     }
 }
 
-macro_rules! define_scores {
+macro_rules! define_user_mode_scores {
     ($table_name: ident, $iden: ident) => {
         pub mod $table_name {
             use sea_orm_migration::prelude::*;
 
-            use super::{users::Users, ScoreGrade, ScoreStatus};
+            use super::{users::Users, ScoreGrade, ScoreStatus, ScoreVersion};
 
             const FOREIGN_KEY_USER_ID: &str =
                 concat!("FK_", stringify!($table_name), "_user_id");
@@ -1232,8 +1401,8 @@ macro_rules! define_scores {
                 UserId,
                 ScoreMd5,
                 MapMd5,
+                ScoreVersion,
                 Score,
-                Performance,
                 Accuracy,
                 Combo,
                 Mods,
@@ -1282,14 +1451,16 @@ macro_rules! define_scores {
                             .char_len(32)
                             .not_null(),
                     )
-                    .col(ColumnDef::new($iden::Score).integer().not_null())
                     .col(
-                        ColumnDef::new($iden::Performance)
-                            .decimal()
-                            .decimal_len(16, 2)
+                        ColumnDef::new($iden::ScoreVersion)
+                            .enumeration(
+                                ScoreVersion::Enum,
+                                [ScoreVersion::V1, ScoreVersion::V2],
+                            )
                             .not_null()
-                            .default(0.0),
+                            .default(ScoreVersion::V1.to_string()),
                     )
+                    .col(ColumnDef::new($iden::Score).integer().not_null())
                     .col(
                         ColumnDef::new($iden::Accuracy)
                             .decimal()
@@ -1434,16 +1605,155 @@ macro_rules! define_scores {
     };
 }
 
-define_scores!(scores_standard, ScoresStandard);
-define_scores!(scores_taiko, ScoresTaiko);
-define_scores!(scores_fruits, ScoresFruits);
-define_scores!(scores_mania, ScoresMania);
-define_scores!(scores_standard_relax, ScoresStandardRelax);
-define_scores!(scores_standard_autopilot, ScoresStandardAutopilot);
-define_scores!(scores_taiko_relax, ScoresTaikoRelax);
-define_scores!(scores_fruits_relax, ScoresFruitsRelax);
+define_user_mode_scores!(scores_standard, ScoresStandard);
+define_user_mode_scores!(scores_taiko, ScoresTaiko);
+define_user_mode_scores!(scores_fruits, ScoresFruits);
+define_user_mode_scores!(scores_mania, ScoresMania);
+define_user_mode_scores!(scores_standard_relax, ScoresStandardRelax);
+define_user_mode_scores!(scores_standard_autopilot, ScoresStandardAutopilot);
+define_user_mode_scores!(scores_taiko_relax, ScoresTaikoRelax);
+define_user_mode_scores!(scores_fruits_relax, ScoresFruitsRelax);
 
-macro_rules! define_user_stats {
+macro_rules! define_score_mode_performances {
+    ($table_name: ident, $iden: ident, $relate_table: ident :: $relate_iden: ident) => {
+        pub mod $table_name {
+            use sea_orm_migration::prelude::*;
+
+            use super::$relate_table::$relate_iden;
+            use super::PerformanceVersion;
+
+            const FOREIGN_KEY_SCORE_ID: &str =
+                concat!("FK_", stringify!($table_name), "_score_id");
+            const INDEX_PERFORMANCE_VERSION_AND_PERFORMANCE: &str = concat!(
+                "IDX_",
+                stringify!($table_name),
+                "_performance_version_and_performance"
+            );
+
+            #[derive(Iden)]
+            pub enum $iden {
+                Table,
+                ScoreId,
+                PerformanceVersion,
+                Performance,
+            }
+
+            pub fn create() -> TableCreateStatement {
+                Table::create()
+                    .table($iden::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new($iden::ScoreId).big_integer().not_null(),
+                    )
+                    .col(
+                        ColumnDef::new($iden::PerformanceVersion)
+                            .enumeration(
+                                PerformanceVersion::Enum,
+                                [
+                                    PerformanceVersion::V1,
+                                    PerformanceVersion::V2,
+                                ],
+                            )
+                            .not_null()
+                            .default(PerformanceVersion::V2.to_string()),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Performance)
+                            .decimal()
+                            .decimal_len(16, 2)
+                            .not_null()
+                            .default(0.0),
+                    )
+                    .primary_key(
+                        sea_query::Index::create()
+                            .col($iden::ScoreId)
+                            .col($iden::PerformanceVersion),
+                    )
+                    .to_owned()
+            }
+
+            pub fn drop() -> TableDropStatement {
+                Table::drop().table($iden::Table).to_owned()
+            }
+
+            pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+                vec![sea_query::ForeignKey::create()
+                    .name(FOREIGN_KEY_SCORE_ID)
+                    .from($iden::Table, $iden::ScoreId)
+                    .to($relate_iden::Table, $relate_iden::Id)
+                    .on_delete(ForeignKeyAction::Cascade)
+                    .on_update(ForeignKeyAction::Cascade)
+                    .to_owned()]
+            }
+
+            pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+                vec![sea_query::ForeignKey::drop()
+                    .name(FOREIGN_KEY_SCORE_ID)
+                    .table($iden::Table)
+                    .to_owned()]
+            }
+
+            pub fn create_indexes() -> Vec<IndexCreateStatement> {
+                vec![sea_query::Index::create()
+                    .name(INDEX_PERFORMANCE_VERSION_AND_PERFORMANCE)
+                    .table($iden::Table)
+                    .col($iden::PerformanceVersion)
+                    .col($iden::Performance)
+                    .to_owned()]
+            }
+
+            pub fn drop_indexes() -> Vec<IndexDropStatement> {
+                vec![sea_query::Index::drop()
+                    .table($iden::Table)
+                    .name(INDEX_PERFORMANCE_VERSION_AND_PERFORMANCE)
+                    .to_owned()]
+            }
+        }
+    };
+}
+
+define_score_mode_performances!(
+    score_performances_standard,
+    ScorePerformancesStandard,
+    scores_standard::ScoresStandard
+);
+define_score_mode_performances!(
+    score_performances_taiko,
+    ScorePerformancesTaiko,
+    scores_taiko::ScoresTaiko
+);
+define_score_mode_performances!(
+    score_performances_fruits,
+    ScorePerformancesFruits,
+    scores_fruits::ScoresFruits
+);
+define_score_mode_performances!(
+    score_performances_mania,
+    ScorePerformancesMania,
+    scores_mania::ScoresMania
+);
+define_score_mode_performances!(
+    score_performances_standard_relax,
+    ScorePerformancesStandardRelax,
+    scores_standard_relax::ScoresStandardRelax
+);
+define_score_mode_performances!(
+    score_performances_standard_autopilot,
+    ScorePerformancesStandardAutopilot,
+    scores_standard_autopilot::ScoresStandardAutopilot
+);
+define_score_mode_performances!(
+    score_performances_taiko_relax,
+    ScorePerformancesTaikoRelax,
+    scores_taiko_relax::ScoresTaikoRelax
+);
+define_score_mode_performances!(
+    score_performances_fruits_relax,
+    ScorePerformancesFruitsRelax,
+    scores_fruits_relax::ScoresFruitsRelax
+);
+
+macro_rules! define_user_mode_stats {
     ($table_name: ident, $iden: ident) => {
         pub mod $table_name {
             use sea_orm_migration::prelude::*;
@@ -1459,7 +1769,6 @@ macro_rules! define_user_stats {
                 UserId,
                 TotalScore,
                 RankedScore,
-                Performance,
                 Playcount,
                 TotalHits,
                 Accuracy,
@@ -1493,12 +1802,6 @@ macro_rules! define_user_stats {
                     .col(
                         ColumnDef::new($iden::RankedScore)
                             .big_integer()
-                            .not_null()
-                            .default(0),
-                    )
-                    .col(
-                        ColumnDef::new($iden::Performance)
-                            .integer()
                             .not_null()
                             .default(0),
                     )
@@ -1601,23 +1904,154 @@ macro_rules! define_user_stats {
     };
 }
 
-define_user_stats!(user_stats_standard, UserStatsStandard);
-define_user_stats!(user_stats_taiko, UserStatsTaiko);
-define_user_stats!(user_stats_fruits, UserStatsFruits);
-define_user_stats!(user_stats_mania, UserStatsMania);
-define_user_stats!(user_stats_standard_relax, UserStatsStandardRelax);
-define_user_stats!(user_stats_standard_autopilot, UserStatsStandardAutopilot);
-define_user_stats!(user_stats_taiko_relax, UserStatsTaikoRelax);
-define_user_stats!(user_stats_fruits_relax, UserStatsFruitsRelax);
+define_user_mode_stats!(user_stats_standard, UserStatsStandard);
+define_user_mode_stats!(user_stats_standard_score_v2, UserStatsStandardScoreV2);
+define_user_mode_stats!(user_stats_taiko, UserStatsTaiko);
+define_user_mode_stats!(user_stats_fruits, UserStatsFruits);
+define_user_mode_stats!(user_stats_mania, UserStatsMania);
+define_user_mode_stats!(user_stats_standard_relax, UserStatsStandardRelax);
+define_user_mode_stats!(
+    user_stats_standard_autopilot,
+    UserStatsStandardAutopilot
+);
+define_user_mode_stats!(user_stats_taiko_relax, UserStatsTaikoRelax);
+define_user_mode_stats!(user_stats_fruits_relax, UserStatsFruitsRelax);
 
-macro_rules! define_leaders {
-    ($table_name: ident, $iden: ident, $relate_table: ident :: $relate_iden: ident) => {
+macro_rules! define_user_mode_performances {
+    ($table_name: ident, $iden: ident) => {
         pub mod $table_name {
             use sea_orm_migration::prelude::*;
 
             use super::users::Users;
-            use super::$relate_table::$relate_iden;
+            use super::PerformanceVersion;
 
+            const FOREIGN_KEY_USER_ID: &str =
+                concat!("FK_", stringify!($table_name), "_user_id");
+            const INDEX_PERFORMANCE_VERSION_AND_PERFORMANCE: &str = concat!(
+                "IDX_",
+                stringify!($table_name),
+                "_performance_version_and_performance"
+            );
+
+            #[derive(Iden)]
+            pub enum $iden {
+                Table,
+                UserId,
+                PerformanceVersion,
+                Performance,
+            }
+
+            pub fn create() -> TableCreateStatement {
+                Table::create()
+                    .table($iden::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new($iden::UserId).big_integer().not_null())
+                    .col(
+                        ColumnDef::new($iden::PerformanceVersion)
+                            .enumeration(
+                                PerformanceVersion::Enum,
+                                [
+                                    PerformanceVersion::V1,
+                                    PerformanceVersion::V2,
+                                ],
+                            )
+                            .not_null()
+                            .default(PerformanceVersion::V2.to_string()),
+                    )
+                    .col(
+                        ColumnDef::new($iden::Performance)
+                            .decimal()
+                            .decimal_len(16, 2)
+                            .not_null()
+                            .default(0.0),
+                    )
+                    .primary_key(
+                        sea_query::Index::create()
+                            .col($iden::UserId)
+                            .col($iden::PerformanceVersion),
+                    )
+                    .to_owned()
+            }
+
+            pub fn drop() -> TableDropStatement {
+                Table::drop().table($iden::Table).to_owned()
+            }
+
+            pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+                vec![sea_query::ForeignKey::create()
+                    .name(FOREIGN_KEY_USER_ID)
+                    .from($iden::Table, $iden::UserId)
+                    .to(Users::Table, Users::Id)
+                    .on_delete(ForeignKeyAction::Cascade)
+                    .on_update(ForeignKeyAction::Cascade)
+                    .to_owned()]
+            }
+
+            pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+                vec![sea_query::ForeignKey::drop()
+                    .name(FOREIGN_KEY_USER_ID)
+                    .table($iden::Table)
+                    .to_owned()]
+            }
+
+            pub fn create_indexes() -> Vec<IndexCreateStatement> {
+                vec![sea_query::Index::create()
+                    .name(INDEX_PERFORMANCE_VERSION_AND_PERFORMANCE)
+                    .table($iden::Table)
+                    .col($iden::PerformanceVersion)
+                    .col($iden::Performance)
+                    .to_owned()]
+            }
+
+            pub fn drop_indexes() -> Vec<IndexDropStatement> {
+                vec![sea_query::Index::drop()
+                    .table($iden::Table)
+                    .name(INDEX_PERFORMANCE_VERSION_AND_PERFORMANCE)
+                    .to_owned()]
+            }
+        }
+    };
+}
+
+define_user_mode_performances!(
+    user_performances_standard,
+    UserPerformancesStandard
+);
+define_user_mode_performances!(user_performances_taiko, UserPerformancesTaiko);
+define_user_mode_performances!(
+    user_performances_fruits,
+    UserPerformancesFruits
+);
+define_user_mode_performances!(user_performances_mania, UserPerformancesMania);
+define_user_mode_performances!(
+    user_performances_standard_relax,
+    UserPerformancesStandardRelax
+);
+define_user_mode_performances!(
+    user_performances_standard_autopilot,
+    UserPerformancesStandardAutopilot
+);
+define_user_mode_performances!(
+    user_performances_taiko_relax,
+    UserPerformancesTaikoRelax
+);
+define_user_mode_performances!(
+    user_performances_fruits_relax,
+    UserPerformancesFruitsRelax
+);
+
+macro_rules! define_beatmap_mode_leaderboard {
+    ($table_name: ident, $iden: ident, $relate_table: ident :: $relate_iden: ident) => {
+        pub mod $table_name {
+            use sea_orm_migration::prelude::*;
+
+            use super::beatmaps::Beatmaps;
+            use super::users::Users;
+            use super::$relate_table::$relate_iden;
+            use super::RankingType;
+
+            const FOREIGN_KEY_BEATMAP_ID: &str =
+                concat!("FK_", stringify!($table_name), "_beatmap_id");
             const FOREIGN_KEY_USER_ID: &str =
                 concat!("FK_", stringify!($table_name), "_user_id");
             const FOREIGN_KEY_SCORE_ID: &str =
@@ -1631,6 +2065,7 @@ macro_rules! define_leaders {
             pub enum $iden {
                 Table,
                 BeatmapId,
+                RankingType,
                 UserId,
                 ScoreId,
             }
@@ -1639,15 +2074,29 @@ macro_rules! define_leaders {
                 Table::create()
                     .table($iden::Table)
                     .if_not_exists()
+                    .col(ColumnDef::new($iden::BeatmapId).integer().not_null())
                     .col(
-                        ColumnDef::new($iden::BeatmapId)
-                            .integer()
-                            .primary_key()
-                            .not_null(),
+                        ColumnDef::new($iden::RankingType)
+                            .enumeration(
+                                RankingType::Enum,
+                                [
+                                    RankingType::ScoreV1,
+                                    RankingType::ScoreV2,
+                                    RankingType::PerformanceV1,
+                                    RankingType::PerformanceV2,
+                                ],
+                            )
+                            .not_null()
+                            .default(RankingType::ScoreV1.to_string()),
                     )
                     .col(ColumnDef::new($iden::UserId).integer().not_null())
                     .col(
                         ColumnDef::new($iden::ScoreId).big_integer().not_null(),
+                    )
+                    .primary_key(
+                        sea_query::Index::create()
+                            .col($iden::BeatmapId)
+                            .col($iden::RankingType),
                     )
                     .to_owned()
             }
@@ -1658,6 +2107,13 @@ macro_rules! define_leaders {
 
             pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
                 vec![
+                    sea_query::ForeignKey::create()
+                        .name(FOREIGN_KEY_BEATMAP_ID)
+                        .from($iden::Table, $iden::BeatmapId)
+                        .to(Beatmaps::Table, Beatmaps::Bid)
+                        .on_delete(ForeignKeyAction::Cascade)
+                        .on_update(ForeignKeyAction::Cascade)
+                        .to_owned(),
                     sea_query::ForeignKey::create()
                         .name(FOREIGN_KEY_USER_ID)
                         .from($iden::Table, $iden::UserId)
@@ -1677,6 +2133,10 @@ macro_rules! define_leaders {
 
             pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
                 vec![
+                    sea_query::ForeignKey::drop()
+                        .name(FOREIGN_KEY_BEATMAP_ID)
+                        .table($iden::Table)
+                        .to_owned(),
                     sea_query::ForeignKey::drop()
                         .name(FOREIGN_KEY_USER_ID)
                         .table($iden::Table)
@@ -1719,31 +2179,43 @@ macro_rules! define_leaders {
     };
 }
 
-define_leaders!(
-    leaders_standard,
-    LeadersStandard,
+define_beatmap_mode_leaderboard!(
+    leaderboard_standard,
+    LeaderboardStandard,
     scores_standard::ScoresStandard
 );
-define_leaders!(leaders_taiko, LeadersTaiko, scores_taiko::ScoresTaiko);
-define_leaders!(leaders_fruits, LeadersFruits, scores_fruits::ScoresFruits);
-define_leaders!(leaders_mania, LeadersMania, scores_mania::ScoresMania);
-define_leaders!(
-    leaders_standard_relax,
-    LeadersStandardRelax,
+define_beatmap_mode_leaderboard!(
+    leaderboard_taiko,
+    LeaderboardTaiko,
+    scores_taiko::ScoresTaiko
+);
+define_beatmap_mode_leaderboard!(
+    leaderboard_fruits,
+    LeaderboardFruits,
+    scores_fruits::ScoresFruits
+);
+define_beatmap_mode_leaderboard!(
+    leaderboard_mania,
+    LeaderboardMania,
+    scores_mania::ScoresMania
+);
+define_beatmap_mode_leaderboard!(
+    leaderboard_standard_relax,
+    LeaderboardStandardRelax,
     scores_standard_relax::ScoresStandardRelax
 );
-define_leaders!(
-    leaders_standard_autopilot,
-    LeadersStandardAutopilot,
+define_beatmap_mode_leaderboard!(
+    leaderboard_standard_autopilot,
+    LeaderboardStandardAutopilot,
     scores_standard_autopilot::ScoresStandardAutopilot
 );
-define_leaders!(
-    leaders_taiko_relax,
-    LeadersTaikoRelax,
+define_beatmap_mode_leaderboard!(
+    leaderboard_taiko_relax,
+    LeaderboardTaikoRelax,
     scores_taiko_relax::ScoresTaikoRelax
 );
-define_leaders!(
-    leaders_fruits_relax,
-    LeadersFruitsRelax,
+define_beatmap_mode_leaderboard!(
+    leaderboard_fruits_relax,
+    LeaderboardFruitsRelax,
     scores_fruits_relax::ScoresFruitsRelax
 );
