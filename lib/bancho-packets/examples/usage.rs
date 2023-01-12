@@ -9,11 +9,11 @@ fn main() {
 
     // Multiple packets with Builder
     let packets = PacketBuilder::new()
-        .add(&server::login_reply(LoginResult::Success(1000)))
-        .add(&server::protocol_version(19))
-        .add(&server::notification("Welcome to osu!"))
-        .add(&server::main_menu_icon("https://image.png", "https://url.link"))
-        .add(&server::silence_end(0))
-        .add(&server::channel_info_end())
+        .add(server::login_reply(LoginResult::Success(1000)))
+        .add(server::protocol_version(19))
+        .add(server::notification("Welcome to osu!"))
+        .add(server::main_menu_icon("https://image.png", "https://url.link"))
+        .add(server::silence_end(0))
+        .add(server::channel_info_end())
         .build();
 }

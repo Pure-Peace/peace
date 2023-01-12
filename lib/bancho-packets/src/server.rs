@@ -1,6 +1,6 @@
 use crate::{
     data, packet, write_channel, write_message, LoginResult, MatchData,
-    MatchUpdate, PacketId, ScoreFrame, OsuWrite
+    MatchUpdate, PacketId, ScoreFrame, BanchoPacketWrite
 };
 
 #[inline]

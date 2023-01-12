@@ -9,8 +9,15 @@ pub mod server;
 
 use enum_primitive_derive::Primitive;
 use num_traits::FromPrimitive;
-use std::convert::TryInto;
-use std::ops::Deref;
+use std::{convert::TryInto, ops::Deref};
+
+/// Packet header length
+///
+/// - 0..=1: packet id
+/// - 2: null
+/// - 3..=6: packet length
+/// - 7..=N: packet data length(uleb128) + data
+pub const BANCHO_PACKET_HEADER_LENGTH: usize = 7;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -234,14 +241,14 @@ pub struct ScoreFrame {
     pub score_v2: bool,
 }
 
-pub trait OsuRead<T> {
+pub trait BanchoPacketRead<T> {
     fn read(reader: &mut PayloadReader) -> Option<T>;
 }
 
-impl OsuRead<String> for String {
+impl BanchoPacketRead<String> for String {
     fn read(reader: &mut PayloadReader) -> Option<String> {
         if reader.payload.get(reader.index())? != &0xb {
-            return None;
+            return None
         }
         reader.increase_index(1);
         let data_length = reader.read_uleb128()? as usize;
@@ -254,7 +261,7 @@ impl OsuRead<String> for String {
     }
 }
 
-impl OsuRead<bool> for bool {
+impl BanchoPacketRead<bool> for bool {
     fn read(reader: &mut PayloadReader) -> Option<bool> {
         Some(reader.read::<i8>()? == 1)
     }
@@ -262,10 +269,10 @@ impl OsuRead<bool> for bool {
 
 macro_rules! impl_number {
     ($($t:ty),+) => {
-        $(impl OsuRead<$t> for $t {
+        $(impl BanchoPacketRead<$t> for $t {
             fn read(reader: &mut PayloadReader) -> Option<$t> {
                 Some(<$t>::from_le_bytes(
-                    reader.next_t::<$t>()?.try_into().ok()?,
+                    reader.next_with_length_type::<$t>()?.try_into().ok()?,
                 ))
             }
         })+
@@ -274,7 +281,7 @@ macro_rules! impl_number {
 
 impl_number!(i8, u8, i16, u16, i32, u32, i64, u64);
 
-impl OsuRead<BanchoMessage> for BanchoMessage {
+impl BanchoPacketRead<BanchoMessage> for BanchoMessage {
     fn read(reader: &mut PayloadReader) -> Option<BanchoMessage> {
         Some(read_struct!(
             reader,
@@ -283,7 +290,7 @@ impl OsuRead<BanchoMessage> for BanchoMessage {
     }
 }
 
-impl OsuRead<ScoreFrame> for ScoreFrame {
+impl BanchoPacketRead<ScoreFrame> for ScoreFrame {
     fn read(reader: &mut PayloadReader) -> Option<ScoreFrame> {
         Some(read_struct!(
             reader,
@@ -310,14 +317,14 @@ impl OsuRead<ScoreFrame> for ScoreFrame {
 
 macro_rules! impl_read_number_array {
     ($($t:ty),+) => {
-        $(impl OsuRead<Vec<$t>> for Vec<$t> {
+        $(impl BanchoPacketRead<Vec<$t>> for Vec<$t> {
             fn read(reader: &mut PayloadReader) -> Option<Vec<$t>> {
-                let length_data = reader.next_t::<i16>()?;
+                let length_data = reader.next_with_length_type::<i16>()?;
                 let int_count = <i16>::from_le_bytes(length_data.try_into().ok()?) as usize;
 
                 let mut data = Vec::with_capacity(int_count);
                 for _ in 0..int_count {
-                    data.push(<$t>::from_le_bytes(reader.next(4)?.try_into().ok()?));
+                    data.push(<$t>::from_le_bytes(reader.next_with_length_type::<i32>()?.try_into().ok()?));
                 }
                 Some(data)
             }
@@ -327,15 +334,20 @@ macro_rules! impl_read_number_array {
 
 impl_read_number_array!(i8, u8, i16, u16, i32, u32, i64, u64);
 
-pub trait OsuWrite {
-    fn osu_write(&self, buf: &mut Vec<u8>);
+pub trait BanchoPacketWrite {
+    fn write_buf(&self, buf: &mut Vec<u8>);
+    fn as_packet(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        self.write_buf(&mut buf);
+        buf
+    }
 }
 
 macro_rules! impl_write_number {
     ($($t:ty),+) => {
-        $(impl OsuWrite for $t {
+        $(impl BanchoPacketWrite for $t {
             #[inline]
-            fn osu_write(&self, buf: &mut Vec<u8>) {
+            fn write_buf(&self, buf: &mut Vec<u8>) {
                 buf.extend(self.to_le_bytes())
             }
         })+
@@ -343,9 +355,9 @@ macro_rules! impl_write_number {
 }
 
 macro_rules! impl_write_number_array {
-    ($($t:ty),+) => {$(impl OsuWrite for [$t] {
+    ($($t:ty),+) => {$(impl BanchoPacketWrite for [$t] {
         #[inline]
-        fn osu_write(&self, buf: &mut Vec<u8>) {
+        fn write_buf(&self, buf: &mut Vec<u8>) {
             buf.extend((self.len() as u16).to_le_bytes());
             for int in self.iter() {
                 buf.extend(int.to_le_bytes())
@@ -354,9 +366,9 @@ macro_rules! impl_write_number_array {
     })+}
 }
 
-impl OsuWrite for str {
+impl BanchoPacketWrite for str {
     #[inline]
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         let byte_length = self.len();
         if byte_length > 0 {
             buf.push(0xb);
@@ -368,23 +380,23 @@ impl OsuWrite for str {
     }
 }
 
-impl OsuWrite for u8 {
+impl BanchoPacketWrite for u8 {
     #[inline]
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         buf.push(*self);
     }
 }
 
-impl OsuWrite for [u8] {
+impl BanchoPacketWrite for [u8] {
     #[inline]
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         buf.extend(self);
     }
 }
 
-impl OsuWrite for bool {
+impl BanchoPacketWrite for bool {
     #[inline]
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         buf.push(if *self { 1 } else { 0 });
     }
 }
@@ -392,23 +404,23 @@ impl OsuWrite for bool {
 impl_write_number!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
 impl_write_number_array!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
 
-impl OsuWrite for LoginResult {
+impl BanchoPacketWrite for LoginResult {
     #[inline]
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         match self {
             LoginResult::Success(user_id) => *user_id,
             LoginResult::Failed(reason) => *reason as i32,
         }
-        .osu_write(buf)
+        .write_buf(buf)
     }
 }
 
-impl OsuWrite for MatchUpdate {
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+impl BanchoPacketWrite for MatchUpdate {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         let raw_password = if let Some(pw) = &self.password {
             if self.send_password {
                 let mut buf = Vec::new();
-                pw.osu_write(&mut buf);
+                pw.write_buf(&mut buf);
                 buf
             } else {
                 b"\x0b\x00".to_vec()
@@ -441,15 +453,15 @@ impl OsuWrite for MatchUpdate {
     }
 }
 
-impl OsuWrite for MatchData {
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+impl BanchoPacketWrite for MatchData {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         MatchUpdate { data: self.to_owned(), send_password: true }
-            .osu_write(buf);
+            .write_buf(buf);
     }
 }
 
-impl OsuWrite for ScoreFrame {
-    fn osu_write(&self, buf: &mut Vec<u8>) {
+impl BanchoPacketWrite for ScoreFrame {
+    fn write_buf(&self, buf: &mut Vec<u8>) {
         buf.extend(data!(
             self.timestamp,
             self.id,
@@ -510,20 +522,22 @@ impl<'a> PayloadReader<'a> {
     }
 
     #[inline]
-    pub(crate) fn next(&mut self, length: usize) -> Option<&[u8]> {
+    pub(crate) fn next_with_length(&mut self, length: usize) -> Option<&[u8]> {
         self.index += length;
         Some(self.payload.get(self.index - length..self.index)?)
     }
 
     #[inline]
-    pub(crate) fn next_t<T: Sized>(&mut self) -> Option<&[u8]> {
-        self.next(std::mem::size_of::<T>())
+    pub(crate) fn next_with_length_type<Len: Sized>(
+        &mut self,
+    ) -> Option<&[u8]> {
+        self.next_with_length(std::mem::size_of::<Len>())
     }
 
     #[inline]
     pub fn read<T>(&mut self) -> Option<T>
     where
-        T: OsuRead<T>,
+        T: BanchoPacketRead<T>,
     {
         T::read(self)
     }
@@ -572,15 +586,28 @@ impl<'a> PacketReader<'a> {
     }
 
     #[inline]
-    /// Read the osu!client packet: (packet id, payload)
-    pub fn next(&mut self) -> Option<Packet> {
-        if (self.buf.len() - self.index) < 7 {
-            return None;
+    /// Read packet header: (type, length)
+    pub fn read_header(header: &[u8]) -> Option<PacketHeader> {
+        let id = *header.get(0)?;
+        Some(PacketHeader {
+            id: PacketId::from_u8(id).unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
+            payload_length: u32::from_le_bytes(header[3..=6].try_into().ok()?),
+        })
+    }
+}
+
+impl<'a> Iterator for PacketReader<'a> {
+    type Item = Packet<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if (self.buf.len() - self.index) < BANCHO_PACKET_HEADER_LENGTH {
+            return None
         }
         // Slice packet header data [u8; 7],
         // including packet id, payload length
-        let header = &self.buf[self.index..self.index + 7];
-        self.index += 7;
+        let header =
+            &self.buf[self.index..self.index + BANCHO_PACKET_HEADER_LENGTH];
+        self.index += BANCHO_PACKET_HEADER_LENGTH;
 
         // Get packet id and payload length
         let PacketHeader { id, payload_length } =
@@ -597,16 +624,6 @@ impl<'a> PacketReader<'a> {
         };
 
         Some(Packet { id, payload })
-    }
-
-    #[inline]
-    /// Read packet header: (type, length)
-    pub fn read_header(header: &[u8]) -> Option<PacketHeader> {
-        let id = *header.get(0)?;
-        Some(PacketHeader {
-            id: PacketId::from_u8(id).unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
-            payload_length: u32::from_le_bytes(header[3..=6].try_into().ok()?),
-        })
     }
 }
 
@@ -630,7 +647,7 @@ pub fn read_uleb128(slice: &[u8]) -> Option<(u32, usize)> {
         index += 1;
         if (byte & 0x80) == 0 {
             val |= (*byte as u32) << shift;
-            return Some((val, index));
+            return Some((val, index))
         }
         val |= ((byte & 0x7f) as u32) << shift;
         shift += 7;
@@ -641,18 +658,17 @@ pub fn read_uleb128(slice: &[u8]) -> Option<(u32, usize)> {
 /// Initial a packet with PacketId
 ///
 /// Packets posit:
-/// ```rust,ignore
+/// ```ignore
 /// [0..=1]: packet id
 /// [2]: null
 /// [3..=6]: packet length
-/// [7..=N]: data length(uleb128) + data
+/// [7..=N]: packet data length(uleb128) + data
 /// ```
 /// The maximum value of u8 is 255,
 ///
 /// but currently the largest packet id of bancho is only 109,
 ///
 /// so I think it is sufficient to insert the packet_id in the first position
-///
 pub fn new_empty_packet(packet_id: PacketId) -> Vec<u8> {
     vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
@@ -698,32 +714,50 @@ impl PacketBuilder {
     }
 
     #[inline]
-    pub fn from_batch(packets: &[&[u8]]) -> Self {
+    pub fn from_batch<P, I>(packets: P) -> Self
+    where
+        I: IntoIterator<Item = u8>,
+        P: IntoIterator<Item = I>,
+    {
         Self::new().add_batch(packets)
     }
 
     #[inline]
-    pub fn add_batch(mut self, packets: &[&[u8]]) -> Self {
+    pub fn add_batch<P, I>(mut self, packets: P) -> Self
+    where
+        I: IntoIterator<Item = u8>,
+        P: IntoIterator<Item = I>,
+    {
         self.add_batch_ref(packets);
         self
     }
 
     #[inline]
-    pub fn add_batch_ref(&mut self, packets: &[&[u8]]) -> &Self {
-        for &i in packets {
+    pub fn add_batch_ref<P, I>(&mut self, packets: P) -> &Self
+    where
+        I: IntoIterator<Item = u8>,
+        P: IntoIterator<Item = I>,
+    {
+        for i in packets {
             self.buffer.extend(i)
         }
         self
     }
 
     #[inline]
-    pub fn add(mut self, packet: &[u8]) -> Self {
+    pub fn add<P>(mut self, packet: P) -> Self
+    where
+        P: IntoIterator<Item = u8>,
+    {
         self.add_ref(packet);
         self
     }
 
     #[inline]
-    pub fn add_ref(&mut self, packet: &[u8]) -> &Self {
+    pub fn add_ref<P>(&mut self, packet: P) -> &Self
+    where
+        P: IntoIterator<Item = u8>,
+    {
         self.buffer.extend(packet);
         self
     }
@@ -739,13 +773,8 @@ impl PacketBuilder {
     }
 
     #[inline]
-    pub fn osu_write<W>(data: W) -> Vec<u8>
-    where
-        W: OsuWrite,
-    {
-        let mut buf = Vec::new();
-        data.osu_write(&mut buf);
-        buf
+    pub fn buffer_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.buffer
     }
 }
 
@@ -775,7 +804,7 @@ pub mod macros {
     /// let val_1: i32 = 123;
     /// let val_2: i16 = 50;
     ///
-    /// // Single data, eq with `val_1.osu_write()`
+    /// // Single data, eq with `val_1.write_buf()`
     /// data!(val_1);
     ///
     /// // Mutiple data, default capacity is 30
@@ -788,47 +817,45 @@ pub mod macros {
     ($item:expr) => {
         {
             let mut buf = Vec::with_capacity(30);
-            $item.osu_write(&mut buf);
+            $item.write_buf(&mut buf);
             buf
         }
     };
     ($($item:expr),+) => {
         {
             let mut buf = Vec::with_capacity(30);
-            $($item.osu_write(&mut buf);)+
+            $($item.write_buf(&mut buf);)+
             buf
         }
     };
     (@capacity { $capacity:expr }, $($item:expr),+) => {
         {
             let mut buf = Vec::with_capacity($capacity);
-            $($item.osu_write(&mut buf);)+
+            $($item.write_buf(&mut buf);)+
             buf
         }
     }
 }
 
     #[macro_export]
-    macro_rules! out_packet {
+    macro_rules! add_packet_length {
         ($packet:expr) => {{
-            for (index, value) in
-                (($packet.len() - 7) as i32).to_le_bytes().iter().enumerate()
-            {
-                $packet[3 + index] = *value;
+            let packet_length =
+                (($packet.len() - $crate::BANCHO_PACKET_HEADER_LENGTH) as i32)
+                    .to_le_bytes();
+            let ptr = $packet.as_mut_ptr();
+            unsafe {
+                std::ptr::write(ptr.add(3), packet_length[0]);
+                std::ptr::write(ptr.add(4), packet_length[1]);
+                std::ptr::write(ptr.add(5), packet_length[2]);
+                std::ptr::write(ptr.add(6), packet_length[3]);
             }
             $packet
         }};
     }
 
     #[macro_export]
-    /// Creating osu!packet
-    ///
-    /// The first parameter is always packet_id.
-    ///
-    /// Two cases exist for the remaining parameters:
-    /// 1. When last parameters ending with a semicolon,
-    /// it means origin data (impl OsuWrite trait).
-    /// 2. Otherwise it means packet data.
+    /// Create Bancho packets
     ///
     /// # Examples:
     /// ```
@@ -858,18 +885,18 @@ pub mod macros {
     /// );
     /// ```
     macro_rules! packet {
-    ($packet_id:expr) => {
-        {
-            let mut p = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
-            $crate::out_packet!(p)
-        }
-    };
-    ($packet_id:expr, $($data:expr),*) => {
-        {
-            let mut p = vec![$packet_id as u8, 0, 0, 0, 0, 0, 0];
-            $($data.osu_write(&mut p);)*
-            $crate::out_packet!(p)
+        ($packet_id:expr) => {
+            {
+                let mut packet = $crate::new_empty_packet($packet_id);
+                $crate::add_packet_length!(packet)
+            }
+        };
+        ($packet_id:expr, $($data:expr),*) => {
+            {
+                let mut packet = $crate::new_empty_packet($packet_id);
+                $($data.write_buf(&mut packet);)*
+                $crate::add_packet_length!(packet)
+            }
         }
     }
-}
 }

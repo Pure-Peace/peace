@@ -1,4 +1,4 @@
-use crate::{data, packet, write_message, OsuWrite, PacketId};
+use crate::{data, packet, write_message, BanchoPacketWrite, PacketId};
 
 #[inline]
 /// #0: OSU_USER_CHANGE_ACTION

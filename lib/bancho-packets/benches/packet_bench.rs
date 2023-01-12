@@ -9,7 +9,7 @@ fn packets_write_benchmark(c: &mut Criterion) {
         b.iter(|| server::match_join_fail())
     });
     group.bench_function("match_join_failed packet - 2", |b| {
-        b.iter(|| PacketBuilder::new().add(&server::match_join_fail()).build())
+        b.iter(|| PacketBuilder::new().add(server::match_join_fail()).build())
     });
     group.bench_function("notification packet", |b| {
         b.iter(|| server::notification("hello"))
@@ -27,15 +27,15 @@ fn packets_write_benchmark(c: &mut Criterion) {
     group.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             PacketBuilder::new()
-                .add(&server::login_reply(LoginResult::Success(1009)))
-                .add(&server::protocol_version(19))
-                .add(&server::notification("Welcome to osu!"))
-                .add(&server::main_menu_icon(
+                .add(server::login_reply(LoginResult::Success(1009)))
+                .add(server::protocol_version(19))
+                .add(server::notification("Welcome to osu!"))
+                .add(server::main_menu_icon(
                     "https://image.png",
                     "https://url.link",
                 ))
-                .add(&server::silence_end(0))
-                .add(&server::channel_info_end())
+                .add(server::silence_end(0))
+                .add(server::channel_info_end())
                 .build()
         })
     });

@@ -237,15 +237,15 @@ mod packets_writing {
     fn test_login() {
         let resp = PacketBuilder::new();
         let resp = resp
-            .add(&server::login_reply(LoginResult::Success(1009)))
-            .add(&server::protocol_version(19))
-            .add(&server::notification("Welcome to osu!"))
-            .add(&server::main_menu_icon(
+            .add(server::login_reply(LoginResult::Success(1009)))
+            .add(server::protocol_version(19))
+            .add(server::notification("Welcome to osu!"))
+            .add(server::main_menu_icon(
                 "https://image.png",
                 "https://url.link",
             ))
-            .add(&server::silence_end(0))
-            .add(&server::channel_info_end());
+            .add(server::silence_end(0))
+            .add(server::channel_info_end());
         assert_eq!(
             resp.build(),
             vec![
@@ -273,8 +273,8 @@ mod packets_writing {
 
     #[test]
     fn test_write_u32_i32() {
-        let int_u32 = PacketBuilder::osu_write(536870912 as u32);
-        let int_i32 = PacketBuilder::osu_write(536870912);
+        let int_u32 = (536870912 as u32).as_packet();
+        let int_i32 = (536870912).as_packet();
 
         println!("{:?} {:?}", int_u32, int_i32);
     }
