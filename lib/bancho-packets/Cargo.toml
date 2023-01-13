@@ -5,7 +5,7 @@ authors = ["PurePeace <purepeace_@outlook.com>"]
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/pure-peace/peace"
-description = "osu! bancho packet reading & writing utilities."
+description = "osu! bancho packet Reading & Writing library."
 readme = "README.md"
 
 [features]
