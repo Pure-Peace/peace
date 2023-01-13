@@ -9,7 +9,10 @@ pub mod server;
 
 use enum_primitive_derive::Primitive;
 use num_traits::FromPrimitive;
-use std::{convert::TryInto, ops::Deref};
+use std::{
+    convert::TryInto,
+    ops::{Deref, DerefMut},
+};
 
 /// Packet header length
 ///
@@ -19,11 +22,14 @@ use std::{convert::TryInto, ops::Deref};
 /// - 7..=N: packet data length(uleb128) + data
 pub const BANCHO_PACKET_HEADER_LENGTH: usize = 7;
 
+pub const EMPTY_STRING_PACKET: &[u8; 2] = b"\x0b\x00";
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+/// Bancho packet, including [`PacketHeader`] structure and payload bytes.
 pub struct Packet<'a> {
     pub id: PacketId,
     pub payload: Option<&'a [u8]>,
@@ -31,6 +37,7 @@ pub struct Packet<'a> {
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+/// Bancho packet header, including [`PacketId`] and payload (data) length.
 pub struct PacketHeader {
     pub id: PacketId,
     pub payload_length: u32,
@@ -38,6 +45,8 @@ pub struct PacketHeader {
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+/// The login result of the bancho client.
+/// Returns `Success(user_id)` if success.
 pub enum LoginResult {
     Success(i32),
     Failed(LoginFailedResaon),
@@ -46,6 +55,7 @@ pub enum LoginResult {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(i32)]
+/// The bancho client will handle these failure reasons when the user login fails.
 pub enum LoginFailedResaon {
     InvalidCredentials = -1,
     OutdatedClient = -2,
@@ -60,8 +70,8 @@ pub enum LoginFailedResaon {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
 #[repr(u8)]
+/// Known packet ids for bancho clients.
 pub enum PacketId {
-    /// Bancho packet ids
     OSU_USER_CHANGE_ACTION = 0,
     OSU_SEND_PUBLIC_MESSAGE = 1,
     OSU_USER_LOGOUT = 2,
@@ -175,6 +185,7 @@ pub enum PacketId {
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+/// [`BanchoMessage`] is the message structure of the bancho client.
 pub struct BanchoMessage {
     pub sender: String,
     pub content: String,
@@ -184,6 +195,7 @@ pub struct BanchoMessage {
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+/// [`MatchData`] is the data of bancho client multiplayer game room.
 pub struct MatchData {
     pub match_id: i32,
     pub in_progress: bool,
@@ -221,8 +233,15 @@ impl Deref for MatchUpdate {
     }
 }
 
+impl DerefMut for MatchUpdate {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+/// The [`ScoreFrame`] uploaded by the bancho client during multiplayer games.
 pub struct ScoreFrame {
     pub timestamp: i32,
     pub id: u8,
@@ -241,6 +260,358 @@ pub struct ScoreFrame {
     pub score_v2: bool,
 }
 
+/// Generic type for [`str`] and [`String`]
+pub trait Str:
+    BanchoPacketWrite
+    + std::fmt::Display
+    + std::fmt::Debug
+    + AsRef<str>
+    + Into<String>
+    + Deref<Target = str>
+{
+}
+
+impl Str for &str {}
+
+impl Str for String {}
+
+#[derive(Debug, Clone)]
+/// [`PayloadReader`] helps to read Bacho packet data.
+///
+/// # Example:
+/// ```
+/// use bancho_packets::{PacketReader, PayloadReader};
+///
+///
+/// let mut reader = PacketReader::new(&[
+///     4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 19, 0, 0, 0, 11, 17, 72, 101, 108,
+///     108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 240, 159, 146, 150,
+///     4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 18, 0, 0, 0, 11, 16, 229, 147, 136,
+///     229, 147, 136, 227, 128, 144, 240, 159, 152, 131, 227, 128, 145,
+///     104, 0, 0, 0, 0, 0, 0, 24, 0, 0, 23, 0, 0, 0, 11, 21, 232, 175,
+///     187, 229, 143, 150, 229, 174, 140, 228, 186, 134, 239, 188, 129,
+///     239, 188, 129, 226, 156, 168,
+/// ]);
+/// while let Some(packet) = reader.next() {
+///     print!("packet id: {:?}: ", packet.id);
+///     match packet.payload {
+///         None => println!("Non-payload"),
+///         Some(payload) => {
+///             let mut payload_reader = PayloadReader::new(payload);
+///             println!("payload as string: {:?}", payload_reader.read::<String>());
+///         },
+///     }
+/// }
+///
+/// ```
+pub struct PayloadReader<'a> {
+    pub(crate) payload: &'a [u8],
+    pub(crate) index: usize,
+}
+
+impl<'a> PayloadReader<'a> {
+    #[inline]
+    pub fn new(payload: &'a [u8]) -> Self {
+        PayloadReader { payload, index: 0 }
+    }
+
+    #[inline]
+    /// Try to read `<T>` from payloads.
+    /// Returns [`None`] when no data matching the given type can be read.
+    pub fn read<T>(&mut self) -> Option<T>
+    where
+        T: BanchoPacketRead<T>,
+    {
+        T::read(self)
+    }
+
+    #[inline]
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    #[inline]
+    pub fn payload(&self) -> &'a [u8] {
+        self.payload
+    }
+
+    #[inline]
+    /// Reset read progress to `0`.
+    pub fn reset(&mut self) {
+        self.index = 0
+    }
+
+    #[inline]
+    pub(crate) fn increase_index(&mut self, offset: usize) -> usize {
+        self.index += offset;
+        self.index
+    }
+
+    #[inline]
+    pub(crate) fn decrease_index(&mut self, offset: usize) -> usize {
+        self.index -= offset;
+        self.index
+    }
+
+    #[inline]
+    pub(crate) fn next_with_length(&mut self, length: usize) -> Option<&[u8]> {
+        self.index += length;
+        Some(self.payload.get(self.index - length..self.index)?)
+    }
+
+    #[inline]
+    pub(crate) fn next_with_length_type<Len: Sized>(
+        &mut self,
+    ) -> Option<&[u8]> {
+        self.next_with_length(std::mem::size_of::<Len>())
+    }
+
+    #[inline]
+    pub(crate) fn read_uleb128(&mut self) -> Option<u32> {
+        let (val, length) = uleb128_to_u32(&self.payload.get(self.index..)?)?;
+        self.index += length;
+        Some(val)
+    }
+}
+
+#[derive(Debug, Clone)]
+/// [`PacketReader`] helps to read Bacho packets.
+///
+/// # Example:
+/// ```
+/// use bancho_packets::{PacketReader, PayloadReader};
+///
+/// // Parsing [`PacketHeader`] from bytes.
+/// let header = PacketReader::parse_header(&[
+///     24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111
+/// ]);
+///
+/// // Read sequentially.
+/// let mut reader = PacketReader::new(&[
+///     24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111, 4, 0, 0, 0,
+///     0, 0, 0, 24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111,
+/// ]);
+/// println!("packet 0: {:?}", reader.next());
+/// println!("packet 1: {:?}", reader.next());
+/// println!("packet 2: {:?}", reader.next());
+/// println!("packet 3 (outside): {:?}", reader.next());
+///
+/// // Full example.
+/// let mut reader = PacketReader::new(&[
+///     4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 19, 0, 0, 0, 11, 17, 72, 101, 108,
+///     108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 240, 159, 146, 150,
+///     4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 18, 0, 0, 0, 11, 16, 229, 147, 136,
+///     229, 147, 136, 227, 128, 144, 240, 159, 152, 131, 227, 128, 145,
+///     104, 0, 0, 0, 0, 0, 0, 24, 0, 0, 23, 0, 0, 0, 11, 21, 232, 175,
+///     187, 229, 143, 150, 229, 174, 140, 228, 186, 134, 239, 188, 129,
+///     239, 188, 129, 226, 156, 168,
+/// ]);
+/// while let Some(packet) = reader.next() {
+///     print!("packet id: {:?}: ", packet.id);
+///     match packet.payload {
+///         None => println!("Non-payload"),
+///         Some(payload) => {
+///             let mut payload_reader = PayloadReader::new(payload);
+///             println!("payload as string: {:?}", payload_reader.read::<String>());
+///         },
+///     }
+/// }
+///
+/// ```
+pub struct PacketReader<'a> {
+    buf: &'a [u8],
+    ptr: usize,
+}
+
+impl<'a> PacketReader<'a> {
+    #[inline]
+    /// Create a new [`PacketReader`] with bytes.
+    pub fn new(buf: &'a [u8]) -> Self {
+        PacketReader { buf, ptr: 0 }
+    }
+
+    #[inline]
+    pub fn index(&self) -> usize {
+        self.ptr
+    }
+
+    #[inline]
+    pub fn buffer(&self) -> &'a [u8] {
+        self.buf
+    }
+
+    #[inline]
+    /// Reset the reading progress of [`PacketReader`].
+    pub fn reset(&mut self) {
+        self.ptr = 0;
+    }
+
+    #[inline]
+    /// Parse [`PacketHeader`] from bytes.
+    pub fn parse_header(header: &[u8]) -> Option<PacketHeader> {
+        let packet_id = *header.get(0)?;
+        Some(PacketHeader {
+            id: PacketId::from_u8(packet_id)
+                .unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
+            payload_length: u32::from_le_bytes(
+                header[3..BANCHO_PACKET_HEADER_LENGTH].try_into().ok()?,
+            ),
+        })
+    }
+}
+
+impl<'a> Iterator for PacketReader<'a> {
+    type Item = Packet<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if (self.buf.len() - self.ptr) < BANCHO_PACKET_HEADER_LENGTH {
+            return None;
+        }
+        // Slice packet header data `[u8; 7]`,
+        // including packet id, payload length
+        let header =
+            &self.buf[self.ptr..self.ptr + BANCHO_PACKET_HEADER_LENGTH];
+        self.ptr += BANCHO_PACKET_HEADER_LENGTH;
+
+        // Get packet id and payload length
+        let PacketHeader { id, payload_length } =
+            PacketReader::parse_header(header)?;
+
+        // Read the payload
+        let payload = if payload_length == 0 {
+            None
+        } else {
+            let next_payload_length = payload_length as usize;
+
+            self.ptr += next_payload_length;
+            self.buf.get(self.ptr - next_payload_length..self.ptr)
+        };
+
+        Some(Packet { id, payload })
+    }
+}
+
+#[derive(Debug, Clone)]
+/// [`PacketBuilder`] can help pack bancho packets.
+///
+/// # Examples:
+/// ```
+/// use bancho_packets::{server, PacketBuilder, LoginResult};
+///
+/// let packet = PacketBuilder::new()
+///     .add(server::login_reply(LoginResult::Success(1009)))
+///     .add(server::protocol_version(19))
+///     .add(server::notification("Welcome to osu!"))
+///     .add(server::main_menu_icon(
+///         "https://image.png",
+///         "https://url.link",
+///     ))
+///     .add(server::silence_end(0))
+///     .add(server::channel_info_end())
+///     .build();
+/// ```
+///
+pub struct PacketBuilder {
+    buffer: Vec<u8>,
+}
+
+impl PacketBuilder {
+    #[inline]
+    /// Create an empty [`PacketBuilder`].
+    pub fn new() -> Self {
+        Self { buffer: Vec::new() }
+    }
+
+    #[inline]
+    /// Create [`PacketBuilder`] with capacity.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self { buffer: Vec::with_capacity(capacity) }
+    }
+
+    #[inline]
+    /// Create [`PacketBuilder`] with [`PacketId`].
+    pub fn with_packet_id(packet_id: PacketId) -> Self {
+        Self { buffer: new_empty_packet(packet_id) }
+    }
+
+    #[inline]
+    /// Consume this [`PacketBuilder`] and return data.
+    pub fn build(self) -> Vec<u8> {
+        self.buffer
+    }
+
+    #[inline]
+    pub fn buffer(&self) -> &Vec<u8> {
+        &self.buffer
+    }
+
+    #[inline]
+    pub fn buffer_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.buffer
+    }
+
+    #[inline]
+    /// Create a [`PacketBuilder`] from multiple packets.
+    pub fn from_batch<P, I>(packets: P) -> Self
+    where
+        I: IntoIterator<Item = u8>,
+        P: IntoIterator<Item = I>,
+    {
+        Self::new().add_batch(packets)
+    }
+
+    #[inline]
+    /// Batch add packets to [`PacketBuilder`].
+    pub fn add_batch<P, I>(mut self, packets: P) -> Self
+    where
+        I: IntoIterator<Item = u8>,
+        P: IntoIterator<Item = I>,
+    {
+        self.add_batch_ref(packets);
+        self
+    }
+
+    #[inline]
+    /// Batch add packets to [`PacketBuilder`].
+    pub fn add_batch_ref<P, I>(&mut self, packets: P) -> &Self
+    where
+        I: IntoIterator<Item = u8>,
+        P: IntoIterator<Item = I>,
+    {
+        for p in packets {
+            self.buffer.extend(p)
+        }
+        self
+    }
+
+    #[inline]
+    /// Add an packet to [`PacketBuilder`].
+    pub fn add<P>(mut self, packet: P) -> Self
+    where
+        P: IntoIterator<Item = u8>,
+    {
+        self.add_ref(packet);
+        self
+    }
+
+    #[inline]
+    /// Add an packet to [`PacketBuilder`].
+    pub fn add_ref<P>(&mut self, packet: P) -> &Self
+    where
+        P: IntoIterator<Item = u8>,
+    {
+        self.buffer.extend(packet);
+        self
+    }
+}
+
+impl From<Vec<u8>> for PacketBuilder {
+    fn from(buffer: Vec<u8>) -> Self {
+        Self { buffer }
+    }
+}
+
+/// Can use [`PayloadReader`] to read data from type `T` which implements this trait.
 pub trait BanchoPacketRead<T> {
     fn read(reader: &mut PayloadReader) -> Option<T>;
 }
@@ -248,7 +619,7 @@ pub trait BanchoPacketRead<T> {
 impl BanchoPacketRead<String> for String {
     fn read(reader: &mut PayloadReader) -> Option<String> {
         if reader.payload.get(reader.index())? != &0xb {
-            return None
+            return None;
         }
         reader.increase_index(1);
         let data_length = reader.read_uleb128()? as usize;
@@ -334,12 +705,139 @@ macro_rules! impl_read_number_array {
 
 impl_read_number_array!(i8, u8, i16, u16, i32, u32, i64, u64);
 
+/// [`BanchoPacketWrite`] is a trait used to convert rust internal data types to bancho packets ([`Vec<u8>`]).
 pub trait BanchoPacketWrite {
-    fn write_buf(&self, buf: &mut Vec<u8>);
-    fn as_packet(&self) -> Vec<u8> {
+    /// Convert [`self`] into a bancho packet and write it into `buf` [`Vec<u8>`].
+    fn write_buf(self, buf: &mut Vec<u8>);
+
+    /// Convert [`self`] into a bancho packet [`Vec<u8>`].
+    fn as_packet(self) -> Vec<u8>
+    where
+        Self: Sized,
+    {
         let mut buf = Vec::new();
         self.write_buf(&mut buf);
         buf
+    }
+
+    /// Calculate the byte length of [`self`] after being converted into a bancho packet,
+    /// which is used to allocate [`Vec`] space in advance to improve performance.
+    ///
+    /// If not implemented, return `0`.
+    fn packet_len(&self) -> usize {
+        0
+    }
+}
+
+impl BanchoPacketWrite for &str {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        let byte_length = self.len();
+        if byte_length > 0 {
+            // string length (uleb128)
+            let (data, ptr) = u32_to_uleb128(byte_length as u32);
+            let length_uleb128 = &data[0..ptr];
+
+            let estimate_len = self.packet_len();
+            if buf.capacity() < estimate_len {
+                buf.reserve(estimate_len);
+            }
+
+            buf.push(0xb);
+            buf.extend(length_uleb128);
+            buf.extend(self.as_bytes());
+        } else {
+            buf.push(0);
+        }
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        if self.len() > 0 {
+            self.as_bytes().len() + 6
+        } else {
+            1
+        }
+    }
+}
+
+impl BanchoPacketWrite for String {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        let byte_length = self.len();
+        if byte_length > 0 {
+            // string length (uleb128)
+            let (data, ptr) = u32_to_uleb128(byte_length as u32);
+            let length_uleb128 = &data[0..ptr];
+
+            let estimate_len = self.packet_len();
+            if buf.capacity() < estimate_len {
+                buf.reserve(estimate_len);
+            }
+
+            buf.push(0xb);
+            buf.extend(length_uleb128);
+            buf.extend(self.into_bytes());
+        } else {
+            buf.push(0);
+        }
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        if self.len() > 0 {
+            self.as_bytes().len() + 6
+        } else {
+            1
+        }
+    }
+}
+
+impl BanchoPacketWrite for u8 {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        buf.push(self);
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        std::mem::size_of::<u8>()
+    }
+}
+
+impl BanchoPacketWrite for &[u8] {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        buf.extend(self);
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        self.len()
+    }
+}
+
+impl BanchoPacketWrite for Vec<u8> {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        buf.extend(self);
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        self.len()
+    }
+}
+
+impl BanchoPacketWrite for bool {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        buf.push(if self { 1 } else { 0 });
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        std::mem::size_of::<bool>()
     }
 }
 
@@ -347,121 +845,160 @@ macro_rules! impl_write_number {
     ($($t:ty),+) => {
         $(impl BanchoPacketWrite for $t {
             #[inline]
-            fn write_buf(&self, buf: &mut Vec<u8>) {
+            fn write_buf(self, buf: &mut Vec<u8>) {
                 buf.extend(self.to_le_bytes())
+            }
+
+            #[inline]
+            fn packet_len(&self) -> usize {
+                std::mem::size_of::<$t>()
             }
         })+
     }
 }
 
+impl_write_number!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
+
 macro_rules! impl_write_number_array {
-    ($($t:ty),+) => {$(impl BanchoPacketWrite for [$t] {
+    ($($t:ty),+) => {$(
+        impl BanchoPacketWrite for &[$t] { impl_write_number_array!(@inner $t); }
+        impl BanchoPacketWrite for Vec<$t> { impl_write_number_array!(@inner $t); }
+    )+};
+    (@inner $t:ty) => {
         #[inline]
-        fn write_buf(&self, buf: &mut Vec<u8>) {
+        fn write_buf(self, buf: &mut Vec<u8>) {
+            let estimate_len = self.packet_len();
+            if buf.capacity() < estimate_len {
+                buf.reserve(estimate_len);
+            }
+
             buf.extend((self.len() as u16).to_le_bytes());
-            for int in self.iter() {
+            for int in self {
                 buf.extend(int.to_le_bytes())
             }
         }
-    })+}
-}
 
-impl BanchoPacketWrite for str {
-    #[inline]
-    fn write_buf(&self, buf: &mut Vec<u8>) {
-        let byte_length = self.len();
-        if byte_length > 0 {
-            buf.push(0xb);
-            buf.extend(write_uleb128(byte_length as u32));
-            buf.extend(self.as_bytes());
-        } else {
-            buf.push(0);
+        #[inline]
+        fn packet_len(&self) -> usize {
+            std::mem::size_of::<u16>() + (std::mem::size_of::<$t>() * self.len())
         }
     }
 }
 
-impl BanchoPacketWrite for u8 {
-    #[inline]
-    fn write_buf(&self, buf: &mut Vec<u8>) {
-        buf.push(*self);
-    }
-}
-
-impl BanchoPacketWrite for [u8] {
-    #[inline]
-    fn write_buf(&self, buf: &mut Vec<u8>) {
-        buf.extend(self);
-    }
-}
-
-impl BanchoPacketWrite for bool {
-    #[inline]
-    fn write_buf(&self, buf: &mut Vec<u8>) {
-        buf.push(if *self { 1 } else { 0 });
-    }
-}
-
-impl_write_number!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
 impl_write_number_array!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
 
 impl BanchoPacketWrite for LoginResult {
     #[inline]
-    fn write_buf(&self, buf: &mut Vec<u8>) {
+    fn write_buf(self, buf: &mut Vec<u8>) {
         match self {
-            LoginResult::Success(user_id) => *user_id,
-            LoginResult::Failed(reason) => *reason as i32,
+            LoginResult::Success(user_id) => user_id,
+            LoginResult::Failed(reason) => reason as i32,
         }
         .write_buf(buf)
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        std::mem::size_of::<i32>()
     }
 }
 
 impl BanchoPacketWrite for MatchUpdate {
-    fn write_buf(&self, buf: &mut Vec<u8>) {
-        let raw_password = if let Some(pw) = &self.password {
-            if self.send_password {
-                let mut buf = Vec::new();
-                pw.write_buf(&mut buf);
-                buf
-            } else {
-                b"\x0b\x00".to_vec()
-            }
-        } else {
-            b"\x00".to_vec()
-        };
+    fn write_buf(mut self, buf: &mut Vec<u8>) {
+        let raw_password = std::mem::take(&mut self.password)
+            .and_then(|password| {
+                if self.send_password {
+                    let mut raw = Vec::with_capacity(password.packet_len());
+                    password.write_buf(&mut raw);
+                    Some(raw)
+                } else {
+                    Some(EMPTY_STRING_PACKET.to_vec())
+                }
+            })
+            .unwrap_or(b"\x00".to_vec());
 
         buf.extend(data!(
             self.match_id as u16,
             self.in_progress,
             self.match_type,
             self.play_mods,
-            self.match_name,
+            std::mem::take(&mut self.match_name),
             raw_password,
-            self.beatmap_name,
+            std::mem::take(&mut self.beatmap_name),
             self.beatmap_id,
-            self.beatmap_md5,
-            self.slot_status,
-            self.slot_teams,
-            self.slot_players,
+            std::mem::take(&mut self.beatmap_md5),
+            std::mem::take(&mut self.slot_status),
+            std::mem::take(&mut self.slot_teams),
+            std::mem::take(&mut self.slot_players),
             self.host_player_id,
             self.match_game_mode,
             self.win_condition,
             self.team_type,
             self.freemods,
-            self.player_mods,
+            std::mem::take(&mut self.player_mods),
             self.match_seed
         ));
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        self.match_id.packet_len()
+            + self.in_progress.packet_len()
+            + self.match_type.packet_len()
+            + self.play_mods.packet_len()
+            + self.match_name.packet_len()
+            + self
+                .password
+                .as_ref()
+                .map(|pw| if self.send_password { pw.packet_len() } else { 2 })
+                .unwrap_or(1)
+            + self.beatmap_name.packet_len()
+            + self.beatmap_id.packet_len()
+            + self.beatmap_md5.packet_len()
+            + self.slot_status.packet_len()
+            + self.slot_teams.packet_len()
+            + self.slot_players.packet_len()
+            + self.host_player_id.packet_len()
+            + self.match_game_mode.packet_len()
+            + self.win_condition.packet_len()
+            + self.team_type.packet_len()
+            + self.freemods.packet_len()
+            + self.player_mods.packet_len()
+            + self.match_seed.packet_len()
     }
 }
 
 impl BanchoPacketWrite for MatchData {
-    fn write_buf(&self, buf: &mut Vec<u8>) {
+    fn write_buf(self, buf: &mut Vec<u8>) {
         MatchUpdate { data: self.to_owned(), send_password: true }
             .write_buf(buf);
+    }
+
+    #[inline]
+    fn packet_len(&self) -> usize {
+        self.match_id.packet_len()
+            + self.in_progress.packet_len()
+            + self.match_type.packet_len()
+            + self.play_mods.packet_len()
+            + self.match_name.packet_len()
+            + self.password.as_ref().map(|pw| pw.packet_len()).unwrap_or(1)
+            + self.beatmap_name.packet_len()
+            + self.beatmap_id.packet_len()
+            + self.beatmap_md5.packet_len()
+            + self.slot_status.packet_len()
+            + self.slot_teams.packet_len()
+            + self.slot_players.packet_len()
+            + self.host_player_id.packet_len()
+            + self.match_game_mode.packet_len()
+            + self.win_condition.packet_len()
+            + self.team_type.packet_len()
+            + self.freemods.packet_len()
+            + self.player_mods.packet_len()
     }
 }
 
 impl BanchoPacketWrite for ScoreFrame {
-    fn write_buf(&self, buf: &mut Vec<u8>) {
+    fn write_buf(self, buf: &mut Vec<u8>) {
         buf.extend(data!(
             self.timestamp,
             self.id,
@@ -480,308 +1017,97 @@ impl BanchoPacketWrite for ScoreFrame {
             self.score_v2
         ));
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct PayloadReader<'a> {
-    pub(crate) payload: &'a [u8],
-    pub(crate) index: usize,
-}
-
-impl<'a> PayloadReader<'a> {
-    #[inline]
-    pub fn new(payload: &'a [u8]) -> Self {
-        PayloadReader { payload, index: 0 }
-    }
 
     #[inline]
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    #[inline]
-    pub fn payload(&self) -> &'a [u8] {
-        self.payload
-    }
-
-    #[inline]
-    pub fn reset(&mut self) {
-        self.index = 0
-    }
-
-    #[inline]
-    pub fn increase_index(&mut self, offset: usize) -> usize {
-        self.index += offset;
-        self.index
-    }
-
-    #[inline]
-    pub fn decrease_index(&mut self, offset: usize) -> usize {
-        self.index -= offset;
-        self.index
-    }
-
-    #[inline]
-    pub(crate) fn next_with_length(&mut self, length: usize) -> Option<&[u8]> {
-        self.index += length;
-        Some(self.payload.get(self.index - length..self.index)?)
-    }
-
-    #[inline]
-    pub(crate) fn next_with_length_type<Len: Sized>(
-        &mut self,
-    ) -> Option<&[u8]> {
-        self.next_with_length(std::mem::size_of::<Len>())
-    }
-
-    #[inline]
-    pub fn read<T>(&mut self) -> Option<T>
-    where
-        T: BanchoPacketRead<T>,
-    {
-        T::read(self)
-    }
-
-    #[inline]
-    pub(crate) fn read_uleb128(&mut self) -> Option<u32> {
-        let (val, length) = read_uleb128(&self.payload.get(self.index..)?)?;
-        self.index += length;
-        Some(val)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct PacketReader<'a> {
-    buf: &'a [u8],
-    index: usize,
-    payload_length: usize,
-}
-
-impl<'a> PacketReader<'a> {
-    #[inline]
-    pub fn new(buf: &'a [u8]) -> Self {
-        PacketReader { buf, index: 0, payload_length: 0 }
-    }
-
-    #[inline]
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    #[inline]
-    pub fn buffer(&self) -> &'a [u8] {
-        self.buf
-    }
-
-    #[inline]
-    pub fn payload_len(&self) -> usize {
-        self.payload_length
-    }
-
-    #[inline]
-    // Reset the packet reader
-    pub fn reset(&mut self) {
-        self.index = 0;
-        self.payload_length = 0;
-    }
-
-    #[inline]
-    /// Read packet header: (type, length)
-    pub fn read_header(header: &[u8]) -> Option<PacketHeader> {
-        let id = *header.get(0)?;
-        Some(PacketHeader {
-            id: PacketId::from_u8(id).unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
-            payload_length: u32::from_le_bytes(header[3..=6].try_into().ok()?),
-        })
-    }
-}
-
-impl<'a> Iterator for PacketReader<'a> {
-    type Item = Packet<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if (self.buf.len() - self.index) < BANCHO_PACKET_HEADER_LENGTH {
-            return None
-        }
-        // Slice packet header data [u8; 7],
-        // including packet id, payload length
-        let header =
-            &self.buf[self.index..self.index + BANCHO_PACKET_HEADER_LENGTH];
-        self.index += BANCHO_PACKET_HEADER_LENGTH;
-
-        // Get packet id and payload length
-        let PacketHeader { id, payload_length } =
-            PacketReader::read_header(header)?;
-
-        // Read the payload
-        let payload = if payload_length == 0 {
-            None
-        } else {
-            self.payload_length = payload_length as usize;
-            // Skip this payload at next call
-            self.index += self.payload_length;
-            self.buf.get(self.index - self.payload_length..self.index)
-        };
-
-        Some(Packet { id, payload })
+    fn packet_len(&self) -> usize {
+        self.timestamp.packet_len()
+            + self.id.packet_len()
+            + self.n300.packet_len()
+            + self.n100.packet_len()
+            + self.n50.packet_len()
+            + self.geki.packet_len()
+            + self.katu.packet_len()
+            + self.miss.packet_len()
+            + self.score.packet_len()
+            + self.combo.packet_len()
+            + self.max_combo.packet_len()
+            + self.perfect.packet_len()
+            + self.hp.packet_len()
+            + self.tag_byte.packet_len()
+            + self.score_v2.packet_len()
     }
 }
 
 #[inline]
-/// Unsigned to uleb128
-pub fn write_uleb128(mut unsigned: u32) -> Vec<u8> {
-    let mut data: Vec<u8> = Vec::with_capacity(2);
-    while unsigned >= 0x80 {
-        data.push(((unsigned & 0x7f) | 0x80) as u8);
+/// Convert [`u32`] to `uleb128`
+pub fn u32_to_uleb128(mut unsigned: u32) -> ([u8; 5], usize) {
+    let mut data = [0, 0, 0, 0, 0];
+    let mut ptr = 0;
+
+    loop {
+        if unsigned < 0x80 {
+            break;
+        }
+        data[ptr] = ((unsigned & 0x7f) | 0x80) as u8;
+        ptr += 1;
         unsigned >>= 7;
     }
-    data.push(unsigned as u8);
-    data
+    data[ptr] = unsigned as u8;
+
+    (data, ptr + 1)
 }
 
 #[inline]
-pub fn read_uleb128(slice: &[u8]) -> Option<(u32, usize)> {
+/// Convert `uleb128` bytes to [`u32`]
+pub fn uleb128_to_u32(uleb128_bytes: &[u8]) -> Option<(u32, usize)> {
     let (mut val, mut shift, mut index) = (0, 0, 0);
     loop {
-        let byte = slice.get(index)?;
+        let byte = uleb128_bytes.get(index)?;
         index += 1;
         if (byte & 0x80) == 0 {
             val |= (*byte as u32) << shift;
-            return Some((val, index))
+            return Some((val, index));
         }
         val |= ((byte & 0x7f) as u32) << shift;
         shift += 7;
     }
 }
 
-#[inline]
+#[inline(always)]
 /// Initial a packet with PacketId
 ///
-/// Packets posit:
-/// ```ignore
-/// [0..=1]: packet id
-/// [2]: null
-/// [3..=6]: packet length
-/// [7..=N]: packet data length(uleb128) + data
-/// ```
-/// The maximum value of u8 is 255,
+/// Packets posits:
 ///
-/// but currently the largest packet id of bancho is only 109,
+/// - 0..=1: [`PacketId`]
+/// - 2: `0x0`
+/// - 3..=6: packet length ([`i32`] as bytes)
+/// - 7..=N: packet data length (`uleb128` as bytes) + data
 ///
-/// so I think it is sufficient to insert the packet_id in the first position
+/// Note: The maximum value of [`u8`] is `255`,
+/// currently the largest packet id of bancho is `109`, so never overflow.
 pub fn new_empty_packet(packet_id: PacketId) -> Vec<u8> {
     vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
 
-#[inline]
-/// Write message packet
-pub fn write_message(
-    sender: &str,
+#[inline(always)]
+/// Pack message packet data
+pub fn pack_message(
+    sender: impl Str,
+    content: impl Str,
+    target: impl Str,
     sender_id: i32,
-    content: &str,
-    target: &str,
 ) -> Vec<u8> {
     data!(sender, content, target, sender_id)
 }
 
-#[inline]
-pub fn write_channel(name: &str, title: &str, player_count: i16) -> Vec<u8> {
+#[inline(always)]
+/// Pack channel info packet data
+pub fn pack_channel_info(
+    name: impl Str,
+    title: impl Str,
+    player_count: i16,
+) -> Vec<u8> {
     data!(name, title, player_count)
-}
-
-#[derive(Debug, Clone)]
-pub struct PacketBuilder {
-    buffer: Vec<u8>,
-}
-
-impl PacketBuilder {
-    #[inline]
-    /// Create an empty builder.
-    pub fn new() -> Self {
-        Self { buffer: Vec::new() }
-    }
-
-    #[inline]
-    /// Create a builder with capacity.
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self { buffer: Vec::with_capacity(capacity) }
-    }
-
-    #[inline]
-    /// Create a builder with [`PacketId`].
-    pub fn with_id(packet_id: PacketId) -> Self {
-        Self { buffer: new_empty_packet(packet_id) }
-    }
-
-    #[inline]
-    pub fn from_batch<P, I>(packets: P) -> Self
-    where
-        I: IntoIterator<Item = u8>,
-        P: IntoIterator<Item = I>,
-    {
-        Self::new().add_batch(packets)
-    }
-
-    #[inline]
-    pub fn add_batch<P, I>(mut self, packets: P) -> Self
-    where
-        I: IntoIterator<Item = u8>,
-        P: IntoIterator<Item = I>,
-    {
-        self.add_batch_ref(packets);
-        self
-    }
-
-    #[inline]
-    pub fn add_batch_ref<P, I>(&mut self, packets: P) -> &Self
-    where
-        I: IntoIterator<Item = u8>,
-        P: IntoIterator<Item = I>,
-    {
-        for i in packets {
-            self.buffer.extend(i)
-        }
-        self
-    }
-
-    #[inline]
-    pub fn add<P>(mut self, packet: P) -> Self
-    where
-        P: IntoIterator<Item = u8>,
-    {
-        self.add_ref(packet);
-        self
-    }
-
-    #[inline]
-    pub fn add_ref<P>(&mut self, packet: P) -> &Self
-    where
-        P: IntoIterator<Item = u8>,
-    {
-        self.buffer.extend(packet);
-        self
-    }
-
-    #[inline]
-    pub fn build(self) -> Vec<u8> {
-        self.buffer
-    }
-
-    #[inline]
-    pub fn buffer(&self) -> &Vec<u8> {
-        &self.buffer
-    }
-
-    #[inline]
-    pub fn buffer_mut(&mut self) -> &mut Vec<u8> {
-        &mut self.buffer
-    }
-}
-
-impl From<Vec<u8>> for PacketBuilder {
-    fn from(buffer: Vec<u8>) -> Self {
-        Self { buffer }
-    }
 }
 
 pub mod macros {
@@ -795,7 +1121,7 @@ pub mod macros {
 }
 
     #[macro_export]
-    /// Creating osu!packet data
+    /// Pack bancho packet data
     ///
     /// # Examples:
     /// ```
@@ -804,75 +1130,59 @@ pub mod macros {
     /// let val_1: i32 = 123;
     /// let val_2: i16 = 50;
     ///
-    /// // Single data, eq with `val_1.write_buf()`
+    /// // Single data
     /// data!(val_1);
     ///
-    /// // Mutiple data, default capacity is 30
+    /// // Mutiple data
     /// data!(val_1, val_2);
     ///
-    /// // Create packet with capacity
+    /// // Create packet data with additional capacity
     /// data!(@capacity { 100 }, val_1, val_2);
     /// ```
     macro_rules! data {
-    ($item:expr) => {
-        {
-            let mut buf = Vec::with_capacity(30);
-            $item.write_buf(&mut buf);
-            buf
-        }
-    };
-    ($($item:expr),+) => {
-        {
-            let mut buf = Vec::with_capacity(30);
-            $($item.write_buf(&mut buf);)+
-            buf
-        }
-    };
-    (@capacity { $capacity:expr }, $($item:expr),+) => {
-        {
-            let mut buf = Vec::with_capacity($capacity);
-            $($item.write_buf(&mut buf);)+
-            buf
-        }
-    }
-}
+        ($($item:expr),+) => {
+            {
+                let mut estimate_capacity = 0;
+                $(estimate_capacity += $item.packet_len();)+
 
-    #[macro_export]
-    macro_rules! add_packet_length {
-        ($packet:expr) => {{
-            let packet_length =
-                (($packet.len() - $crate::BANCHO_PACKET_HEADER_LENGTH) as i32)
-                    .to_le_bytes();
-            let ptr = $packet.as_mut_ptr();
-            unsafe {
-                std::ptr::write(ptr.add(3), packet_length[0]);
-                std::ptr::write(ptr.add(4), packet_length[1]);
-                std::ptr::write(ptr.add(5), packet_length[2]);
-                std::ptr::write(ptr.add(6), packet_length[3]);
+                let mut buf = Vec::with_capacity(estimate_capacity);
+                $($item.write_buf(&mut buf);)+
+                buf
             }
-            $packet
-        }};
+        };
+        (@capacity { $capacity:expr }, $($item:expr),+) => {
+            {
+                let mut estimate_capacity = 0;
+                $(estimate_capacity += $item.packet_len();)+
+
+                let mut buf = Vec::with_capacity($capacity + estimate_capacity);
+                $($item.write_buf(&mut buf);)+
+                buf
+            }
+        }
     }
 
     #[macro_export]
-    /// Create Bancho packets
+    /// Pack bancho packets
+    ///
     ///
     /// # Examples:
     /// ```
     /// use bancho_packets::*;
     ///
-    /// // Origin data here (i32)
+    /// // Basic
+    /// packet!(PacketId::BANCHO_USER_STATS);
+    ///
+    /// // With data
     /// let data: i32 = 6;
     /// packet!(PacketId::BANCHO_USER_STATS, data);
     ///
-    /// // Packet data here (Vec<u8>)
+    /// // With data
     /// let data = vec![1, 2, 3];
     /// packet!(PacketId::BANCHO_USER_STATS, data);
     ///
-    /// // Only packet_id
-    /// packet!(PacketId::BANCHO_USER_STATS);
     ///
-    /// // Complex example
+    /// // With complex data
     /// let user_id: i32 = 1000;
     /// let username: &str = "username";
     ///
@@ -885,17 +1195,24 @@ pub mod macros {
     /// );
     /// ```
     macro_rules! packet {
-        ($packet_id:expr) => {
-            {
-                let mut packet = $crate::new_empty_packet($packet_id);
-                $crate::add_packet_length!(packet)
-            }
-        };
-        ($packet_id:expr, $($data:expr),*) => {
+        ($packet_id:expr $(,$data:expr)*) => {
             {
                 let mut packet = $crate::new_empty_packet($packet_id);
                 $($data.write_buf(&mut packet);)*
-                $crate::add_packet_length!(packet)
+
+                let packet_length_bytes =
+                    ((packet.len() - $crate::BANCHO_PACKET_HEADER_LENGTH) as i32)
+                        .to_le_bytes();
+                let ptr = packet.as_mut_ptr();
+
+                // `new_empty_packet` always returns a vector of length 7, there will be no null pointer.
+                unsafe {
+                    std::ptr::write(ptr.add(3), packet_length_bytes[0]);
+                    std::ptr::write(ptr.add(4), packet_length_bytes[1]);
+                    std::ptr::write(ptr.add(5), packet_length_bytes[2]);
+                    std::ptr::write(ptr.add(6), packet_length_bytes[3]);
+                }
+                packet
             }
         }
     }

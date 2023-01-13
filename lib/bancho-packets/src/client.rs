@@ -1,11 +1,11 @@
-use crate::{data, packet, write_message, BanchoPacketWrite, PacketId};
+use crate::{data, packet, pack_message, BanchoPacketWrite, PacketId, Str};
 
 #[inline]
 /// #0: OSU_USER_CHANGE_ACTION
 pub fn user_change_action(
     action: u8,
-    info: &str,
-    beatmap_md5: &str,
+    info: impl Str,
+    beatmap_md5: impl Str,
     play_mods_value: u32,
     game_mode: u8,
     beatmap_id: i32,
@@ -26,14 +26,14 @@ pub fn user_change_action(
 #[inline]
 /// #1: OSU_SEND_PUBLIC_MESSAGE
 pub fn send_public_message(
-    sender: &str,
+    sender: impl Str,
+    content: impl Str,
+    target: impl Str,
     sender_id: i32,
-    content: &str,
-    target: &str,
 ) -> Vec<u8> {
     packet!(
         PacketId::OSU_SEND_PUBLIC_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        pack_message(sender, content, target, sender_id)
     )
 }
 
@@ -88,14 +88,14 @@ pub fn spectate_cant() -> Vec<u8> {
 #[inline]
 /// #25: OSU_SEND_PRIVATE_MESSAGE
 pub fn send_private_message(
-    sender: &str,
+    sender: impl Str,
+    content: impl Str,
+    target: impl Str,
     sender_id: i32,
-    content: &str,
-    target: &str,
 ) -> Vec<u8> {
     packet!(
         PacketId::OSU_SEND_PRIVATE_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        pack_message(sender, content, target, sender_id)
     )
 }
 
@@ -118,11 +118,11 @@ pub fn user_create_match(
     in_progress: i8,
     powerplay: i8,
     mods: i32,
-    name: &str,
-    passwd: &str,
-    map_name: &str,
+    name: impl Str,
+    passwd: impl Str,
+    map_name: impl Str,
     map_id: i32,
-    map_md5: &str,
+    map_md5: impl Str,
     slot_statuses: Vec<i8>,
     slot_teams: Vec<i8>,
 ) -> Vec<u8> {
@@ -146,7 +146,7 @@ pub fn user_create_match(
 
 #[inline]
 /// #32: OSU_USER_JOIN_MATCH
-pub fn user_join_match(match_id: i32, match_password: &str) -> Vec<u8> {
+pub fn user_join_match(match_id: i32, match_password: impl Str) -> Vec<u8> {
     packet!(PacketId::OSU_USER_JOIN_MATCH, data!(match_id, match_password))
 }
 
@@ -181,11 +181,11 @@ pub fn match_change_settings(
     in_progress: i8,
     powerplay: i8,
     mods: i32,
-    name: &str,
-    passwd: &str,
-    map_name: &str,
+    name: impl Str,
+    passwd: impl Str,
+    map_name: impl Str,
     map_id: i32,
-    map_md5: &str,
+    map_md5: impl Str,
     slot_statuses: Vec<i8>,
     slot_teams: Vec<i8>,
 ) -> Vec<u8> {
@@ -269,7 +269,7 @@ pub fn match_skip_request() -> Vec<u8> {
 
 #[inline]
 /// #63: OSU_USER_CHANNEL_JOIN
-pub fn user_channel_join(channel_name: &str) -> Vec<u8> {
+pub fn user_channel_join(channel_name: impl Str) -> Vec<u8> {
     packet!(PacketId::OSU_USER_CHANNEL_JOIN, channel_name)
 }
 
@@ -305,7 +305,7 @@ pub fn match_change_team() -> Vec<u8> {
 
 #[inline]
 /// #78: OSU_USER_CHANNEL_PART
-pub fn user_channel_part(channel_name: &str) -> Vec<u8> {
+pub fn user_channel_part(channel_name: impl Str) -> Vec<u8> {
     packet!(PacketId::OSU_MATCH_CHANGE_TEAM, channel_name)
 }
 
@@ -318,14 +318,14 @@ pub fn user_receive_updates(filter_val: i32) -> Vec<u8> {
 #[inline]
 /// #82: OSU_USER_SET_AWAY_MESSAGE
 pub fn user_set_away_message(
-    sender: &str,
+    sender: impl Str,
+    content: impl Str,
+    target: impl Str,
     sender_id: i32,
-    content: &str,
-    target: &str,
 ) -> Vec<u8> {
     packet!(
         PacketId::OSU_USER_SET_AWAY_MESSAGE,
-        write_message(sender, sender_id, content, target)
+        pack_message(sender, content, target, sender_id)
     )
 }
 
@@ -349,7 +349,7 @@ pub fn match_invite(user_id: i32) -> Vec<u8> {
 
 #[inline]
 /// #90: OSU_MATCH_CHANGE_PASSWORD
-pub fn match_change_password(password: &str) -> Vec<u8> {
+pub fn match_change_password(password: impl Str) -> Vec<u8> {
     packet!(PacketId::OSU_MATCH_CHANGE_PASSWORD, password)
 }
 

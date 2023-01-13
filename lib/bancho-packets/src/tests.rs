@@ -1,12 +1,12 @@
 mod packets_reading {
-    use crate::{read_uleb128, BanchoMessage, PacketReader, PayloadReader};
+    use crate::{uleb128_to_u32, BanchoMessage, PacketReader, PayloadReader};
 
     #[test]
     fn test_read_header() {
         println!(
             "p1: {:?}\np2: {:?}",
-            PacketReader::read_header(&[4, 0, 0, 0, 0, 0, 0]),
-            PacketReader::read_header(&[
+            PacketReader::parse_header(&[4, 0, 0, 0, 0, 0, 0]),
+            PacketReader::parse_header(&[
                 24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111
             ])
         );
@@ -40,7 +40,7 @@ mod packets_reading {
 
     #[test]
     fn test_read_uleb128() {
-        assert_eq!(read_uleb128(&[0xE5, 0x8E, 0x26]), Some((624485, 3)));
+        assert_eq!(uleb128_to_u32(&[0xE5, 0x8E, 0x26]), Some((624485, 3)));
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod packets_writing {
     #[test]
     fn test_send_message() {
         assert_eq!(
-            server::send_message("PurePeace", 1001, "hello", "osu"),
+            server::send_message("PurePeace", "hello", "osu", 1001),
             vec![
                 7, 0, 0, 27, 0, 0, 0, 11, 9, 80, 117, 114, 101, 80, 101, 97,
                 99, 101, 11, 5, 104, 101, 108, 108, 111, 11, 3, 111, 115, 117,

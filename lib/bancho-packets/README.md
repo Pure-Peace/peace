@@ -1,25 +1,35 @@
 # bancho-packets
 
-osu! Bancho data packet reading and writing utilities.
+**osu! bancho packet Reading & Writing library.**
 
-### Test
+**[docs https://docs.rs/bancho-packets](https://docs.rs/bancho-packets)**
 
-```
-cargo test
-```
+### Usage
 
-### Benchmark
-
-```
-cargo bench
+Add to your `cargo.toml`
+```toml
+[dependencies]
+bancho-packets = "4"
 ```
 
-## Reading from osu
+Or run the following Cargo command in your project directory:
+```bash
+cargo add bancho-packets
+```
+
+
+
+
+### Examples
+
+see more: [examples](examples), [src/tests.rs](src/tests.rs)
+
+**Reading packets**
 
 ```rust
 use bancho_packets::{PacketReader, PayloadReader};
 
-// Data packets from osu!
+// Packets from osu! bancho
 let data = &[
     4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 19, 0, 0, 0, 11, 17, 72, 101, 108, 108,
     111, 44, 32, 87, 111, 114, 108, 100, 33, 240, 159, 146, 150, 4, 0, 0,
@@ -34,30 +44,29 @@ let mut reader = PacketReader::new(data);
 
 // Read packets
 while let Some(packet) = reader.next() {
-    print!("{:?}: ", packet.id);
+    print!("packet id: {:?}: ", packet.id);
     match packet.payload {
         Some(payload) => {
             // Read payload
             let mut payload_reader = PayloadReader::new(payload);
-            println!("{:?}", payload_reader.read::<String>());
+            println!("payload: {:?}", payload_reader.read::<String>());
         },
         None => println!("Non-payload"),
     }
 }
+
+/* Results
+  packet id: OSU_PING: Non-payload
+  packet id: BANCHO_NOTIFICATION: payload: Some("Hello, World!💖")
+  packet id: OSU_PING: Non-payload
+  packet id: BANCHO_NOTIFICATION: payload: Some("哈哈【😃】")
+  packet id: BANCHO_ACCOUNT_RESTRICTED: Non-payload
+  packet id: BANCHO_NOTIFICATION: payload: Some("读取完了！！✨")
+*/
 ```
 
-### Results
 
-```bash
-OSU_PING: Non-payload
-BANCHO_NOTIFICATION: Some("Hello, World!💖")
-OSU_PING: Non-payload
-BANCHO_NOTIFICATION: Some("哈哈【😃】")
-BANCHO_ACCOUNT_RESTRICTED: Non-payload
-BANCHO_NOTIFICATION: Some("读取完了！！✨")
-```
-
-## Writing to osu
+**Writing packets**
 
 ```rust
 use bancho_packets::*;
@@ -70,17 +79,17 @@ let serverside_notification = server::notification("hello");
 
 // Multiple packets with Builder
 let packets = PacketBuilder::new()
-    .add(&server::login_reply(LoginResult::Success(1000)))
-    .add(&server::protocol_version(19))
-    .add(&server::notification("Welcome to osu!"))
-    .add(&server::main_menu_icon("https://image.png", "https://url.link"))
-    .add(&server::silence_end(0))
-    .add(&server::channel_info_end())
+    .add(server::login_reply(LoginResult::Success(1000)))
+    .add(server::protocol_version(19))
+    .add(server::notification("Welcome to osu!"))
+    .add(server::main_menu_icon("https://image.png", "https://url.link"))
+    .add(server::silence_end(0))
+    .add(server::channel_info_end())
     .build();
 
 ```
 
-## Raw (Build your own packet)
+**Build your own packet**
 
 ```rust
 use bancho_packets::*;
@@ -93,8 +102,8 @@ let packet = packet!(PacketId::BANCHO_MATCH_PLAYER_SKIPPED, number_data)
 pub fn user_stats(
     user_id: i32,
     action: u8,
-    info: &str,
-    beatmap_md5: &str,
+    info: String,
+    beatmap_md5: String,
     mods: u32,
     mode: u8,
     beatmap_id: i32,
@@ -108,7 +117,6 @@ pub fn user_stats(
     packet!(
         PacketId::BANCHO_USER_STATS,
         data!(
-            @capacity { 60 }, // optional set capacity
             user_id,
             action,
             info,
@@ -127,3 +135,16 @@ pub fn user_stats(
 }
 
 ```
+
+### Run Test
+
+```
+cargo test
+```
+
+### Run Benchmark
+
+```
+cargo bench
+```
+
