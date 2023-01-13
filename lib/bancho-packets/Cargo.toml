@@ -1,6 +1,6 @@
 [package]
 name = "bancho-packets"
-version = "4.0.0"
+version = "4.1.0"
 authors = ["PurePeace <purepeace_@outlook.com>"]
 edition = "2021"
 license = "MIT"
@@ -9,13 +9,16 @@ description = "osu! bancho packet Reading & Writing library."
 readme = "README.md"
 
 [features]
-default = ["serde"]
+default = ["serde", "derive"]
+
+derive = ["bancho-packets-derive"]
 
 [dependencies]
 num-traits = "0.2"
 enum-primitive-derive = "0.2"
 
 serde = { version = "1.0.151", features = ["derive"], optional = true }
+bancho-packets-derive = { path = "./derive", optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
