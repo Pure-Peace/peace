@@ -1,6 +1,6 @@
 [package]
 name = "bancho-packets-derive"
-version = "4.0.0"
+version = "0.1.0"
 authors = ["PurePeace <purepeace_@outlook.com>"]
 edition = "2021"
 license = "MIT"
