@@ -1,6 +1,6 @@
 # bancho-packets-derive
 
-**Available attributies**
+**Available derives**
 
 - `ReadPacket`: This derive macro will implement the `BanchoPacketRead` trait for the struct.
 - `WritePacket`: This derive macro will implement the `BanchoPacketRead` trait for the struct.

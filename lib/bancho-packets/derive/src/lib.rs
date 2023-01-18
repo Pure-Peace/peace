@@ -8,7 +8,7 @@ use syn::{parse_macro_input, DeriveInput};
 ///
 /// ### Usage
 ///
-/// ```
+/// ```ignore
 /// use bancho_packets::{ReadPacket, PacketReader, PayloadReader};
 ///
 /// #[derive(Debug, Clone, ReadPacket)]
@@ -62,7 +62,7 @@ pub fn derive_read_packet(input: TokenStream) -> TokenStream {
 ///
 /// ### Usage
 ///
-/// ```
+/// ```ignore
 /// use bancho_packets::{ReadPacket, WritePacket, PacketLength};
 ///
 /// #[derive(Debug, Clone, ReadPacket, WritePacket, PacketLength)]
@@ -115,7 +115,7 @@ pub fn derive_write_packet(input: TokenStream) -> TokenStream {
 ///
 /// ### Usage
 ///
-/// ```
+/// ```ignore
 /// use bancho_packets::{PacketLength};
 ///
 /// #[derive(Debug, Clone, PacketLength)]

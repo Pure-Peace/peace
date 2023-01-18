@@ -17,3 +17,7 @@ proc-macro = true
 quote = "1"
 syn = "1"
 proc-macro2 = "1"
+
+
+[dev-dependencies]
+bancho-packets = { version = "4" }
