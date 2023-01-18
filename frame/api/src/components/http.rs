@@ -1,7 +1,4 @@
-use crate::{
-    components::{cfg::ApiFrameConfig, router},
-    Application,
-};
+use crate::{components::router, ApiFrameConfig, Application};
 use axum::Router;
 use axum_server::{AddrIncomingConfig, Handle};
 use once_cell::sync::OnceCell;
@@ -87,7 +84,7 @@ pub fn addr(cfg: &ApiFrameConfig) -> String {
 
 #[cfg(feature = "tls")]
 pub mod tls {
-    use crate::{cfg::ApiFrameConfig, http::server_handle};
+    use crate::{http::server_handle, ApiFrameConfig};
     use axum::{
         extract::Host,
         handler::HandlerWithoutStateExt,

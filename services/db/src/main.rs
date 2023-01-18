@@ -1,4 +1,4 @@
-use peace_db::{cfg::DbServiceConfig, App};
+use peace_db::{App, DbServiceConfig};
 use peace_rpc::server;
 
 #[tokio::main]

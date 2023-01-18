@@ -1,5 +1,5 @@
 use peace_api::http;
-use peace_gateway::{cfg::GatewayConfig, App};
+use peace_gateway::{App, GatewayConfig};
 
 #[tokio::main]
 pub async fn main() {

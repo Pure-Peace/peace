@@ -1,18 +1,28 @@
-pub mod cfg;
+#[macro_use]
+extern crate peace_rpc;
+
 pub mod impls;
 pub mod rpc;
 
-use cfg::BanchoConfig;
+use clap_serde_derive::ClapSerde;
 use peace_pb::services::bancho::{
     bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET,
 };
-use peace_rpc::{cfg::RpcFrameConfig, interceptor::client_ip, Application};
+use peace_rpc::{interceptor::client_ip, Application, RpcFrameConfig};
 use rpc::Bancho;
 use std::sync::Arc;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
 };
+
+/// Command Line Interface (CLI) for Bancho service.
+#[peace_config]
+#[command(name = "bancho", author, version, about, propagate_version = true)]
+pub struct BanchoConfig {
+    #[command(flatten)]
+    pub frame_cfg: RpcFrameConfig,
+}
 
 #[derive(Clone)]
 pub struct App {

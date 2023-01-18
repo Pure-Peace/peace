@@ -1,6 +1,6 @@
 use crate::{
     Application,
-    {cfg::ApiFrameConfig, responder, responder::shutdown_server},
+    {responder, responder::shutdown_server, ApiFrameConfig},
 };
 use axum::{
     body::Body,

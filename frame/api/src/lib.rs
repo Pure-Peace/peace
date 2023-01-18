@@ -7,10 +7,12 @@ mod components;
 pub mod extractors;
 
 pub use components::*;
-pub use peace_cfg::{macro_impl_config as impl_config, ParseConfig};
+pub use peace_cfg::{
+    macro_impl_config as impl_config, peace_config, ParseConfig,
+    SingletonConfig,
+};
 
 use axum::{async_trait, body::Body, extract::Host, http::Request, Router};
-use cfg::ApiFrameConfig;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 use utoipa::openapi::OpenApi;

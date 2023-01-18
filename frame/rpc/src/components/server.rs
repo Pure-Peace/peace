@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{cfg::RpcFrameConfig, Application};
+use crate::{Application, RpcFrameConfig};
 use once_cell::sync::OnceCell;
 use tonic::{
     metadata::MetadataValue,
@@ -30,7 +30,9 @@ pub async fn serve(app_cfg: impl Application) {
                 move |req| {
                     let token: MetadataValue<_> =
                         format!("Bearer {token}").parse().unwrap();
-                    crate::interceptor::admin_endpoints_authorization(req, token)
+                    crate::interceptor::admin_endpoints_authorization(
+                        req, token,
+                    )
                 },
             ))
         } else {

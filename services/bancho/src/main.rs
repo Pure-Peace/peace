@@ -1,4 +1,4 @@
-use bancho::{cfg::BanchoConfig, App};
+use bancho::{App, BanchoConfig};
 use peace_rpc::server;
 
 #[tokio::main]
