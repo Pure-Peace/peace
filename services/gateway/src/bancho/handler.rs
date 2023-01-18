@@ -5,7 +5,9 @@ use axum::{
 
 use peace_api::{
     error::{map_err, Error},
-    extractors::{ClientIp, OsuClientBody, OsuToken, OsuVersion},
+    extractors::{
+        BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
+    },
 };
 use peace_pb::services::bancho::{
     bancho_rpc_client::BanchoRpcClient, LoginReply,
@@ -40,20 +42,20 @@ pub async fn bancho_get() -> Response {
     )
 )]
 pub async fn bancho_post(
-    osu_token: Option<OsuToken>,
-    OsuVersion(osu_version): OsuVersion,
+    session_id: Option<BanchoClientToken>,
+    BanchoClientVersion(version): BanchoClientVersion,
     ClientIp(ip): ClientIp,
     State(mut bancho): State<BanchoRpcClient<Channel>>,
-    OsuClientBody(body): OsuClientBody,
+    BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
-    if osu_token.is_none() {
+    if session_id.is_none() {
         let mut req =
             Request::new(parser::parse_osu_login_request_body(body.into())?);
 
         req.metadata_mut()
             .insert(CLIENT_IP_HEADER, ip.to_string().parse().map_err(map_err)?);
 
-        let LoginReply { token, packet } = bancho
+        let LoginReply { session_id, packet } = bancho
             .login(req)
             .await
             .map_err(|err| {
@@ -62,9 +64,9 @@ pub async fn bancho_post(
             })?
             .into_inner();
 
-        if let Some(token) = token {
+        if let Some(session_id) = session_id {
             return Ok((
-                [("cho-token", token.as_str()), CHO_PROTOCOL],
+                [("cho-token", session_id.as_str()), CHO_PROTOCOL],
                 packet.unwrap_or("ok".into()),
             )
                 .into_response());

@@ -13,10 +13,10 @@ pub const OSU_VERSION: &str = "osu-version";
 pub const OSU_TOKEN: &str = "osu-token";
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct OsuVersion(pub String);
+pub struct BanchoClientVersion(pub String);
 
 #[async_trait]
-impl<S> FromRequestParts<S> for OsuVersion
+impl<S> FromRequestParts<S> for BanchoClientVersion
 where
     S: Send + Sync,
 {
@@ -32,15 +32,17 @@ where
             .and_then(|hv| hv.to_str().ok())
             .and_then(|s| Some(s.to_owned()))
             .map(Self)
-            .ok_or(anyhow!("Invalid osu-version header, please check.").into())
+            .ok_or(
+                anyhow!("Invalid `osu-version` header, please check.").into(),
+            )
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct OsuToken(pub String);
+pub struct BanchoClientToken(pub String);
 
 #[async_trait]
-impl<S> FromRequestParts<S> for OsuToken
+impl<S> FromRequestParts<S> for BanchoClientToken
 where
     S: Send + Sync,
 {
@@ -56,15 +58,15 @@ where
             .and_then(|hv| hv.to_str().ok())
             .and_then(|s| Some(s.to_owned()))
             .map(Self)
-            .ok_or(anyhow!("osu-token header is required.").into())
+            .ok_or(anyhow!("`osu-token` header is required.").into())
     }
 }
 
 #[derive(Debug)]
-pub struct OsuClientBody(pub Bytes);
+pub struct BanchoRequestBody(pub Bytes);
 
 #[async_trait]
-impl<S, B> FromRequest<S, B> for OsuClientBody
+impl<S, B> FromRequest<S, B> for BanchoRequestBody
 where
     Bytes: FromRequest<S, B>,
     B: Send + 'static,

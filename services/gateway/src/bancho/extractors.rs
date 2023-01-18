@@ -3,7 +3,7 @@ use axum::{
     async_trait, body::Bytes, extract::FromRequest, http::Request,
     response::Response,
 };
-use peace_api::extractors::OsuClientBody;
+use peace_api::extractors::BanchoRequestBody;
 use peace_pb::services::bancho::LoginRequest;
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ where
         req: Request<B>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let body = OsuClientBody::from_request(req, state).await?.0;
+        let body = BanchoRequestBody::from_request(req, state).await?.0;
 
         Ok(Self(parser::parse_osu_login_request_body(body.into())?))
     }
