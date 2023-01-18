@@ -13,6 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "bancho")]
     build_bancho();
 
+    #[cfg(feature = "bancho_state")]
+    build_bancho_state();
+
     Ok(())
 }
 
@@ -37,6 +40,14 @@ fn build_bancho() {
     tonic_build::configure()
         .file_descriptor_set_path(with_out_dir("bancho_descriptor.bin"))
         .compile(&["proto/services/bancho.proto"], &["proto"])
+        .unwrap();
+}
+
+#[cfg(feature = "bancho_state")]
+fn build_bancho_state() {
+    tonic_build::configure()
+        .file_descriptor_set_path(with_out_dir("bancho_state_descriptor.bin"))
+        .compile(&["proto/services/bancho_state.proto"], &["proto"])
         .unwrap();
 }
 

@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package peace.services.bancho.state;
+
+service BanchoStateRPC {
+  rpc BroadcastBanchoPackets(BroadcastBanchoPacketsRequest)
+      returns (ExecSuccess);
+
+  rpc EnqueueBanchoPackets(EnqueueBanchoPacketsRequest) returns (ExecSuccess);
+  rpc BatchEnqueueBanchoPackets(BatchEnqueueBanchoPacketsRequest)
+      returns (ExecSuccess);
+
+  rpc DequeueBanchoPackets(DequeueBanchoPacketsRequest) returns (BanchoPackets);
+  rpc BatchDequeueBanchoPackets(BatchDequeueBanchoPacketsRequest)
+      returns (ExecSuccess);
+
+  rpc CreateUserSession(CreateUserSessionRequest) returns (ExecSuccess);
+  rpc DeleteUserSession(DeleteUserSessionRequest) returns (ExecSuccess);
+}
+
+message ExecSuccess {}
+
+message BroadcastBanchoPacketsRequest { bytes packets = 1; }
+
+message RawUserQuery {
+  enum QueryType {
+    // Deserialize into `UserId(i32)`
+    UserId = 0;
+    // Deserialize into `Username(string)`
+    Username = 1;
+    // Deserialize into `UsernameUnicode(string)`
+    UsernameUnicode = 2;
+    // Deserialize into `SessionId(string)`
+    SessionId = 3;
+  }
+  QueryType query_type = 1;
+  bytes key = 2;
+}
+
+message RawBanchoPacketTarget {
+  enum TargetType {
+    // Deserialize into `UserId(i32)`
+    UserId = 0;
+    // Deserialize into `Username(string)`
+    Username = 1;
+    // Deserialize into `UsernameUnicode(string)`
+    UsernameUnicode = 2;
+    // Deserialize into `SessionId(string)`
+    SessionId = 3;
+    // Deserialize into `Channel(string)`
+    Channel = 4;
+  }
+  TargetType target_type = 1;
+  bytes key = 2;
+}
+
+message EnqueueBanchoPacketsRequest {
+  RawBanchoPacketTarget target = 1;
+  bytes packets = 2;
+}
+
+message BatchEnqueueBanchoPacketsRequest {
+  repeated EnqueueBanchoPacketsRequest requests = 1;
+}
+
+message DequeueBanchoPacketsRequest {
+  RawBanchoPacketTarget target = 1;
+  bytes key = 2;
+}
+
+message BatchDequeueBanchoPacketsRequest {
+  repeated DequeueBanchoPacketsRequest requests = 1;
+}
+
+message BanchoPackets { bytes packets = 1; }
+
+message CreateUserSessionRequest {
+  int32 user_id = 1;
+  string username = 2;
+  string username_unicode = 3;
+  int32 privileges = 4;
+  int32 bancho_privileges = 5;
+  int32 lazer_privileges = 6;
+  string region = 7;
+  string ip = 8;
+}
+
+message DeleteUserSessionRequest { RawUserQuery query = 1; }

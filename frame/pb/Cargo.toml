@@ -16,8 +16,9 @@ all = ["reflection", "frame", "services"]
 frame = ["logs"]
 logs = []
 
-services = ["bancho", "peace_db"]
+services = ["bancho", "bancho_state", "peace_db"]
 bancho = []
+bancho_state = []
 peace_db = []
 
 

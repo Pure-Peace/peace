@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "services/bancho",
+    "services/bancho/state",
     "services/gateway",
     "services/db",
     "lib/tools",
