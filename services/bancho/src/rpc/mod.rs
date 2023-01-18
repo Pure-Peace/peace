@@ -34,7 +34,7 @@ impl BanchoRpc for Bancho {
 
         println!("Got a request: {:?}, ip: {:?}", request, client_ip);
 
-        let reply = LoginReply { token: None, packet: None };
+        let reply = LoginReply { session_id: None, packet: None };
 
         Ok(Response::new(reply))
     }

@@ -1,6 +1,6 @@
 [package]
 name = "bancho"
-description = "Peace Bancho Service"
+description = "Peace bancho logic service"
 version = "0.1.0"
 edition = "2021"
 authors = ["Pure-Peace"]

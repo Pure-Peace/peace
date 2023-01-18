@@ -15,7 +15,7 @@ service BanchoRPC {
 
 message BanchoReply { optional bytes packet = 1; }
 
-message PingRequest { string token = 1; }
+message PingRequest { string session_id = 1; }
 
 message ClientHashes {
   string path_hash = 1;
@@ -36,18 +36,18 @@ message LoginRequest {
 }
 
 message LoginReply {
-  optional string token = 1;
+  optional string session_id = 1;
   optional bytes packet = 2;
 }
 
-message RequestStatusUpdateRequest { string token = 1; }
+message RequestStatusUpdateRequest { string session_id = 1; }
 
-message PresenceRequestAllRequest { string token = 1; }
+message PresenceRequestAllRequest { string session_id = 1; }
 
-message SpectateStopRequest { string token = 1; }
+message SpectateStopRequest { string session_id = 1; }
 
-message SpectateCantRequest { string token = 1; }
+message SpectateCantRequest { string session_id = 1; }
 
-message LobbyPartRequest { string token = 1; }
+message LobbyPartRequest { string session_id = 1; }
 
-message LobbyJoinRequest { string token = 1; }
+message LobbyJoinRequest { string session_id = 1; }
