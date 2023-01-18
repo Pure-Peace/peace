@@ -1,5 +1,8 @@
 pub use crate::macro_impl_config as impl_config;
 
+#[cfg(feature = "derive")]
+pub use peace_cfg_derive::*;
+
 use clap::{Args, Parser, Subcommand};
 use clap_serde_derive::ClapSerde;
 use serde::{Deserialize, Serialize};
@@ -191,7 +194,10 @@ where
 pub mod macros {
     pub use once_cell::sync::OnceCell;
 
-    /// Implement a `get` function for the given struct that can be used to get app configuration.
+    /// Add a `get` method to the given struct.
+    ///
+    /// This method only initializes the configuration struct when it is called for the first time,
+    /// and subsequent calls will directly return the [`std::sync::Arc<T>`] of the struct.
     ///
     /// ```rust
     /// use clap::Parser;
