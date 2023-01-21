@@ -64,24 +64,22 @@ pub enum Relation {
     ScoresTaiko,
     #[sea_orm(has_many = "super::scores_taiko_relax::Entity")]
     ScoresTaikoRelax,
-    #[sea_orm(has_many = "super::user_performances_fruits::Entity")]
-    UserPerformancesFruits,
-    #[sea_orm(has_many = "super::user_performances_fruits_relax::Entity")]
-    UserPerformancesFruitsRelax,
-    #[sea_orm(has_many = "super::user_performances_mania::Entity")]
-    UserPerformancesMania,
-    #[sea_orm(has_many = "super::user_performances_standard::Entity")]
-    UserPerformancesStandard,
-    #[sea_orm(
-        has_many = "super::user_performances_standard_autopilot::Entity"
-    )]
-    UserPerformancesStandardAutopilot,
-    #[sea_orm(has_many = "super::user_performances_standard_relax::Entity")]
-    UserPerformancesStandardRelax,
-    #[sea_orm(has_many = "super::user_performances_taiko::Entity")]
-    UserPerformancesTaiko,
-    #[sea_orm(has_many = "super::user_performances_taiko_relax::Entity")]
-    UserPerformancesTaikoRelax,
+    #[sea_orm(has_many = "super::user_pp_fruits::Entity")]
+    UserPpFruits,
+    #[sea_orm(has_many = "super::user_pp_fruits_relax::Entity")]
+    UserPpFruitsRelax,
+    #[sea_orm(has_many = "super::user_pp_mania::Entity")]
+    UserPpMania,
+    #[sea_orm(has_many = "super::user_pp_standard::Entity")]
+    UserPpStandard,
+    #[sea_orm(has_many = "super::user_pp_standard_autopilot::Entity")]
+    UserPpStandardAutopilot,
+    #[sea_orm(has_many = "super::user_pp_standard_relax::Entity")]
+    UserPpStandardRelax,
+    #[sea_orm(has_many = "super::user_pp_taiko::Entity")]
+    UserPpTaiko,
+    #[sea_orm(has_many = "super::user_pp_taiko_relax::Entity")]
+    UserPpTaikoRelax,
     #[sea_orm(has_many = "super::user_stats_fruits::Entity")]
     UserStatsFruits,
     #[sea_orm(has_many = "super::user_stats_fruits_relax::Entity")]
@@ -216,51 +214,51 @@ impl Related<super::scores_taiko_relax::Entity> for Entity {
     }
 }
 
-impl Related<super::user_performances_fruits::Entity> for Entity {
+impl Related<super::user_pp_fruits::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesFruits.def()
+        Relation::UserPpFruits.def()
     }
 }
 
-impl Related<super::user_performances_fruits_relax::Entity> for Entity {
+impl Related<super::user_pp_fruits_relax::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesFruitsRelax.def()
+        Relation::UserPpFruitsRelax.def()
     }
 }
 
-impl Related<super::user_performances_mania::Entity> for Entity {
+impl Related<super::user_pp_mania::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesMania.def()
+        Relation::UserPpMania.def()
     }
 }
 
-impl Related<super::user_performances_standard::Entity> for Entity {
+impl Related<super::user_pp_standard::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesStandard.def()
+        Relation::UserPpStandard.def()
     }
 }
 
-impl Related<super::user_performances_standard_autopilot::Entity> for Entity {
+impl Related<super::user_pp_standard_autopilot::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesStandardAutopilot.def()
+        Relation::UserPpStandardAutopilot.def()
     }
 }
 
-impl Related<super::user_performances_standard_relax::Entity> for Entity {
+impl Related<super::user_pp_standard_relax::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesStandardRelax.def()
+        Relation::UserPpStandardRelax.def()
     }
 }
 
-impl Related<super::user_performances_taiko::Entity> for Entity {
+impl Related<super::user_pp_taiko::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesTaiko.def()
+        Relation::UserPpTaiko.def()
     }
 }
 
-impl Related<super::user_performances_taiko_relax::Entity> for Entity {
+impl Related<super::user_pp_taiko_relax::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::UserPerformancesTaikoRelax.def()
+        Relation::UserPpTaikoRelax.def()
     }
 }
 

@@ -44,8 +44,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::leaderboard_taiko_relax::Entity")]
     LeaderboardTaikoRelax,
-    #[sea_orm(has_many = "super::score_performances_taiko_relax::Entity")]
-    ScorePerformancesTaikoRelax,
+    #[sea_orm(has_many = "super::score_pp_taiko_relax::Entity")]
+    ScorePpTaikoRelax,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -62,9 +62,9 @@ impl Related<super::leaderboard_taiko_relax::Entity> for Entity {
     }
 }
 
-impl Related<super::score_performances_taiko_relax::Entity> for Entity {
+impl Related<super::score_pp_taiko_relax::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ScorePerformancesTaikoRelax.def()
+        Relation::ScorePpTaikoRelax.def()
     }
 }
 

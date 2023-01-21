@@ -15,12 +15,8 @@ pub enum GameMode {
     Taiko,
 }
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(
-    rs_type = "String",
-    db_type = "Enum",
-    enum_name = "performance_version"
-)]
-pub enum PerformanceVersion {
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "pp_version")]
+pub enum PpVersion {
     #[sea_orm(string_value = "v1")]
     V1,
     #[sea_orm(string_value = "v2")]
@@ -47,10 +43,10 @@ pub enum RankStatus {
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "ranking_type")]
 pub enum RankingType {
-    #[sea_orm(string_value = "performance_v1")]
-    PerformanceV1,
-    #[sea_orm(string_value = "performance_v2")]
-    PerformanceV2,
+    #[sea_orm(string_value = "pp_v1")]
+    PpV1,
+    #[sea_orm(string_value = "pp_v2")]
+    PpV2,
     #[sea_orm(string_value = "score_v1")]
     ScoreV1,
     #[sea_orm(string_value = "score_v2")]
@@ -98,7 +94,7 @@ pub enum ScoreVersion {
 }
 
 /// Manually implement [`TryFromU64`] due to [sea-orm #3513](https://github.com/SeaQL/sea-orm/issues/1364)
-impl TryFromU64 for PerformanceVersion {
+impl TryFromU64 for PpVersion {
     fn try_from_u64(n: u64) -> Result<Self, sea_orm::DbErr> {
         match n {
             0 => Ok(Self::V1),
@@ -112,11 +108,12 @@ impl TryFromU64 for PerformanceVersion {
 impl TryFromU64 for RankingType {
     fn try_from_u64(n: u64) -> Result<Self, sea_orm::DbErr> {
         match n {
-            0 => Ok(Self::PerformanceV1),
-            1 => Ok(Self::PerformanceV2),
+            0 => Ok(Self::PpV1),
+            1 => Ok(Self::PpV2),
             2 => Ok(Self::ScoreV1),
             3 => Ok(Self::ScoreV2),
             _ => Err(sea_orm::DbErr::Type(format!("Invalid value {}", n))),
         }
     }
 }
+
