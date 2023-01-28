@@ -1,15 +1,18 @@
 #[macro_use]
 extern crate peace_rpc;
+#[macro_use]
+extern crate peace_logs;
 
-pub mod impls;
+mod components;
+pub use components::*;
 pub mod rpc;
 
 use clap_serde_derive::ClapSerde;
-use peace_pb::services::bancho::{
-    bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET,
+use peace_pb::services::bancho_state_rpc::{
+    bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
-use peace_rpc::{interceptor::client_ip, Application, RpcFrameConfig};
-use rpc::Bancho;
+use peace_rpc::{Application, RpcFrameConfig};
+use rpc::BanchoState;
 use std::sync::Arc;
 use tonic::{
     async_trait,
@@ -17,19 +20,25 @@ use tonic::{
 };
 
 #[peace_config]
-#[command(name = "bancho", author, version, about, propagate_version = true)]
-pub struct BanchoConfig {
+#[command(
+    name = "bancho_state",
+    author,
+    version,
+    about,
+    propagate_version = true
+)]
+pub struct BanchoStateConfig {
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
 }
 
 #[derive(Clone)]
 pub struct App {
-    pub cfg: Arc<BanchoConfig>,
+    pub cfg: Arc<BanchoStateConfig>,
 }
 
 impl App {
-    pub fn new(cfg: Arc<BanchoConfig>) -> Self {
+    pub fn new(cfg: Arc<BanchoStateConfig>) -> Self {
         Self { cfg }
     }
 }
@@ -41,12 +50,11 @@ impl Application for App {
     }
 
     fn service_descriptors(&self) -> Option<&[&[u8]]> {
-        Some(&[BANCHO_DESCRIPTOR_SET])
+        Some(&[BANCHO_STATE_DESCRIPTOR_SET])
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let bancho = Bancho::default();
         configured_server
-            .add_service(BanchoRpcServer::with_interceptor(bancho, client_ip))
+            .add_service(BanchoStateRpcServer::new(BanchoState::default()))
     }
 }

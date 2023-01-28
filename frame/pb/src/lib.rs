@@ -9,3 +9,15 @@ impl ConvertError {
         Self(raw.to_string())
     }
 }
+
+impl ToString for ConvertError {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl From<ConvertError> for String {
+    fn from(err: ConvertError) -> Self {
+        err.0
+    }
+}

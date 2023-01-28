@@ -14,8 +14,12 @@ service BanchoStateRPC {
   rpc BatchDequeueBanchoPackets(BatchDequeueBanchoPacketsRequest)
       returns (ExecSuccess);
 
-  rpc CreateUserSession(CreateUserSessionRequest) returns (ExecSuccess);
-  rpc DeleteUserSession(DeleteUserSessionRequest) returns (ExecSuccess);
+  rpc CreateUserSession(CreateUserSessionRequest)
+      returns (CreateUserSessionResponse);
+  rpc DeleteUserSession(RawUserQuery) returns (ExecSuccess);
+  rpc IsUserSessionExists(RawUserQuery) returns (IsUserSessionExistsResponse);
+
+  rpc ShowAllSessions(ShowAllSessionsRequest) returns (ShowAllSessionsResponse);
 }
 
 message ExecSuccess {}
@@ -34,7 +38,8 @@ message RawUserQuery {
     SessionId = 3;
   }
   QueryType query_type = 1;
-  bytes key = 2;
+  optional int32 int_val = 2;
+  optional string string_val = 3;
 }
 
 message RawBanchoPacketTarget {
@@ -51,7 +56,8 @@ message RawBanchoPacketTarget {
     Channel = 4;
   }
   TargetType target_type = 1;
-  bytes key = 2;
+  optional int32 int_val = 2;
+  optional string string_val = 3;
 }
 
 message EnqueueBanchoPacketsRequest {
@@ -65,7 +71,7 @@ message BatchEnqueueBanchoPacketsRequest {
 
 message DequeueBanchoPacketsRequest {
   RawBanchoPacketTarget target = 1;
-  bytes key = 2;
+  bytes value = 2;
 }
 
 message BatchDequeueBanchoPacketsRequest {
@@ -77,12 +83,33 @@ message BanchoPackets { bytes packets = 1; }
 message CreateUserSessionRequest {
   int32 user_id = 1;
   string username = 2;
-  string username_unicode = 3;
+  optional string username_unicode = 3;
   int32 privileges = 4;
   int32 bancho_privileges = 5;
-  int32 lazer_privileges = 6;
   string region = 7;
   string ip = 8;
 }
 
-message DeleteUserSessionRequest { RawUserQuery query = 1; }
+message CreateUserSessionResponse { string session_id = 1; }
+
+message IsUserSessionExistsResponse { optional string session_id = 1; }
+
+message ShowAllSessionsRequest {}
+
+message ShowAllSessionsResponse {
+  message UserData {
+    string session_id = 1;
+    int32 user_id = 2;
+    string username = 3;
+    optional string username_unicode = 4;
+    int32 privileges = 5;
+    int32 bancho_privileges = 6;
+    string region = 7;
+    string ip = 8;
+  }
+  uint64 len = 1;
+  repeated UserData indexed_by_session_id = 2;
+  repeated UserData indexed_by_user_id = 3;
+  repeated UserData indexed_by_username = 4;
+  repeated UserData indexed_by_username_unicode = 5;
+}
