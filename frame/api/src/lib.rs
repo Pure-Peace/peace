@@ -8,8 +8,9 @@ pub mod extractors;
 
 pub use components::*;
 pub use peace_cfg::{
+    macro_define_rpc_client_config as define_rpc_client_config,
     macro_impl_config as impl_config, peace_config, ParseConfig,
-    SingletonConfig,
+    RpcClientConfig, SingletonConfig,
 };
 
 use axum::{async_trait, body::Body, extract::Host, http::Request, Router};

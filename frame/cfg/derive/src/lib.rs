@@ -16,9 +16,10 @@ use syn::{parse_macro_input, DeriveInput};
 ///
 /// #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize, SingletonConfig)]
 /// pub struct GatewayConfig {
-///     /// A list of hostnames to route to the bancho service.
-///     #[arg(short = 'B', long)]
-///     pub bancho_hostname: Vec<String>,
+///     /// Bancho service address.
+///     #[default("http://127.0.0.1:50051".to_owned())]
+///     #[arg(long, default_value = "http://127.0.0.1:50051")]
+///     pub bancho_addr: String,
 /// }
 ///
 ///

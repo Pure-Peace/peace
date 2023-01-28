@@ -9,6 +9,10 @@ default = ["derive"]
 derive = ["peace_cfg_derive"]
 
 [dependencies]
+paste = "1.0"
+async-trait = "0.1"
+anyhow = "1.0"
+
 # cfg
 clap = { version = "4.0", features = ["derive"] }
 clap-serde-derive = { version = "0.2.0" }
@@ -21,3 +25,4 @@ serde_json = { version = "1.0" }
 serde_yaml = { version = "0.9" }
 
 peace_cfg_derive = { path = "./derive", optional = true }
+peace_logs = { path = "../logs" }

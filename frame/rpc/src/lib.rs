@@ -5,8 +5,9 @@ mod components;
 
 pub use components::*;
 pub use peace_cfg::{
+    macro_define_rpc_client_config as define_rpc_client_config,
     macro_impl_config as impl_config, peace_config, ParseConfig,
-    SingletonConfig,
+    RpcClientConfig, SingletonConfig,
 };
 
 use once_cell::sync::OnceCell;

@@ -16,12 +16,12 @@ use axum::{
 };
 use bancho::handler;
 use clap_serde_derive::ClapSerde;
-use peace_api::{ApiFrameConfig, Application};
-use peace_pb::services::bancho::bancho_rpc_client::BanchoRpcClient;
-use std::path::PathBuf;
+use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
+use peace_pb::services::bancho_rpc;
 use std::sync::Arc;
-use tonic::transport::{Certificate, Channel, ClientTlsConfig, Endpoint};
 use utoipa::OpenApi;
+
+define_rpc_client_config!(service_name: bancho_rpc);
 
 /// Command Line Interface (CLI) for Peace gateway service.
 #[peace_config]
@@ -36,35 +36,8 @@ pub struct GatewayConfig {
     #[command(flatten)]
     pub frame_cfg: ApiFrameConfig,
 
-    /// A list of hostnames to route to the bancho service.
-    #[arg(short = 'B', long)]
-    pub bancho_hostname: Vec<String>,
-
-    /// Bancho service address.
-    #[default("http://127.0.0.1:50051".to_owned())]
-    #[arg(long, default_value = "http://127.0.0.1:50051")]
-    pub bancho_addr: String,
-
-    /// Bancho service unix domain socket path.
-    /// Only for unix systems.
-    ///
-    /// `uds` will be preferred over `addr`.
-    #[arg(long)]
-    pub bancho_uds: Option<PathBuf>,
-
-    /// `tls` connection for Bancho service.
-    #[default(false)]
-    #[arg(long)]
-    pub bancho_tls: bool,
-
-    /// SSL certificate path.
-    #[arg(long)]
-    pub bancho_ssl_cert: Option<PathBuf>,
-
-    /// Not attempt to connect to the bancho endpoint until first use.
-    #[default(false)]
-    #[arg(long)]
-    pub bancho_lazy_connect: bool,
+    #[command(flatten)]
+    pub bancho: BanchoRpcConfig,
 }
 
 #[derive(Clone)]
@@ -76,64 +49,6 @@ impl App {
     pub fn new(cfg: Arc<GatewayConfig>) -> Self {
         Self { cfg }
     }
-
-    pub async fn connect_bancho_service(
-        &self,
-    ) -> Result<BanchoRpcClient<Channel>, anyhow::Error> {
-        async fn connect_endpoint(
-            endpoint: Endpoint,
-            lazy_connect: bool,
-        ) -> Result<Channel, anyhow::Error> {
-            Ok(if lazy_connect {
-                endpoint.connect_lazy()
-            } else {
-                info!("Attempting to connect to bancho gRPC endpoint...");
-                endpoint.connect().await?
-            })
-        }
-
-        #[cfg(unix)]
-        if let Some(uds) = self.cfg.bancho_uds {
-            info!("Bancho gRPC service: {}", uds);
-            let service_factory =
-                tower::service_fn(|_| tokio::net::UnixStream::connect(uds));
-            let endpoint =
-                tonic::transport::Endpoint::try_from("http://[::]:50051")?;
-
-            let channel = if self.cfg.bancho_lazy_connect {
-                endpoint.connect_with_connector_lazy(service_factory)
-            } else {
-                info!("Attempting to connect to bancho gRPC endpoint...");
-                endpoint.connect_with_connector(service_factory).await?
-            };
-            return BanchoRpcClient::new(channel);
-        }
-
-        info!("Bancho gRPC service: {}", self.cfg.bancho_addr);
-        if self.cfg.bancho_tls {
-            let pem =
-                tokio::fs::read(self.cfg.bancho_ssl_cert.as_ref().unwrap())
-                    .await?;
-            let ca = Certificate::from_pem(pem);
-            let tls = ClientTlsConfig::new().ca_certificate(ca);
-            return Ok(BanchoRpcClient::new(
-                connect_endpoint(
-                    Channel::from_shared(self.cfg.bancho_addr.clone())?
-                        .tls_config(tls)?,
-                    self.cfg.bancho_lazy_connect,
-                )
-                .await?,
-            ));
-        }
-
-        Ok(BanchoRpcClient::new(
-            connect_endpoint(
-                Channel::from_shared(self.cfg.bancho_addr.clone())?,
-                self.cfg.bancho_lazy_connect,
-            )
-            .await?,
-        ))
-    }
 }
 
 #[async_trait]
@@ -143,8 +58,8 @@ impl Application for App {
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
-        let bancho_handlers =
-            self.connect_bancho_service().await.unwrap_or_else(|err| {
+        let bancho_rpc_client =
+            self.cfg.bancho.connect_client().await.unwrap_or_else(|err| {
                 error!("Unable to connect to the bancho gRPC service, please make sure the service is started.");
                 panic!("{}", err)
             });
@@ -188,7 +103,8 @@ impl Application for App {
             .route("/web/bancho_connect.php", get(handler::bancho_connect))
             .route("/web/check-updates", get(handler::check_updates))
             .route("/web/maps/:beatmap_file_name", get(handler::update_beatmap))
-            .with_state(bancho_handlers)
+            .route("/test", get(handler::test))
+            .with_state(bancho_rpc_client)
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {

@@ -3,6 +3,7 @@ pub use crate::macro_impl_config as impl_config;
 #[cfg(feature = "derive")]
 pub use peace_cfg_derive::*;
 
+use async_trait::async_trait;
 use clap::{Args, Parser, Subcommand};
 use clap_serde_derive::ClapSerde;
 use serde::{Deserialize, Serialize};
@@ -191,8 +192,23 @@ where
     }
 }
 
+#[async_trait]
+pub trait RpcClientConfig {
+    type RpcClient;
+    fn uri(&self) -> &str;
+    fn uds(&self) -> Option<&std::path::PathBuf>;
+    fn tls(&self) -> bool;
+    fn ssl_cert(&self) -> Option<&std::path::PathBuf>;
+    fn lazy_connect(&self) -> bool;
+    async fn connect_client(&self) -> Result<Self::RpcClient, anyhow::Error>;
+}
+
 pub mod macros {
+    pub use anyhow::Error;
+    pub use async_trait::async_trait;
     pub use once_cell::sync::OnceCell;
+    pub use paste;
+    pub use peace_logs;
 
     /// Add a `get` method to the given struct.
     ///
@@ -206,9 +222,10 @@ pub mod macros {
     ///
     /// #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
     /// pub struct GatewayConfig {
-    ///     /// A list of hostnames to route to the bancho service.
-    ///     #[arg(short = 'B', long)]
-    ///     pub bancho_hostname: Vec<String>,
+    ///     /// Bancho service address.
+    ///     #[default("http://127.0.0.1:50051".to_owned())]
+    ///     #[arg(long, default_value = "http://127.0.0.1:50051")]
+    ///     pub bancho_addr: String,
     /// }
     ///
     /// peace_cfg::impl_config!(GatewayConfig);
@@ -228,6 +245,174 @@ pub mod macros {
                         $crate::macros::OnceCell::<std::sync::Arc<$t>>::new();
                     CFG.get_or_init(|| std::sync::Arc::new(<$t>::parse_cfg()))
                         .clone()
+                }
+            }
+        };
+    }
+
+    #[macro_export]
+    /// Define RPC config struct
+    ///
+    /// Example
+    /// ```rust,ignore
+    /// #[macro_use]
+    /// extern crate peace_api;
+    ///
+    /// use clap_serde_derive::ClapSerde;
+    /// use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
+    ///
+    /// // Should import RPC service namespace first
+    /// use peace_pb::services::bancho_rpc;
+    ///
+    /// // It will generate a config struct named [`BanchoRpcConfig`]
+    /// peace_api::define_rpc_client_config!(service_name: bancho_rpc);
+    ///
+    /// /// Command Line Interface (CLI) for Peace gateway service.
+    /// #[peace_config]
+    /// #[command(
+    ///     name = "peace-gateway",
+    ///     author,
+    ///     version,
+    ///     about,
+    ///     propagate_version = true
+    /// )]
+    /// pub struct GatewayConfig {
+    ///     #[command(flatten)]
+    ///     pub frame_cfg: ApiFrameConfig,
+    ///
+    ///     #[command(flatten)]
+    ///     pub bancho: BanchoRpcConfig, // Use it - [`BanchoRpcConfig`]
+    /// }
+    ///
+    /// // Init config
+    /// let cfg = GatewayConfig::get();
+    ///
+    /// // Connect to RPC client
+    /// let client = cfg.bancho.connect_client().await.unwrap_or_else(|err| {
+    ///     error!("Unable to connect to the bancho gRPC service, please make sure the service is started.");
+    ///     panic!("{}", err)
+    /// });
+    ///
+    /// ```
+    macro_rules! macro_define_rpc_client_config {
+        (service_name: $service_name: ty) => {
+            $crate::macros::paste::paste! {
+                #[derive(
+                    clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
+                )]
+                pub struct [<$service_name:camel Config>] {
+                    /// Service uri.
+                    #[default("http://127.0.0.1:50051".to_owned())]
+                    #[arg(long, default_value = "http://127.0.0.1:50051")]
+                    pub [<$service_name:snake _uri>]: String,
+
+                    /// Service unix domain socket path.
+                    /// Only for unix systems.
+                    ///
+                    /// `uds` will be preferred over `uri`.
+                    #[arg(long)]
+                    pub [<$service_name:snake _uds>]: Option<std::path::PathBuf>,
+
+                    /// Enable `tls` connection.
+                    #[default(false)]
+                    #[arg(long)]
+                    pub [<$service_name:snake _tls>]: bool,
+
+                    /// SSL certificate path.
+                    #[arg(long)]
+                    pub [<$service_name:snake _ssl_cert>]: Option<std::path::PathBuf>,
+
+                    /// Not attempt to connect to the endpoint until first use.
+                    #[default(false)]
+                    #[arg(long)]
+                    pub [<$service_name:snake _lazy_connect>]: bool,
+                }
+
+                #[$crate::macros::async_trait]
+                impl $crate::RpcClientConfig for [<$service_name:camel Config>] {
+                    type RpcClient = [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<tonic::transport::Channel>;
+
+                    #[inline]
+                    fn uri(&self) -> &str {
+                        self.[<$service_name:snake _uri>].as_str()
+                    }
+
+                    #[inline]
+                    fn uds(&self) -> Option<&std::path::PathBuf> {
+                        self.[<$service_name:snake _uds>].as_ref()
+                    }
+
+                    #[inline]
+                    fn tls(&self) -> bool {
+                        self.[<$service_name:snake _tls>]
+                    }
+
+                    #[inline]
+                    fn ssl_cert(&self) -> Option<&std::path::PathBuf> {
+                        self.[<$service_name:snake _ssl_cert>].as_ref()
+                    }
+
+                    #[inline]
+                    fn lazy_connect(&self) -> bool {
+                        self.[<$service_name:snake _lazy_connect>]
+                    }
+
+                    #[inline]
+                    async fn connect_client(&self) -> Result<Self::RpcClient, $crate::macros::Error> {
+                        async fn connect_endpoint(
+                            endpoint: tonic::transport::Endpoint,
+                            lazy_connect: bool,
+                        ) -> Result<tonic::transport::Channel, $crate::macros::Error> {
+                            Ok(if lazy_connect {
+                                endpoint.connect_lazy()
+                            } else {
+                                $crate::macros::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                                endpoint.connect().await?
+                            })
+                        }
+
+                        #[cfg(unix)]
+                        if let Some(uds) = self.uds().to_owned() {
+                            $crate::macros::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), uds);
+                            let service_factory =
+                                tower::service_fn(|_| tokio::net::UnixStream::connect(uds));
+                            let endpoint =
+                                tonic::transport::Endpoint::try_from("http://[::]:50051")?;
+
+                            let channel = if self.lazy_connect() {
+                                endpoint.connect_with_connector_lazy(service_factory)
+                            } else {
+                                $crate::macros::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                                endpoint.connect_with_connector(service_factory).await?
+                            };
+                            return Self::RpcClient::new(channel);
+                        }
+
+                        $crate::macros::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), self.uri());
+                        if self.tls() {
+                            let pem =
+                                tokio::fs::read(self.ssl_cert().as_ref().unwrap())
+                                    .await?;
+                            let ca = tonic::transport::Certificate::from_pem(pem);
+                            let tls = tonic::transport::ClientTlsConfig::new().ca_certificate(ca);
+                            return Ok(Self::RpcClient::new(
+                                connect_endpoint(
+                                    tonic::transport::Channel::from_shared(self.uri().to_owned())?
+                                        .tls_config(tls)?,
+                                    self.lazy_connect(),
+                                )
+                                .await?,
+                            ));
+                        }
+
+                        Ok(Self::RpcClient::new(
+                            connect_endpoint(
+                                tonic::transport::Channel::from_shared(self.uri().to_owned())?,
+                                self.lazy_connect(),
+                            )
+                            .await?,
+                        ))
+                    }
                 }
             }
         };
