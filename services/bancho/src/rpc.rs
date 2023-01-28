@@ -1,14 +1,20 @@
-use peace_pb::services::bancho::{
-    bancho_rpc_server::BanchoRpc, BanchoReply, LobbyJoinRequest,
-    LobbyPartRequest, LoginReply, LoginRequest, PingRequest,
-    PresenceRequestAllRequest, RequestStatusUpdateRequest, SpectateCantRequest,
-    SpectateStopRequest,
+use peace_pb::services::{
+    bancho_rpc::{bancho_rpc_server::BanchoRpc, *},
+    bancho_state_rpc::{bancho_state_rpc_client::BanchoStateRpcClient, *},
 };
 use peace_rpc::extensions::ClientIp;
-use tonic::{Request, Response, Status};
+use tonic::{transport::Channel, Request, Response, Status};
 
-#[derive(Debug, Default, Clone)]
-pub struct Bancho {}
+#[derive(Debug, Clone)]
+pub struct Bancho {
+    pub state_rpc: BanchoStateRpcClient<Channel>,
+}
+
+impl Bancho {
+    pub fn new(state_rpc: BanchoStateRpcClient<Channel>) -> Self {
+        Self { state_rpc }
+    }
+}
 
 #[tonic::async_trait]
 impl BanchoRpc for Bancho {
@@ -27,16 +33,32 @@ impl BanchoRpc for Bancho {
         &self,
         request: Request<LoginRequest>,
     ) -> Result<Response<LoginReply>, Status> {
-        let client_ip = request
-            .extensions()
-            .get::<ClientIp>()
-            .ok_or(Status::internal("No client ip"))?;
+        let client_ip = ClientIp::from_request(&request)?;
 
-        println!("Got a request: {:?}, ip: {:?}", request, client_ip);
+        let mut state = self.state_rpc.clone();
 
-        let reply = LoginReply { session_id: None, packet: None };
+        // TODO: Check password and get user id
+        let req = request.into_inner();
+        let user_id = 1;
 
-        Ok(Response::new(reply))
+        let resp = state
+            .create_user_session(Request::new(CreateUserSessionRequest {
+                user_id,
+                username: req.username,
+                username_unicode: None,
+                privileges: 1,
+                bancho_privileges: 1,
+                region: "".to_owned(),
+                ip: client_ip.to_string(),
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+
+        Ok(Response::new(LoginReply {
+            session_id: Some(resp.session_id),
+            packet: None,
+        }))
     }
 
     async fn request_status_update(
