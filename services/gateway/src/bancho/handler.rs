@@ -15,7 +15,7 @@ use peace_pb::services::bancho::{
 use tonic::{transport::Channel, Request};
 
 use super::{
-    constants::{CHO_PROTOCOL, CLIENT_IP_HEADER},
+    constants::{CHO_PROTOCOL, X_REAL_IP},
     parser,
 };
 
@@ -53,7 +53,7 @@ pub async fn bancho_post(
             Request::new(parser::parse_osu_login_request_body(body.into())?);
 
         req.metadata_mut()
-            .insert(CLIENT_IP_HEADER, ip.to_string().parse().map_err(map_err)?);
+            .insert(X_REAL_IP, ip.to_string().parse().map_err(map_err)?);
 
         let LoginReply { session_id, packet } = bancho
             .login(req)
