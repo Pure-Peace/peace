@@ -9,7 +9,7 @@ use peace_api::{
         BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
     },
 };
-use peace_pb::services::bancho::{
+use peace_pb::services::bancho_rpc::{
     bancho_rpc_client::BanchoRpcClient, LoginReply,
 };
 use tonic::{transport::Channel, Request};
@@ -394,5 +394,11 @@ pub async fn check_updates() -> Response {
     )
 )]
 pub async fn update_beatmap() -> Response {
+    "ok".into_response()
+}
+
+pub async fn test(
+    State(mut bancho): State<BanchoRpcClient<Channel>>,
+) -> Response {
     "ok".into_response()
 }

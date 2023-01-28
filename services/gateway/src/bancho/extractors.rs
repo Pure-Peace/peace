@@ -4,7 +4,7 @@ use axum::{
     response::Response,
 };
 use peace_api::extractors::BanchoRequestBody;
-use peace_pb::services::bancho::LoginRequest;
+use peace_pb::services::bancho_rpc::LoginRequest;
 
 #[derive(Debug)]
 pub struct OsuClientLoginBody(pub LoginRequest);

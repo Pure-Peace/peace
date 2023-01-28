@@ -1,5 +1,5 @@
 use peace_api::error::{map_err, Error};
-use peace_pb::services::bancho::{ClientHashes, LoginRequest};
+use peace_pb::services::bancho_rpc::{ClientHashes, LoginRequest};
 
 pub fn parse_osu_login_request_body(
     body: Vec<u8>,

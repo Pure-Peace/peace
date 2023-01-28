@@ -1,5 +1,5 @@
 #[cfg(feature = "bancho")]
-pub mod bancho {
+pub mod bancho_rpc {
     tonic::include_proto!("peace.services.bancho");
 
     #[cfg(feature = "reflection")]
@@ -8,7 +8,7 @@ pub mod bancho {
 }
 
 #[cfg(feature = "peace_db")]
-pub mod peace_db {
+pub mod peace_db_rpc {
     tonic::include_proto!("peace.services.db.peace");
 
     #[cfg(feature = "reflection")]
@@ -17,7 +17,7 @@ pub mod peace_db {
 }
 
 #[cfg(feature = "bancho_state")]
-pub mod bancho_state {
+pub mod bancho_state_rpc {
     tonic::include_proto!("peace.services.bancho.state");
 
     #[cfg(feature = "reflection")]
@@ -27,7 +27,8 @@ pub mod bancho_state {
     use self::{
         raw_bancho_packet_target::TargetType, raw_user_query::QueryType,
     };
-    use crate::ConvertError;
+
+    const CONVERT_PANIC: &str = "This should never happen, please check that the value is passed correctly.";
 
     #[derive(Debug, Clone)]
     pub enum UserQuery {
@@ -37,26 +38,49 @@ pub mod bancho_state {
         SessionId(String),
     }
 
-    impl TryFrom<RawUserQuery> for UserQuery {
-        type Error = ConvertError;
+    impl From<RawUserQuery> for UserQuery {
+        fn from(raw: RawUserQuery) -> UserQuery {
+            match raw.query_type() {
+                QueryType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                QueryType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+            }
+        }
+    }
 
-        fn try_from(raw: RawUserQuery) -> Result<UserQuery, ConvertError> {
-            Ok(match raw.query_type() {
-                QueryType::UserId => Self::UserId(i32::from_le_bytes(
-                    raw.key.try_into().map_err(|_| {
-                        ConvertError("Invalid user_id bytes".into())
-                    })?,
-                )),
-                QueryType::Username => Self::Username(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-                QueryType::UsernameUnicode => Self::UsernameUnicode(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-                QueryType::SessionId => Self::SessionId(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-            })
+    impl From<UserQuery> for RawUserQuery {
+        fn from(query: UserQuery) -> RawUserQuery {
+            match query {
+                UserQuery::UserId(user_id) => RawUserQuery {
+                    query_type: QueryType::UserId as i32,
+                    int_val: Some(user_id),
+                    string_val: None,
+                },
+                UserQuery::Username(username) => RawUserQuery {
+                    query_type: QueryType::Username as i32,
+                    int_val: None,
+                    string_val: Some(username),
+                },
+                UserQuery::UsernameUnicode(username_unicode) => RawUserQuery {
+                    query_type: QueryType::UsernameUnicode as i32,
+                    int_val: None,
+                    string_val: Some(username_unicode),
+                },
+                UserQuery::SessionId(session_id) => RawUserQuery {
+                    query_type: QueryType::SessionId as i32,
+                    int_val: None,
+                    string_val: Some(session_id),
+                },
+            }
         }
     }
 
@@ -69,31 +93,25 @@ pub mod bancho_state {
         Channel(String),
     }
 
-    impl TryFrom<RawBanchoPacketTarget> for BanchoPacketTarget {
-        type Error = ConvertError;
-
-        fn try_from(
-            raw: RawBanchoPacketTarget,
-        ) -> Result<BanchoPacketTarget, ConvertError> {
-            Ok(match raw.target_type() {
-                TargetType::UserId => Self::UserId(i32::from_le_bytes(
-                    raw.key.try_into().map_err(|_| {
-                        ConvertError("Invalid user_id bytes".into())
-                    })?,
-                )),
-                TargetType::Username => Self::Username(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-                TargetType::UsernameUnicode => Self::UsernameUnicode(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-                TargetType::SessionId => Self::SessionId(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-                TargetType::Channel => Self::Channel(
-                    String::from_utf8(raw.key).map_err(ConvertError::new)?,
-                ),
-            })
+    impl From<RawBanchoPacketTarget> for BanchoPacketTarget {
+        fn from(raw: RawBanchoPacketTarget) -> BanchoPacketTarget {
+            match raw.target_type() {
+                TargetType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Channel => {
+                    Self::Channel(raw.string_val.expect(CONVERT_PANIC))
+                },
+            }
         }
     }
 }

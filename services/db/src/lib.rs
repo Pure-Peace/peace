@@ -5,7 +5,7 @@ pub mod rpc;
 
 use clap_serde_derive::ClapSerde;
 use peace_dal::db::peace::PeaceDbConfig;
-use peace_pb::services::peace_db::{
+use peace_pb::services::peace_db_rpc::{
     peace_db_rpc_server::PeaceDbRpcServer, PEACE_DB_DESCRIPTOR_SET,
 };
 use peace_rpc::{Application, RpcFrameConfig};

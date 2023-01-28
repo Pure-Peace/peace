@@ -1,4 +1,4 @@
-use peace_pb::services::peace_db::{
+use peace_pb::services::peace_db_rpc::{
     peace_db_rpc_server::PeaceDbRpc, HelloReply, HelloRequest,
 };
 use tonic::{Request, Response, Status};
