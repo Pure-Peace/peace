@@ -16,7 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 tonic = "0.8"
-tokio = { version = "1" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 # serde
 serde = { version = "1.0", features = ["derive"] }
