@@ -21,7 +21,10 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
-define_rpc_client_config!(service_name: bancho_state_rpc);
+define_rpc_client_config!(
+    service_name: bancho_state_rpc,
+    config_name: BanchoStateRpcConfig
+);
 
 /// Command Line Interface (CLI) for Bancho service.
 #[peace_config]

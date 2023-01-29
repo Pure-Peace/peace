@@ -265,7 +265,10 @@ pub mod macros {
     /// use peace_pb::services::bancho_rpc;
     ///
     /// // It will generate a config struct named [`BanchoRpcConfig`]
-    /// peace_api::define_rpc_client_config!(service_name: bancho_rpc);
+    /// peace_api::define_rpc_client_config!(
+    ///     service_name: bancho_rpc,
+    ///     config_name: BanchoRpcConfig
+    /// );
     ///
     /// /// Command Line Interface (CLI) for Peace gateway service.
     /// #[peace_config]
@@ -295,12 +298,12 @@ pub mod macros {
     ///
     /// ```
     macro_rules! macro_define_rpc_client_config {
-        (service_name: $service_name: ty) => {
+        (service_name: $service_name: ty, config_name: $config_name: ty) => {
             $crate::macros::paste::paste! {
                 #[derive(
                     clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
                 )]
-                pub struct [<$service_name:camel Config>] {
+                pub struct $config_name {
                     /// Service uri.
                     #[default("http://127.0.0.1:50051".to_owned())]
                     #[arg(long, default_value = "http://127.0.0.1:50051")]
@@ -329,7 +332,7 @@ pub mod macros {
                 }
 
                 #[$crate::macros::async_trait]
-                impl $crate::RpcClientConfig for [<$service_name:camel Config>] {
+                impl $crate::RpcClientConfig for $config_name {
                     type RpcClient = [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<tonic::transport::Channel>;
 
                     #[inline]

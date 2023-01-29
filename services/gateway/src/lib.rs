@@ -21,7 +21,10 @@ use peace_pb::services::bancho_rpc;
 use std::sync::Arc;
 use utoipa::OpenApi;
 
-define_rpc_client_config!(service_name: bancho_rpc);
+define_rpc_client_config!(
+    service_name: bancho_rpc,
+    config_name: BanchoRpcConfig
+);
 
 /// Command Line Interface (CLI) for Peace gateway service.
 #[peace_config]
