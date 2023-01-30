@@ -104,8 +104,9 @@ pub async fn set_env_filter(
 ) -> Result<Json<CommonHandleResponse>, AppError> {
     crate::set_env_filter(&filter)?;
 
-    info!("<LogsApi> Set env filter to: [{}]", filter);
-    Ok(Json(CommonHandleResponse { success: true, msg: None }))
+    let current_filter = crate::env_filter(None).to_string();
+    info!("<LogsApi> Set env filter to: [{}]", current_filter);
+    Ok(Json(CommonHandleResponse { success: true, msg: Some(current_filter) }))
 }
 
 /// Get current log configs.

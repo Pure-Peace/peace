@@ -126,16 +126,22 @@ pub fn toggle_debug_mode(enabled: bool) -> Result<(), reload::Error> {
     })
 }
 
-/// Convert [`i32`] to [`LevelFilter`]
-pub fn level_from_int(level: i32) -> Result<LevelFilter, ()> {
-    match level {
-        0 => Ok(LevelFilter::Off),
-        1 => Ok(LevelFilter::Error),
-        2 => Ok(LevelFilter::Warn),
-        3 => Ok(LevelFilter::Info),
-        4 => Ok(LevelFilter::Debug),
-        5 => Ok(LevelFilter::Trace),
-        _ => Err(()),
+pub trait IntoLevelFilter {
+    fn into_level_filter(&self) -> Result<LevelFilter, &str>;
+}
+
+impl IntoLevelFilter for i32 {
+    /// Convert [`i32`] to [`LevelFilter`]
+    fn into_level_filter(&self) -> Result<LevelFilter, &str> {
+        match *self {
+            0 => Ok(LevelFilter::Off),
+            1 => Ok(LevelFilter::Error),
+            2 => Ok(LevelFilter::Warn),
+            3 => Ok(LevelFilter::Info),
+            4 => Ok(LevelFilter::Debug),
+            5 => Ok(LevelFilter::Trace),
+            _ => Err("Invalid level"),
+        }
     }
 }
 

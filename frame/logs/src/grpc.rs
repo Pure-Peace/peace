@@ -1,6 +1,7 @@
+use crate::IntoLevelFilter;
 use peace_pb::frame::logs::{
-    logs_rpc_server::LogsRpc, CommonRpcResult, SetLogLevelRequest,
-    ToggleStatusRequest,
+    logs_rpc_server::LogsRpc, BoolValue, EmptyRequest, ExecSuccess,
+    SetLevelRequest, StringValue,
 };
 use tonic::{Request, Response, Status};
 
@@ -9,62 +10,85 @@ pub struct LogsRpcService {}
 
 #[tonic::async_trait]
 impl LogsRpc for LogsRpcService {
-    async fn set_log_level(
+    async fn set_level(
         &self,
-        request: Request<SetLogLevelRequest>,
-    ) -> Result<Response<CommonRpcResult>, Status> {
-        let level = crate::level_from_int(request.into_inner().log_level)
-            .map_err(|_| {
-                Status::invalid_argument("Failed to convert level from int.")
-            })?;
+        request: Request<SetLevelRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        let level = request
+            .into_inner()
+            .level
+            .into_level_filter()
+            .map_err(|err| Status::invalid_argument(err))?;
+
         crate::set_level(level)
             .map_err(|err| Status::internal(err.to_string()))?;
 
-        info!("<LogsRpc> Reload log level to: [{}]", level);
-        Ok(Response::new(CommonRpcResult { success: true, msg: None }))
+        info!("<LogsRpc> Set log level to: [{}]", level);
+        Ok(Response::new(ExecSuccess {}))
     }
 
-    async fn toggle_debug_mode(
+    async fn set_debug_mode(
         &self,
-        request: Request<ToggleStatusRequest>,
-    ) -> Result<Response<CommonRpcResult>, Status> {
-        let enabled = request.into_inner().enabled;
+        request: Request<BoolValue>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        let enabled = request.into_inner().value;
         crate::toggle_debug_mode(enabled)
             .map_err(|err| Status::internal(err.to_string()))?;
 
-        info!("<LogsRpc> Toggle debug mode: [{}]", enabled);
-        Ok(Response::new(CommonRpcResult { success: true, msg: None }))
+        info!("<LogsRpc> Set debug mode: [{}]", enabled);
+        Ok(Response::new(ExecSuccess {}))
+    }
+
+    async fn set_env_filter(
+        &self,
+        request: Request<StringValue>,
+    ) -> Result<Response<StringValue>, Status> {
+        let filter = request.into_inner().value;
+        crate::set_env_filter(&filter)
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        let current_filter = crate::env_filter(None).to_string();
+        info!("<LogsRpc> Set env filter to: [{}]", current_filter);
+        Ok(Response::new(StringValue { value: current_filter }))
+    }
+
+    async fn get_config(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<StringValue>, Status> {
+        Ok(Response::new(StringValue {
+            value: crate::env_filter(None).to_string(),
+        }))
     }
 }
 
 #[cfg(test)]
 mod test {
     use peace_pb::frame::logs::{
-        logs_rpc_server::LogsRpc, LogLevel, SetLogLevelRequest,
-        ToggleStatusRequest,
+        logs_rpc_server::LogsRpc, BoolValue, LogLevel, SetLevelRequest,
     };
 
     use crate::grpc::LogsRpcService;
 
     #[tokio::test]
     async fn try_set_level() {
-        let s = LogsRpcService {};
-        let req = tonic::Request::new(SetLogLevelRequest {
-            log_level: LogLevel::Info as i32,
+        let svc = LogsRpcService {};
+        let req = tonic::Request::new(SetLevelRequest {
+            level: LogLevel::Info as i32,
         });
-        assert!(s.set_log_level(req).await.is_ok());
+        assert!(svc.set_level(req).await.is_ok());
 
-        let req = tonic::Request::new(SetLogLevelRequest { log_level: -1 });
-        assert!(s.set_log_level(req).await.is_err());
+        let req = tonic::Request::new(SetLevelRequest { level: -1 });
+        assert!(svc.set_level(req).await.is_err());
     }
 
     #[tokio::test]
     async fn try_debug_mode() {
-        let s = LogsRpcService {};
-        let req = tonic::Request::new(ToggleStatusRequest { enabled: true });
-        assert!(s.toggle_debug_mode(req).await.is_ok());
+        let svc = LogsRpcService {};
+        let req = tonic::Request::new(BoolValue { value: true });
+        assert!(svc.set_debug_mode(req).await.is_ok());
 
-        let req = tonic::Request::new(ToggleStatusRequest { enabled: false });
-        assert!(s.toggle_debug_mode(req).await.is_ok());
+        let req = tonic::Request::new(BoolValue { value: false });
+        assert!(svc.set_debug_mode(req).await.is_ok());
     }
 }
