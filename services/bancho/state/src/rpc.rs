@@ -61,8 +61,7 @@ impl BanchoStateRpc for BanchoState {
             .create(request.into_inner().into())
             .await;
 
-        info!(target: "asda", "Session <{session_id}> created");
-
+        info!(target: "session.create", "Session <{session_id}> created");
         Ok(Response::new(CreateUserSessionResponse { session_id }))
     }
 
@@ -70,12 +69,10 @@ impl BanchoStateRpc for BanchoState {
         &self,
         request: Request<RawUserQuery>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.user_sessions
-            .write()
-            .await
-            .delete(&request.into_inner().into())
-            .await;
+        let query = request.into_inner().into();
+        self.user_sessions.write().await.delete(&query).await;
 
+        info!(target: "session.delete", "Session <{query:?}> deleted");
         Ok(Response::new(ExecSuccess {}))
     }
 

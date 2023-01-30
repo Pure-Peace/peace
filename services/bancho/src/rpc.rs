@@ -44,7 +44,7 @@ impl BanchoRpc for Bancho {
         let resp = state
             .create_user_session(Request::new(CreateUserSessionRequest {
                 user_id,
-                username: req.username,
+                username: req.username.to_owned(),
                 username_unicode: None,
                 privileges: 1,
                 bancho_privileges: 1,
@@ -54,6 +54,8 @@ impl BanchoRpc for Bancho {
             .await
             .unwrap()
             .into_inner();
+
+        info!(target: "bancho.login", "user <{}:{user_id}> logged in (session_id: {})", req.username, resp.session_id);
 
         Ok(Response::new(LoginReply {
             session_id: Some(resp.session_id),
