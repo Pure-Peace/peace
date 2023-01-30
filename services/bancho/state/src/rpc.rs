@@ -2,7 +2,7 @@ use crate::{User, UserSessions};
 use futures::future::join_all;
 use peace_pb::services::bancho_state_rpc::{
     bancho_state_rpc_server::BanchoStateRpc,
-    show_all_sessions_response::UserData, *,
+    get_all_sessions_response::UserData, *,
 };
 use std::{collections::hash_map::Values, sync::Arc};
 use tokio::sync::RwLock;
@@ -61,6 +61,8 @@ impl BanchoStateRpc for BanchoState {
             .create(request.into_inner().into())
             .await;
 
+        info!(target: "asda", "Session <{session_id}> created");
+
         Ok(Response::new(CreateUserSessionResponse { session_id }))
     }
 
@@ -97,10 +99,10 @@ impl BanchoStateRpc for BanchoState {
         }))
     }
 
-    async fn show_all_sessions(
+    async fn get_all_sessions(
         &self,
-        _request: Request<ShowAllSessionsRequest>,
-    ) -> Result<Response<ShowAllSessionsResponse>, Status> {
+        _request: Request<GetAllSessionsRequest>,
+    ) -> Result<Response<GetAllSessionsResponse>, Status> {
         let user_sessions = self.user_sessions.read().await;
 
         async fn collect_data<K>(
@@ -120,7 +122,7 @@ impl BanchoStateRpc for BanchoState {
             collect_data(user_sessions.indexed_by_username_unicode.values())
                 .await;
 
-        Ok(Response::new(ShowAllSessionsResponse {
+        Ok(Response::new(GetAllSessionsResponse {
             len: user_sessions.len() as u64,
             indexed_by_session_id,
             indexed_by_user_id,

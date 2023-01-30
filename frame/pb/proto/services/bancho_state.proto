@@ -19,7 +19,7 @@ service BanchoStateRPC {
   rpc DeleteUserSession(RawUserQuery) returns (ExecSuccess);
   rpc IsUserSessionExists(RawUserQuery) returns (IsUserSessionExistsResponse);
 
-  rpc ShowAllSessions(ShowAllSessionsRequest) returns (ShowAllSessionsResponse);
+  rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 }
 
 message ExecSuccess {}
@@ -94,9 +94,9 @@ message CreateUserSessionResponse { string session_id = 1; }
 
 message IsUserSessionExistsResponse { optional string session_id = 1; }
 
-message ShowAllSessionsRequest {}
+message GetAllSessionsRequest {}
 
-message ShowAllSessionsResponse {
+message GetAllSessionsResponse {
   message UserData {
     string session_id = 1;
     int32 user_id = 2;

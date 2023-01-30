@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use peace_pb::services::bancho_state_rpc::{
-    show_all_sessions_response::UserData, CreateUserSessionRequest, UserQuery,
+    get_all_sessions_response::UserData, CreateUserSessionRequest, UserQuery,
 };
 use tokio::sync::RwLock;
 use tools_derive::convert;
