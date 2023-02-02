@@ -12,6 +12,7 @@ pub struct Model {
     pub pp_version: PpVersion,
     #[sea_orm(column_type = "Decimal(Some((16, 2)))")]
     pub pp: Decimal,
+    pub raw_pp: Option<Json>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

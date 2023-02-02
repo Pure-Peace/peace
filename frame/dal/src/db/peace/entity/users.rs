@@ -18,7 +18,6 @@ pub struct Model {
     pub password: String,
     #[sea_orm(unique)]
     pub email: String,
-    pub privileges: i32,
     pub country: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
@@ -28,8 +27,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::bancho_client_hardware_records::Entity")]
     BanchoClientHardwareRecords,
-    #[sea_orm(has_many = "super::custom_settings::Entity")]
-    CustomSettings,
+    #[sea_orm(has_many = "super::chat_messages::Entity")]
+    ChatMessages,
     #[sea_orm(has_many = "super::favourite_beatmaps::Entity")]
     FavouriteBeatmaps,
     #[sea_orm(has_many = "super::leaderboard_fruits::Entity")]
@@ -80,6 +79,8 @@ pub enum Relation {
     UserPpTaiko,
     #[sea_orm(has_many = "super::user_pp_taiko_relax::Entity")]
     UserPpTaikoRelax,
+    #[sea_orm(has_many = "super::user_settings::Entity")]
+    UserSettings,
     #[sea_orm(has_many = "super::user_stats_fruits::Entity")]
     UserStatsFruits,
     #[sea_orm(has_many = "super::user_stats_fruits_relax::Entity")]
@@ -106,9 +107,9 @@ impl Related<super::bancho_client_hardware_records::Entity> for Entity {
     }
 }
 
-impl Related<super::custom_settings::Entity> for Entity {
+impl Related<super::chat_messages::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::CustomSettings.def()
+        Relation::ChatMessages.def()
     }
 }
 
@@ -262,6 +263,12 @@ impl Related<super::user_pp_taiko_relax::Entity> for Entity {
     }
 }
 
+impl Related<super::user_settings::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserSettings.def()
+    }
+}
+
 impl Related<super::user_stats_fruits::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::UserStatsFruits.def()
@@ -322,6 +329,15 @@ impl Related<super::beatmaps::Entity> for Entity {
     }
     fn via() -> Option<RelationDef> {
         Some(super::beatmap_ratings::Relation::Users.def().rev())
+    }
+}
+
+impl Related<super::channels::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::channel_users::Relation::Channels.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::channel_users::Relation::Users.def().rev())
     }
 }
 

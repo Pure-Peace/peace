@@ -6,13 +6,13 @@ pub enum GameMode {
     #[iden = "game_mode"]
     Enum = -1,
     #[iden = "Standard"]
-    Standard,
+    Standard = 0,
     #[iden = "Taiko"]
-    Taiko,
+    Taiko = 1,
     #[iden = "Fruits"]
-    Fruits,
+    Fruits = 2,
     #[iden = "Mania"]
-    Mania,
+    Mania = 3,
 }
 
 #[derive(Iden)]
@@ -20,11 +20,11 @@ pub enum ScoreStatus {
     #[iden = "score_status"]
     Enum = -1,
     #[iden = "Failed"]
-    Failed,
+    Failed = 0,
     #[iden = "Passed"]
-    Passed,
+    Passed = 1,
     #[iden = "High"]
-    High,
+    High = 2,
 }
 
 #[derive(Iden)]
@@ -32,23 +32,23 @@ enum ScoreGrade {
     #[iden = "score_grade"]
     Enum = -1,
     #[iden = "A"]
-    A,
+    A = 0,
     #[iden = "B"]
-    B,
+    B = 1,
     #[iden = "C"]
-    C,
+    C = 2,
     #[iden = "D"]
-    D,
+    D = 3,
     #[iden = "S"]
-    S,
+    S = 4,
     #[iden = "SH"]
-    SH,
+    SH = 5,
     #[iden = "X"]
-    X,
+    X = 6,
     #[iden = "XH"]
-    XH,
+    XH = 7,
     #[iden = "F"]
-    F,
+    F = 8,
 }
 
 #[derive(Iden)]
@@ -56,19 +56,19 @@ pub enum RankStatus {
     #[iden = "rank_status"]
     Enum = -3,
     #[iden = "Graveyard"]
-    Graveyard,
+    Graveyard = -2,
     #[iden = "Wip"]
-    Wip,
+    Wip = -1,
     #[iden = "Pending"]
-    Pending,
+    Pending = 0,
     #[iden = "Ranked"]
-    Ranked,
+    Ranked = 1,
     #[iden = "Approved"]
-    Approved,
+    Approved = 2,
     #[iden = "Qualified"]
-    Qualified,
+    Qualified = 3,
     #[iden = "Loved"]
-    Loved,
+    Loved = 4,
 }
 
 #[derive(Iden)]
@@ -76,9 +76,9 @@ pub enum PPVersion {
     #[iden = "pp_version"]
     Enum = -1,
     #[iden = "v1"]
-    V1,
+    V1 = 0,
     #[iden = "v2"]
-    V2,
+    V2 = 1,
 }
 
 #[derive(Iden)]
@@ -86,9 +86,9 @@ pub enum ScoreVersion {
     #[iden = "score_version"]
     Enum = -1,
     #[iden = "v1"]
-    V1,
+    V1 = 0,
     #[iden = "v2"]
-    V2,
+    V2 = 1,
 }
 
 #[derive(Iden)]
@@ -96,13 +96,13 @@ pub enum RankingType {
     #[iden = "ranking_type"]
     Enum = -1,
     #[iden = "score_v1"]
-    ScoreV1,
+    ScoreV1 = 0,
     #[iden = "score_v2"]
-    ScoreV2,
+    ScoreV2 = 1,
     #[iden = "pp_v1"]
-    PPV1,
+    PPV1 = 2,
     #[iden = "pp_v2"]
-    PPV2,
+    PPV2 = 3,
 }
 
 #[derive(Iden)]
@@ -110,13 +110,13 @@ pub enum ChannelType {
     #[iden = "channel_type"]
     Enum = -1,
     #[iden = "personal"]
-    Personal,
+    Personal = 0,
     #[iden = "group"]
-    Group,
+    Group = 1,
     #[iden = "multiplayer"]
-    Multiplayer,
+    Multiplayer = 2,
     #[iden = "spectaor"]
-    Spectaor,
+    Spectaor = 3,
 }
 
 #[derive(Iden)]
@@ -124,13 +124,13 @@ pub enum ChannelHandleType {
     #[iden = "channel_handle_type"]
     Enum = -1,
     #[iden = "join"]
-    Join,
+    Join = 0,
     #[iden = "send_message"]
-    SendMessage,
+    SendMessage = 1,
     #[iden = "kick_user"]
-    KickUser,
+    KickUser = 2,
     #[iden = "mute_user"]
-    MuteUser,
+    MuteUser = 3,
 }
 
 #[derive(DeriveMigrationName)]

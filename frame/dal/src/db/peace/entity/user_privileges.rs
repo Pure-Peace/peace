@@ -3,21 +3,28 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "friend_relationships")]
+#[sea_orm(table_name = "user_privileges")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub user_id: i32,
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub friend_id: i32,
-    pub remark: Option<String>,
+    pub privilege_id: i64,
+    pub grantor_id: i32,
     pub created_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
+        belongs_to = "super::privileges::Entity",
+        from = "Column::PrivilegeId",
+        to = "super::privileges::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Privileges,
+    #[sea_orm(
         belongs_to = "super::users::Entity",
-        from = "Column::FriendId",
+        from = "Column::GrantorId",
         to = "super::users::Column::Id",
         on_update = "Cascade",
         on_delete = "Cascade"
@@ -31,6 +38,12 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Users1,
+}
+
+impl Related<super::privileges::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Privileges.def()
+    }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

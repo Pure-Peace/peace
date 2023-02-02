@@ -3,6 +3,34 @@
 use sea_orm::{entity::prelude::*, TryFromU64};
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(
+    rs_type = "String",
+    db_type = "Enum",
+    enum_name = "channel_handle_type"
+)]
+pub enum ChannelHandleType {
+    #[sea_orm(string_value = "join")]
+    Join,
+    #[sea_orm(string_value = "kick_user")]
+    KickUser,
+    #[sea_orm(string_value = "mute_user")]
+    MuteUser,
+    #[sea_orm(string_value = "send_message")]
+    SendMessage,
+}
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "channel_type")]
+pub enum ChannelType {
+    #[sea_orm(string_value = "group")]
+    Group,
+    #[sea_orm(string_value = "multiplayer")]
+    Multiplayer,
+    #[sea_orm(string_value = "personal")]
+    Personal,
+    #[sea_orm(string_value = "spectaor")]
+    Spectaor,
+}
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "game_mode")]
 pub enum GameMode {
     #[sea_orm(string_value = "Fruits")]
@@ -117,3 +145,15 @@ impl TryFromU64 for RankingType {
     }
 }
 
+/// Manually implement [`TryFromU64`] due to [sea-orm #3513](https://github.com/SeaQL/sea-orm/issues/1364)
+impl TryFromU64 for ChannelHandleType {
+    fn try_from_u64(n: u64) -> Result<Self, sea_orm::DbErr> {
+        match n {
+            0 => Ok(Self::Join),
+            1 => Ok(Self::KickUser),
+            2 => Ok(Self::MuteUser),
+            3 => Ok(Self::SendMessage),
+            _ => Err(sea_orm::DbErr::Type(format!("Invalid value {}", n))),
+        }
+    }
+}
