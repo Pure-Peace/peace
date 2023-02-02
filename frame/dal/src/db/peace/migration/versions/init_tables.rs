@@ -115,7 +115,7 @@ impl MigrationTrait for Migration {
             users::create(),
             bancho_client_hardware_records::create(),
             favourite_beatmaps::create(),
-            friend_relationships::create(),
+            followers::create(),
             custom_settings::create(),
             beatmaps::create(),
             beatmap_ratings::create(),
@@ -165,7 +165,7 @@ impl MigrationTrait for Migration {
         let create_foreign_key_stmts = vec![
             bancho_client_hardware_records::create_foreign_keys(),
             favourite_beatmaps::create_foreign_keys(),
-            friend_relationships::create_foreign_keys(),
+            followers::create_foreign_keys(),
             custom_settings::create_foreign_keys(),
             beatmap_ratings::create_foreign_keys(),
             scores_standard::create_foreign_keys(),
@@ -217,7 +217,7 @@ impl MigrationTrait for Migration {
         let create_index_stmts = vec![
             users::create_indexes(),
             favourite_beatmaps::create_indexes(),
-            friend_relationships::create_indexes(),
+            followers::create_indexes(),
             beatmaps::create_indexes(),
             beatmap_ratings::create_indexes(),
             scores_standard::create_indexes(),
@@ -348,7 +348,7 @@ impl MigrationTrait for Migration {
             users::drop(),
             bancho_client_hardware_records::drop(),
             favourite_beatmaps::drop(),
-            friend_relationships::drop(),
+            followers::drop(),
             custom_settings::drop(),
             beatmaps::drop(),
             beatmap_ratings::drop(),
@@ -398,7 +398,7 @@ impl MigrationTrait for Migration {
         let drop_foreign_key_stmts = vec![
             bancho_client_hardware_records::drop_foreign_keys(),
             favourite_beatmaps::drop_foreign_keys(),
-            friend_relationships::drop_foreign_keys(),
+            followers::drop_foreign_keys(),
             custom_settings::drop_foreign_keys(),
             beatmap_ratings::drop_foreign_keys(),
             scores_standard::drop_foreign_keys(),
@@ -450,7 +450,7 @@ impl MigrationTrait for Migration {
         let drop_index_stmts = vec![
             users::drop_indexes(),
             favourite_beatmaps::drop_indexes(),
-            friend_relationships::drop_indexes(),
+            followers::drop_indexes(),
             beatmaps::drop_indexes(),
             beatmap_ratings::drop_indexes(),
             scores_standard::drop_indexes(),
@@ -871,74 +871,66 @@ pub mod favourite_beatmaps {
     }
 }
 
-pub mod friend_relationships {
+pub mod followers {
     use sea_orm_migration::prelude::*;
 
     use super::users::Users;
 
-    const FOREIGN_KEY_USER_ID: &str = "FK_friend_relationships_user_id";
-    const FOREIGN_KEY_FRIEND_ID: &str = "FK_friend_relationships_friend_id";
-    const INDEX_USER_ID: &str = "IDX_friend_relationships_user_id";
+    const FOREIGN_KEY_USER_ID: &str = "FK_followers_user_id";
+    const FOREIGN_KEY_FOLLOW_ID: &str = "FK_followers_follow_id";
+    const INDEX_USER_ID: &str = "IDX_followers_user_id";
 
     #[derive(Iden)]
-    pub enum FriendRelationships {
+    pub enum Followers {
         Table,
         UserId,
-        FriendId,
+        FollowId,
         Remark,
         CreatedAt,
     }
 
     pub fn create() -> TableCreateStatement {
         Table::create()
-            .table(FriendRelationships::Table)
+            .table(Followers::Table)
             .if_not_exists()
+            .col(ColumnDef::new(Followers::UserId).integer().not_null())
+            .col(ColumnDef::new(Followers::FollowId).integer().not_null())
             .col(
-                ColumnDef::new(FriendRelationships::UserId)
-                    .integer()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(FriendRelationships::FriendId)
-                    .integer()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(FriendRelationships::Remark)
+                ColumnDef::new(Followers::Remark)
                     .string()
                     .string_len(16)
                     .null(),
             )
             .col(
-                ColumnDef::new(FriendRelationships::CreatedAt)
+                ColumnDef::new(Followers::CreatedAt)
                     .timestamp_with_time_zone()
                     .default(Expr::current_timestamp())
                     .not_null(),
             )
             .primary_key(
                 sea_query::Index::create()
-                    .col(FriendRelationships::UserId)
-                    .col(FriendRelationships::FriendId),
+                    .col(Followers::UserId)
+                    .col(Followers::FollowId),
             )
             .to_owned()
     }
 
     pub fn drop() -> TableDropStatement {
-        Table::drop().table(FriendRelationships::Table).to_owned()
+        Table::drop().table(Followers::Table).to_owned()
     }
 
     pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
         vec![
             sea_query::ForeignKey::create()
                 .name(FOREIGN_KEY_USER_ID)
-                .from(FriendRelationships::Table, FriendRelationships::UserId)
+                .from(Followers::Table, Followers::UserId)
                 .to(Users::Table, Users::Id)
                 .on_delete(ForeignKeyAction::Cascade)
                 .on_update(ForeignKeyAction::Cascade)
                 .to_owned(),
             sea_query::ForeignKey::create()
-                .name(FOREIGN_KEY_FRIEND_ID)
-                .from(FriendRelationships::Table, FriendRelationships::FriendId)
+                .name(FOREIGN_KEY_FOLLOW_ID)
+                .from(Followers::Table, Followers::FollowId)
                 .to(Users::Table, Users::Id)
                 .on_delete(ForeignKeyAction::Cascade)
                 .on_update(ForeignKeyAction::Cascade)
@@ -950,11 +942,11 @@ pub mod friend_relationships {
         vec![
             sea_query::ForeignKey::drop()
                 .name(FOREIGN_KEY_USER_ID)
-                .table(FriendRelationships::Table)
+                .table(Followers::Table)
                 .to_owned(),
             sea_query::ForeignKey::drop()
-                .name(FOREIGN_KEY_FRIEND_ID)
-                .table(FriendRelationships::Table)
+                .name(FOREIGN_KEY_FOLLOW_ID)
+                .table(Followers::Table)
                 .to_owned(),
         ]
     }
@@ -962,14 +954,14 @@ pub mod friend_relationships {
     pub fn create_indexes() -> Vec<IndexCreateStatement> {
         vec![sea_query::Index::create()
             .name(INDEX_USER_ID)
-            .table(FriendRelationships::Table)
-            .col(FriendRelationships::UserId)
+            .table(Followers::Table)
+            .col(Followers::UserId)
             .to_owned()]
     }
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
         vec![sea_query::Index::drop()
-            .table(FriendRelationships::Table)
+            .table(Followers::Table)
             .name(INDEX_USER_ID)
             .to_owned()]
     }
@@ -978,8 +970,7 @@ pub mod friend_relationships {
 pub mod custom_settings {
     use sea_orm_migration::prelude::*;
 
-    use super::users::Users;
-    use super::RankingType;
+    use super::{users::Users, RankingType};
 
     const FOREIGN_KEY_USER_ID: &str = "FK_custom_settings_user_id";
 
@@ -1640,8 +1631,7 @@ macro_rules! define_score_mode_pp {
         pub mod $table_name {
             use sea_orm_migration::prelude::*;
 
-            use super::$relate_table::$relate_iden;
-            use super::PPVersion;
+            use super::{$relate_table::$relate_iden, PPVersion};
 
             const FOREIGN_KEY_SCORE_ID: &str =
                 concat!("FK_", stringify!($table_name), "_score_id");
@@ -1930,8 +1920,7 @@ macro_rules! define_user_mode_pp {
         pub mod $table_name {
             use sea_orm_migration::prelude::*;
 
-            use super::users::Users;
-            use super::PPVersion;
+            use super::{users::Users, PPVersion};
 
             const FOREIGN_KEY_USER_ID: &str =
                 concat!("FK_", stringify!($table_name), "_user_id");
@@ -2029,10 +2018,10 @@ macro_rules! define_beatmap_mode_leaderboard {
         pub mod $table_name {
             use sea_orm_migration::prelude::*;
 
-            use super::beatmaps::Beatmaps;
-            use super::users::Users;
-            use super::$relate_table::$relate_iden;
-            use super::RankingType;
+            use super::{
+                beatmaps::Beatmaps, users::Users, $relate_table::$relate_iden,
+                RankingType,
+            };
 
             const FOREIGN_KEY_BEATMAP_ID: &str =
                 concat!("FK_", stringify!($table_name), "_beatmap_id");
