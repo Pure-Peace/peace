@@ -2761,9 +2761,6 @@ pub mod chat_messages {
                     .auto_increment()
                     .not_null(),
             )
-            .col(
-                ColumnDef::new(ChatMessages::SenderId).big_integer().not_null(),
-            )
             .col(ColumnDef::new(ChatMessages::SenderId).integer().not_null())
             .col(
                 ColumnDef::new(ChatMessages::ChannelId)
@@ -2784,7 +2781,6 @@ pub mod chat_messages {
                     .default(false)
                     .not_null(),
             )
-            .primary_key(sea_query::Index::create().col(ChatMessages::Id))
             .to_owned()
     }
 
