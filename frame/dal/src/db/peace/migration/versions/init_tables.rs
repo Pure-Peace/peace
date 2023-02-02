@@ -193,6 +193,7 @@ impl MigrationTrait for Migration {
             channels::create(),
             channel_users::create(),
             channel_privileges::create(),
+            chat_messages::create(),
         ];
 
         let create_foreign_key_stmts = vec![
@@ -245,6 +246,7 @@ impl MigrationTrait for Migration {
             leaderboard_fruits_relax::create_foreign_keys(),
             channel_users::create_foreign_keys(),
             channel_privileges::create_foreign_keys(),
+            chat_messages::create_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -290,8 +292,10 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::create_indexes(),
             leaderboard_taiko_relax::create_indexes(),
             leaderboard_fruits_relax::create_indexes(),
+            channels::create_indexes(),
             channel_users::create_indexes(),
             channel_privileges::create_indexes(),
+            chat_messages::create_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -456,6 +460,7 @@ impl MigrationTrait for Migration {
             channels::drop(),
             channel_users::drop(),
             channel_privileges::drop(),
+            chat_messages::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
@@ -508,6 +513,7 @@ impl MigrationTrait for Migration {
             leaderboard_fruits_relax::drop_foreign_keys(),
             channel_users::drop_foreign_keys(),
             channel_privileges::drop_foreign_keys(),
+            chat_messages::drop_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -553,6 +559,7 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::drop_indexes(),
             leaderboard_taiko_relax::drop_indexes(),
             leaderboard_fruits_relax::drop_indexes(),
+            channels::drop_indexes(),
             channel_users::drop_indexes(),
             channel_privileges::drop_indexes(),
         ]
@@ -1901,6 +1908,7 @@ macro_rules! define_score_mode_pp {
                 ScoreId,
                 PPVersion,
                 PP,
+                RawPP,
             }
 
             pub fn create() -> TableCreateStatement {
@@ -1926,6 +1934,7 @@ macro_rules! define_score_mode_pp {
                             .not_null()
                             .default(0.0),
                     )
+                    .col(ColumnDef::new($iden::RawPP).json().null())
                     .primary_key(
                         sea_query::Index::create()
                             .col($iden::ScoreId)
@@ -2457,6 +2466,8 @@ pub mod channels {
 
     use super::ChannelType;
 
+    const INDEX_CHANNEL_NAME: &str = "IDX_channel_name";
+
     #[derive(Iden)]
     pub enum Channels {
         Table,
@@ -2487,7 +2498,7 @@ pub mod channels {
                     )
                     .not_null(),
             )
-            .col(ColumnDef::new(Channels::Name).string().null())
+            .col(ColumnDef::new(Channels::Name).string().unique_key().null())
             .col(ColumnDef::new(Channels::Description).string().null())
             .col(ColumnDef::new(Channels::Icon).string().null())
             .col(
@@ -2503,6 +2514,21 @@ pub mod channels {
 
     pub fn drop() -> TableDropStatement {
         Table::drop().table(Channels::Table).to_owned()
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
+            .name(INDEX_CHANNEL_NAME)
+            .table(Channels::Table)
+            .col(Channels::Name)
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop()
+            .table(Channels::Table)
+            .name(INDEX_CHANNEL_NAME)
+            .to_owned()]
     }
 }
 
@@ -2699,6 +2725,118 @@ pub mod channel_privileges {
         vec![sea_query::Index::drop()
             .table(ChannelPrivileges::Table)
             .name(INDEX_PRIV_ID)
+            .to_owned()]
+    }
+}
+
+pub mod chat_messages {
+    use sea_orm_migration::prelude::*;
+
+    use super::{channels::Channels, users::Users};
+
+    const FOREIGN_KEY_CHANNEL_ID: &str = "FK_chat_msg_channel_id";
+    const FOREIGN_KEY_USER_ID: &str = "FK_chat_msg_user_id";
+    const INDEX_CHANNEL_ID: &str = "IDX_chat_msg_channel_id";
+
+    #[derive(Iden)]
+    pub enum ChatMessages {
+        Table,
+        Id,
+        SenderId,
+        ChannelId,
+        Timestamp,
+        ContentString,
+        ContentHtml,
+        IsAction,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(ChatMessages::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(ChatMessages::Id)
+                    .big_integer()
+                    .primary_key()
+                    .auto_increment()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(ChatMessages::SenderId).big_integer().not_null(),
+            )
+            .col(ColumnDef::new(ChatMessages::SenderId).integer().not_null())
+            .col(
+                ColumnDef::new(ChatMessages::ChannelId)
+                    .big_integer()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(ChatMessages::Timestamp)
+                    .timestamp_with_time_zone()
+                    .default(Expr::current_timestamp())
+                    .not_null(),
+            )
+            .col(ColumnDef::new(ChatMessages::ContentString).text().not_null())
+            .col(ColumnDef::new(ChatMessages::ContentHtml).text().null())
+            .col(
+                ColumnDef::new(ChatMessages::IsAction)
+                    .boolean()
+                    .default(false)
+                    .not_null(),
+            )
+            .primary_key(sea_query::Index::create().col(ChatMessages::Id))
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(ChatMessages::Table).to_owned()
+    }
+
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_CHANNEL_ID)
+                .from(ChatMessages::Table, ChatMessages::ChannelId)
+                .to(Channels::Table, Channels::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_USER_ID)
+                .from(ChatMessages::Table, ChatMessages::SenderId)
+                .to(Users::Table, Users::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_CHANNEL_ID)
+                .table(ChatMessages::Table)
+                .to_owned(),
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_USER_ID)
+                .table(ChatMessages::Table)
+                .to_owned(),
+        ]
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
+            .name(INDEX_CHANNEL_ID)
+            .table(ChatMessages::Table)
+            .col(ChatMessages::ChannelId)
+            .unique()
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop()
+            .table(ChatMessages::Table)
+            .name(INDEX_CHANNEL_ID)
             .to_owned()]
     }
 }
