@@ -105,6 +105,34 @@ pub enum RankingType {
     PPV2,
 }
 
+#[derive(Iden)]
+pub enum ChannelType {
+    #[iden = "channel_type"]
+    Enum = -1,
+    #[iden = "personal"]
+    Personal,
+    #[iden = "group"]
+    Group,
+    #[iden = "multiplayer"]
+    Multiplayer,
+    #[iden = "spectaor"]
+    Spectaor,
+}
+
+#[derive(Iden)]
+pub enum ChannelHandleType {
+    #[iden = "channel_handle_type"]
+    Enum = -1,
+    #[iden = "join"]
+    Join,
+    #[iden = "send_message"]
+    SendMessage,
+    #[iden = "kick_user"]
+    KickUser,
+    #[iden = "mute_user"]
+    MuteUser,
+}
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -162,6 +190,9 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::create(),
             leaderboard_taiko_relax::create(),
             leaderboard_fruits_relax::create(),
+            channels::create(),
+            channel_users::create(),
+            channel_privileges::create(),
         ];
 
         let create_foreign_key_stmts = vec![
@@ -212,6 +243,8 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::create_foreign_keys(),
             leaderboard_taiko_relax::create_foreign_keys(),
             leaderboard_fruits_relax::create_foreign_keys(),
+            channel_users::create_foreign_keys(),
+            channel_privileges::create_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -257,6 +290,8 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::create_indexes(),
             leaderboard_taiko_relax::create_indexes(),
             leaderboard_fruits_relax::create_indexes(),
+            channel_users::create_indexes(),
+            channel_privileges::create_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -321,6 +356,24 @@ impl MigrationTrait for Migration {
                     RankingType::ScoreV2,
                     RankingType::PPV1,
                     RankingType::PPV2,
+                ])
+                .to_owned(),
+            extension::postgres::Type::create()
+                .as_enum(ChannelType::Enum)
+                .values([
+                    ChannelType::Personal,
+                    ChannelType::Group,
+                    ChannelType::Multiplayer,
+                    ChannelType::Spectaor,
+                ])
+                .to_owned(),
+            extension::postgres::Type::create()
+                .as_enum(ChannelHandleType::Enum)
+                .values([
+                    ChannelHandleType::Join,
+                    ChannelHandleType::SendMessage,
+                    ChannelHandleType::KickUser,
+                    ChannelHandleType::MuteUser,
                 ])
                 .to_owned(),
         ];
@@ -400,6 +453,9 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::drop(),
             leaderboard_taiko_relax::drop(),
             leaderboard_fruits_relax::drop(),
+            channels::drop(),
+            channel_users::drop(),
+            channel_privileges::drop(),
         ];
 
         let drop_foreign_key_stmts = vec![
@@ -450,6 +506,8 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::drop_foreign_keys(),
             leaderboard_taiko_relax::drop_foreign_keys(),
             leaderboard_fruits_relax::drop_foreign_keys(),
+            channel_users::drop_foreign_keys(),
+            channel_privileges::drop_foreign_keys(),
         ]
         .into_iter()
         .flatten()
@@ -495,6 +553,8 @@ impl MigrationTrait for Migration {
             leaderboard_standard_autopilot::drop_indexes(),
             leaderboard_taiko_relax::drop_indexes(),
             leaderboard_fruits_relax::drop_indexes(),
+            channel_users::drop_indexes(),
+            channel_privileges::drop_indexes(),
         ]
         .into_iter()
         .flatten()
@@ -513,6 +573,12 @@ impl MigrationTrait for Migration {
                 .to_owned(),
             extension::postgres::Type::drop()
                 .name(RankingType::Enum)
+                .to_owned(),
+            extension::postgres::Type::drop()
+                .name(ChannelType::Enum)
+                .to_owned(),
+            extension::postgres::Type::drop()
+                .name(ChannelHandleType::Enum)
                 .to_owned(),
         ];
 
@@ -568,7 +634,7 @@ pub mod users {
             .if_not_exists()
             .col(
                 ColumnDef::new(Users::Id)
-                    .unsigned()
+                    .integer()
                     .not_null()
                     .auto_increment()
                     .primary_key(),
@@ -693,7 +759,7 @@ pub mod privileges {
             .if_not_exists()
             .col(
                 ColumnDef::new(Privileges::Id)
-                    .big_unsigned()
+                    .big_integer()
                     .not_null()
                     .auto_increment()
                     .primary_key(),
@@ -707,11 +773,11 @@ pub mod privileges {
             .col(ColumnDef::new(Privileges::Description).string().null())
             .col(
                 ColumnDef::new(Privileges::Priority)
-                    .small_unsigned()
+                    .small_integer()
                     .not_null()
                     .default(1000),
             )
-            .col(ColumnDef::new(Privileges::CreatorId).unsigned().null())
+            .col(ColumnDef::new(Privileges::CreatorId).integer().null())
             .col(
                 ColumnDef::new(Privileges::CreatedAt)
                     .timestamp_with_time_zone()
@@ -782,18 +848,16 @@ pub mod user_privileges {
             .if_not_exists()
             .col(
                 ColumnDef::new(UserPrivileges::UserId)
-                    .unsigned()
+                    .integer()
                     .not_null()
                     .primary_key(),
             )
             .col(
                 ColumnDef::new(UserPrivileges::PrivilegeId)
-                    .big_unsigned()
+                    .big_integer()
                     .not_null(),
             )
-            .col(
-                ColumnDef::new(UserPrivileges::GrantorId).unsigned().not_null(),
-            )
+            .col(ColumnDef::new(UserPrivileges::GrantorId).integer().not_null())
             .col(
                 ColumnDef::new(UserPrivileges::CreatedAt)
                     .timestamp_with_time_zone()
@@ -896,7 +960,7 @@ pub mod bancho_client_hardware_records {
             .if_not_exists()
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::UserId)
-                    .unsigned()
+                    .integer()
                     .not_null(),
             )
             .col(
@@ -935,7 +999,7 @@ pub mod bancho_client_hardware_records {
             )
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::UsedTimes)
-                    .unsigned()
+                    .integer()
                     .default(1)
                     .not_null(),
             )
@@ -1008,12 +1072,10 @@ pub mod favourite_beatmaps {
         Table::create()
             .table(FavouriteBeatmaps::Table)
             .if_not_exists()
-            .col(
-                ColumnDef::new(FavouriteBeatmaps::UserId).unsigned().not_null(),
-            )
+            .col(ColumnDef::new(FavouriteBeatmaps::UserId).integer().not_null())
             .col(
                 ColumnDef::new(FavouriteBeatmaps::BeatmapsetId)
-                    .unsigned()
+                    .integer()
                     .not_null(),
             )
             .col(
@@ -1095,8 +1157,8 @@ pub mod followers {
         Table::create()
             .table(Followers::Table)
             .if_not_exists()
-            .col(ColumnDef::new(Followers::UserId).unsigned().not_null())
-            .col(ColumnDef::new(Followers::FollowId).unsigned().not_null())
+            .col(ColumnDef::new(Followers::UserId).integer().not_null())
+            .col(ColumnDef::new(Followers::FollowId).integer().not_null())
             .col(
                 ColumnDef::new(Followers::Remark)
                     .string()
@@ -1191,7 +1253,7 @@ pub mod user_settings {
             .if_not_exists()
             .col(
                 ColumnDef::new(UserSettings::UserId)
-                    .unsigned()
+                    .integer()
                     .not_null()
                     .primary_key(),
             )
@@ -1302,11 +1364,11 @@ pub mod beatmaps {
             .if_not_exists()
             .col(
                 ColumnDef::new(Beatmaps::Bid)
-                    .unsigned()
+                    .integer()
                     .not_null()
                     .primary_key(),
             )
-            .col(ColumnDef::new(Beatmaps::Sid).unsigned().not_null())
+            .col(ColumnDef::new(Beatmaps::Sid).integer().not_null())
             .col(
                 ColumnDef::new(Beatmaps::Md5)
                     .char()
@@ -1387,18 +1449,18 @@ pub mod beatmaps {
                     .decimal_len(4, 2)
                     .not_null(),
             )
-            .col(ColumnDef::new(Beatmaps::Length).unsigned().not_null())
-            .col(ColumnDef::new(Beatmaps::LengthDrain).unsigned().not_null())
+            .col(ColumnDef::new(Beatmaps::Length).integer().not_null())
+            .col(ColumnDef::new(Beatmaps::LengthDrain).integer().not_null())
             .col(ColumnDef::new(Beatmaps::Source).string().null())
             .col(ColumnDef::new(Beatmaps::Tags).string().null())
-            .col(ColumnDef::new(Beatmaps::GenreId).small_unsigned().null())
-            .col(ColumnDef::new(Beatmaps::LanguageId).small_unsigned().null())
+            .col(ColumnDef::new(Beatmaps::GenreId).small_integer().null())
+            .col(ColumnDef::new(Beatmaps::LanguageId).small_integer().null())
             .col(ColumnDef::new(Beatmaps::Storyboard).boolean().null())
             .col(ColumnDef::new(Beatmaps::Video).boolean().null())
-            .col(ColumnDef::new(Beatmaps::ObjectCount).unsigned().null())
-            .col(ColumnDef::new(Beatmaps::SliderCount).unsigned().null())
-            .col(ColumnDef::new(Beatmaps::SpinnerCount).unsigned().null())
-            .col(ColumnDef::new(Beatmaps::MaxCombo).unsigned().null())
+            .col(ColumnDef::new(Beatmaps::ObjectCount).integer().null())
+            .col(ColumnDef::new(Beatmaps::SliderCount).integer().null())
+            .col(ColumnDef::new(Beatmaps::SpinnerCount).integer().null())
+            .col(ColumnDef::new(Beatmaps::MaxCombo).integer().null())
             .col(
                 ColumnDef::new(Beatmaps::Immutable)
                     .boolean()
@@ -1506,7 +1568,7 @@ pub mod beatmap_ratings {
         Table::create()
             .table(BeatmapRatings::Table)
             .if_not_exists()
-            .col(ColumnDef::new(BeatmapRatings::UserId).unsigned().not_null())
+            .col(ColumnDef::new(BeatmapRatings::UserId).integer().not_null())
             .col(
                 ColumnDef::new(BeatmapRatings::MapMd5)
                     .char()
@@ -1515,7 +1577,7 @@ pub mod beatmap_ratings {
             )
             .col(
                 ColumnDef::new(BeatmapRatings::Rating)
-                    .tiny_unsigned()
+                    .tiny_integer()
                     .not_null(),
             )
             .col(
@@ -1636,12 +1698,12 @@ macro_rules! define_user_mode_scores {
                     .if_not_exists()
                     .col(
                         ColumnDef::new($iden::Id)
-                            .big_unsigned()
+                            .big_integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new($iden::UserId).unsigned().not_null())
+                    .col(ColumnDef::new($iden::UserId).integer().not_null())
                     .col(
                         ColumnDef::new($iden::ScoreMd5)
                             .char()
@@ -1664,22 +1726,22 @@ macro_rules! define_user_mode_scores {
                             .not_null()
                             .default(ScoreVersion::V1.to_string()),
                     )
-                    .col(ColumnDef::new($iden::Score).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Score).integer().not_null())
                     .col(
                         ColumnDef::new($iden::Accuracy)
                             .decimal()
                             .decimal_len(6, 2)
                             .not_null(),
                     )
-                    .col(ColumnDef::new($iden::Combo).unsigned().not_null())
-                    .col(ColumnDef::new($iden::Mods).unsigned().not_null())
-                    .col(ColumnDef::new($iden::N300).unsigned().not_null())
-                    .col(ColumnDef::new($iden::N100).unsigned().not_null())
-                    .col(ColumnDef::new($iden::N50).unsigned().not_null())
-                    .col(ColumnDef::new($iden::Miss).unsigned().not_null())
-                    .col(ColumnDef::new($iden::Geki).unsigned().not_null())
-                    .col(ColumnDef::new($iden::Katu).unsigned().not_null())
-                    .col(ColumnDef::new($iden::Playtime).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Combo).integer().not_null())
+                    .col(ColumnDef::new($iden::Mods).integer().not_null())
+                    .col(ColumnDef::new($iden::N300).integer().not_null())
+                    .col(ColumnDef::new($iden::N100).integer().not_null())
+                    .col(ColumnDef::new($iden::N50).integer().not_null())
+                    .col(ColumnDef::new($iden::Miss).integer().not_null())
+                    .col(ColumnDef::new($iden::Geki).integer().not_null())
+                    .col(ColumnDef::new($iden::Katu).integer().not_null())
+                    .col(ColumnDef::new($iden::Playtime).integer().not_null())
                     .col(
                         ColumnDef::new($iden::Perfect)
                             .boolean()
@@ -1846,7 +1908,7 @@ macro_rules! define_score_mode_pp {
                     .table($iden::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new($iden::ScoreId).big_unsigned().not_null(),
+                        ColumnDef::new($iden::ScoreId).big_integer().not_null(),
                     )
                     .col(
                         ColumnDef::new($iden::PPVersion)
@@ -1981,31 +2043,31 @@ macro_rules! define_user_mode_stats {
                     .if_not_exists()
                     .col(
                         ColumnDef::new($iden::UserId)
-                            .unsigned()
+                            .integer()
                             .primary_key()
                             .not_null(),
                     )
                     .col(
                         ColumnDef::new($iden::TotalScore)
-                            .big_unsigned()
+                            .big_integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::RankedScore)
-                            .big_unsigned()
+                            .big_integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Playcount)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::TotalHits)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
@@ -2018,49 +2080,49 @@ macro_rules! define_user_mode_stats {
                     )
                     .col(
                         ColumnDef::new($iden::MaxCombo)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::TotalSecondsPlayed)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Count300)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Count100)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Count50)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::CountMiss)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::CountFailed)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::CountQuit)
-                            .unsigned()
+                            .integer()
                             .not_null()
                             .default(0),
                     )
@@ -2134,7 +2196,7 @@ macro_rules! define_user_mode_pp {
                 Table::create()
                     .table($iden::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new($iden::UserId).unsigned().not_null())
+                    .col(ColumnDef::new($iden::UserId).integer().not_null())
                     .col(
                         ColumnDef::new($iden::PPVersion)
                             .enumeration(
@@ -2242,7 +2304,7 @@ macro_rules! define_beatmap_mode_leaderboard {
                 Table::create()
                     .table($iden::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new($iden::BeatmapId).unsigned().not_null())
+                    .col(ColumnDef::new($iden::BeatmapId).integer().not_null())
                     .col(
                         ColumnDef::new($iden::RankingType)
                             .enumeration(
@@ -2257,9 +2319,9 @@ macro_rules! define_beatmap_mode_leaderboard {
                             .not_null()
                             .default(RankingType::ScoreV1.to_string()),
                     )
-                    .col(ColumnDef::new($iden::UserId).unsigned().not_null())
+                    .col(ColumnDef::new($iden::UserId).integer().not_null())
                     .col(
-                        ColumnDef::new($iden::ScoreId).big_unsigned().not_null(),
+                        ColumnDef::new($iden::ScoreId).big_integer().not_null(),
                     )
                     .primary_key(
                         sea_query::Index::create()
@@ -2387,3 +2449,254 @@ define_beatmap_mode_leaderboard!(
     LeaderboardFruitsRelax,
     scores_fruits_relax::ScoresFruitsRelax
 );
+
+pub mod channels {
+    use sea_orm_migration::prelude::*;
+
+    use super::ChannelType;
+
+    #[derive(Iden)]
+    pub enum Channels {
+        Table,
+        Id,
+        ChannelType,
+        Name,
+        Description,
+        Icon,
+        AutoJoin,
+        CreatorId,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(Channels::Table)
+            .if_not_exists()
+            .col(ColumnDef::new(Channels::Id).big_integer().not_null())
+            .col(
+                ColumnDef::new(Channels::ChannelType)
+                    .enumeration(
+                        ChannelType::Enum,
+                        [
+                            ChannelType::Personal,
+                            ChannelType::Group,
+                            ChannelType::Multiplayer,
+                            ChannelType::Spectaor,
+                        ],
+                    )
+                    .not_null(),
+            )
+            .col(ColumnDef::new(Channels::Name).string().null())
+            .col(ColumnDef::new(Channels::Description).string().null())
+            .col(ColumnDef::new(Channels::Icon).string().null())
+            .col(
+                ColumnDef::new(Channels::AutoJoin)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(ColumnDef::new(Channels::CreatorId).big_integer().null())
+            .primary_key(sea_query::Index::create().col(Channels::Id))
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(Channels::Table).to_owned()
+    }
+}
+
+pub mod channel_users {
+    use sea_orm_migration::prelude::*;
+
+    use super::{channels::Channels, users::Users};
+
+    const FOREIGN_KEY_CHANNEL_ID: &str = "FK_channel_users_channel_id";
+    const FOREIGN_KEY_USER_ID: &str = "FK_channel_users_user_id";
+    const INDEX_USER_ID: &str = "IDX_channel_users_user_id";
+
+    #[derive(Iden)]
+    pub enum ChannelUsers {
+        Table,
+        ChannelId,
+        UserId,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(ChannelUsers::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(ChannelUsers::ChannelId)
+                    .big_integer()
+                    .not_null(),
+            )
+            .col(ColumnDef::new(ChannelUsers::UserId).integer().not_null())
+            .primary_key(
+                sea_query::Index::create()
+                    .col(ChannelUsers::ChannelId)
+                    .col(ChannelUsers::UserId),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(ChannelUsers::Table).to_owned()
+    }
+
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_CHANNEL_ID)
+                .from(ChannelUsers::Table, ChannelUsers::ChannelId)
+                .to(Channels::Table, Channels::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_USER_ID)
+                .from(ChannelUsers::Table, ChannelUsers::UserId)
+                .to(Users::Table, Users::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_CHANNEL_ID)
+                .table(ChannelUsers::Table)
+                .to_owned(),
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_USER_ID)
+                .table(ChannelUsers::Table)
+                .to_owned(),
+        ]
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
+            .name(INDEX_USER_ID)
+            .table(ChannelUsers::Table)
+            .col(ChannelUsers::UserId)
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop()
+            .table(ChannelUsers::Table)
+            .name(INDEX_USER_ID)
+            .to_owned()]
+    }
+}
+
+pub mod channel_privileges {
+    use sea_orm_migration::prelude::*;
+
+    use super::{
+        channels::Channels, privileges::Privileges, ChannelHandleType,
+    };
+
+    const FOREIGN_KEY_CHANNEL_ID: &str = "FK_channel_priv_channel_id";
+    const FOREIGN_KEY_PRIV_ID: &str = "FK_channel_priv_priv_id";
+
+    const INDEX_PRIV_ID: &str = "IDX_channel_priv_priv_id";
+
+    #[derive(Iden)]
+    pub enum ChannelPrivileges {
+        Table,
+        ChannelId,
+        Handle,
+        RequiredPrivilegeId,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(ChannelPrivileges::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(ChannelPrivileges::ChannelId)
+                    .big_integer()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(ChannelPrivileges::Handle)
+                    .enumeration(
+                        ChannelHandleType::Enum,
+                        [
+                            ChannelHandleType::Join,
+                            ChannelHandleType::SendMessage,
+                            ChannelHandleType::KickUser,
+                            ChannelHandleType::MuteUser,
+                        ],
+                    )
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(ChannelPrivileges::RequiredPrivilegeId)
+                    .big_integer()
+                    .not_null(),
+            )
+            .primary_key(
+                sea_query::Index::create()
+                    .col(ChannelPrivileges::ChannelId)
+                    .col(ChannelPrivileges::Handle),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(ChannelPrivileges::Table).to_owned()
+    }
+
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_CHANNEL_ID)
+                .from(ChannelPrivileges::Table, ChannelPrivileges::ChannelId)
+                .to(Channels::Table, Channels::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_PRIV_ID)
+                .from(
+                    ChannelPrivileges::Table,
+                    ChannelPrivileges::RequiredPrivilegeId,
+                )
+                .to(Privileges::Table, Privileges::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_CHANNEL_ID)
+                .table(ChannelPrivileges::Table)
+                .to_owned(),
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_PRIV_ID)
+                .table(ChannelPrivileges::Table)
+                .to_owned(),
+        ]
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
+            .name(INDEX_PRIV_ID)
+            .table(ChannelPrivileges::Table)
+            .col(ChannelPrivileges::RequiredPrivilegeId)
+            .unique()
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop()
+            .table(ChannelPrivileges::Table)
+            .name(INDEX_PRIV_ID)
+            .to_owned()]
+    }
+}
