@@ -113,6 +113,8 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let create_table_stmts = vec![
             users::create(),
+            privileges::create(),
+            user_privileges::create(),
             bancho_client_hardware_records::create(),
             favourite_beatmaps::create(),
             followers::create(),
@@ -163,6 +165,7 @@ impl MigrationTrait for Migration {
         ];
 
         let create_foreign_key_stmts = vec![
+            user_privileges::create_foreign_keys(),
             bancho_client_hardware_records::create_foreign_keys(),
             favourite_beatmaps::create_foreign_keys(),
             followers::create_foreign_keys(),
@@ -216,6 +219,8 @@ impl MigrationTrait for Migration {
 
         let create_index_stmts = vec![
             users::create_indexes(),
+            privileges::create_indexes(),
+            user_privileges::create_indexes(),
             favourite_beatmaps::create_indexes(),
             followers::create_indexes(),
             beatmaps::create_indexes(),
@@ -346,6 +351,8 @@ impl MigrationTrait for Migration {
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let drop_table_stmts = vec![
             users::drop(),
+            privileges::drop(),
+            user_privileges::drop(),
             bancho_client_hardware_records::drop(),
             favourite_beatmaps::drop(),
             followers::drop(),
@@ -396,6 +403,7 @@ impl MigrationTrait for Migration {
         ];
 
         let drop_foreign_key_stmts = vec![
+            user_privileges::drop_foreign_keys(),
             bancho_client_hardware_records::drop_foreign_keys(),
             favourite_beatmaps::drop_foreign_keys(),
             followers::drop_foreign_keys(),
@@ -449,6 +457,8 @@ impl MigrationTrait for Migration {
 
         let drop_index_stmts = vec![
             users::drop_indexes(),
+            privileges::drop_indexes(),
+            user_privileges::drop_indexes(),
             favourite_beatmaps::drop_indexes(),
             followers::drop_indexes(),
             beatmaps::drop_indexes(),
@@ -547,7 +557,6 @@ pub mod users {
         NameUnicodeSafe,
         Password,
         Email,
-        Privileges,
         Country,
         CreatedAt,
         UpdatedAt,
@@ -598,12 +607,6 @@ pub mod users {
                     .string()
                     .string_len(64)
                     .unique_key()
-                    .not_null(),
-            )
-            .col(
-                ColumnDef::new(Users::Privileges)
-                    .unsigned()
-                    .default(1)
                     .not_null(),
             )
             .col(ColumnDef::new(Users::Country).string().string_len(8).null())
@@ -664,6 +667,203 @@ pub mod users {
                 .name(INDEX_EMAIL)
                 .to_owned(),
         ]
+    }
+}
+
+pub mod privileges {
+    use sea_orm_migration::prelude::*;
+
+    const INDEX_NAME: &str = "IDX_privileges_name";
+    const INDEX_PRIORITY: &str = "IDX_privileges_priority";
+
+    #[derive(Iden)]
+    pub enum Privileges {
+        Table,
+        Id,
+        Name,
+        Description,
+        Priority,
+        CreatorId,
+        CreatedAt,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(Privileges::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(Privileges::Id)
+                    .big_unsigned()
+                    .not_null()
+                    .auto_increment()
+                    .primary_key(),
+            )
+            .col(
+                ColumnDef::new(Privileges::Name)
+                    .string()
+                    .unique_key()
+                    .not_null(),
+            )
+            .col(ColumnDef::new(Privileges::Description).string().null())
+            .col(
+                ColumnDef::new(Privileges::Priority)
+                    .small_unsigned()
+                    .not_null()
+                    .default(1000),
+            )
+            .col(ColumnDef::new(Privileges::CreatorId).unsigned().null())
+            .col(
+                ColumnDef::new(Privileges::CreatedAt)
+                    .timestamp_with_time_zone()
+                    .default(Expr::current_timestamp())
+                    .not_null(),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(Privileges::Table).to_owned()
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![
+            sea_query::Index::create()
+                .name(INDEX_NAME)
+                .table(Privileges::Table)
+                .col(Privileges::Name)
+                .unique()
+                .to_owned(),
+            sea_query::Index::create()
+                .name(INDEX_PRIORITY)
+                .table(Privileges::Table)
+                .col(Privileges::Priority)
+                .unique()
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![
+            sea_query::Index::drop()
+                .table(Privileges::Table)
+                .name(INDEX_NAME)
+                .to_owned(),
+            sea_query::Index::drop()
+                .table(Privileges::Table)
+                .name(INDEX_PRIORITY)
+                .to_owned(),
+        ]
+    }
+}
+
+pub mod user_privileges {
+    use sea_orm_migration::prelude::*;
+
+    use super::{privileges::Privileges, users::Users};
+
+    const FOREIGN_KEY_USER_ID: &str = "FK_user_priv_user_id";
+    const FOREIGN_KEY_PRIV_ID: &str = "FK_user_priv_priv_id";
+    const FOREIGN_KEY_GRANTOR_ID: &str = "FK_user_priv_grantor_id";
+
+    const INDEX_PRIV_ID: &str = "IDX_user_priv_priv_id";
+
+    #[derive(Iden)]
+    pub enum UserPrivileges {
+        Table,
+        UserId,
+        PrivilegeId,
+        GrantorId,
+        CreatedAt,
+    }
+
+    pub fn create() -> TableCreateStatement {
+        Table::create()
+            .table(UserPrivileges::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(UserPrivileges::UserId)
+                    .unsigned()
+                    .not_null()
+                    .primary_key(),
+            )
+            .col(
+                ColumnDef::new(UserPrivileges::PrivilegeId)
+                    .big_unsigned()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(UserPrivileges::GrantorId).unsigned().not_null(),
+            )
+            .col(
+                ColumnDef::new(UserPrivileges::CreatedAt)
+                    .timestamp_with_time_zone()
+                    .default(Expr::current_timestamp())
+                    .not_null(),
+            )
+            .to_owned()
+    }
+
+    pub fn drop() -> TableDropStatement {
+        Table::drop().table(UserPrivileges::Table).to_owned()
+    }
+
+    pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
+        vec![
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_USER_ID)
+                .from(UserPrivileges::Table, UserPrivileges::UserId)
+                .to(Users::Table, Users::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_PRIV_ID)
+                .from(UserPrivileges::Table, UserPrivileges::PrivilegeId)
+                .to(Privileges::Table, Privileges::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+            sea_query::ForeignKey::create()
+                .name(FOREIGN_KEY_GRANTOR_ID)
+                .from(UserPrivileges::Table, UserPrivileges::GrantorId)
+                .to(Users::Table, Users::Id)
+                .on_delete(ForeignKeyAction::Cascade)
+                .on_update(ForeignKeyAction::Cascade)
+                .to_owned(),
+        ]
+    }
+
+    pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
+        vec![
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_USER_ID)
+                .table(UserPrivileges::Table)
+                .to_owned(),
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_PRIV_ID)
+                .table(UserPrivileges::Table)
+                .to_owned(),
+            sea_query::ForeignKey::drop()
+                .name(FOREIGN_KEY_GRANTOR_ID)
+                .table(UserPrivileges::Table)
+                .to_owned(),
+        ]
+    }
+
+    pub fn create_indexes() -> Vec<IndexCreateStatement> {
+        vec![sea_query::Index::create()
+            .name(INDEX_PRIV_ID)
+            .table(UserPrivileges::Table)
+            .col(UserPrivileges::PrivilegeId)
+            .unique()
+            .to_owned()]
+    }
+
+    pub fn drop_indexes() -> Vec<IndexDropStatement> {
+        vec![sea_query::Index::drop()
+            .table(UserPrivileges::Table)
+            .name(INDEX_PRIV_ID)
+            .to_owned()]
     }
 }
 
@@ -808,7 +1008,9 @@ pub mod favourite_beatmaps {
         Table::create()
             .table(FavouriteBeatmaps::Table)
             .if_not_exists()
-            .col(ColumnDef::new(FavouriteBeatmaps::UserId).unsigned().not_null())
+            .col(
+                ColumnDef::new(FavouriteBeatmaps::UserId).unsigned().not_null(),
+            )
             .col(
                 ColumnDef::new(FavouriteBeatmaps::BeatmapsetId)
                     .unsigned()
