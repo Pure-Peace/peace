@@ -2190,6 +2190,7 @@ macro_rules! define_user_mode_pp {
                 UserId,
                 PPVersion,
                 PP,
+                RawPP,
             }
 
             pub fn create() -> TableCreateStatement {
@@ -2213,6 +2214,7 @@ macro_rules! define_user_mode_pp {
                             .not_null()
                             .default(0.0),
                     )
+                    .col(ColumnDef::new($iden::RawPP).json().null())
                     .primary_key(
                         sea_query::Index::create()
                             .col($iden::UserId)
