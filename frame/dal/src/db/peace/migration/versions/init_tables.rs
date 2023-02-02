@@ -116,7 +116,7 @@ impl MigrationTrait for Migration {
             bancho_client_hardware_records::create(),
             favourite_beatmaps::create(),
             followers::create(),
-            custom_settings::create(),
+            user_settings::create(),
             beatmaps::create(),
             beatmap_ratings::create(),
             scores_standard::create(),
@@ -166,7 +166,7 @@ impl MigrationTrait for Migration {
             bancho_client_hardware_records::create_foreign_keys(),
             favourite_beatmaps::create_foreign_keys(),
             followers::create_foreign_keys(),
-            custom_settings::create_foreign_keys(),
+            user_settings::create_foreign_keys(),
             beatmap_ratings::create_foreign_keys(),
             scores_standard::create_foreign_keys(),
             scores_taiko::create_foreign_keys(),
@@ -349,7 +349,7 @@ impl MigrationTrait for Migration {
             bancho_client_hardware_records::drop(),
             favourite_beatmaps::drop(),
             followers::drop(),
-            custom_settings::drop(),
+            user_settings::drop(),
             beatmaps::drop(),
             beatmap_ratings::drop(),
             scores_standard::drop(),
@@ -399,7 +399,7 @@ impl MigrationTrait for Migration {
             bancho_client_hardware_records::drop_foreign_keys(),
             favourite_beatmaps::drop_foreign_keys(),
             followers::drop_foreign_keys(),
-            custom_settings::drop_foreign_keys(),
+            user_settings::drop_foreign_keys(),
             beatmap_ratings::drop_foreign_keys(),
             scores_standard::drop_foreign_keys(),
             scores_taiko::drop_foreign_keys(),
@@ -967,41 +967,40 @@ pub mod followers {
     }
 }
 
-pub mod custom_settings {
+pub mod user_settings {
     use sea_orm_migration::prelude::*;
 
     use super::{users::Users, RankingType};
 
-    const FOREIGN_KEY_USER_ID: &str = "FK_custom_settings_user_id";
+    const FOREIGN_KEY_USER_ID: &str = "FK_user_settings_user_id";
 
     #[derive(Iden)]
-    pub enum CustomSettings {
+    pub enum UserSettings {
         Table,
         UserId,
         DisplayUnicodeName,
         ScoreboardRankingType,
         InvisibleOnline,
-        UpdatedAt,
     }
 
     pub fn create() -> TableCreateStatement {
         Table::create()
-            .table(CustomSettings::Table)
+            .table(UserSettings::Table)
             .if_not_exists()
             .col(
-                ColumnDef::new(CustomSettings::UserId)
+                ColumnDef::new(UserSettings::UserId)
                     .integer()
                     .not_null()
                     .primary_key(),
             )
             .col(
-                ColumnDef::new(CustomSettings::DisplayUnicodeName)
+                ColumnDef::new(UserSettings::DisplayUnicodeName)
                     .boolean()
                     .not_null()
                     .default(false),
             )
             .col(
-                ColumnDef::new(CustomSettings::ScoreboardRankingType)
+                ColumnDef::new(UserSettings::ScoreboardRankingType)
                     .enumeration(
                         RankingType::Enum,
                         [
@@ -1015,28 +1014,22 @@ pub mod custom_settings {
                     .default(RankingType::ScoreV1.to_string()),
             )
             .col(
-                ColumnDef::new(CustomSettings::InvisibleOnline)
+                ColumnDef::new(UserSettings::InvisibleOnline)
                     .boolean()
                     .not_null()
                     .default(false),
-            )
-            .col(
-                ColumnDef::new(CustomSettings::UpdatedAt)
-                    .timestamp_with_time_zone()
-                    .default(Expr::current_timestamp())
-                    .not_null(),
             )
             .to_owned()
     }
 
     pub fn drop() -> TableDropStatement {
-        Table::drop().table(CustomSettings::Table).to_owned()
+        Table::drop().table(UserSettings::Table).to_owned()
     }
 
     pub fn create_foreign_keys() -> Vec<ForeignKeyCreateStatement> {
         vec![sea_query::ForeignKey::create()
             .name(FOREIGN_KEY_USER_ID)
-            .from(CustomSettings::Table, CustomSettings::UserId)
+            .from(UserSettings::Table, UserSettings::UserId)
             .to(Users::Table, Users::Id)
             .on_delete(ForeignKeyAction::Cascade)
             .on_update(ForeignKeyAction::Cascade)
@@ -1046,7 +1039,7 @@ pub mod custom_settings {
     pub fn drop_foreign_keys() -> Vec<ForeignKeyDropStatement> {
         vec![sea_query::ForeignKey::drop()
             .name(FOREIGN_KEY_USER_ID)
-            .table(CustomSettings::Table)
+            .table(UserSettings::Table)
             .to_owned()]
     }
 }
