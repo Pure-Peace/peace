@@ -6,6 +6,7 @@ members = [
     "services/bancho/state",
     "services/gateway",
     "services/db",
+    "services/chat",
     "lib/tools",
     "lib/tools/derive",
     "lib/bancho-packets",

@@ -41,18 +41,14 @@ pub mod bancho_state_rpc {
     impl From<RawUserQuery> for UserQuery {
         fn from(raw: RawUserQuery) -> UserQuery {
             match raw.query_type() {
-                QueryType::UserId => {
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
-                },
-                QueryType::Username => {
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
-                },
-                QueryType::UsernameUnicode => {
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
-                },
-                QueryType::SessionId => {
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
-                },
+                QueryType::UserId =>
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
+                QueryType::Username =>
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
+                QueryType::UsernameUnicode =>
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
+                QueryType::SessionId =>
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
             }
         }
     }
@@ -96,22 +92,26 @@ pub mod bancho_state_rpc {
     impl From<RawBanchoPacketTarget> for BanchoPacketTarget {
         fn from(raw: RawBanchoPacketTarget) -> BanchoPacketTarget {
             match raw.target_type() {
-                TargetType::UserId => {
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
-                },
-                TargetType::Username => {
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
-                },
-                TargetType::UsernameUnicode => {
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
-                },
-                TargetType::SessionId => {
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
-                },
-                TargetType::Channel => {
-                    Self::Channel(raw.string_val.expect(CONVERT_PANIC))
-                },
+                TargetType::UserId =>
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
+                TargetType::Username =>
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
+                TargetType::UsernameUnicode =>
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
+                TargetType::SessionId =>
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
+                TargetType::Channel =>
+                    Self::Channel(raw.string_val.expect(CONVERT_PANIC)),
             }
         }
     }
+}
+
+#[cfg(feature = "chat")]
+pub mod chat_rpc {
+    tonic::include_proto!("peace.services.chat");
+
+    #[cfg(feature = "reflection")]
+    pub const CHAT_DESCRIPTOR_SET: &[u8] =
+        tonic::include_file_descriptor_set!("chat_descriptor");
 }

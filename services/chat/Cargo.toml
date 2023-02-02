@@ -1,0 +1,39 @@
+[package]
+name = "chat"
+description = "Peace Chat gRPC Service"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+[[bin]]
+name = "chat-server"
+path = "src/main.rs"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tonic = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# serde
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# utils
+clap = { version = "4.0", features = ["derive"] }
+clap-serde-derive = "0.2.0"
+once_cell = "1.16"
+
+
+# local crates
+peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
+peace_pb = { path = "../../frame/pb", features = ["reflection", "chat"] }
+peace_rpc = { path = "../../frame/rpc", features = [
+    "tls",
+    "admin_endpoints",
+    "reflection",
+] }
+peace_dal = { path = "../../frame/dal" }

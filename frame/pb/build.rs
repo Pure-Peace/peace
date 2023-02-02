@@ -10,6 +10,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "peace_db")]
     build_peace_db();
 
+    #[cfg(feature = "chat")]
+    build_chat();
+
     #[cfg(feature = "bancho")]
     build_bancho();
 
@@ -32,6 +35,14 @@ fn build_peace_db() {
     tonic_build::configure()
         .file_descriptor_set_path(with_out_dir("peace_db_descriptor.bin"))
         .compile(&["proto/services/peace_db.proto"], &["proto"])
+        .unwrap();
+}
+
+#[cfg(feature = "chat")]
+fn build_chat() {
+    tonic_build::configure()
+        .file_descriptor_set_path(with_out_dir("chat_descriptor.bin"))
+        .compile(&["proto/services/chat.proto"], &["proto"])
         .unwrap();
 }
 
