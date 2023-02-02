@@ -559,7 +559,7 @@ pub mod users {
             .if_not_exists()
             .col(
                 ColumnDef::new(Users::Id)
-                    .integer()
+                    .unsigned()
                     .not_null()
                     .auto_increment()
                     .primary_key(),
@@ -602,7 +602,7 @@ pub mod users {
             )
             .col(
                 ColumnDef::new(Users::Privileges)
-                    .integer()
+                    .unsigned()
                     .default(1)
                     .not_null(),
             )
@@ -696,7 +696,7 @@ pub mod bancho_client_hardware_records {
             .if_not_exists()
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::UserId)
-                    .integer()
+                    .unsigned()
                     .not_null(),
             )
             .col(
@@ -735,7 +735,7 @@ pub mod bancho_client_hardware_records {
             )
             .col(
                 ColumnDef::new(BanchoClientHardwareRecords::UsedTimes)
-                    .integer()
+                    .unsigned()
                     .default(1)
                     .not_null(),
             )
@@ -808,10 +808,10 @@ pub mod favourite_beatmaps {
         Table::create()
             .table(FavouriteBeatmaps::Table)
             .if_not_exists()
-            .col(ColumnDef::new(FavouriteBeatmaps::UserId).integer().not_null())
+            .col(ColumnDef::new(FavouriteBeatmaps::UserId).unsigned().not_null())
             .col(
                 ColumnDef::new(FavouriteBeatmaps::BeatmapsetId)
-                    .integer()
+                    .unsigned()
                     .not_null(),
             )
             .col(
@@ -893,8 +893,8 @@ pub mod followers {
         Table::create()
             .table(Followers::Table)
             .if_not_exists()
-            .col(ColumnDef::new(Followers::UserId).integer().not_null())
-            .col(ColumnDef::new(Followers::FollowId).integer().not_null())
+            .col(ColumnDef::new(Followers::UserId).unsigned().not_null())
+            .col(ColumnDef::new(Followers::FollowId).unsigned().not_null())
             .col(
                 ColumnDef::new(Followers::Remark)
                     .string()
@@ -989,7 +989,7 @@ pub mod user_settings {
             .if_not_exists()
             .col(
                 ColumnDef::new(UserSettings::UserId)
-                    .integer()
+                    .unsigned()
                     .not_null()
                     .primary_key(),
             )
@@ -1100,11 +1100,11 @@ pub mod beatmaps {
             .if_not_exists()
             .col(
                 ColumnDef::new(Beatmaps::Bid)
-                    .integer()
+                    .unsigned()
                     .not_null()
                     .primary_key(),
             )
-            .col(ColumnDef::new(Beatmaps::Sid).integer().not_null())
+            .col(ColumnDef::new(Beatmaps::Sid).unsigned().not_null())
             .col(
                 ColumnDef::new(Beatmaps::Md5)
                     .char()
@@ -1185,18 +1185,18 @@ pub mod beatmaps {
                     .decimal_len(4, 2)
                     .not_null(),
             )
-            .col(ColumnDef::new(Beatmaps::Length).integer().not_null())
-            .col(ColumnDef::new(Beatmaps::LengthDrain).integer().not_null())
+            .col(ColumnDef::new(Beatmaps::Length).unsigned().not_null())
+            .col(ColumnDef::new(Beatmaps::LengthDrain).unsigned().not_null())
             .col(ColumnDef::new(Beatmaps::Source).string().null())
             .col(ColumnDef::new(Beatmaps::Tags).string().null())
-            .col(ColumnDef::new(Beatmaps::GenreId).small_integer().null())
-            .col(ColumnDef::new(Beatmaps::LanguageId).small_integer().null())
+            .col(ColumnDef::new(Beatmaps::GenreId).small_unsigned().null())
+            .col(ColumnDef::new(Beatmaps::LanguageId).small_unsigned().null())
             .col(ColumnDef::new(Beatmaps::Storyboard).boolean().null())
             .col(ColumnDef::new(Beatmaps::Video).boolean().null())
-            .col(ColumnDef::new(Beatmaps::ObjectCount).integer().null())
-            .col(ColumnDef::new(Beatmaps::SliderCount).integer().null())
-            .col(ColumnDef::new(Beatmaps::SpinnerCount).integer().null())
-            .col(ColumnDef::new(Beatmaps::MaxCombo).integer().null())
+            .col(ColumnDef::new(Beatmaps::ObjectCount).unsigned().null())
+            .col(ColumnDef::new(Beatmaps::SliderCount).unsigned().null())
+            .col(ColumnDef::new(Beatmaps::SpinnerCount).unsigned().null())
+            .col(ColumnDef::new(Beatmaps::MaxCombo).unsigned().null())
             .col(
                 ColumnDef::new(Beatmaps::Immutable)
                     .boolean()
@@ -1304,7 +1304,7 @@ pub mod beatmap_ratings {
         Table::create()
             .table(BeatmapRatings::Table)
             .if_not_exists()
-            .col(ColumnDef::new(BeatmapRatings::UserId).integer().not_null())
+            .col(ColumnDef::new(BeatmapRatings::UserId).unsigned().not_null())
             .col(
                 ColumnDef::new(BeatmapRatings::MapMd5)
                     .char()
@@ -1313,7 +1313,7 @@ pub mod beatmap_ratings {
             )
             .col(
                 ColumnDef::new(BeatmapRatings::Rating)
-                    .small_integer()
+                    .tiny_unsigned()
                     .not_null(),
             )
             .col(
@@ -1434,12 +1434,12 @@ macro_rules! define_user_mode_scores {
                     .if_not_exists()
                     .col(
                         ColumnDef::new($iden::Id)
-                            .big_integer()
+                            .big_unsigned()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new($iden::UserId).integer().not_null())
+                    .col(ColumnDef::new($iden::UserId).unsigned().not_null())
                     .col(
                         ColumnDef::new($iden::ScoreMd5)
                             .char()
@@ -1462,22 +1462,22 @@ macro_rules! define_user_mode_scores {
                             .not_null()
                             .default(ScoreVersion::V1.to_string()),
                     )
-                    .col(ColumnDef::new($iden::Score).integer().not_null())
+                    .col(ColumnDef::new($iden::Score).unsigned().not_null())
                     .col(
                         ColumnDef::new($iden::Accuracy)
                             .decimal()
                             .decimal_len(6, 2)
                             .not_null(),
                     )
-                    .col(ColumnDef::new($iden::Combo).integer().not_null())
-                    .col(ColumnDef::new($iden::Mods).integer().not_null())
-                    .col(ColumnDef::new($iden::N300).integer().not_null())
-                    .col(ColumnDef::new($iden::N100).integer().not_null())
-                    .col(ColumnDef::new($iden::N50).integer().not_null())
-                    .col(ColumnDef::new($iden::Miss).integer().not_null())
-                    .col(ColumnDef::new($iden::Geki).integer().not_null())
-                    .col(ColumnDef::new($iden::Katu).integer().not_null())
-                    .col(ColumnDef::new($iden::Playtime).integer().not_null())
+                    .col(ColumnDef::new($iden::Combo).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Mods).unsigned().not_null())
+                    .col(ColumnDef::new($iden::N300).unsigned().not_null())
+                    .col(ColumnDef::new($iden::N100).unsigned().not_null())
+                    .col(ColumnDef::new($iden::N50).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Miss).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Geki).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Katu).unsigned().not_null())
+                    .col(ColumnDef::new($iden::Playtime).unsigned().not_null())
                     .col(
                         ColumnDef::new($iden::Perfect)
                             .boolean()
@@ -1644,7 +1644,7 @@ macro_rules! define_score_mode_pp {
                     .table($iden::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new($iden::ScoreId).big_integer().not_null(),
+                        ColumnDef::new($iden::ScoreId).big_unsigned().not_null(),
                     )
                     .col(
                         ColumnDef::new($iden::PPVersion)
@@ -1779,31 +1779,31 @@ macro_rules! define_user_mode_stats {
                     .if_not_exists()
                     .col(
                         ColumnDef::new($iden::UserId)
-                            .integer()
+                            .unsigned()
                             .primary_key()
                             .not_null(),
                     )
                     .col(
                         ColumnDef::new($iden::TotalScore)
-                            .big_integer()
+                            .big_unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::RankedScore)
-                            .big_integer()
+                            .big_unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Playcount)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::TotalHits)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
@@ -1816,49 +1816,49 @@ macro_rules! define_user_mode_stats {
                     )
                     .col(
                         ColumnDef::new($iden::MaxCombo)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::TotalSecondsPlayed)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Count300)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Count100)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::Count50)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::CountMiss)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::CountFailed)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new($iden::CountQuit)
-                            .integer()
+                            .unsigned()
                             .not_null()
                             .default(0),
                     )
@@ -1932,7 +1932,7 @@ macro_rules! define_user_mode_pp {
                 Table::create()
                     .table($iden::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new($iden::UserId).integer().not_null())
+                    .col(ColumnDef::new($iden::UserId).unsigned().not_null())
                     .col(
                         ColumnDef::new($iden::PPVersion)
                             .enumeration(
@@ -2040,7 +2040,7 @@ macro_rules! define_beatmap_mode_leaderboard {
                 Table::create()
                     .table($iden::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new($iden::BeatmapId).integer().not_null())
+                    .col(ColumnDef::new($iden::BeatmapId).unsigned().not_null())
                     .col(
                         ColumnDef::new($iden::RankingType)
                             .enumeration(
@@ -2055,9 +2055,9 @@ macro_rules! define_beatmap_mode_leaderboard {
                             .not_null()
                             .default(RankingType::ScoreV1.to_string()),
                     )
-                    .col(ColumnDef::new($iden::UserId).integer().not_null())
+                    .col(ColumnDef::new($iden::UserId).unsigned().not_null())
                     .col(
-                        ColumnDef::new($iden::ScoreId).big_integer().not_null(),
+                        ColumnDef::new($iden::ScoreId).big_unsigned().not_null(),
                     )
                     .primary_key(
                         sea_query::Index::create()
