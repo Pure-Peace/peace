@@ -8,6 +8,10 @@
 
 [![Rust](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
 
+## [>> Documentation <<](https://peace.osu.icu/)
+
+
+
 ## *Description*
 
 **Make it easy for developers to build their desired osu! server or project**
