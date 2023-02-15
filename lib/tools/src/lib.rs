@@ -1,6 +1,10 @@
 #[cfg(feature = "async_collections")]
 pub mod async_collections;
 
+pub mod constants;
+#[cfg(feature = "tonic_utils")]
+pub mod tonic_utils;
+
 #[macro_export]
 macro_rules! pkg_metadata {
     () => {

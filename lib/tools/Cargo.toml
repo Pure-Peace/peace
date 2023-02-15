@@ -7,10 +7,14 @@ edition = "2021"
 [features]
 default = []
 
-all = ["async_collections"]
+all = ["async_collections", "tonic_utils"]
 async_collections = ["tokio"]
+tonic_utils = ["tonic"]
 
 
 [dependencies]
 # async
 tokio = { version = "1.0", optional = true }
+
+# tonic
+tonic = { version = "0.8", optional = true }
