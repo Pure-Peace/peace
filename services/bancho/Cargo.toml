@@ -40,3 +40,4 @@ peace_rpc = { path = "../../frame/rpc", features = [
     "admin_endpoints",
     "reflection",
 ] }
+bancho-packets = { path = "../../lib/bancho-packets" }

@@ -7,23 +7,29 @@ extern crate peace_api;
 
 pub mod apidocs;
 pub mod bancho;
+pub mod utils;
 
 use apidocs::GatewayApiDocs;
 use axum::{
     async_trait,
     routing::{get, post},
-    Router,
+    Extension, Router,
 };
 use bancho::routes;
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
-use peace_pb::services::bancho_rpc;
-use std::sync::Arc;
+use peace_pb::services::{bancho_rpc, bancho_state_rpc};
+use std::{fmt::Display, sync::Arc};
 use utoipa::OpenApi;
 
 define_rpc_client_config!(
     service_name: bancho_rpc,
     config_name: BanchoRpcConfig
+);
+
+define_rpc_client_config!(
+    service_name: bancho_state_rpc,
+    config_name: BanchoStateRpcConfig
 );
 
 /// Command Line Interface (CLI) for Peace gateway service.
@@ -41,6 +47,9 @@ pub struct GatewayConfig {
 
     #[command(flatten)]
     pub bancho: BanchoRpcConfig,
+
+    #[command(flatten)]
+    pub bancho_state: BanchoStateRpcConfig,
 }
 
 #[derive(Clone)]
@@ -61,11 +70,18 @@ impl Application for App {
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
-        let bancho_rpc_client =
-            self.cfg.bancho.connect_client().await.unwrap_or_else(|err| {
-                error!("Unable to connect to the bancho gRPC service, please make sure the service is started.");
+        let bancho_rpc_client = self.cfg.bancho.connect_client().await.unwrap_or_else(|err| {
+                error!("Unable to connect to the {err} service, please make sure the service is started.");
                 panic!("{}", err)
             });
+
+        let bancho_state_rpc_client =
+        self.cfg.bancho_state.connect_client().await.unwrap_or_else(
+                |err| {
+                    error!("Unable to connect to the {err} service, please make sure the service is started.");
+                    panic!("{}", err)
+                },
+            );
 
         Router::new()
             .route("/", get(routes::bancho_get))
@@ -104,6 +120,8 @@ impl Application for App {
             .route("/web/check-updates", get(routes::check_updates))
             .route("/web/maps/:beatmap_file_name", get(routes::update_beatmap))
             .route("/test", get(routes::test))
+            .layer(Extension(bancho_rpc_client))
+            .layer(Extension(bancho_state_rpc_client))
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {

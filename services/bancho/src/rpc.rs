@@ -1,3 +1,4 @@
+use bancho_packets::{server, PacketBuilder};
 use peace_pb::services::{
     bancho_rpc::{bancho_rpc_server::BanchoRpc, *},
     bancho_state_rpc::{bancho_state_rpc_client::BanchoStateRpcClient, *},
@@ -59,7 +60,13 @@ impl BanchoRpc for Bancho {
 
         Ok(Response::new(LoginReply {
             session_id: Some(resp.session_id),
-            packet: None,
+            packet: Some(
+                PacketBuilder::new()
+                    .add(server::login_reply(
+                        bancho_packets::LoginResult::Success(user_id),
+                    ))
+                    .build(),
+            ),
         }))
     }
 
