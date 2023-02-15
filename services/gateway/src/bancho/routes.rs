@@ -1,23 +1,25 @@
 use axum::{
     extract::{Path, State},
     response::{IntoResponse, Response},
+    Extension,
 };
 
 use peace_api::{
-    error::{map_err, Error},
+    error::Error,
     extractors::{
         BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
     },
 };
-use peace_pb::services::bancho_rpc::{
-    bancho_rpc_client::BanchoRpcClient, LoginReply,
+use peace_pb::services::{
+    bancho_rpc::{bancho_rpc_client::BanchoRpcClient, LoginReply},
+    bancho_state_rpc::bancho_state_rpc_client::BanchoStateRpcClient,
 };
-use tonic::{transport::Channel, Request};
+use tonic::transport::Channel;
+use tools::tonic_utils::RpcRequest;
 
-use super::{
-    constants::{CHO_PROTOCOL, X_REAL_IP},
-    parser,
-};
+use crate::utils::map_rpc_err;
+
+use super::{constants::CHO_PROTOCOL, logic, parser};
 
 /// Bancho get handler
 #[utoipa::path(
@@ -43,41 +45,21 @@ pub async fn bancho_get() -> Response {
 )]
 pub async fn bancho_post(
     session_id: Option<BanchoClientToken>,
-    BanchoClientVersion(version): BanchoClientVersion,
+    version: Option<BanchoClientVersion>,
     ClientIp(ip): ClientIp,
-    State(mut bancho): State<BanchoRpcClient<Channel>>,
+    Extension(bancho): Extension<BanchoRpcClient<Channel>>,
+    Extension(bancho_state): Extension<BanchoStateRpcClient<Channel>>,
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
     if session_id.is_none() {
-        let mut req =
-            Request::new(parser::parse_osu_login_request_body(body.into())?);
-
-        req.metadata_mut()
-            .insert(X_REAL_IP, ip.to_string().parse().map_err(map_err)?);
-
-        let LoginReply { session_id, packet } = bancho
-            .login(req)
-            .await
-            .map_err(|err| {
-                error!("login rpc call failed with: {}", err);
-                Error::Internal
-            })?
-            .into_inner();
-
-        if let Some(session_id) = session_id {
-            return Ok((
-                [("cho-token", session_id.as_str()), CHO_PROTOCOL],
-                packet.unwrap_or("ok".into()),
-            )
-                .into_response());
+        if version.is_none() {
+            return Err(Error::Unauthorized);
         }
 
-        return Ok((
-            [("cho-token", "failed"), CHO_PROTOCOL],
-            packet.unwrap_or("failed".into()),
-        )
-            .into_response());
+        return logic::bancho_login(bancho, body, ip).await;
     }
+
+    logic::check_session(bancho_state, session_id.unwrap()).await?;
 
     /* println!("{:?} {} {}", osu_token, osu_version, ip);
     println!("{:?}", body); */
@@ -397,8 +379,6 @@ pub async fn update_beatmap() -> Response {
     "ok".into_response()
 }
 
-pub async fn test(
-    State(mut bancho): State<BanchoRpcClient<Channel>>,
-) -> Response {
+pub async fn test() -> Response {
     "ok".into_response()
 }

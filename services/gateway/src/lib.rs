@@ -14,7 +14,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use bancho::handler;
+use bancho::routes;
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
 use peace_pb::services::bancho_rpc;
@@ -68,46 +68,42 @@ impl Application for App {
             });
 
         Router::new()
-            .route("/", get(handler::bancho_get))
-            .route("/", post(handler::bancho_post))
-            .route("/ss/:screenshot", get(handler::get_screenshot))
-            .route("/d/:beatmapset_id", get(handler::download_beatmapset))
-            .route("/users", post(handler::client_register))
-            .route("/p/doyoureallywanttoaskpeppy", get(handler::ask_peppy))
-            .route("/difficulty-rating", get(handler::difficulty_rating))
-            .route("/web/osu-error.php", post(handler::osu_error))
-            .route("/web/osu-screenshot.php", post(handler::osu_screenshot))
-            .route("/web/osu-getfriends.php", get(handler::osu_getfriends))
+            .route("/", get(routes::bancho_get))
+            .route("/", post(routes::bancho_post))
+            .route("/ss/:screenshot", get(routes::get_screenshot))
+            .route("/d/:beatmapset_id", get(routes::download_beatmapset))
+            .route("/users", post(routes::client_register))
+            .route("/p/doyoureallywanttoaskpeppy", get(routes::ask_peppy))
+            .route("/difficulty-rating", get(routes::difficulty_rating))
+            .route("/web/osu-error.php", post(routes::osu_error))
+            .route("/web/osu-screenshot.php", post(routes::osu_screenshot))
+            .route("/web/osu-getfriends.php", get(routes::osu_getfriends))
             .route(
                 "/web/osu-getbeatmapinfo.php",
-                get(handler::osu_getbeatmapinfo),
+                get(routes::osu_getbeatmapinfo),
             )
-            .route(
-                "/web/osu-getfavourites.php",
-                get(handler::osu_getfavourites),
-            )
-            .route("/web/osu-addfavourite.php", get(handler::osu_addfavourite))
-            .route("/web/lastfm.php", get(handler::lastfm))
-            .route("/web/osu-search.php", get(handler::osu_search))
-            .route("/web/osu-search-set.php", get(handler::osu_search_set))
+            .route("/web/osu-getfavourites.php", get(routes::osu_getfavourites))
+            .route("/web/osu-addfavourite.php", get(routes::osu_addfavourite))
+            .route("/web/lastfm.php", get(routes::lastfm))
+            .route("/web/osu-search.php", get(routes::osu_search))
+            .route("/web/osu-search-set.php", get(routes::osu_search_set))
             .route(
                 "/web/osu-submit-modular-selector.php",
-                post(handler::osu_submit_modular_selector),
+                post(routes::osu_submit_modular_selector),
             )
-            .route("/web/osu-getreplay.php", get(handler::osu_getreplay))
-            .route("/web/osu-rate.php", get(handler::osu_rate))
+            .route("/web/osu-getreplay.php", get(routes::osu_getreplay))
+            .route("/web/osu-rate.php", get(routes::osu_rate))
             .route(
                 "/web/osu-osz2-getscores.php",
-                get(handler::osu_osz2_getscores),
+                get(routes::osu_osz2_getscores),
             )
-            .route("/web/osu-comment.php", post(handler::osu_comment))
-            .route("/web/osu-markasread.php", get(handler::osu_markasread))
-            .route("/web/osu-getseasonal.php", get(handler::osu_getseasonal))
-            .route("/web/bancho_connect.php", get(handler::bancho_connect))
-            .route("/web/check-updates", get(handler::check_updates))
-            .route("/web/maps/:beatmap_file_name", get(handler::update_beatmap))
-            .route("/test", get(handler::test))
-            .with_state(bancho_rpc_client)
+            .route("/web/osu-comment.php", post(routes::osu_comment))
+            .route("/web/osu-markasread.php", get(routes::osu_markasread))
+            .route("/web/osu-getseasonal.php", get(routes::osu_getseasonal))
+            .route("/web/bancho_connect.php", get(routes::bancho_connect))
+            .route("/web/check-updates", get(routes::check_updates))
+            .route("/web/maps/:beatmap_file_name", get(routes::update_beatmap))
+            .route("/test", get(routes::test))
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {
