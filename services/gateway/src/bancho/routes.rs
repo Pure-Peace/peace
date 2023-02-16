@@ -1,25 +1,17 @@
+use super::logic;
+use crate::{BanchoRpc, BanchoStateRpc};
 use axum::{
-    extract::{Path, State},
+    extract::Path,
     response::{IntoResponse, Response},
     Extension,
 };
-
 use peace_api::{
     error::Error,
     extractors::{
         BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
     },
 };
-use peace_pb::services::{
-    bancho_rpc::{bancho_rpc_client::BanchoRpcClient, LoginReply},
-    bancho_state_rpc::bancho_state_rpc_client::BanchoStateRpcClient,
-};
-use tonic::transport::Channel;
-use tools::tonic_utils::RpcRequest;
-
-use crate::utils::map_rpc_err;
-
-use super::{constants::CHO_PROTOCOL, logic, parser};
+use peace_pb::services::bancho_state_rpc::UserQuery;
 
 /// Bancho get handler
 #[utoipa::path(
@@ -47,8 +39,8 @@ pub async fn bancho_post(
     session_id: Option<BanchoClientToken>,
     version: Option<BanchoClientVersion>,
     ClientIp(ip): ClientIp,
-    Extension(bancho): Extension<BanchoRpcClient<Channel>>,
-    Extension(bancho_state): Extension<BanchoStateRpcClient<Channel>>,
+    Extension(bancho): Extension<BanchoRpc>,
+    Extension(bancho_state): Extension<BanchoStateRpc>,
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
     if session_id.is_none() {

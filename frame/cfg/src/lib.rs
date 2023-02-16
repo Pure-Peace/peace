@@ -301,6 +301,9 @@ pub mod macros {
         };
         (service_name: $service_name: ty, config_name: $config_name: ty, default_uri: $default_uri: literal) => {
             $crate::macros::paste::paste! {
+                pub type [<$service_name:camel>] =
+                    [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<tonic::transport::Channel>;
+
                 #[derive(
                     clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
                 )]
@@ -334,7 +337,7 @@ pub mod macros {
 
                 #[$crate::macros::async_trait]
                 impl $crate::RpcClientConfig for $config_name {
-                    type RpcClient = [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<tonic::transport::Channel>;
+                    type RpcClient = [<$service_name:camel>];
 
                     #[inline]
                     fn uri(&self) -> &str {

@@ -1,20 +1,17 @@
-use std::net::IpAddr;
-
 use super::{constants::CHO_PROTOCOL, parser};
-use crate::utils::map_rpc_err;
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use peace_api::error::Error;
-use peace_api::extractors::BanchoClientToken;
-use peace_pb::services::bancho_rpc::{
-    bancho_rpc_client::BanchoRpcClient, LoginReply,
+use crate::{utils::map_rpc_err, BanchoRpc, BanchoStateRpc};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
-use peace_pb::services::bancho_state_rpc::bancho_state_rpc_client::BanchoStateRpcClient;
-use tonic::transport::Channel;
+use peace_api::{error::Error, extractors::BanchoClientVersion};
+use peace_pb::services::{bancho_rpc::LoginReply, bancho_state_rpc::UserQuery};
+use std::net::IpAddr;
+use tonic::Request;
 use tools::tonic_utils::RpcRequest;
 
 pub async fn bancho_login(
-    mut bancho: BanchoRpcClient<Channel>,
+    mut bancho: BanchoRpc,
     body: axum::body::Bytes,
     ip: IpAddr,
 ) -> Result<Response, Error> {
@@ -48,8 +45,5 @@ pub async fn bancho_login(
 }
 
 pub async fn check_session(
-    mut bancho_state: BanchoStateRpcClient<Channel>,
-    session_id: BanchoClientToken,
-) -> Result<Response, Error> {
-   todo!()
+    mut bancho_state: BanchoStateRpc,
 }

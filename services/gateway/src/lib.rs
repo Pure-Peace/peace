@@ -19,7 +19,7 @@ use bancho::routes;
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
 use peace_pb::services::{bancho_rpc, bancho_state_rpc};
-use std::{fmt::Display, sync::Arc};
+use std::sync::Arc;
 use utoipa::OpenApi;
 
 define_rpc_client_config!(
