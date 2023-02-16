@@ -144,12 +144,10 @@ where
     T: ClapSerde,
 {
     File::open(f.path).map(|mut file| match f.ext_type {
-        ConfigFileType::Yaml => {
-            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
-        },
-        ConfigFileType::Json => {
-            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
-        },
+        ConfigFileType::Yaml =>
+            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
+        ConfigFileType::Json =>
+            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
         ConfigFileType::Toml => {
             let mut buf = Vec::new();
             file.read_to_end(&mut buf).unwrap();
@@ -212,8 +210,9 @@ pub mod macros {
 
     /// Add a `get` method to the given struct.
     ///
-    /// This method only initializes the configuration struct when it is called for the first time,
-    /// and subsequent calls will directly return the [`std::sync::Arc<T>`] of the struct.
+    /// This method only initializes the configuration struct when it is called
+    /// for the first time, and subsequent calls will directly return the
+    /// [`std::sync::Arc<T>`] of the struct.
     ///
     /// ```rust
     /// use clap::Parser;
@@ -295,18 +294,20 @@ pub mod macros {
     ///     error!("Unable to connect to the bancho gRPC service, please make sure the service is started.");
     ///     panic!("{}", err)
     /// });
-    ///
     /// ```
     macro_rules! macro_define_rpc_client_config {
         (service_name: $service_name: ty, config_name: $config_name: ty) => {
+            $crate::macro_define_rpc_client_config!(service_name: $service_name, config_name: $config_name, default_uri: "http://127.0.0.1:50051");
+        };
+        (service_name: $service_name: ty, config_name: $config_name: ty, default_uri: $default_uri: literal) => {
             $crate::macros::paste::paste! {
                 #[derive(
                     clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
                 )]
                 pub struct $config_name {
                     /// Service uri.
-                    #[default("http://127.0.0.1:50051".to_owned())]
-                    #[arg(long, default_value = "http://127.0.0.1:50051")]
+                    #[default($default_uri.to_owned())]
+                    #[arg(long, default_value = $default_uri)]
                     pub [<$service_name:snake _uri>]: String,
 
                     /// Service unix domain socket path.

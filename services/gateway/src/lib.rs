@@ -29,7 +29,8 @@ define_rpc_client_config!(
 
 define_rpc_client_config!(
     service_name: bancho_state_rpc,
-    config_name: BanchoStateRpcConfig
+    config_name: BanchoStateRpcConfig,
+    default_uri: "http://127.0.0.1:12345"
 );
 
 /// Command Line Interface (CLI) for Peace gateway service.
