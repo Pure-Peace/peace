@@ -8,6 +8,8 @@ use std::{collections::hash_map::Values, sync::Arc};
 use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 
+const SESSION_NOT_FOUND: &'static str = "session no exists";
+
 #[derive(Debug, Default, Clone)]
 pub struct BanchoState {
     pub user_sessions: Arc<RwLock<UserSessions>>,
@@ -76,24 +78,80 @@ impl BanchoStateRpc for BanchoState {
         Ok(Response::new(ExecSuccess {}))
     }
 
-    async fn is_user_session_exists(
+    async fn check_user_session_exists(
         &self,
         request: Request<RawUserQuery>,
-    ) -> Result<Response<IsUserSessionExistsResponse>, Status> {
-        Ok(Response::new(IsUserSessionExistsResponse {
-            session_id: {
-                if let Some(user) = self
-                    .user_sessions
-                    .read()
-                    .await
-                    .get(&request.into_inner().into())
-                {
-                    Some(user.read().await.session_id.to_owned())
-                } else {
-                    None
-                }
-            },
-        }))
+    ) -> Result<Response<UserSessionExistsResponse>, Status> {
+        if !self.user_sessions.read().await.exists(&request.into_inner().into())
+        {
+            return Err(Status::not_found(SESSION_NOT_FOUND))
+        }
+
+        Ok(Response::new(UserSessionExistsResponse {}))
+    }
+
+    async fn get_user_session(
+        &self,
+        request: Request<RawUserQuery>,
+    ) -> Result<Response<GetUserSessionResponse>, Status> {
+        let res = if let Some(user) =
+            self.user_sessions.read().await.get(&request.into_inner().into())
+        {
+            let user = user.read().await;
+            GetUserSessionResponse {
+                session_id: Some(user.session_id.to_owned()),
+                user_id: Some(user.user_id),
+                username: Some(user.session_id.to_owned()),
+                username_unicode: user
+                    .username_unicode
+                    .as_ref()
+                    .map(|s| s.to_owned()),
+            }
+        } else {
+            return Err(Status::not_found(SESSION_NOT_FOUND))
+        };
+
+        Ok(Response::new(res))
+    }
+
+    async fn get_user_session_with_fields(
+        &self,
+        request: Request<RawUserQueryWithFields>,
+    ) -> Result<Response<GetUserSessionResponse>, Status> {
+        let req = request.into_inner();
+        let query = req.query.ok_or(Status::not_found(SESSION_NOT_FOUND))?;
+
+        let res = if let Some(user) =
+            self.user_sessions.read().await.get(&query.into())
+        {
+            let mut res = GetUserSessionResponse::default();
+            let fields = UserSessionFields::from(req.fields);
+
+            let user = user.read().await;
+
+            if fields.intersects(UserSessionFields::SessionId) {
+                res.session_id = Some(user.session_id.to_owned());
+            }
+
+            if fields.intersects(UserSessionFields::UserId) {
+                res.user_id = Some(user.user_id);
+            }
+
+            if fields.intersects(UserSessionFields::Username) {
+                res.username = Some(user.session_id.to_owned());
+            }
+
+            if fields.intersects(UserSessionFields::UsernameUnicode) {
+                res.username_unicode =
+                    user.username_unicode.as_ref().map(|s| s.to_owned());
+            }
+
+            res
+        } else {
+            return Err(Status::not_found(SESSION_NOT_FOUND))
+        };
+
+        Ok(Response::new(res))
     }
 
     async fn get_all_sessions(

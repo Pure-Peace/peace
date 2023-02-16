@@ -17,8 +17,18 @@ service BanchoStateRPC {
   rpc CreateUserSession(CreateUserSessionRequest)
       returns (CreateUserSessionResponse);
   rpc DeleteUserSession(RawUserQuery) returns (ExecSuccess);
-  rpc IsUserSessionExists(RawUserQuery) returns (IsUserSessionExistsResponse);
 
+  // Check specified user session, if session not exists will return error(404)
+  rpc CheckUserSessionExists(RawUserQuery) returns (UserSessionExistsResponse);
+  // Get user info from sessions and returns `SessionId`, `UserId`, `Username`,
+  // `UsernameUnicode` fields, if session not exists will return error(404)
+  rpc GetUserSession(RawUserQuery) returns (GetUserSessionResponse);
+  // Get user info from sessions and and returns the specified fields, if
+  // session not exists will return error(404)
+  rpc GetUserSessionWithFields(RawUserQueryWithFields)
+      returns (GetUserSessionResponse);
+
+  // For debug
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 }
 
@@ -40,6 +50,11 @@ message RawUserQuery {
   QueryType query_type = 1;
   optional int32 int_val = 2;
   optional string string_val = 3;
+}
+
+message RawUserQueryWithFields {
+  RawUserQuery query = 1;
+  int32 fields = 2;
 }
 
 message RawBanchoPacketTarget {
@@ -92,7 +107,14 @@ message CreateUserSessionRequest {
 
 message CreateUserSessionResponse { string session_id = 1; }
 
-message IsUserSessionExistsResponse { optional string session_id = 1; }
+message UserSessionExistsResponse {}
+
+message GetUserSessionResponse {
+  optional string session_id = 1;
+  optional int32 user_id = 2;
+  optional string username = 3;
+  optional string username_unicode = 4;
+}
 
 message GetAllSessionsRequest {}
 

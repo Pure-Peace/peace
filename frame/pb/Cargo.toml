@@ -18,7 +18,7 @@ logs = []
 
 services = ["bancho", "bancho_state", "peace_db", "chat"]
 bancho = []
-bancho_state = []
+bancho_state = ["bitmask-enum"]
 peace_db = []
 chat = []
 
@@ -28,6 +28,9 @@ chat = []
 [dependencies]
 tonic = "0.8"
 prost = "0.11"
+
+bitmask-enum = { version = "2.1", optional = true }
+
 
 [build-dependencies]
 tonic-build = "0.8"
