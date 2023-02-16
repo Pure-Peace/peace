@@ -43,7 +43,7 @@ once_cell = "1.16"
 thiserror = "1.0"
 anyhow = "1.0"
 axum-client-ip = "0.3.0"
-
+derive_deref = "1.1"
 
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }

@@ -7,12 +7,13 @@ use axum::{
     response::{IntoResponse, Response},
 };
 pub use axum_client_ip::ClientIp;
+use derive_deref::Deref;
 use hyper::header::USER_AGENT;
 
 pub const OSU_VERSION: &str = "osu-version";
 pub const OSU_TOKEN: &str = "osu-token";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deref, Serialize, Deserialize)]
 pub struct BanchoClientVersion(pub String);
 
 #[async_trait]
@@ -38,7 +39,7 @@ where
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deref, Serialize, Deserialize)]
 pub struct BanchoClientToken(pub String);
 
 #[async_trait]
@@ -62,7 +63,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deref)]
 pub struct BanchoRequestBody(pub Bytes);
 
 #[async_trait]
@@ -86,7 +87,7 @@ where
             .unwrap_or(false)
         {
             return Err(Error::Anyhow(anyhow!("Invalid client user-agent."))
-                .into_response());
+                .into_response())
         }
 
         Ok(Self(
