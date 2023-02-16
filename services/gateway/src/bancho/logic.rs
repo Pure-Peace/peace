@@ -13,8 +13,13 @@ use tools::tonic_utils::RpcRequest;
 pub async fn bancho_login(
     mut bancho: BanchoRpc,
     body: axum::body::Bytes,
+    version: Option<BanchoClientVersion>,
     ip: IpAddr,
 ) -> Result<Response, Error> {
+    if version.is_none() {
+        return Err(Error::Unauthorized)
+    }
+
     let req =
         RpcRequest::new(parser::parse_osu_login_request_body(body.into())?)
             .client_ip_header(ip);
@@ -30,11 +35,11 @@ pub async fn bancho_login(
                 packet.unwrap_or("failed".into()),
             ),
         )
-            .into_response());
+            .into_response())
     }
 
     if packet.is_none() {
-        return Err(Error::Internal);
+        return Err(Error::Internal)
     }
 
     Ok((
@@ -46,4 +51,12 @@ pub async fn bancho_login(
 
 pub async fn check_session(
     mut bancho_state: BanchoStateRpc,
+    query: UserQuery,
+) -> Result<(), Error> {
+    bancho_state
+        .check_user_session_exists(Request::new(query.into()))
+        .await
+        .map_err(map_rpc_err)?;
+
+    Ok(())
 }

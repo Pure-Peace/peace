@@ -44,14 +44,15 @@ pub async fn bancho_post(
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
     if session_id.is_none() {
-        if version.is_none() {
-            return Err(Error::Unauthorized);
-        }
-
-        return logic::bancho_login(bancho, body, ip).await;
+        return logic::bancho_login(bancho, body, version, ip).await
     }
 
-    logic::check_session(bancho_state, session_id.unwrap()).await?;
+    let session_id = session_id.unwrap();
+    logic::check_session(
+        bancho_state,
+        UserQuery::SessionId(session_id.to_string()),
+    )
+    .await?;
 
     /* println!("{:?} {} {}", osu_token, osu_version, ip);
     println!("{:?}", body); */
