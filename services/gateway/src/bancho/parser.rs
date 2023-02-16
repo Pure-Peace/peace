@@ -1,52 +1,52 @@
-use peace_api::error::{map_err, Error};
+use crate::Error;
 use peace_pb::services::bancho_rpc::{ClientHashes, LoginRequest};
+
+pub fn split_string(s: &str, sep: char) -> Vec<String> {
+    s.trim()
+        .split(sep)
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().to_owned())
+        .collect::<Vec<String>>()
+}
 
 pub fn parse_osu_login_request_body(
     body: Vec<u8>,
 ) -> Result<LoginRequest, Error> {
-    let body = String::from_utf8(body).map_err(map_err)?;
+    let body = String::from_utf8(body)
+        .map_err(|_| Error::Login("invalid request body".into()))?;
 
-    let mut lines = body
-        .split('\n')
-        .filter(|i| i != &"")
-        .map(|s| s.to_owned())
-        .collect::<Vec<String>>();
+    let mut lines = split_string(&body, '\n');
 
     if lines.len() < 3 {
-        return Err(Error::Anyhow(anyhow!("Invalid login data.")));
+        return Err(Error::Login("invalid data".into()));
     }
 
     let username = std::mem::take(&mut lines[0]);
     let password = std::mem::take(&mut lines[1]);
 
-    if username.len() < 2 || password.len() != 32 {
-        return Err(Error::Anyhow(anyhow!("Invalid username or password.")));
+    if username.is_empty() || password.len() != 32 {
+        return Err(Error::Login("invalid user info".into()));
     }
 
-    let mut client_info =
-        lines[2].split('|').map(|s| s.to_owned()).collect::<Vec<String>>();
+    let mut client_info = split_string(&lines[2], '|');
 
     if client_info.len() < 5 {
-        return Err(Error::Anyhow(anyhow!("Invalid client info.")));
+        return Err(Error::Login("invalid client info".into()));
     }
 
     let client_version = std::mem::take(&mut client_info[0]);
 
     // Parse utc offset
-    let utc_offset = client_info[1].parse::<i32>().map_err(map_err)?;
+    let utc_offset = client_info[1].parse::<i32>().unwrap_or(0);
 
     // Display city in bancho or not
     let display_city = client_info[2].as_str() == "1";
 
     // Client hashes
-    let mut client_hashes = std::mem::take(&mut client_info[3])
-        .split(':')
-        .filter(|i| i != &"")
-        .map(|s| s.to_owned())
-        .collect::<Vec<String>>();
+    let mut client_hashes = split_string(&client_info[3], ':');
 
     if client_hashes.len() < 5 {
-        return Err(Error::Anyhow(anyhow!("Invalid client hashes.")));
+        return Err(Error::Login("invalid client hashes".into()));
     }
 
     // Only allow friend's pm

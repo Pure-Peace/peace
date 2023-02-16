@@ -1,10 +1,10 @@
 use super::{constants::CHO_PROTOCOL, parser};
-use crate::{utils::map_rpc_err, BanchoRpc, BanchoStateRpc};
+use crate::{BanchoRpc, BanchoStateRpc, Error};
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use peace_api::{error::Error, extractors::BanchoClientVersion};
+use peace_api::extractors::BanchoClientVersion;
 use peace_pb::services::{bancho_rpc::LoginReply, bancho_state_rpc::UserQuery};
 use std::net::IpAddr;
 use tonic::Request;
@@ -17,15 +17,18 @@ pub async fn bancho_login(
     ip: IpAddr,
 ) -> Result<Response, Error> {
     if version.is_none() {
-        return Err(Error::Unauthorized)
+        return Err(Error::Login("invalid client version".into()));
     }
 
     let req =
         RpcRequest::new(parser::parse_osu_login_request_body(body.into())?)
             .client_ip_header(ip);
 
-    let LoginReply { session_id, packet } =
-        bancho.login(req.to_request()).await.map_err(map_rpc_err)?.into_inner();
+    let LoginReply { session_id, packet } = bancho
+        .login(req.to_request())
+        .await
+        .map_err(|err| Error::Login(err.message().into()))?
+        .into_inner();
 
     if session_id.is_none() {
         return Ok((
@@ -35,11 +38,7 @@ pub async fn bancho_login(
                 packet.unwrap_or("failed".into()),
             ),
         )
-            .into_response())
-    }
-
-    if packet.is_none() {
-        return Err(Error::Internal)
+            .into_response());
     }
 
     Ok((
@@ -56,7 +55,7 @@ pub async fn check_session(
     bancho_state
         .check_user_session_exists(Request::new(query.into()))
         .await
-        .map_err(map_rpc_err)?;
+        .map_err(|err| Error::Login(err.message().into()))?;
 
     Ok(())
 }

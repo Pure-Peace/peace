@@ -7,7 +7,9 @@ extern crate peace_api;
 
 pub mod apidocs;
 pub mod bancho;
-pub mod utils;
+mod error;
+
+pub use error::*;
 
 use apidocs::GatewayApiDocs;
 use axum::{

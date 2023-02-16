@@ -1,15 +1,12 @@
 use super::logic;
-use crate::{BanchoRpc, BanchoStateRpc};
+use crate::{BanchoRpc, BanchoStateRpc, Error};
 use axum::{
     extract::Path,
     response::{IntoResponse, Response},
     Extension,
 };
-use peace_api::{
-    error::Error,
-    extractors::{
-        BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
-    },
+use peace_api::extractors::{
+    BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
 };
 use peace_pb::services::bancho_state_rpc::UserQuery;
 
@@ -44,7 +41,7 @@ pub async fn bancho_post(
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
     if session_id.is_none() {
-        return logic::bancho_login(bancho, body, version, ip).await
+        return logic::bancho_login(bancho, body, version, ip).await;
     }
 
     let session_id = session_id.unwrap();
