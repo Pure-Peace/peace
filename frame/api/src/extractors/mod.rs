@@ -9,6 +9,7 @@ use axum::{
 pub use axum_client_ip::ClientIp;
 use derive_deref::Deref;
 use hyper::header::USER_AGENT;
+use std::fmt::Display;
 
 pub const OSU_VERSION: &str = "osu-version";
 pub const OSU_TOKEN: &str = "osu-token";
@@ -39,6 +40,12 @@ where
     }
 }
 
+impl Display for BanchoClientVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 #[derive(Debug, Deref, Serialize, Deserialize)]
 pub struct BanchoClientToken(pub String);
 
@@ -60,6 +67,12 @@ where
             .and_then(|s| Some(s.to_owned()))
             .map(Self)
             .ok_or(anyhow!("`osu-token` header is required.").into())
+    }
+}
+
+impl Display for BanchoClientToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -87,7 +100,7 @@ where
             .unwrap_or(false)
         {
             return Err(Error::Anyhow(anyhow!("Invalid client user-agent."))
-                .into_response())
+                .into_response());
         }
 
         Ok(Self(
