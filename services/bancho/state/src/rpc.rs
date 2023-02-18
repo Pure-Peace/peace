@@ -82,12 +82,16 @@ impl BanchoStateRpc for BanchoState {
         &self,
         request: Request<RawUserQuery>,
     ) -> Result<Response<UserSessionExistsResponse>, Status> {
-        if !self.user_sessions.read().await.exists(&request.into_inner().into())
-        {
-            return Err(Status::not_found(SESSION_NOT_FOUND))
+        let user =
+            self.user_sessions.read().await.get(&request.into_inner().into());
+
+        if user.is_none() {
+            return Err(Status::not_found(SESSION_NOT_FOUND));
         }
 
-        Ok(Response::new(UserSessionExistsResponse {}))
+        Ok(Response::new(UserSessionExistsResponse {
+            user_id: user.unwrap().read().await.user_id,
+        }))
     }
 
     async fn get_user_session(
@@ -108,7 +112,7 @@ impl BanchoStateRpc for BanchoState {
                     .map(|s| s.to_owned()),
             }
         } else {
-            return Err(Status::not_found(SESSION_NOT_FOUND))
+            return Err(Status::not_found(SESSION_NOT_FOUND));
         };
 
         Ok(Response::new(res))
@@ -148,7 +152,7 @@ impl BanchoStateRpc for BanchoState {
 
             res
         } else {
-            return Err(Status::not_found(SESSION_NOT_FOUND))
+            return Err(Status::not_found(SESSION_NOT_FOUND));
         };
 
         Ok(Response::new(res))

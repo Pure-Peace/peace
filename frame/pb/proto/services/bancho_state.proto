@@ -84,16 +84,13 @@ message BatchEnqueueBanchoPacketsRequest {
   repeated EnqueueBanchoPacketsRequest requests = 1;
 }
 
-message DequeueBanchoPacketsRequest {
-  RawBanchoPacketTarget target = 1;
-  bytes value = 2;
-}
+message DequeueBanchoPacketsRequest { RawBanchoPacketTarget target = 1; }
 
 message BatchDequeueBanchoPacketsRequest {
   repeated DequeueBanchoPacketsRequest requests = 1;
 }
 
-message BanchoPackets { bytes packets = 1; }
+message BanchoPackets { bytes data = 1; }
 
 message CreateUserSessionRequest {
   int32 user_id = 1;
@@ -107,7 +104,7 @@ message CreateUserSessionRequest {
 
 message CreateUserSessionResponse { string session_id = 1; }
 
-message UserSessionExistsResponse {}
+message UserSessionExistsResponse { int32 user_id = 1; }
 
 message GetUserSessionResponse {
   optional string session_id = 1;

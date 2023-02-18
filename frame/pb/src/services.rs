@@ -50,14 +50,18 @@ pub mod bancho_state_rpc {
     impl From<RawUserQuery> for UserQuery {
         fn from(raw: RawUserQuery) -> UserQuery {
             match raw.query_type() {
-                QueryType::SessionId =>
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
-                QueryType::UserId =>
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
-                QueryType::Username =>
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
-                QueryType::UsernameUnicode =>
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
+                QueryType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                QueryType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
             }
         }
     }
@@ -101,16 +105,53 @@ pub mod bancho_state_rpc {
     impl From<RawBanchoPacketTarget> for BanchoPacketTarget {
         fn from(raw: RawBanchoPacketTarget) -> BanchoPacketTarget {
             match raw.target_type() {
-                TargetType::SessionId =>
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::UserId =>
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
-                TargetType::Username =>
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::UsernameUnicode =>
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::Channel =>
-                    Self::Channel(raw.string_val.expect(CONVERT_PANIC)),
+                TargetType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Channel => {
+                    Self::Channel(raw.string_val.expect(CONVERT_PANIC))
+                },
+            }
+        }
+    }
+
+    impl From<BanchoPacketTarget> for RawBanchoPacketTarget {
+        fn from(target: BanchoPacketTarget) -> RawBanchoPacketTarget {
+            match target {
+                BanchoPacketTarget::SessionId(session_id) => Self {
+                    target_type: TargetType::SessionId as i32,
+                    int_val: None,
+                    string_val: Some(session_id),
+                },
+                BanchoPacketTarget::UserId(user_id) => Self {
+                    target_type: TargetType::UserId as i32,
+                    int_val: Some(user_id),
+                    string_val: None,
+                },
+                BanchoPacketTarget::Username(username) => Self {
+                    target_type: TargetType::Username as i32,
+                    int_val: None,
+                    string_val: Some(username),
+                },
+                BanchoPacketTarget::UsernameUnicode(username_unicode) => Self {
+                    target_type: TargetType::UsernameUnicode as i32,
+                    int_val: None,
+                    string_val: Some(username_unicode),
+                },
+                BanchoPacketTarget::Channel(channel) => Self {
+                    target_type: TargetType::Channel as i32,
+                    int_val: None,
+                    string_val: Some(channel),
+                },
             }
         }
     }
