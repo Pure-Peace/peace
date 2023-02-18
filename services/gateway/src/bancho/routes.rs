@@ -5,10 +5,13 @@ use axum::{
     response::{IntoResponse, Response},
     Extension,
 };
+use bancho_packets::PacketReader;
 use peace_api::extractors::{
     BanchoClientToken, BanchoClientVersion, BanchoRequestBody, ClientIp,
 };
-use peace_pb::services::bancho_state_rpc::UserQuery;
+use peace_pb::services::bancho_state_rpc::{
+    BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
+};
 
 /// Bancho get handler
 #[utoipa::path(
@@ -36,25 +39,56 @@ pub async fn bancho_post(
     session_id: Option<BanchoClientToken>,
     version: Option<BanchoClientVersion>,
     ClientIp(ip): ClientIp,
-    Extension(bancho): Extension<BanchoRpc>,
-    Extension(bancho_state): Extension<BanchoStateRpc>,
+    Extension(mut bancho): Extension<BanchoRpc>,
+    Extension(mut bancho_state): Extension<BanchoStateRpc>,
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
     if session_id.is_none() {
-        return logic::bancho_login(bancho, body, version, ip).await;
+        return logic::bancho_login(&mut bancho, body, version, ip).await;
     }
 
     let session_id = session_id.unwrap();
-    logic::check_session(
-        bancho_state,
-        UserQuery::SessionId(session_id.to_string()),
+    let user_id = logic::check_user_session(
+        &mut bancho_state,
+        UserQuery::SessionId(session_id.to_owned()),
     )
     .await?;
 
-    /* println!("{:?} {} {}", osu_token, osu_version, ip);
-    println!("{:?}", body); */
+    let mut reader = PacketReader::new(&body);
 
-    Ok("ok".into_response())
+    while let Some(packet) = reader.next() {
+        debug!(
+            "bancho packet received: {packet:?} (<{user_id}> [{session_id}])"
+        );
+
+        if let Err(err) = logic::bancho_packet_handle(
+            &session_id,
+            user_id,
+            &packet,
+            &mut bancho,
+        )
+        .await
+        {
+            error!("bancho packet ({packet:?}) handle err: {err:?} (<{user_id}> [{session_id}])")
+        }
+    }
+
+    let packets = bancho_state
+        .dequeue_bancho_packets(DequeueBanchoPacketsRequest {
+            target: Some(
+                BanchoPacketTarget::SessionId(session_id.to_owned()).into(),
+            ),
+        })
+        .await;
+
+    if let Err(err) = packets {
+        error!(
+            "dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])"
+        );
+        return Ok("ok".into_response());
+    }
+
+    return Ok(packets.unwrap().into_inner().data.into_response());
 }
 
 /// Bancho get_screenshot
