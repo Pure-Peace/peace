@@ -25,7 +25,7 @@ required-features = ["cli"]
 
 
 [dependencies]
-sea-orm = { version = "^0", features = [
+sea-orm = { version = "0.11", features = [
     "sqlx-all",
     "runtime-tokio-rustls",
     "macros",
@@ -43,10 +43,10 @@ paste = "1.0"
 
 # optional
 tokio = { version = "1", features = ["rt", "macros"], optional = true }
-sea-orm-migration = { version = "0.10.5", optional = true, features = [
+sea-orm-migration = { version = "0.11", optional = true, features = [
     "runtime-tokio-rustls",
 ] }
-sea-orm-cli = { version = "*", optional = true, default-features = false, features = [
+sea-orm-cli = { version = "0.11", optional = true, default-features = false, features = [
     "codegen",
     "cli",
     "runtime-tokio-rustls",
