@@ -1,15 +1,18 @@
-pub use clap::Parser;
-pub use clap_serde_derive::ClapSerde;
-pub use paste;
-pub use peace_logs::{log::LevelFilter, LogLevel};
-pub use sea_orm::{ConnectOptions, DatabaseConnection, DbErr};
-pub use serde::{Deserialize, Serialize};
+pub mod ____private {
+    pub use clap_4 as clap;
+    pub use clap_serde_derive::ClapSerde;
+    pub use paste;
+    pub use peace_logs::{log::LevelFilter, LogLevel};
+    pub use sea_orm::{ConnectOptions, DatabaseConnection, DbErr};
+    pub use serde::{Deserialize, Serialize};
+}
 
 /// Create a configuration structure for the specified database.
 ///
 /// [clap #3513](https://github.com/clap-rs/clap/issues/3513)
-/// Due to `clap` currently does not support adding a prefix to the configuration struct,
-/// this declarative macro is currently used to reuse configuration items.
+/// Due to `clap` currently does not support adding a prefix to the
+/// configuration struct, this declarative macro is currently used to reuse
+/// configuration items.
 ///
 /// examples
 ///
@@ -22,13 +25,13 @@ pub use serde::{Deserialize, Serialize};
 #[macro_export]
 macro_rules! define_db_config {
     ($struct_name: ident, $prefix: ident) => {
-        $crate::macros::paste::paste! {
+        $crate::macros::____private::paste::paste! {
             #[allow(non_snake_case)]
             mod [<__def_ $struct_name _mod__>] {
-                use $crate::macros::{Parser, ClapSerde, Deserialize, Serialize};
+                use $crate::macros::____private::{clap, ClapSerde, Deserialize, Serialize};
 
                 /// Database configurations
-                #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+                #[derive(clap::Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
                 pub struct $struct_name {
                     /// Database connection URL.
                     #[default("protocol://username:password@host/database".to_string())]
@@ -68,9 +71,9 @@ macro_rules! define_db_config {
                     pub [<$prefix _db_sqlx_logging>]: bool,
 
                     /// Set SQLx statement logging level (default [`LogLevel::Info`]) (ignored if `sqlx_logging` is false).
-                    #[default($crate::macros::LogLevel::Info)]
+                    #[default($crate::macros::____private::LogLevel::Info)]
                     #[arg(long, value_enum, default_value = "info")]
-                    pub [<$prefix _db_sqlx_logging_level>]: $crate::macros::LogLevel,
+                    pub [<$prefix _db_sqlx_logging_level>]: $crate::macros::____private::LogLevel,
 
                     /// Set schema search path (PostgreSQL only).
                     #[arg(long)]
@@ -88,10 +91,10 @@ macro_rules! define_db_config {
 #[macro_export]
 macro_rules! impl_db_config {
     ($struct_name: ident, $prefix: ident) => {
-        $crate::macros::paste::paste! {
+        $crate::macros::____private::paste::paste! {
             impl $crate::DbConfig for $struct_name {
-                fn configured_opt(&self) -> $crate::macros::ConnectOptions {
-                    let mut opt = $crate::macros::ConnectOptions::new(self.[<$prefix _db_url>].clone());
+                fn configured_opt(&self) -> $crate::macros::____private::ConnectOptions {
+                    let mut opt = $crate::macros::____private::ConnectOptions::new(self.[<$prefix _db_url>].clone());
 
                     if let Some(v) = self.[<$prefix _db_max_connections>] {
                         opt.max_connections(v);
@@ -123,7 +126,7 @@ macro_rules! impl_db_config {
                         opt.set_schema_search_path(v);
                     }
                     opt.sqlx_logging(self.[<$prefix _db_sqlx_logging>]);
-                    opt.sqlx_logging_level($crate::macros::LevelFilter::from(
+                    opt.sqlx_logging_level($crate::macros::____private::LevelFilter::from(
                         self.[<$prefix _db_sqlx_logging_level>],
                     ));
 
