@@ -1,4 +1,5 @@
 use bancho_packets::{server, PacketBuilder};
+use peace_dal::{db::peace::Repository, DatabaseConnection};
 use peace_pb::services::{
     bancho_rpc::{bancho_rpc_server::BanchoRpc, *},
     bancho_state_rpc::{bancho_state_rpc_client::BanchoStateRpcClient, *},
@@ -9,11 +10,15 @@ use tonic::{transport::Channel, Request, Response, Status};
 #[derive(Debug, Clone)]
 pub struct Bancho {
     pub state_rpc: BanchoStateRpcClient<Channel>,
+    pub db_conn: DatabaseConnection,
 }
 
 impl Bancho {
-    pub fn new(state_rpc: BanchoStateRpcClient<Channel>) -> Self {
-        Self { state_rpc }
+    pub fn new(
+        state_rpc: BanchoStateRpcClient<Channel>,
+        db_conn: DatabaseConnection,
+    ) -> Self {
+        Self { state_rpc, db_conn }
     }
 }
 
@@ -35,12 +40,11 @@ impl BanchoRpc for Bancho {
         request: Request<LoginRequest>,
     ) -> Result<Response<LoginReply>, Status> {
         let client_ip = ClientIp::from_request(&request)?;
+        let req = request.into_inner();
+
+        let user_id = 1;
 
         let mut state = self.state_rpc.clone();
-
-        // TODO: Check password and get user id
-        let req = request.into_inner();
-        let user_id = 1;
 
         let resp = state
             .create_user_session(Request::new(CreateUserSessionRequest {
@@ -48,12 +52,14 @@ impl BanchoRpc for Bancho {
                 username: req.username.to_owned(),
                 username_unicode: None,
                 privileges: 1,
-                bancho_privileges: 1,
-                region: "".to_owned(),
-                ip: client_ip.to_string(),
+                connection_info: Some(ConnectionInfo {
+                    ip: client_ip.to_string(),
+                    region: "".into(),
+                    latitude: 0.,
+                    longitude: 0.,
+                }),
             }))
-            .await
-            .unwrap()
+            .await?
             .into_inner();
 
         info!(target: "bancho.login", "user <{}:{user_id}> logged in (session_id: {})", req.username, resp.session_id);
