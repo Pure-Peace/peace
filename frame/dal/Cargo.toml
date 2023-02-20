@@ -8,9 +8,15 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 [features]
-default = ["cli", "migration"]
+default = ["cli", "sea_cli", "migration"]
 migration = ["sea-orm-migration", "tokio"]
-cli = ["sea-orm-cli", "clap_3", "dotenvy", "tokio"]
+sea_cli = ["sea-orm-cli", "clap_3", "dotenvy", "tokio"]
+cli = ["dotenvy", "tokio"]
+
+[[bin]]
+name = "db-cli"
+path = "src/cli.rs"
+required-features = ["sea_cli"]
 
 
 [[bin]]
@@ -18,9 +24,10 @@ name = "db-peace-migrate"
 path = "src/db/peace/migration/migrate.rs"
 required-features = ["migration"]
 
+
 [[bin]]
-name = "db-cli"
-path = "src/cli.rs"
+name = "db-peace-cli"
+path = "src/db/peace/cli.rs"
 required-features = ["cli"]
 
 

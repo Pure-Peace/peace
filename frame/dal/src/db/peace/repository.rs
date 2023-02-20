@@ -13,18 +13,19 @@ impl Repository {
     pub async fn create_user(
         db: &DatabaseConnection,
         name: String,
-        name_safe: String,
         name_unicode: Option<String>,
-        name_unicode_safe: Option<String>,
         password: String,
         email: String,
         country: Option<String>,
     ) -> Result<InsertResult<users::ActiveModel>, DbErr> {
         User::insert(users::ActiveModel {
-            name: Set(name),
-            name_safe: Set(name_safe),
-            name_unicode: Set(name_unicode),
-            name_unicode_safe: Set(name_unicode_safe),
+            name: Set(name.trim().to_string()),
+            name_safe: Set(name.trim().to_ascii_lowercase().replace(' ', "_")),
+            name_unicode: Set(name_unicode
+                .as_ref()
+                .map(|s| s.trim().to_owned())),
+            name_unicode_safe: Set(name_unicode
+                .map(|s| s.trim().to_ascii_lowercase().replace(' ', "_"))),
             password: Set(password),
             email: Set(email),
             country: Set(country),
