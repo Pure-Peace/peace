@@ -1,8 +1,7 @@
 use crate::{User, UserSessions};
 use futures::future::join_all;
 use peace_pb::services::bancho_state_rpc::{
-    bancho_state_rpc_server::BanchoStateRpc,
-    get_all_sessions_response::UserData, *,
+    bancho_state_rpc_server::BanchoStateRpc, *,
 };
 use std::{collections::hash_map::Values, sync::Arc};
 use tokio::sync::RwLock;
@@ -86,7 +85,7 @@ impl BanchoStateRpc for BanchoState {
             self.user_sessions.read().await.get(&request.into_inner().into());
 
         if user.is_none() {
-            return Err(Status::not_found(SESSION_NOT_FOUND));
+            return Err(Status::not_found(SESSION_NOT_FOUND))
         }
 
         Ok(Response::new(UserSessionExistsResponse {
@@ -112,7 +111,7 @@ impl BanchoStateRpc for BanchoState {
                     .map(|s| s.to_owned()),
             }
         } else {
-            return Err(Status::not_found(SESSION_NOT_FOUND));
+            return Err(Status::not_found(SESSION_NOT_FOUND))
         };
 
         Ok(Response::new(res))
@@ -152,7 +151,7 @@ impl BanchoStateRpc for BanchoState {
 
             res
         } else {
-            return Err(Status::not_found(SESSION_NOT_FOUND));
+            return Err(Status::not_found(SESSION_NOT_FOUND))
         };
 
         Ok(Response::new(res))
@@ -167,8 +166,18 @@ impl BanchoStateRpc for BanchoState {
         async fn collect_data<K>(
             values: Values<'_, K, Arc<RwLock<User>>>,
         ) -> Vec<UserData> {
-            join_all(values.map(|u| async { u.read().await.to_owned().into() }))
-                .await
+            join_all(values.map(|u| async {
+                let u = u.read().await;
+                UserData {
+                    session_id: u.session_id.to_owned(),
+                    user_id: u.user_id,
+                    username: u.username.to_owned(),
+                    username_unicode: u.username_unicode.to_owned(),
+                    privileges: u.privileges,
+                    connection_info: Some(u.connection_info.to_owned()),
+                }
+            }))
+            .await
         }
 
         let indexed_by_session_id =

@@ -92,14 +92,19 @@ message BatchDequeueBanchoPacketsRequest {
 
 message BanchoPackets { bytes data = 1; }
 
+message ConnectionInfo {
+  string ip = 1;
+  string region = 2;
+  double latitude = 3;
+  double longitude = 4;
+}
+
 message CreateUserSessionRequest {
   int32 user_id = 1;
   string username = 2;
   optional string username_unicode = 3;
   int32 privileges = 4;
-  int32 bancho_privileges = 5;
-  string region = 7;
-  string ip = 8;
+  ConnectionInfo connection_info = 5;
 }
 
 message CreateUserSessionResponse { string session_id = 1; }
@@ -115,17 +120,16 @@ message GetUserSessionResponse {
 
 message GetAllSessionsRequest {}
 
+message UserData {
+  string session_id = 1;
+  int32 user_id = 2;
+  string username = 3;
+  optional string username_unicode = 4;
+  int32 privileges = 5;
+  ConnectionInfo connection_info = 6;
+}
+
 message GetAllSessionsResponse {
-  message UserData {
-    string session_id = 1;
-    int32 user_id = 2;
-    string username = 3;
-    optional string username_unicode = 4;
-    int32 privileges = 5;
-    int32 bancho_privileges = 6;
-    string region = 7;
-    string ip = 8;
-  }
   uint64 len = 1;
   repeated UserData indexed_by_session_id = 2;
   repeated UserData indexed_by_user_id = 3;

@@ -1,13 +1,11 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use peace_pb::services::bancho_state_rpc::{
-    get_all_sessions_response::UserData, CreateUserSessionRequest, UserQuery,
+    ConnectionInfo, CreateUserSessionRequest, UserQuery,
 };
 use tokio::sync::RwLock;
-use tools_derive::convert;
 use uuid::Uuid;
 
-#[convert(UserData)]
 #[derive(Debug, Default, Clone)]
 pub struct User {
     pub session_id: String,
@@ -15,9 +13,7 @@ pub struct User {
     pub username: String,
     pub username_unicode: Option<String>,
     pub privileges: i32,
-    pub bancho_privileges: i32,
-    pub region: String,
-    pub ip: String,
+    pub connection_info: ConnectionInfo,
 }
 
 impl From<CreateUserSessionRequest> for User {
@@ -28,9 +24,7 @@ impl From<CreateUserSessionRequest> for User {
             username,
             username_unicode,
             privileges,
-            bancho_privileges,
-            region,
-            ip,
+            connection_info,
         } = res;
 
         Self {
@@ -39,9 +33,7 @@ impl From<CreateUserSessionRequest> for User {
             username,
             username_unicode,
             privileges,
-            bancho_privileges,
-            region,
-            ip,
+            connection_info: connection_info.unwrap(),
         }
     }
 }
@@ -122,15 +114,12 @@ impl UserSessions {
     pub fn get(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>> {
         match query {
             UserQuery::UserId(user_id) => self.indexed_by_user_id.get(user_id),
-            UserQuery::Username(username) => {
-                self.indexed_by_username.get(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.get(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.get(session_id)
-            },
+            UserQuery::Username(username) =>
+                self.indexed_by_username.get(username),
+            UserQuery::UsernameUnicode(username_unicode) =>
+                self.indexed_by_username_unicode.get(username_unicode),
+            UserQuery::SessionId(session_id) =>
+                self.indexed_by_session_id.get(session_id),
         }
         .cloned()
     }
@@ -138,18 +127,14 @@ impl UserSessions {
     #[inline]
     pub fn exists(&self, query: &UserQuery) -> bool {
         match query {
-            UserQuery::UserId(user_id) => {
-                self.indexed_by_user_id.contains_key(user_id)
-            },
-            UserQuery::Username(username) => {
-                self.indexed_by_username.contains_key(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.contains_key(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.contains_key(session_id)
-            },
+            UserQuery::UserId(user_id) =>
+                self.indexed_by_user_id.contains_key(user_id),
+            UserQuery::Username(username) =>
+                self.indexed_by_username.contains_key(username),
+            UserQuery::UsernameUnicode(username_unicode) =>
+                self.indexed_by_username_unicode.contains_key(username_unicode),
+            UserQuery::SessionId(session_id) =>
+                self.indexed_by_session_id.contains_key(session_id),
         }
     }
 

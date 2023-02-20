@@ -21,12 +21,16 @@ pub async fn bancho_login(
     ip: IpAddr,
 ) -> Result<Response, Error> {
     if version.is_none() {
-        return Err(Error::Login("empty client version".into()));
+        return Err(Error::Login("empty client version".into()))
     }
 
-    let req =
-        RpcRequest::new(parser::parse_osu_login_request_body(body.into())?)
-            .client_ip_header(ip);
+    let data = parser::parse_osu_login_request_body(body.into())?;
+
+    if data.client_version != version.unwrap().as_str() {
+        return Err(Error::Login("mismatched client version".into()))
+    }
+
+    let req = RpcRequest::new(data).client_ip_header(ip);
 
     let LoginReply { session_id, packet } = bancho
         .login(req.to_request())
@@ -42,7 +46,7 @@ pub async fn bancho_login(
                 packet.unwrap_or("failed".into()),
             ),
         )
-            .into_response());
+            .into_response())
     }
 
     Ok((
