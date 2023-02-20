@@ -51,7 +51,9 @@ sea-orm-cli = { version = "0.11", optional = true, default-features = false, fea
     "cli",
     "runtime-tokio-rustls",
 ] }
-clap_3 = { package = "clap", version = "^3.2", optional = true }
+clap_3 = { package = "clap", version = "^3.2", optional = true, features = [
+    "derive",
+] }
 dotenvy = { version = "^0.15", optional = true }
 
 
