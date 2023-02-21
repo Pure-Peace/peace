@@ -50,3 +50,4 @@ sea-orm-migration = { version = "0.11", optional = true, features = [
 dotenvy = { version = "^0.15", optional = true }
 
 peace_dal = { path = "../../frame/dal" }
+peace_domain = { path = "../../frame/domain", features = ["domain_peace"] }

@@ -1,7 +1,11 @@
 use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use peace_dal::{Database, EntityTrait, Set};
-use peace_db::peace::entity::{users, users::Entity as User};
+use peace_db::peace::{
+    entity::{users, users::Entity as User},
+    Repository,
+};
+use peace_domain::peace::CreateUser;
 
 #[derive(Debug, Parser)]
 #[clap(version, author, about = "Peace db CLI")]
@@ -48,17 +52,16 @@ async fn main() {
             .unwrap();
 
             println!("Creating user...");
-            User::insert(users::ActiveModel {
-                name: Set(username.trim().to_string()),
-                name_safe: Set(username
-                    .trim()
-                    .to_ascii_lowercase()
-                    .replace(' ', "_")),
-                password: Set(password),
-                email: Set(email),
-                ..Default::default()
-            })
-            .exec(&db)
+            Repository::create_user(
+                &db,
+                CreateUser {
+                    name: username.into(),
+                    name_unicode: None,
+                    password: password.into(),
+                    email: email.into(),
+                    country: None,
+                },
+            )
             .await
             .unwrap();
             println!("Success")

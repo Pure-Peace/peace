@@ -1,6 +1,7 @@
 use super::entity;
 
 use entity::{users, users::Entity as User};
+use peace_domain::peace::CreateUser;
 use sea_orm::*;
 
 pub struct Repository;
@@ -12,26 +13,21 @@ impl Repository {
 
     pub async fn create_user(
         db: &DatabaseConnection,
-        name: String,
-        name_unicode: Option<String>,
-        password: String,
-        email: String,
-        country: Option<String>,
+        creat_user: CreateUser,
     ) -> Result<InsertResult<users::ActiveModel>, DbErr> {
-        fn to_safe(s: &String) -> String {
-            s.trim().to_ascii_lowercase().replace(' ', "_")
-        }
-
         User::insert(users::ActiveModel {
-            name: Set(name.trim().to_owned()),
-            name_safe: Set(to_safe(&name)),
-            name_unicode: Set(name_unicode
+            name: Set(creat_user.name.as_ref().to_owned()),
+            name_safe: Set(creat_user.name.safe_name().into()),
+            name_unicode: Set(creat_user
+                .name_unicode
                 .as_ref()
-                .map(|s| s.trim().to_owned())),
-            name_unicode_safe: Set(name_unicode.as_ref().map(to_safe)),
-            password: Set(password),
-            email: Set(email),
-            country: Set(country),
+                .map(|n| n.as_ref().to_owned())),
+            name_unicode_safe: Set(creat_user
+                .name_unicode
+                .map(|u| u.safe_name().into())),
+            password: Set(creat_user.password.into()),
+            email: Set(creat_user.email.into()),
+            country: Set(creat_user.country),
             ..Default::default()
         })
         .exec(db)
