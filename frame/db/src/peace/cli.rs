@@ -1,11 +1,8 @@
 use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
-use peace_dal::{Database, EntityTrait, Set};
-use peace_db::peace::{
-    entity::{users, users::Entity as User},
-    Repository,
-};
-use peace_domain::peace::CreateUser;
+use peace_dal::Database;
+use peace_db::peace::Repository;
+use peace_domain::peace::{CreateUser, Email, Password, Username};
 
 #[derive(Debug, Parser)]
 #[clap(version, author, about = "Peace db CLI")]
@@ -25,6 +22,9 @@ pub enum Commands {
         username: String,
 
         #[arg(long)]
+        username_unicode: Option<String>,
+
+        #[arg(long)]
         password: String,
 
         #[arg(long)]
@@ -42,6 +42,7 @@ async fn main() {
         Commands::CreatePeaceUser {
             database_url,
             username,
+            username_unicode,
             password,
             email,
         } => {
@@ -55,10 +56,12 @@ async fn main() {
             Repository::create_user(
                 &db,
                 CreateUser {
-                    name: username.into(),
-                    name_unicode: None,
-                    password: password.into(),
-                    email: email.into(),
+                    name: Username::from_str(username.as_str()).unwrap(),
+                    name_unicode: username_unicode
+                        .as_ref()
+                        .map(|s| Username::from_str(s.as_str()).unwrap()),
+                    password: Password::hash_password(password).unwrap(),
+                    email: Email::from_str(email.as_str()).unwrap(),
                     country: None,
                 },
             )
