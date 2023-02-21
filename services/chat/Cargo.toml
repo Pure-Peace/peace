@@ -36,4 +36,4 @@ peace_rpc = { path = "../../frame/rpc", features = [
     "admin_endpoints",
     "reflection",
 ] }
-peace_dal = { path = "../../frame/dal" }
+peace_db = { path = "../../frame/db", default-features = false }

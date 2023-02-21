@@ -1,6 +1,5 @@
 [package]
-name = "peace_dal"
-description = "Peace Data Access Layer (DAL)"
+name = "peace_db"
 version = "0.1.0"
 edition = "2021"
 authors = ["Pure-Peace"]
@@ -8,13 +7,22 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 [features]
-default = ["sea_cli"]
-sea_cli = ["sea-orm-cli", "clap_3", "dotenvy", "tokio"]
+default = ["db_peace_migration", "db_peace_cli"]
+db_peace_migration = ["sea-orm-migration", "tokio"]
+db_peace_cli = ["dotenvy", "tokio", "db_peace"]
+db_peace = []
+
 
 [[bin]]
-name = "db-cli"
-path = "src/cli.rs"
-required-features = ["sea_cli"]
+name = "db-peace-migrate"
+path = "src/peace/migration/migrate.rs"
+required-features = ["db_peace_migration"]
+
+
+[[bin]]
+name = "db-peace-cli"
+path = "src/peace/cli.rs"
+required-features = ["db_peace_cli"]
 
 
 [dependencies]
@@ -29,23 +37,16 @@ sea-orm = { version = "0.11", features = [
 serde = { version = "1.0", features = ["derive"] }
 
 # utils
-clap_4 = { package = "clap", version = "4.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive"] }
 clap-serde-derive = "0.2.0"
 async-trait = "0.1"
 paste = "1.0"
 
 # optional
 tokio = { version = "1", features = ["rt", "macros"], optional = true }
-sea-orm-cli = { version = "0.11", optional = true, default-features = false, features = [
-    "codegen",
-    "cli",
+sea-orm-migration = { version = "0.11", optional = true, features = [
     "runtime-tokio-rustls",
-] }
-clap_3 = { package = "clap", version = "^3.2", optional = true, features = [
-    "derive",
 ] }
 dotenvy = { version = "^0.15", optional = true }
 
-
-# local crates
-peace_logs = { path = "../../frame/logs", features = ["cli"] }
+peace_dal = { path = "../../frame/dal" }

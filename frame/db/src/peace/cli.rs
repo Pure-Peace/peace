@@ -1,8 +1,7 @@
 use clap::{Parser, Subcommand};
-use clap_4 as clap;
 use dotenvy::dotenv;
-use entity::{users, users::Entity as User};
-use peace_dal::{db::peace::entity, Database, EntityTrait, Set};
+use peace_dal::{Database, EntityTrait, Set};
+use peace_db::peace::entity::{users, users::Entity as User};
 
 #[derive(Debug, Parser)]
 #[clap(version, author, about = "Peace db CLI")]

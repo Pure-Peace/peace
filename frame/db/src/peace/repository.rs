@@ -18,14 +18,17 @@ impl Repository {
         email: String,
         country: Option<String>,
     ) -> Result<InsertResult<users::ActiveModel>, DbErr> {
+        fn to_safe(s: &String) -> String {
+            s.trim().to_ascii_lowercase().replace(' ', "_")
+        }
+
         User::insert(users::ActiveModel {
-            name: Set(name.trim().to_string()),
-            name_safe: Set(name.trim().to_ascii_lowercase().replace(' ', "_")),
+            name: Set(name.trim().to_owned()),
+            name_safe: Set(to_safe(&name)),
             name_unicode: Set(name_unicode
                 .as_ref()
                 .map(|s| s.trim().to_owned())),
-            name_unicode_safe: Set(name_unicode
-                .map(|s| s.trim().to_ascii_lowercase().replace(' ', "_"))),
+            name_unicode_safe: Set(name_unicode.as_ref().map(to_safe)),
             password: Set(password),
             email: Set(email),
             country: Set(country),

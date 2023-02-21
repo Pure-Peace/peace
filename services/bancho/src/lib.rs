@@ -7,7 +7,7 @@ pub mod logic;
 pub mod rpc;
 
 use clap_serde_derive::ClapSerde;
-use peace_dal::{db::peace::PeaceDbConfig, DbConfig};
+use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::services::{
     bancho_rpc::bancho_rpc_server::BanchoRpcServer,
     bancho_state_rpc::{self, BANCHO_STATE_DESCRIPTOR_SET},

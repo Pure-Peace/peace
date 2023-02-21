@@ -1,4 +1,4 @@
-use peace_dal::db::peace::migration;
+use peace_db::peace::migration;
 use sea_orm_migration::cli;
 
 #[tokio::main]

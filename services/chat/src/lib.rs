@@ -4,7 +4,7 @@ extern crate peace_rpc;
 pub mod rpc;
 
 use clap_serde_derive::ClapSerde;
-use peace_dal::db::peace::PeaceDbConfig;
+use peace_db::peace::PeaceDbConfig;
 use peace_pb::services::chat_rpc::{
     chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET,
 };

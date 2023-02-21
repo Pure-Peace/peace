@@ -41,4 +41,4 @@ peace_rpc = { path = "../../frame/rpc", features = [
     "reflection",
 ] }
 bancho-packets = { path = "../../lib/bancho-packets" }
-peace_dal = { path = "../../frame/dal", default-features = false }
+peace_db = { path = "../../frame/db", default-features = false }

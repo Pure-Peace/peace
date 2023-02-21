@@ -1,5 +1,5 @@
 use bancho_packets::{server, PacketBuilder};
-use peace_dal::{db::peace::Repository, DatabaseConnection};
+use peace_db::{peace::Repository, DatabaseConnection};
 use peace_pb::services::{
     bancho_rpc::{bancho_rpc_server::BanchoRpc, *},
     bancho_state_rpc::{bancho_state_rpc_client::BanchoStateRpcClient, *},
