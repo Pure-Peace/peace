@@ -11,8 +11,9 @@ pub enum UsernameError {
 pub struct EmailError;
 
 #[derive(thiserror::Error, Debug)]
-#[error("Failed to process password.")]
-pub struct PasswordError {
-    #[from]
-    source: argon2::Error,
+pub enum PasswordError {
+    #[error("Failed to parse password: {0}.")]
+    ParseFailed(#[from] argon2::Error),
+    #[error("Invalid password.")]
+    InvalidPassword,
 }

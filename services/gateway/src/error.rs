@@ -1,16 +1,18 @@
+use crate::bancho::constants::{CHO_PROTOCOL, CHO_TOKEN};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use bancho_packets::{server, PacketBuilder};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("login: {0}")]
+    #[error("Login failed: {0}")]
     Login(String),
 }
 
 impl Error {
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::Login(_) => StatusCode::UNAUTHORIZED,
+            Self::Login(_) => StatusCode::OK,
         }
     }
 }
@@ -23,6 +25,20 @@ impl From<Error> for Response {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        (self.status_code(), self.to_string()).into_response()
+        match self {
+            Error::Login(_) => (
+                [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
+                PacketBuilder::new()
+                    .add(server::login_reply(
+                        bancho_packets::LoginResult::Failed(
+                            bancho_packets::LoginFailedResaon::InvalidCredentials,
+                        ),
+                    ))
+                    .add(server::notification(self.to_string()))
+                    .build(),
+            )
+                .into_response(),
+            _ => (self.status_code(), self.to_string()).into_response(),
+        }
     }
 }
