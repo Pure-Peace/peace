@@ -1,7 +1,7 @@
 use super::entity;
 use entity::{users, users::Entity as User};
 use peace_dal::*;
-use peace_domain::peace::{Ascii, CreateUser, Unicode, Username, UsernameSafe};
+use peace_domain::peace::{CreateUser, UsernameSafe};
 
 #[derive(Debug, Clone)]
 pub struct Repository(DatabaseConnection);
@@ -21,14 +21,17 @@ impl Repository {
         username_unicode: Option<UsernameSafe>,
     ) -> Result<Option<users::Model>, DbErr> {
         User::find()
-            .apply_if(username, |query, name| {
-                query.filter(users::Column::NameSafe.eq(name.as_ref()))
-            })
-            .apply_if(username_unicode, |query, name_unicode| {
-                query.filter(
-                    users::Column::NameUnicodeSafe.eq(name_unicode.as_ref()),
-                )
-            })
+            .filter(
+                Condition::any()
+                    .add_option(
+                        username.map(|name| {
+                            users::Column::NameSafe.eq(name.as_ref())
+                        }),
+                    )
+                    .add_option(username_unicode.map(|name_unicode| {
+                        users::Column::NameUnicodeSafe.eq(name_unicode.as_ref())
+                    })),
+            )
             .one(self.conn())
             .await
     }
@@ -55,6 +58,39 @@ impl Repository {
         .exec(self.conn())
         .await
     }
+
+    pub async fn change_user_password(
+        &self,
+        user_id: Option<i32>,
+        username: Option<UsernameSafe>,
+        username_unicode: Option<UsernameSafe>,
+        password: String,
+    ) -> Result<InsertResult<users::ActiveModel>, DbErr> {
+        let user = User::find()
+            .filter(
+                Condition::any()
+                    .add_option(user_id.map(|id| users::Column::Id.eq(id)))
+                    .add_option(
+                        username.map(|name| {
+                            users::Column::NameSafe.eq(name.as_ref())
+                        }),
+                    )
+                    .add_option(username_unicode.map(|name_unicode| {
+                        users::Column::NameUnicodeSafe.eq(name_unicode.as_ref())
+                    })),
+            )
+            .one(self.conn())
+            .await?
+            .ok_or(DbErr::Custom("user not found".into()))?;
+
+        let mut model = user.into_active_model();
+
+        model.password = ActiveValue::Set(password);
+
+        model.update(self.conn()).await?;
+
+        todo!()
+    }
 }
 
 #[cfg(test)]
@@ -65,8 +101,8 @@ mod test {
 
     #[tokio::test]
     async fn test_main() {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
+        peace_logs::fmt()
+            .with_max_level(peace_logs::Level::DEBUG)
             .with_test_writer()
             .init();
 
