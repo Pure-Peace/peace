@@ -16,10 +16,10 @@ use std::{
     str::FromStr,
     sync::{Arc, Mutex},
 };
-use tracing::log::LevelFilter;
+pub use tracing::log::LevelFilter;
 pub use tracing::*;
 pub use tracing_subscriber::*;
-use tracing_subscriber::{
+pub use tracing_subscriber::{
     fmt, layer::Layered, prelude::*, reload, reload::Handle, reload::Layer,
     Registry,
 };

@@ -1,5 +1,5 @@
-use crate::BanchoStateRpc;
-use bancho_packets::{server, LoginFailedResaon, PacketBuilder};
+use crate::{logic, BanchoStateRpc};
+use bancho_packets::{server, PacketBuilder};
 use peace_db::peace::Repository;
 use peace_domain::peace::{Ascii, Password, Unicode, Username};
 use peace_pb::services::{
@@ -37,62 +37,25 @@ impl BanchoRpc for Bancho {
     async fn login(
         &self,
         request: Request<LoginRequest>,
-    ) -> Result<Response<LoginReply>, Status> {
+    ) -> Result<Response<LoginSuccess>, Status> {
         let client_ip = ClientIp::from_request(&request)?;
         let req = request.into_inner();
 
-        let username = Username::<Ascii>::from_str(req.username.as_str())
-            .ok()
-            .map(|n| n.safe_name());
-        let username_unicode =
-            Username::<Unicode>::from_str(req.username.as_str())
-                .ok()
-                .map(|n| n.safe_name());
+        let user = logic::get_user_model_by_username(
+            &self.repo,
+            Some(req.username.as_str()),
+            Some(req.username.as_str()),
+        )
+        .await?;
 
-        let user = self
-            .repo
-            .find_user_by_username(username, username_unicode)
-            .await
-            .map_err(|err| Status::internal(err.to_string()))?;
-
-        if user.is_none() {
-            return Ok(Response::new(LoginReply {
-                session_id: None,
-                packet: Some(
-                    PacketBuilder::new()
-                        .add(server::login_reply(
-                            bancho_packets::LoginResult::Failed(
-                                LoginFailedResaon::InvalidCredentials,
-                            ),
-                        ))
-                        .build(),
-                ),
-            }));
-        }
-
-        let user = user.unwrap();
-        if !Password::verify_password(
+        Password::verify_password(
             user.password.as_str(),
             req.password.as_str(),
         )
-        .map_err(|err| Status::internal(err.to_string()))?
-        {
-            return Ok(Response::new(LoginReply {
-                session_id: None,
-                packet: Some(
-                    PacketBuilder::new()
-                        .add(server::login_reply(
-                            bancho_packets::LoginResult::Failed(
-                                LoginFailedResaon::InvalidCredentials,
-                            ),
-                        ))
-                        .build(),
-                ),
-            }));
-        }
+        .map_err(|err| Status::unauthenticated(err.to_string()))?;
 
         let mut state = self.state_rpc.clone();
-        let resp = state
+        let CreateUserSessionResponse { session_id } = state
             .create_user_session(Request::new(CreateUserSessionRequest {
                 user_id: user.id,
                 username: user.name,
@@ -108,10 +71,10 @@ impl BanchoRpc for Bancho {
             .await?
             .into_inner();
 
-        info!(target: "bancho.login", "user <{}:{}> logged in (session_id: {})", user.name_safe, user.id, resp.session_id);
+        info!(target: "bancho.login", "user <{}:{}> logged in (session_id: {})", user.name_safe, user.id, session_id);
 
-        Ok(Response::new(LoginReply {
-            session_id: Some(resp.session_id),
+        Ok(Response::new(LoginSuccess {
+            session_id,
             packet: Some(
                 PacketBuilder::new()
                     .add(server::login_reply(

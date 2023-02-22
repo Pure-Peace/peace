@@ -3,13 +3,12 @@ use super::{
     parser,
 };
 use crate::{BanchoRpc, BanchoStateRpc, Error};
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId};
 use peace_api::extractors::BanchoClientVersion;
-use peace_pb::services::{bancho_rpc::LoginReply, bancho_state_rpc::UserQuery};
+use peace_pb::services::{
+    bancho_rpc::LoginSuccess, bancho_state_rpc::UserQuery,
+};
 use std::net::IpAddr;
 use tonic::Request;
 use tools::tonic_utils::RpcRequest;
@@ -21,36 +20,25 @@ pub async fn bancho_login(
     ip: IpAddr,
 ) -> Result<Response, Error> {
     if version.is_none() {
-        return Err(Error::Login("empty client version".into()))
+        return Err(Error::Login("empty client version".into()));
     }
 
     let data = parser::parse_osu_login_request_body(body.into())?;
 
     if data.client_version != version.unwrap().as_str() {
-        return Err(Error::Login("mismatched client version".into()))
+        return Err(Error::Login("mismatched client version".into()));
     }
 
     let req = RpcRequest::new(data).client_ip_header(ip);
 
-    let LoginReply { session_id, packet } = bancho
+    let LoginSuccess { session_id, packet } = bancho
         .login(req.to_request())
         .await
         .map_err(|err| Error::Login(err.message().into()))?
         .into_inner();
 
-    if session_id.is_none() {
-        return Ok((
-            StatusCode::UNAUTHORIZED,
-            (
-                [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
-                packet.unwrap_or("failed".into()),
-            ),
-        )
-            .into_response())
-    }
-
     Ok((
-        [(CHO_TOKEN, session_id.unwrap().as_str()), CHO_PROTOCOL],
+        [(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL],
         packet.unwrap_or("ok".into()),
     )
         .into_response())

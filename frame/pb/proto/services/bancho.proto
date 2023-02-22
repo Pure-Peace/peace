@@ -4,7 +4,7 @@ package peace.services.bancho;
 
 service BanchoRPC {
   rpc Ping(PingRequest) returns (BanchoReply);
-  rpc Login(LoginRequest) returns (LoginReply);
+  rpc Login(LoginRequest) returns (LoginSuccess);
   rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (BanchoReply);
   rpc PresenceRequestAll(PresenceRequestAllRequest) returns (BanchoReply);
   rpc SpectateStop(SpectateStopRequest) returns (BanchoReply);
@@ -35,8 +35,8 @@ message LoginRequest {
   ClientHashes client_hashes = 7;
 }
 
-message LoginReply {
-  optional string session_id = 1;
+message LoginSuccess {
+  string session_id = 1;
   optional bytes packet = 2;
 }
 
