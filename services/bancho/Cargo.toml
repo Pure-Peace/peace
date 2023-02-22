@@ -42,3 +42,4 @@ peace_rpc = { path = "../../frame/rpc", features = [
 ] }
 bancho-packets = { path = "../../lib/bancho-packets" }
 peace_db = { path = "../../frame/db", default-features = false }
+peace_domain = { path = "../../frame/domain", features = ["domain_peace"] }

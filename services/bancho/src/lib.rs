@@ -7,7 +7,10 @@ pub mod logic;
 pub mod rpc;
 
 use clap_serde_derive::ClapSerde;
-use peace_db::{peace::PeaceDbConfig, DbConfig};
+use peace_db::{
+    peace::{PeaceDbConfig, Repository},
+    DbConfig,
+};
 use peace_pb::services::{
     bancho_rpc::bancho_rpc_server::BanchoRpcServer,
     bancho_state_rpc::{self, BANCHO_STATE_DESCRIPTOR_SET},
@@ -76,7 +79,10 @@ impl Application for App {
                 panic!("{}", err)
             });
 
-        let bancho = Bancho::new(bancho_state_rpc_client, peace_db_conn);
+        let bancho = Bancho::new(
+            bancho_state_rpc_client,
+            Repository::new(peace_db_conn.clone()),
+        );
 
         configured_server
             .add_service(BanchoRpcServer::with_interceptor(bancho, client_ip))

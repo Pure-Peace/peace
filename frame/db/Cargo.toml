@@ -51,3 +51,8 @@ dotenvy = { version = "^0.15", optional = true }
 
 peace_dal = { path = "../../frame/dal" }
 peace_domain = { path = "../../frame/domain", features = ["domain_peace"] }
+
+
+[dev-dependencies]
+tracing-subscriber = "0.3.16"
+tracing = "0.1.37"

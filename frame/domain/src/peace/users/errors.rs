@@ -1,6 +1,10 @@
 #[derive(thiserror::Error, Debug)]
-#[error("Invalid username.")]
-pub struct UsernameError;
+pub enum UsernameError {
+    #[error("only ascii characters are allowed.")]
+    InvalidAsciiCharacters,
+    #[error("use either underscores or spaces, not both.")]
+    UnderscoresAndSpacesNotExistsBoth,
+}
 
 #[derive(thiserror::Error, Debug)]
 #[error("Invalid email.")]

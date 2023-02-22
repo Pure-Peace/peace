@@ -52,19 +52,18 @@ async fn main() {
             .await
             .unwrap();
 
+            let repo = Repository::new(db.clone());
+
             println!("Creating user...");
-            Repository::create_user(
-                &db,
-                CreateUser {
-                    name: Username::from_str(username.as_str()).unwrap(),
-                    name_unicode: username_unicode
-                        .as_ref()
-                        .map(|s| Username::from_str(s.as_str()).unwrap()),
-                    password: Password::hash_password(password).unwrap(),
-                    email: Email::from_str(email.as_str()).unwrap(),
-                    country: None,
-                },
-            )
+            repo.create_user(CreateUser {
+                name: Username::from_str(username.as_str()).unwrap(),
+                name_unicode: username_unicode
+                    .as_ref()
+                    .map(|s| Username::from_str(s.as_str()).unwrap()),
+                password: Password::hash_password(password).unwrap(),
+                email: Email::from_str(email.as_str()).unwrap(),
+                country: None,
+            })
             .await
             .unwrap();
             println!("Success")

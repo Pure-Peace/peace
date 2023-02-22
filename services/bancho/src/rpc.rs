@@ -1,24 +1,23 @@
-use bancho_packets::{server, PacketBuilder};
-use peace_db::{peace::Repository, DatabaseConnection};
+use crate::BanchoStateRpc;
+use bancho_packets::{server, LoginFailedResaon, PacketBuilder};
+use peace_db::peace::Repository;
+use peace_domain::peace::{Ascii, Password, Unicode, Username};
 use peace_pb::services::{
     bancho_rpc::{bancho_rpc_server::BanchoRpc, *},
-    bancho_state_rpc::{bancho_state_rpc_client::BanchoStateRpcClient, *},
+    bancho_state_rpc::*,
 };
 use peace_rpc::extensions::ClientIp;
-use tonic::{transport::Channel, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 #[derive(Debug, Clone)]
 pub struct Bancho {
-    pub state_rpc: BanchoStateRpcClient<Channel>,
-    pub db_conn: DatabaseConnection,
+    pub state_rpc: BanchoStateRpc,
+    pub repo: Repository,
 }
 
 impl Bancho {
-    pub fn new(
-        state_rpc: BanchoStateRpcClient<Channel>,
-        db_conn: DatabaseConnection,
-    ) -> Self {
-        Self { state_rpc, db_conn }
+    pub fn new(state_rpc: BanchoStateRpc, repo: Repository) -> Self {
+        Self { state_rpc, repo }
     }
 }
 
@@ -42,15 +41,62 @@ impl BanchoRpc for Bancho {
         let client_ip = ClientIp::from_request(&request)?;
         let req = request.into_inner();
 
-        let user_id = 1;
+        let username = Username::<Ascii>::from_str(req.username.as_str())
+            .ok()
+            .map(|n| n.safe_name());
+        let username_unicode =
+            Username::<Unicode>::from_str(req.username.as_str())
+                .ok()
+                .map(|n| n.safe_name());
+
+        let user = self
+            .repo
+            .find_user_by_username(username, username_unicode)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        if user.is_none() {
+            return Ok(Response::new(LoginReply {
+                session_id: None,
+                packet: Some(
+                    PacketBuilder::new()
+                        .add(server::login_reply(
+                            bancho_packets::LoginResult::Failed(
+                                LoginFailedResaon::InvalidCredentials,
+                            ),
+                        ))
+                        .build(),
+                ),
+            }));
+        }
+
+        let user = user.unwrap();
+        if !Password::verify_password(
+            user.password.as_str(),
+            req.password.as_str(),
+        )
+        .map_err(|err| Status::internal(err.to_string()))?
+        {
+            return Ok(Response::new(LoginReply {
+                session_id: None,
+                packet: Some(
+                    PacketBuilder::new()
+                        .add(server::login_reply(
+                            bancho_packets::LoginResult::Failed(
+                                LoginFailedResaon::InvalidCredentials,
+                            ),
+                        ))
+                        .build(),
+                ),
+            }));
+        }
 
         let mut state = self.state_rpc.clone();
-
         let resp = state
             .create_user_session(Request::new(CreateUserSessionRequest {
-                user_id,
-                username: req.username.to_owned(),
-                username_unicode: None,
+                user_id: user.id,
+                username: user.name,
+                username_unicode: user.name_unicode,
                 privileges: 1,
                 connection_info: Some(ConnectionInfo {
                     ip: client_ip.to_string(),
@@ -62,15 +108,16 @@ impl BanchoRpc for Bancho {
             .await?
             .into_inner();
 
-        info!(target: "bancho.login", "user <{}:{user_id}> logged in (session_id: {})", req.username, resp.session_id);
+        info!(target: "bancho.login", "user <{}:{}> logged in (session_id: {})", user.name_safe, user.id, resp.session_id);
 
         Ok(Response::new(LoginReply {
             session_id: Some(resp.session_id),
             packet: Some(
                 PacketBuilder::new()
                     .add(server::login_reply(
-                        bancho_packets::LoginResult::Success(user_id),
+                        bancho_packets::LoginResult::Success(user.id),
                     ))
+                    .add(server::notification("welcome to peace!"))
                     .build(),
             ),
         }))
