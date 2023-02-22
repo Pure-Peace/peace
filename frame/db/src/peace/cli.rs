@@ -2,22 +2,24 @@ use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use peace_dal::Database;
 use peace_db::peace::Repository;
-use peace_domain::peace::{CreateUser, Email, Password, Username};
+use peace_domain::peace::{
+    Ascii, CreateUser, Email, Password, Unicode, Username,
+};
 
 #[derive(Debug, Parser)]
 #[clap(version, author, about = "Peace db CLI")]
 pub struct PeaceDbCli {
+    #[arg(value_parser, global = true, short = 'u', long)]
+    pub database_url: Option<String>,
+
     #[clap(subcommand)]
     pub command: Commands,
 }
 
 #[derive(Subcommand, PartialEq, Eq, Debug)]
 pub enum Commands {
-    #[clap(about = "[peace] Create a new peace user in database")]
-    CreatePeaceUser {
-        #[arg(value_parser, global = true, short = 'u', long)]
-        database_url: Option<String>,
-
+    #[clap(about = "[peace] Create a new user in database")]
+    CreateUser {
         #[arg(long)]
         username: String,
 
@@ -25,10 +27,30 @@ pub enum Commands {
         username_unicode: Option<String>,
 
         #[arg(long)]
-        password: String,
+        raw_password: Option<String>,
+
+        #[arg(long)]
+        md5_password: Option<String>,
 
         #[arg(long)]
         email: String,
+    },
+    #[clap(about = "[peace] Change user's password")]
+    ChangeUserPassword {
+        #[arg(long)]
+        user_id: Option<i32>,
+
+        #[arg(long)]
+        username: Option<String>,
+
+        #[arg(long)]
+        username_unicode: Option<String>,
+
+        #[arg(long)]
+        raw_password: Option<String>,
+
+        #[arg(long)]
+        md5_password: Option<String>,
     },
 }
 
@@ -39,15 +61,19 @@ async fn main() {
     let cli = PeaceDbCli::parse();
 
     match cli.command {
-        Commands::CreatePeaceUser {
-            database_url,
+        Commands::CreateUser {
             username,
             username_unicode,
-            password,
+            raw_password,
+            md5_password,
             email,
         } => {
+            if raw_password.is_none() && md5_password.is_none() {
+                panic!("raw-password or md5-password is required.");
+            }
+
             let db = Database::connect(
-                database_url.expect("database-url is required."),
+                cli.database_url.expect("database-url is required."),
             )
             .await
             .unwrap();
@@ -60,10 +86,69 @@ async fn main() {
                 name_unicode: username_unicode
                     .as_ref()
                     .map(|s| Username::from_str(s.as_str()).unwrap()),
-                password: Password::hash_password(password).unwrap(),
+                password: Password::hash_password(
+                    md5_password
+                        .and_then(|p| Some(p))
+                        .or_else(|| {
+                            Some(format!(
+                                "{:x}",
+                                md5::compute(raw_password.unwrap().as_bytes())
+                            ))
+                        })
+                        .unwrap(),
+                )
+                .unwrap(),
                 email: Email::from_str(email.as_str()).unwrap(),
                 country: None,
             })
+            .await
+            .unwrap();
+            println!("Success")
+        },
+        Commands::ChangeUserPassword {
+            user_id,
+            username,
+            username_unicode,
+            raw_password,
+            md5_password,
+        } => {
+            if raw_password.is_none() && md5_password.is_none() {
+                panic!("raw-password or md5-password is required.");
+            }
+
+            let db = Database::connect(
+                cli.database_url.expect("database-url is required."),
+            )
+            .await
+            .unwrap();
+
+            let repo = Repository::new(db.clone());
+
+            println!("Changing user's password...");
+            repo.change_user_password(
+                user_id,
+                username.map(|s| {
+                    Username::<Ascii>::from_str(s.as_str()).unwrap().safe_name()
+                }),
+                username_unicode.map(|s| {
+                    Username::<Unicode>::from_str(s.as_str())
+                        .unwrap()
+                        .safe_name()
+                }),
+                Password::hash_password(
+                    md5_password
+                        .and_then(|p| Some(p))
+                        .or_else(|| {
+                            Some(format!(
+                                "{:x}",
+                                md5::compute(raw_password.unwrap().as_bytes())
+                            ))
+                        })
+                        .unwrap(),
+                )
+                .unwrap()
+                .to_string(),
+            )
             .await
             .unwrap();
             println!("Success")
