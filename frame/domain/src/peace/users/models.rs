@@ -250,15 +250,17 @@ impl Password {
     pub fn verify_password<T: AsRef<[u8]>>(
         hashed_password: &str,
         password: T,
-    ) -> Result<bool, PasswordError> {
-        Ok(argon2::verify_encoded(hashed_password, password.as_ref())?)
+    ) -> Result<(), PasswordError> {
+        argon2::verify_encoded(hashed_password, password.as_ref())?
+            .then_some(())
+            .ok_or(PasswordError::InvalidPassword)
     }
 
     #[inline]
     pub fn verify<T: AsRef<[u8]>>(
         &self,
         password: T,
-    ) -> Result<bool, PasswordError> {
+    ) -> Result<(), PasswordError> {
         Self::verify_password(&self.0, password)
     }
 }
