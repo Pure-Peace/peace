@@ -54,7 +54,10 @@ impl Application for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        configured_server
-            .add_service(BanchoStateRpcServer::new(BanchoState::default()))
+        let bancho_state = BanchoState::default();
+
+        bancho_state.start_background_service();
+
+        configured_server.add_service(BanchoStateRpcServer::new(bancho_state))
     }
 }

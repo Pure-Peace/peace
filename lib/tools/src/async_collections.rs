@@ -70,3 +70,20 @@ where
 
     shutdown(s);
 }
+
+
+#[derive(Debug, Default)]
+pub struct BackgroundService {
+    started: AtomicBool,
+    notify: Notify,
+}
+
+impl BackgroundService {
+    pub fn start() {
+
+    }
+
+    pub fn stop() {
+
+    }
+}

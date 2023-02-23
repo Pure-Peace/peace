@@ -3,7 +3,13 @@ use futures::future::join_all;
 use peace_pb::services::bancho_state_rpc::{
     bancho_state_rpc_server::BanchoStateRpc, *,
 };
-use std::{collections::hash_map::Values, sync::Arc};
+use std::{
+    collections::hash_map::Values,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 
@@ -12,6 +18,20 @@ const SESSION_NOT_FOUND: &'static str = "session no exists";
 #[derive(Debug, Default, Clone)]
 pub struct BanchoState {
     pub user_sessions: Arc<RwLock<UserSessions>>,
+}
+
+impl BanchoState {
+    pub fn start_background_service(&self) {
+        static STARTED: AtomicBool = AtomicBool::new(false);
+        if STARTED.load(Ordering::SeqCst) {
+            panic!("background service is already running!")
+        }
+        tokio::task::spawn(async move {
+
+
+        });
+        STARTED.store(true, Ordering::SeqCst);
+    }
 }
 
 #[tonic::async_trait]
@@ -101,24 +121,24 @@ impl BanchoStateRpc for BanchoState {
         &self,
         request: Request<RawUserQuery>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
-        let res = if let Some(user) =
-            self.user_sessions.read().await.get(&request.into_inner().into())
-        {
-            let user = user.read().await;
-            GetUserSessionResponse {
-                session_id: Some(user.session_id.to_owned()),
-                user_id: Some(user.user_id),
-                username: Some(user.session_id.to_owned()),
-                username_unicode: user
-                    .username_unicode
-                    .as_ref()
-                    .map(|s| s.to_owned()),
-            }
-        } else {
-            return Err(Status::not_found(SESSION_NOT_FOUND))
-        };
+        let user = self
+            .user_sessions
+            .read()
+            .await
+            .get(&request.into_inner().into())
+            .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
-        Ok(Response::new(res))
+        let user = user.read().await;
+
+        Ok(Response::new(GetUserSessionResponse {
+            session_id: Some(user.session_id.to_owned()),
+            user_id: Some(user.user_id),
+            username: Some(user.session_id.to_owned()),
+            username_unicode: user
+                .username_unicode
+                .as_ref()
+                .map(|s| s.to_owned()),
+        }))
     }
 
     async fn get_user_session_with_fields(
@@ -128,35 +148,34 @@ impl BanchoStateRpc for BanchoState {
         let req = request.into_inner();
         let query = req.query.ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
-        let res = if let Some(user) =
-            self.user_sessions.read().await.get(&query.into())
-        {
-            let mut res = GetUserSessionResponse::default();
-            let fields = UserSessionFields::from(req.fields);
+        let user = self
+            .user_sessions
+            .read()
+            .await
+            .get(&query.into())
+            .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
-            let user = user.read().await;
+        let mut res = GetUserSessionResponse::default();
+        let fields = UserSessionFields::from(req.fields);
 
-            if fields.intersects(UserSessionFields::SessionId) {
-                res.session_id = Some(user.session_id.to_owned());
-            }
+        let user = user.read().await;
 
-            if fields.intersects(UserSessionFields::UserId) {
-                res.user_id = Some(user.user_id);
-            }
+        if fields.intersects(UserSessionFields::SessionId) {
+            res.session_id = Some(user.session_id.to_owned());
+        }
 
-            if fields.intersects(UserSessionFields::Username) {
-                res.username = Some(user.session_id.to_owned());
-            }
+        if fields.intersects(UserSessionFields::UserId) {
+            res.user_id = Some(user.user_id);
+        }
 
-            if fields.intersects(UserSessionFields::UsernameUnicode) {
-                res.username_unicode =
-                    user.username_unicode.as_ref().map(|s| s.to_owned());
-            }
+        if fields.intersects(UserSessionFields::Username) {
+            res.username = Some(user.session_id.to_owned());
+        }
 
-            res
-        } else {
-            return Err(Status::not_found(SESSION_NOT_FOUND))
-        };
+        if fields.intersects(UserSessionFields::UsernameUnicode) {
+            res.username_unicode =
+                user.username_unicode.as_ref().map(|s| s.to_owned());
+        }
 
         Ok(Response::new(res))
     }
