@@ -127,6 +127,8 @@ message UserData {
   optional string username_unicode = 4;
   int32 privileges = 5;
   ConnectionInfo connection_info = 6;
+  string created_at = 7;
+  string last_active = 8;
 }
 
 message GetAllSessionsResponse {

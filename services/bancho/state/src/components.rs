@@ -1,5 +1,6 @@
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
+use chrono::{DateTime, Utc};
 use peace_pb::services::bancho_state_rpc::{
     ConnectionInfo, CreateUserSessionRequest, UserQuery,
 };
@@ -14,6 +15,15 @@ pub struct User {
     pub username_unicode: Option<String>,
     pub privileges: i32,
     pub connection_info: ConnectionInfo,
+    pub created_at: DateTime<Utc>,
+    pub last_active: DateTime<Utc>,
+}
+
+impl User {
+    #[inline]
+    pub fn update_active(&mut self) {
+        self.last_active = Utc::now();
+    }
 }
 
 impl From<CreateUserSessionRequest> for User {
@@ -34,6 +44,8 @@ impl From<CreateUserSessionRequest> for User {
             username_unicode,
             privileges,
             connection_info: connection_info.unwrap(),
+            created_at: Utc::now(),
+            last_active: Utc::now(),
         }
     }
 }
