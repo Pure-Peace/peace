@@ -94,7 +94,7 @@ where
     F: Fn(SignalHandle) -> T,
 {
     factory: F,
-    handle: Option<JoinHandle<T::Output>>,
+    handle: Option<JoinHandle<Option<T::Output>>>,
     signal: Option<SignalHandle>,
 }
 
@@ -115,7 +115,10 @@ where
         }
     }
 
-    pub fn start(&mut self) -> Result<(), BackgroundServiceError> {
+    pub fn start(
+        &mut self,
+        manual_stop: bool,
+    ) -> Result<(), BackgroundServiceError> {
         if self.is_started() {
             return Err(BackgroundServiceError::AlreadyStarted);
         }
@@ -123,9 +126,18 @@ where
         let signal = SignalHandle::new();
         self.signal = Some(signal.clone());
 
-        let fut = (self.factory)(signal);
+        let fut = (self.factory)(signal.clone());
 
-        self.handle = Some(tokio::spawn(fut));
+        self.handle = Some(tokio::spawn(async move {
+            if manual_stop {
+                Some(fut.await)
+            } else {
+                tokio::select! {
+                    v = fut => Some(v),
+                    _ = signal.wait_signal() => None
+                }
+            }
+        }));
         Ok(())
     }
 
@@ -141,5 +153,9 @@ where
         if let Some(h) = self.handle.as_ref() {
             h.abort()
         }
+    }
+
+    pub fn handle(&mut self) -> Option<JoinHandle<Option<T::Output>>> {
+        std::mem::replace(&mut self.handle, None)
     }
 }

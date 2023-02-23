@@ -19,13 +19,28 @@ impl BanchoState {
     pub fn start_background_service(&self) {
         let mut session_recycle = BackgroundService::new(|stop| async move {
             println!("start!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            stop.wait_signal().await;
+            tokio::select!(
+                _ = async {
+                    let mut i = 0;
+
+                    loop {
+                        i += 1;
+                        println!("666");
+                        if i > 5 {
+                            println!("sm");
+                            break;
+                        }
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                } => {},
+                _ = stop.wait_signal() => {}
+            );
             println!("end!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         });
-        session_recycle.start().unwrap();
+        session_recycle.start(true).unwrap();
 
         tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(5)).await;
+            tokio::time::sleep(Duration::from_secs(10)).await;
             println!("time to end");
             session_recycle.trigger_signal().unwrap();
         });
