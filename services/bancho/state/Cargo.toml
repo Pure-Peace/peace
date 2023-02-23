@@ -46,3 +46,4 @@ peace_rpc = { path = "../../../frame/rpc", features = [
     "reflection",
 ] }
 tools_derive = { path = "../../../lib/tools/derive" }
+tools = { path = "../../../lib/tools", features = ["async_collections"] }

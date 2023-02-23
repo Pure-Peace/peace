@@ -1,8 +1,11 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    future::Future,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
-use tokio::{signal, sync::Notify};
+use tokio::{signal, sync::Notify, task::JoinHandle};
 
 #[derive(Debug, Default)]
 pub struct NotifyOnce {
@@ -71,19 +74,72 @@ where
     shutdown(s);
 }
 
-
-#[derive(Debug, Default)]
-pub struct BackgroundService {
-    started: AtomicBool,
-    notify: Notify,
+#[derive(thiserror::Error, Debug)]
+pub enum BackgroundServiceError {
+    #[error("task is already started")]
+    AlreadyStarted,
+    #[error("task is not started")]
+    NotStarted,
+    #[error("signal is not exists")]
+    SignalNotExists,
+    #[error("failed to trigger signal")]
+    FailedToTriggerSignal,
 }
 
-impl BackgroundService {
-    pub fn start() {
+#[derive(Debug)]
+pub struct BackgroundService<T, F>
+where
+    T: Future + Send + 'static,
+    T::Output: Send + 'static,
+    F: Fn(SignalHandle) -> T,
+{
+    factory: F,
+    handle: Option<JoinHandle<T::Output>>,
+    signal: Option<SignalHandle>,
+}
 
+impl<T, F> BackgroundService<T, F>
+where
+    T: Future + Send + 'static,
+    T::Output: Send + 'static,
+    F: Fn(SignalHandle) -> T,
+{
+    pub fn new(factory: F) -> Self {
+        Self { factory, handle: None, signal: None }
     }
 
-    pub fn stop() {
+    pub fn is_started(&self) -> bool {
+        match self.handle.as_ref() {
+            Some(h) => !h.is_finished(),
+            None => false,
+        }
+    }
 
+    pub fn start(&mut self) -> Result<(), BackgroundServiceError> {
+        if self.is_started() {
+            return Err(BackgroundServiceError::AlreadyStarted);
+        }
+
+        let signal = SignalHandle::new();
+        self.signal = Some(signal.clone());
+
+        let fut = (self.factory)(signal);
+
+        self.handle = Some(tokio::spawn(fut));
+        Ok(())
+    }
+
+    pub fn trigger_signal(&self) -> Result<(), BackgroundServiceError> {
+        self.signal
+            .as_ref()
+            .and_then(|s| Some(s.trigger()))
+            .ok_or(BackgroundServiceError::SignalNotExists)?;
+        Ok(())
+    }
+
+    pub fn abort(&mut self) {
+        if let Some(h) = self.handle.as_ref() {
+            h.abort()
+        }
     }
 }

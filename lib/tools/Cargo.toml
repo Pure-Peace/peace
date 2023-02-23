@@ -18,3 +18,5 @@ tokio = { version = "1.0", optional = true }
 
 # tonic
 tonic = { version = "0.8", optional = true }
+
+thiserror = "1.0"

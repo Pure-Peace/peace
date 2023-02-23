@@ -3,15 +3,10 @@ use futures::future::join_all;
 use peace_pb::services::bancho_state_rpc::{
     bancho_state_rpc_server::BanchoStateRpc, *,
 };
-use std::{
-    collections::hash_map::Values,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
+use std::{collections::hash_map::Values, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
+use tools::async_collections::BackgroundService;
 
 const SESSION_NOT_FOUND: &'static str = "session no exists";
 
@@ -22,15 +17,18 @@ pub struct BanchoState {
 
 impl BanchoState {
     pub fn start_background_service(&self) {
-        static STARTED: AtomicBool = AtomicBool::new(false);
-        if STARTED.load(Ordering::SeqCst) {
-            panic!("background service is already running!")
-        }
-        tokio::task::spawn(async move {
-
-
+        let mut session_recycle = BackgroundService::new(|stop| async move {
+            println!("start!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            stop.wait_signal().await;
+            println!("end!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         });
-        STARTED.store(true, Ordering::SeqCst);
+        session_recycle.start().unwrap();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            println!("time to end");
+            session_recycle.trigger_signal().unwrap();
+        });
     }
 }
 
