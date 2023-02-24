@@ -15,11 +15,15 @@ use std::{
     process,
 };
 
+/// A generic configuration struct that holds a configuration file path,
+/// a boolean flag to save the current parameters as a configuration file,
+/// a command, and any additional arguments provided.
 #[derive(Parser)]
 pub struct BaseConfig<T>
 where
     T: Parser + ClapSerde + Args + serde::Serialize,
 {
+    /// Configuration file path.
     #[clap(flatten)]
     pub config_path: ConfigPath,
 
@@ -27,10 +31,11 @@ where
     #[arg(long, default_value = "false")]
     pub save_as_config: bool,
 
+    /// Command to execute.
     #[command(subcommand)]
     command: Option<Commands>,
 
-    /// Rest of arguments
+    /// Additional arguments.
     #[clap(flatten)]
     pub config: T,
 }
@@ -75,6 +80,7 @@ impl Deref for ConfigPath {
     }
 }
 
+/// An enum representing supported configuration file types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigFileType {
     Yaml,
@@ -82,13 +88,25 @@ pub enum ConfigFileType {
     Toml,
 }
 
+/// A struct representing a configuration file path and its associated file type.
 #[derive(Debug, Clone)]
 pub struct ConfigFile<'a> {
+    /// The path of the configuration file.
     pub path: &'a Path,
+    /// The file type of the configuration file.
     pub ext_type: ConfigFileType,
 }
 
 impl<'a> ConfigFile<'a> {
+    /// Creates a new [`ConfigFile`] instance from the provided file path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A reference to the file path.
+    ///
+    /// # Returns
+    ///
+    /// A new [`ConfigFile`] instance.
     pub fn new(path: &'a Path) -> Self {
         Self { path, ext_type: ConfigFileType::from(path) }
     }
@@ -98,6 +116,15 @@ impl<P> From<P> for ConfigFileType
 where
     P: AsRef<Path>,
 {
+    /// Converts a file path into a [`ConfigFileType`] instance based on the file extension.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A file path to convert.
+    ///
+    /// # Returns
+    ///
+    /// A [`ConfigFileType`] instance representing the file type.
     fn from(path: P) -> Self {
         let binding = path.as_ref().extension().unwrap().to_ascii_lowercase();
         let ext = binding.to_str().unwrap();
@@ -110,6 +137,18 @@ where
     }
 }
 
+/// This macro is used to serialize a given configuration to a string using one of several possible
+/// file formats, depending on the specified configuration file type.
+///
+/// # Arguments
+///
+/// * `$file_type` - The file type to use for serialization.
+/// * `$cfg` - The configuration to serialize.
+/// * `$(($typ: ident, $serde: ident, $fn: ident)),*` - A list of tuples representing each possible
+/// file format to use for serialization. Each tuple contains an identifier for the file format, an
+/// identifier for the corresponding serde library, and an identifier for the serde function to use
+/// for serialization.
+///
 macro_rules! cfg_to_string {
     ($file_type: expr, $cfg: expr, $(($typ: ident, $serde: ident, $fn: ident)),*) => {
         match $file_type {
@@ -118,6 +157,16 @@ macro_rules! cfg_to_string {
     };
 }
 
+/// Writes a configuration file of the given content to the specified path.
+///
+/// # Arguments
+///
+/// * `f` - A [`ConfigFile`] containing the path and file extension for the configuration file.
+/// * `content` - The configuration file contents to be written.
+///
+/// # Panics
+///
+/// Panics if the file cannot be created or if the contents cannot be written to the file.
 pub fn write_config<T>(f: &ConfigFile, content: T)
 where
     T: serde::Serialize,
@@ -137,6 +186,19 @@ where
         .unwrap();
 }
 
+/// Reads a configuration file of the specified type from the specified path.
+///
+/// # Arguments
+///
+/// * `f` - A [`ConfigFile`] containing the path and file extension for the configuration file.
+///
+/// # Returns
+///
+/// Returns the deserialized configuration data.
+///
+/// # Errors
+///
+/// Returns an [`std::io::Error`] if the file cannot be read or the contents cannot be deserialized.
 pub fn read_config_from_file<T>(
     f: &ConfigFile,
 ) -> Result<<T as ClapSerde>::Opt, std::io::Error>
@@ -144,10 +206,12 @@ where
     T: ClapSerde,
 {
     File::open(f.path).map(|mut file| match f.ext_type {
-        ConfigFileType::Yaml =>
-            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
-        ConfigFileType::Json =>
-            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
+        ConfigFileType::Yaml => {
+            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
+        },
+        ConfigFileType::Json => {
+            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
+        },
         ConfigFileType::Toml => {
             let mut buf = Vec::new();
             file.read_to_end(&mut buf).unwrap();
@@ -155,8 +219,10 @@ where
         },
     })
 }
-
+/// Trait for parsing configuration for a type.
 pub trait ParseConfig<T> {
+    /// Parses args from the command line,
+    /// performs a `command` or returns a loaded app configuration.
     fn parse_cfg() -> T;
 }
 
@@ -167,11 +233,18 @@ where
     /// Parses args from the command line,
     /// performs a `command` or returns a loaded app configuration.
     fn parse_cfg() -> T {
+        // Parse the base configuration from command line arguments.
         let cfg = BaseConfig::<T>::parse();
+        // Create a new configuration file based on the parsed configuration path.
         let f = ConfigFile::new(&cfg.config_path);
+        // Attempt to read the configuration file and deserialize it into the
+        // target type `T`. If there is an error reading the file, use the default
+        // configuration from the base configuration instead.
         let cfg_t =
             read_config_from_file::<T>(&f).map(T::from).unwrap_or(cfg.config);
 
+        // If the command is to create a new configuration file, write the current
+        // configuration to the specified file path and exit the program.
         if let Some(Commands::CreateConfig(path)) = cfg.command {
             let f = ConfigFile::new(&path);
             write_config(&f, &cfg_t);
@@ -182,22 +255,42 @@ where
             process::exit(0)
         }
 
+        // If the save_as_config option is specified, write the current configuration
+        // to the configuration file.
         if cfg.save_as_config {
             write_config(&f, &cfg_t);
         }
 
+        // Return the final configuration.
         cfg_t
     }
 }
 
 #[async_trait]
 pub trait RpcClientConfig {
+    /// The type of the RPC client that will be created
     type RpcClient;
+
+    /// Gets the URI for the RPC client to connect to
     fn uri(&self) -> &str;
+
+    /// Gets the UDS (Unix domain socket) path, if one is specified
     fn uds(&self) -> Option<&std::path::PathBuf>;
+
+    /// Determines whether TLS is enabled for the RPC client
     fn tls(&self) -> bool;
+
+    /// Gets the path to the SSL certificate, if TLS is enabled
     fn ssl_cert(&self) -> Option<&std::path::PathBuf>;
+
+    /// Determines whether to lazily connect the RPC client
     fn lazy_connect(&self) -> bool;
+
+    /// Connects the RPC client
+    ///
+    /// # Errors
+    ///
+    /// Returns an `anyhow::Error` if the client could not be connected.
     async fn connect_client(&self) -> Result<Self::RpcClient, anyhow::Error>;
 }
 

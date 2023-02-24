@@ -14,6 +14,7 @@ use std::fmt::Display;
 pub const OSU_VERSION: &str = "osu-version";
 pub const OSU_TOKEN: &str = "osu-token";
 
+/// Represents the version of the Bancho client.
 #[derive(Debug, Deref, Serialize, Deserialize)]
 pub struct BanchoClientVersion(pub String);
 
@@ -24,6 +25,19 @@ where
 {
     type Rejection = Error;
 
+    /// Extracts the `osu-version` header from the request parts and constructs
+    /// a `BanchoClientVersion` instance from it.
+    ///
+    /// # Arguments
+    ///
+    /// * `parts` - A mutable reference to the `Parts` struct containing the
+    ///             request parts.
+    /// * `_state` - A reference to the application state.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing the `BanchoClientVersion` instance if
+    /// successful, or an `Error` if the `osu-version` header is invalid.
     async fn from_request_parts(
         parts: &mut Parts,
         _state: &S,
@@ -46,6 +60,7 @@ impl Display for BanchoClientVersion {
     }
 }
 
+/// Wrapper for the `osu-token` header value.
 #[derive(Debug, Deref, Serialize, Deserialize)]
 pub struct BanchoClientToken(pub String);
 
@@ -56,6 +71,13 @@ where
 {
     type Rejection = Error;
 
+    /// Parses the `osu-token` header value from the incoming request and returns it
+    /// as a `BanchoClientToken` instance.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `osu-token` header is not present or if it cannot be
+    /// converted to a string.
     async fn from_request_parts(
         parts: &mut Parts,
         _state: &S,
@@ -76,6 +98,7 @@ impl Display for BanchoClientToken {
     }
 }
 
+/// A wrapper around the body of a Bancho request.
 #[derive(Debug, Deref)]
 pub struct BanchoRequestBody(pub Bytes);
 
@@ -88,10 +111,12 @@ where
 {
     type Rejection = Response;
 
+    /// Attempts to extract the request body from the provided `Request`.
     async fn from_request(
         req: Request<B>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
+        // Ensure the request came from a valid client.
         if !req
             .headers()
             .get(USER_AGENT)
@@ -103,6 +128,7 @@ where
                 .into_response());
         }
 
+        // Extract the request body and wrap it in a `BanchoRequestBody`.
         Ok(Self(
             Bytes::from_request(req, state)
                 .await

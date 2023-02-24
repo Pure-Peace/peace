@@ -32,12 +32,15 @@ pub struct BanchoStateConfig {
     pub frame_cfg: RpcFrameConfig,
 }
 
+/// The BanchoState application struct.
 #[derive(Clone)]
 pub struct App {
+    /// The configuration for the BanchoState application.
     pub cfg: Arc<BanchoStateConfig>,
 }
 
 impl App {
+    /// Create a new BanchoState application instance with the provided configuration.
     pub fn new(cfg: Arc<BanchoStateConfig>) -> Self {
         Self { cfg }
     }
@@ -45,19 +48,25 @@ impl App {
 
 #[async_trait]
 impl Application for App {
+    /// Get the RPC frame configuration for the BanchoState application.
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
     }
 
+    /// Get the service descriptors for the BanchoState application.
     fn service_descriptors(&self) -> Option<&[&[u8]]> {
         Some(&[BANCHO_STATE_DESCRIPTOR_SET])
     }
 
+    /// Start the BanchoState application and return a Router.
     async fn service(&self, mut configured_server: Server) -> Router {
+        // Create a new BanchoState instance.
         let bancho_state = BanchoState::default();
 
+        // Start the background service for the BanchoState instance.
         bancho_state.start_background_service();
 
+        // Add the BanchoState service to the server.
         configured_server.add_service(BanchoStateRpcServer::new(bancho_state))
     }
 }
