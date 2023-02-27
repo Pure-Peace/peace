@@ -1,5 +1,14 @@
-use bancho_state::{App, BanchoStateConfig};
-use peace_rpc::server;
+#[macro_use]
+extern crate peace_rpc;
+
+#[macro_use]
+extern crate peace_logs;
+
+pub mod app;
+pub mod rpc;
+
+pub use app::*;
+pub use rpc::*;
 
 /// The main entry point of the application.
 #[tokio::main(flavor = "multi_thread")]
@@ -11,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     peace_logs::init(&app.cfg.frame_cfg);
 
     // Start serving the RPC server with the `App` instance.
-    server::serve(app).await;
+    peace_rpc::server::serve(app).await;
 
     Ok(())
 }

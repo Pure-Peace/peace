@@ -1,0 +1,29 @@
+[package]
+name = "bancho_state"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tonic = "0.8"
+tokio = { version = "1", features = ["macros", "parking_lot"] }
+async-trait = "0.1"
+
+# serde
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# utils
+uuid = { version = "1.2", features = ["v4", "fast-rng"] }
+futures = "0.3"
+chrono = "0.4"
+
+# local crates
+peace_logs = { path = "../../frame/logs" }
+peace_pb = { path = "../../frame/pb", features = ["bancho_state"] }
+tools = { path = "../../lib/tools", features = ["async_collections"] }

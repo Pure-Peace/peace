@@ -3,7 +3,7 @@ resolver = "2"
 
 members = [
     "services/bancho",
-    "services/bancho/state",
+    "services/bancho-state",
     "services/gateway",
     "services/chat",
     "lib/tools",
@@ -19,6 +19,7 @@ members = [
     "frame/rpc",
     "frame/cfg",
     "frame/cfg/derive",
+    "bin/bancho-state",
 ]
 
 

@@ -1,25 +1,37 @@
-use crate::{User, UserSessions};
-use futures::future::join_all;
-use peace_pb::services::bancho_state_rpc::{
-    bancho_state_rpc_server::BanchoStateRpc, *,
-};
+use crate::{repositorys::*, User, UserSessions};
+use async_trait::async_trait;
+use peace_pb::services::bancho_state_rpc::*;
 use std::{collections::hash_map::Values, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 use tools::async_collections::BackgroundService;
 
-const SESSION_NOT_FOUND: &'static str = "session no exists";
+pub const SESSION_NOT_FOUND: &'static str = "session no exists";
 
-/// The global state of the Bancho server.
 #[derive(Debug, Default, Clone)]
-pub struct BanchoState {
+pub struct AppState {
     /// The collection of user sessions currently active on the server.
     pub user_sessions: Arc<RwLock<UserSessions>>,
 }
 
-impl BanchoState {
-    /// Starts the background service for session recycling.
-    pub fn start_background_service(&self) {
+impl AppStateRepository for AppState {
+    fn user_sessions(&self) -> Arc<RwLock<UserSessions>> {
+        self.user_sessions.clone()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BanchoStatePacketsRepository;
+
+#[derive(Debug, Default, Clone)]
+pub struct BanchoStateBackgroundServiceRepository;
+
+#[derive(Debug, Default, Clone)]
+pub struct BanchoStateSessionsRepository;
+
+#[async_trait]
+impl BackgroundServiceRepository for BanchoStateBackgroundServiceRepository {
+    fn start_background_service(&self) {
         let mut session_recycle = BackgroundService::new(|stop| async move {
             // Start the service
             println!("Starting session recycling service...");
@@ -57,8 +69,8 @@ impl BanchoState {
     }
 }
 
-#[tonic::async_trait]
-impl BanchoStateRpc for BanchoState {
+#[async_trait]
+impl PacketsRepository for BanchoStatePacketsRepository {
     async fn broadcast_bancho_packets(
         &self,
         request: Request<BroadcastBanchoPacketsRequest>,
@@ -93,25 +105,17 @@ impl BanchoStateRpc for BanchoState {
     ) -> Result<Response<ExecSuccess>, Status> {
         unimplemented!()
     }
+}
 
-    /// Creates a new user session.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - The request containing the user's credentials.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing a `Response` with the new session ID, or a `Status` if an error occurs.
-    ///
-    ///
+#[async_trait]
+impl SessionsRepository for BanchoStateSessionsRepository {
     async fn create_user_session(
         &self,
+        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<CreateUserSessionRequest>,
     ) -> Result<Response<CreateUserSessionResponse>, Status> {
         // Create a new user session using the provided request.
-        let session_id = self
-            .user_sessions
+        let session_id = user_sessions
             .write()
             .await
             .create(request.into_inner().into())
@@ -124,25 +128,15 @@ impl BanchoStateRpc for BanchoState {
         Ok(Response::new(CreateUserSessionResponse { session_id }))
     }
 
-    /// Deletes a user session from the `user_sessions` using the provided query.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - A `Request` object containing the `RawUserQuery` to use for deleting the session.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` object containing a `Response` object with an `ExecSuccess` message indicating that the
-    /// session was successfully deleted, or a `Status` object indicating that an error occurred.
-    ///
     async fn delete_user_session(
         &self,
+        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<ExecSuccess>, Status> {
         let query = request.into_inner().into();
 
         // Delete the session using the query.
-        self.user_sessions.write().await.delete(&query).await;
+        user_sessions.write().await.delete(&query).await;
 
         // Log that the session was deleted.
         info!(target: "session.delete", "Session <{query:?}> deleted");
@@ -151,23 +145,13 @@ impl BanchoStateRpc for BanchoState {
         Ok(Response::new(ExecSuccess {}))
     }
 
-    /// Check if a user session exists for the given query.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - A request containing the query for the user session.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing a `UserSessionExistsResponse` if the session exists,
-    /// or a `Status` with an error message if it does not.
     async fn check_user_session_exists(
         &self,
+        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<UserSessionExistsResponse>, Status> {
         // Retrieve the user session from the user session store.
-        let user = self
-            .user_sessions
+        let user = user_sessions
             .read()
             .await
             .get(&request.into_inner().into())
@@ -184,28 +168,13 @@ impl BanchoStateRpc for BanchoState {
         Ok(Response::new(UserSessionExistsResponse { user_id }))
     }
 
-    /// Get user session details based on the provided query.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - A `Request` containing the query for the user session.
-    ///
-    /// # Returns
-    ///
-    /// * A `Result` containing either a `Response` with the details of the user session
-    ///   or a `Status` indicating that the session was not found.
-    ///
-    /// # Errors
-    ///
-    /// This function may return a `Status` indicating that the session was not found.
-    ///
     async fn get_user_session(
         &self,
+        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         // Get the user session based on the provided query
-        let user = self
-            .user_sessions
+        let user = user_sessions
             .read()
             .await
             .get(&request.into_inner().into())
@@ -230,18 +199,9 @@ impl BanchoStateRpc for BanchoState {
         }))
     }
 
-    /// Retrieves a user session with specific fields from the database.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - A gRPC request containing the query and fields to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// A gRPC response containing the requested user session fields.
-    ///
     async fn get_user_session_with_fields(
         &self,
+        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQueryWithFields>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         // Extract the query and fields from the request
@@ -249,8 +209,7 @@ impl BanchoStateRpc for BanchoState {
         let query = req.query.ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
         // Retrieve the user session from the database
-        let user = self
-            .user_sessions
+        let user = user_sessions
             .read()
             .await
             .get(&query.into())
@@ -285,30 +244,20 @@ impl BanchoStateRpc for BanchoState {
         Ok(Response::new(res))
     }
 
-    /// Returns a list of all active user sessions.
-    ///
-    /// # Arguments
-    ///
-    /// * `_request` - A `Request` object containing a `GetAllSessionsRequest` message.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` object containing a `Response` object with a `GetAllSessionsResponse`
-    /// message, or a `Status` object indicating an error.
-    ///
     async fn get_all_sessions(
         &self,
+        user_sessions: Arc<RwLock<UserSessions>>,
         _request: Request<GetAllSessionsRequest>,
     ) -> Result<Response<GetAllSessionsResponse>, Status> {
         // Get a read lock on the `user_sessions` hash map
-        let user_sessions = self.user_sessions.read().await;
+        let user_sessions = user_sessions.read().await;
 
         // Define a helper function to collect data from the hash map
         async fn collect_data<K>(
             values: Values<'_, K, Arc<RwLock<User>>>,
         ) -> Vec<UserData> {
             // Use `join_all` to asynchronously process all elements in the `values` iterator
-            join_all(values.map(|u| async {
+            futures::future::join_all(values.map(|u| async {
                 // Get a read lock on the user object
                 let u = u.read().await;
 
