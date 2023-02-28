@@ -6,6 +6,7 @@ pub use peace_cfg_derive::*;
 use async_trait::async_trait;
 use clap::{Args, Parser, Subcommand};
 use clap_serde_derive::ClapSerde;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -88,7 +89,8 @@ pub enum ConfigFileType {
     Toml,
 }
 
-/// A struct representing a configuration file path and its associated file type.
+/// A struct representing a configuration file path and its associated file
+/// type.
 #[derive(Debug, Clone)]
 pub struct ConfigFile<'a> {
     /// The path of the configuration file.
@@ -116,7 +118,8 @@ impl<P> From<P> for ConfigFileType
 where
     P: AsRef<Path>,
 {
-    /// Converts a file path into a [`ConfigFileType`] instance based on the file extension.
+    /// Converts a file path into a [`ConfigFileType`] instance based on the
+    /// file extension.
     ///
     /// # Arguments
     ///
@@ -137,18 +140,19 @@ where
     }
 }
 
-/// This macro is used to serialize a given configuration to a string using one of several possible
-/// file formats, depending on the specified configuration file type.
+/// This macro is used to serialize a given configuration to a string using one
+/// of several possible file formats, depending on the specified configuration
+/// file type.
 ///
 /// # Arguments
 ///
 /// * `$file_type` - The file type to use for serialization.
 /// * `$cfg` - The configuration to serialize.
-/// * `$(($typ: ident, $serde: ident, $fn: ident)),*` - A list of tuples representing each possible
-/// file format to use for serialization. Each tuple contains an identifier for the file format, an
-/// identifier for the corresponding serde library, and an identifier for the serde function to use
-/// for serialization.
-///
+/// * `$(($typ: ident, $serde: ident, $fn: ident)),*` - A list of tuples
+///   representing each possible
+/// file format to use for serialization. Each tuple contains an identifier for
+/// the file format, an identifier for the corresponding serde library, and an
+/// identifier for the serde function to use for serialization.
 macro_rules! cfg_to_string {
     ($file_type: expr, $cfg: expr, $(($typ: ident, $serde: ident, $fn: ident)),*) => {
         match $file_type {
@@ -161,12 +165,14 @@ macro_rules! cfg_to_string {
 ///
 /// # Arguments
 ///
-/// * `f` - A [`ConfigFile`] containing the path and file extension for the configuration file.
+/// * `f` - A [`ConfigFile`] containing the path and file extension for the
+///   configuration file.
 /// * `content` - The configuration file contents to be written.
 ///
 /// # Panics
 ///
-/// Panics if the file cannot be created or if the contents cannot be written to the file.
+/// Panics if the file cannot be created or if the contents cannot be written to
+/// the file.
 pub fn write_config<T>(f: &ConfigFile, content: T)
 where
     T: serde::Serialize,
@@ -190,7 +196,8 @@ where
 ///
 /// # Arguments
 ///
-/// * `f` - A [`ConfigFile`] containing the path and file extension for the configuration file.
+/// * `f` - A [`ConfigFile`] containing the path and file extension for the
+///   configuration file.
 ///
 /// # Returns
 ///
@@ -198,7 +205,8 @@ where
 ///
 /// # Errors
 ///
-/// Returns an [`std::io::Error`] if the file cannot be read or the contents cannot be deserialized.
+/// Returns an [`std::io::Error`] if the file cannot be read or the contents
+/// cannot be deserialized.
 pub fn read_config_from_file<T>(
     f: &ConfigFile,
 ) -> Result<<T as ClapSerde>::Opt, std::io::Error>
@@ -206,12 +214,10 @@ where
     T: ClapSerde,
 {
     File::open(f.path).map(|mut file| match f.ext_type {
-        ConfigFileType::Yaml => {
-            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
-        },
-        ConfigFileType::Json => {
-            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
-        },
+        ConfigFileType::Yaml =>
+            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
+        ConfigFileType::Json =>
+            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
         ConfigFileType::Toml => {
             let mut buf = Vec::new();
             file.read_to_end(&mut buf).unwrap();
@@ -235,16 +241,18 @@ where
     fn parse_cfg() -> T {
         // Parse the base configuration from command line arguments.
         let cfg = BaseConfig::<T>::parse();
-        // Create a new configuration file based on the parsed configuration path.
+        // Create a new configuration file based on the parsed configuration
+        // path.
         let f = ConfigFile::new(&cfg.config_path);
         // Attempt to read the configuration file and deserialize it into the
-        // target type `T`. If there is an error reading the file, use the default
-        // configuration from the base configuration instead.
+        // target type `T`. If there is an error reading the file, use the
+        // default configuration from the base configuration instead.
         let cfg_t =
             read_config_from_file::<T>(&f).map(T::from).unwrap_or(cfg.config);
 
-        // If the command is to create a new configuration file, write the current
-        // configuration to the specified file path and exit the program.
+        // If the command is to create a new configuration file, write the
+        // current configuration to the specified file path and exit the
+        // program.
         if let Some(Commands::CreateConfig(path)) = cfg.command {
             let f = ConfigFile::new(&path);
             write_config(&f, &cfg_t);
@@ -255,8 +263,8 @@ where
             process::exit(0)
         }
 
-        // If the save_as_config option is specified, write the current configuration
-        // to the configuration file.
+        // If the save_as_config option is specified, write the current
+        // configuration to the configuration file.
         if cfg.save_as_config {
             write_config(&f, &cfg_t);
         }
@@ -294,12 +302,29 @@ pub trait RpcClientConfig {
     async fn connect_client(&self) -> Result<Self::RpcClient, anyhow::Error>;
 }
 
+#[async_trait]
+pub trait DbConfig {
+    /// Returns a configured [`ConnectOptions`]
+    fn configured_opt(&self) -> ConnectOptions;
+
+    /// Connect to database.
+    async fn connect(&self) -> Result<DatabaseConnection, DbErr> {
+        Database::connect(self.configured_opt()).await
+    }
+}
+
 pub mod macros {
-    pub use anyhow::Error;
-    pub use async_trait::async_trait;
-    pub use once_cell::sync::OnceCell;
-    pub use paste;
-    pub use peace_logs;
+    pub mod ____private {
+        pub use anyhow::Error;
+        pub use async_trait::async_trait;
+        pub use clap;
+        pub use clap_serde_derive::ClapSerde;
+        pub use once_cell::sync::OnceCell;
+        pub use paste;
+        pub use peace_logs::{self, log::LevelFilter, LogLevel};
+        pub use sea_orm::{ConnectOptions, DatabaseConnection, DbErr};
+        pub use serde::{Deserialize, Serialize};
+    }
 
     /// Add a `get` method to the given struct.
     ///
@@ -333,8 +358,11 @@ pub mod macros {
                 /// Get or init configs (only initialized once).
                 pub fn get() -> std::sync::Arc<$t> {
                     use $crate::ParseConfig;
-                    static CFG: $crate::macros::OnceCell<std::sync::Arc<$t>> =
-                        $crate::macros::OnceCell::<std::sync::Arc<$t>>::new();
+                    static CFG: $crate::macros::____private::OnceCell<
+                        std::sync::Arc<$t>,
+                    > = $crate::macros::____private::OnceCell::<
+                        std::sync::Arc<$t>,
+                    >::new();
                     CFG.get_or_init(|| std::sync::Arc::new(<$t>::parse_cfg()))
                         .clone()
                 }
@@ -393,7 +421,7 @@ pub mod macros {
             $crate::macro_define_rpc_client_config!(service_name: $service_name, config_name: $config_name, default_uri: "http://127.0.0.1:50051");
         };
         (service_name: $service_name: ty, config_name: $config_name: ty, default_uri: $default_uri: literal) => {
-            $crate::macros::paste::paste! {
+            $crate::macros::____private::paste::paste! {
                 pub type [<$service_name:camel>] =
                     [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<tonic::transport::Channel>;
 
@@ -428,7 +456,7 @@ pub mod macros {
                     pub [<$service_name:snake _lazy_connect>]: bool,
                 }
 
-                #[$crate::macros::async_trait]
+                #[$crate::macros::____private::async_trait]
                 impl $crate::RpcClientConfig for $config_name {
                     type RpcClient = [<$service_name:camel>];
 
@@ -458,15 +486,15 @@ pub mod macros {
                     }
 
                     #[inline]
-                    async fn connect_client(&self) -> Result<Self::RpcClient, $crate::macros::Error> {
+                    async fn connect_client(&self) -> Result<Self::RpcClient, $crate::macros::____private::Error> {
                         async fn connect_endpoint(
                             endpoint: tonic::transport::Endpoint,
                             lazy_connect: bool,
-                        ) -> Result<tonic::transport::Channel, $crate::macros::Error> {
+                        ) -> Result<tonic::transport::Channel, $crate::macros::____private::Error> {
                             Ok(if lazy_connect {
                                 endpoint.connect_lazy()
                             } else {
-                                $crate::macros::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                                $crate::macros::____private::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
                                 endpoint.connect().await?
                             })
                         }
@@ -488,7 +516,7 @@ pub mod macros {
                             return Self::RpcClient::new(channel);
                         }
 
-                        $crate::macros::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), self.uri());
+                        $crate::macros::____private::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), self.uri());
                         if self.tls() {
                             let pem =
                                 tokio::fs::read(self.ssl_cert().as_ref().unwrap())
@@ -512,6 +540,138 @@ pub mod macros {
                             )
                             .await?,
                         ))
+                    }
+                }
+            }
+        };
+    }
+
+    /// Create a configuration structure for the specified database.
+    ///
+    /// [clap #3513](https://github.com/clap-rs/clap/issues/3513)
+    /// Due to `clap` currently does not support adding a prefix to the
+    /// configuration struct, this declarative macro is currently used to reuse
+    /// configuration items.
+    ///
+    /// examples
+    ///
+    /// ```rust
+    /// use peace_cfg::define_db_config;
+    ///
+    /// define_db_config!(config_name: BanchoDbConfig, command_prefix: bancho);
+    /// define_db_config!(config_name: LazerDbConfig, command_prefix: lazer);
+    /// ```
+    #[macro_export]
+    macro_rules! define_db_config {
+        (config_name: $struct_name: ident, command_prefix: $prefix: ident) => {
+            $crate::macros::____private::paste::paste! {
+                #[allow(non_snake_case)]
+                mod [<__def_ $struct_name _mod__>] {
+                    use $crate::macros::____private::{clap, ClapSerde, Deserialize, Serialize};
+
+                    /// Database configurations
+                    #[derive(
+                        clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
+                    )]
+                    pub struct $struct_name {
+                        /// Database connection URL.
+                        #[default("protocol://username:password@host/database".to_string())]
+                        #[arg(
+                            long,
+                            default_value = "protocol://username:password@host/database"
+                        )]
+                        pub [<$prefix _db_url>]: String,
+
+                        /// Set the maximum number of connections of the pool.
+                        #[arg(long)]
+                        pub [<$prefix _db_max_connections>]: Option<u32>,
+
+                        /// Set the minimum number of connections of the pool.
+                        #[arg(long)]
+                        pub [<$prefix _db_min_connections>]: Option<u32>,
+
+                        /// Set the timeout duration when acquiring a connection.
+                        #[arg(long)]
+                        pub [<$prefix _db_connect_timeout>]: Option<u64>,
+
+                        /// Set the maximum amount of time to spend waiting for acquiring a connection.
+                        #[arg(long)]
+                        pub [<$prefix _db_acquire_timeout>]: Option<u64>,
+
+                        /// Set the idle duration before closing a connection.
+                        #[arg(long)]
+                        pub [<$prefix _db_idle_timeout>]: Option<u64>,
+
+                        /// Set the maximum lifetime of individual connections.
+                        #[arg(long)]
+                        pub [<$prefix _db_max_lifetime>]: Option<u64>,
+
+                        /// Enable SQLx statement logging (default true).
+                        #[default(true)]
+                        #[arg(long, default_value = "true")]
+                        pub [<$prefix _db_sqlx_logging>]: bool,
+
+                        /// Set SQLx statement logging level (default [`LogLevel::Info`]) (ignored if `sqlx_logging` is false).
+                        #[default($crate::macros::____private::LogLevel::Info)]
+                        #[arg(long, value_enum, default_value = "info")]
+                        pub [<$prefix _db_sqlx_logging_level>]: $crate::macros::____private::LogLevel,
+
+                        /// Set schema search path (PostgreSQL only).
+                        #[arg(long)]
+                        pub [<$prefix _db_set_schema_search_path>]: Option<String>,
+                    }
+
+                    $crate::impl_db_config!($struct_name, $prefix);
+                }
+
+                pub use [<__def_ $struct_name _mod__>]::$struct_name;
+            }
+        };
+    }
+
+    #[macro_export]
+    macro_rules! impl_db_config {
+        ($struct_name: ident, $prefix: ident) => {
+            $crate::macros::____private::paste::paste! {
+                impl $crate::DbConfig for $struct_name {
+                    fn configured_opt(&self) -> $crate::macros::____private::ConnectOptions {
+                        let mut opt = $crate::macros::____private::ConnectOptions::new(self.[<$prefix _db_url>].clone());
+
+                        if let Some(v) = self.[<$prefix _db_max_connections>] {
+                            opt.max_connections(v);
+                        }
+                        if let Some(v) = self.[<$prefix _db_min_connections>] {
+                            opt.min_connections(v);
+                        }
+                        if let Some(v) =
+                            self.[<$prefix _db_connect_timeout>].map(std::time::Duration::from_secs)
+                        {
+                            opt.connect_timeout(v);
+                        }
+                        if let Some(v) =
+                            self.[<$prefix _db_acquire_timeout>].map(std::time::Duration::from_secs)
+                        {
+                            opt.acquire_timeout(v);
+                        }
+                        if let Some(v) =
+                            self.[<$prefix _db_idle_timeout>].map(std::time::Duration::from_secs)
+                        {
+                            opt.idle_timeout(v);
+                        }
+                        if let Some(v) =
+                            self.[<$prefix _db_max_lifetime>].map(std::time::Duration::from_secs)
+                        {
+                            opt.max_lifetime(v);
+                        }
+                        if let Some(v) = self.[<$prefix _db_set_schema_search_path>].to_owned() {
+                            opt.set_schema_search_path(v);
+                        }
+                        opt.sqlx_logging(self.[<$prefix _db_sqlx_logging>]);
+                        opt.sqlx_logging_level($crate::macros::____private::LevelFilter::from(
+                            self.[<$prefix _db_sqlx_logging_level>],
+                        ));
+
+                        opt
                     }
                 }
             }

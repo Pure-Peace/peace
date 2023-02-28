@@ -44,7 +44,7 @@ once_cell = "1.16"
 peace_logs = { path = "../../frame/logs", features = ["cli"] }
 peace_cfg = { path = "../../frame/cfg" }
 tools = { path = "../../lib/tools", features = ["async_collections"] }
-peace_pb = { path = "../../frame/pb", optional = true }
+peace_pb = { path = "../../core/pb", optional = true }
 
 
 [target.'cfg(unix)'.dependencies]

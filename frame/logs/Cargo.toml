@@ -25,7 +25,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 # grpc optional
 tonic = { version = "0.8", optional = true }
-peace_pb = { path = "../pb", optional = true, features = ["logs"] }
+peace_pb = { path = "../../core/pb", optional = true, features = ["logs"] }
 
 # axum optional
 axum = { version = "0.6.0", optional = true }
@@ -38,8 +38,8 @@ clap-serde-derive = { version = "0.2.0", optional = true }
 
 
 # openapi optional
-utoipa = { version = "2.4.2", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "3.0.1", features = ["axum"] }
+utoipa = { version = "3.0.3", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "3.0.2", features = ["axum"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }

@@ -115,8 +115,8 @@ where
 }
 
 #[derive(thiserror::Error, Debug)]
-/// An error enum to represent errors that can occur while using BackgroundService.
-pub enum BackgroundServiceError {
+/// An error enum to represent errors that can occur while using BackgroundTask.
+pub enum BackgroundTaskError {
     #[error("task is already started")]
     AlreadyStarted,
     #[error("task is not started")]
@@ -128,7 +128,7 @@ pub enum BackgroundServiceError {
 }
 
 #[derive(Debug)]
-pub struct BackgroundService<T, F>
+pub struct BackgroundTask<T, F>
 where
     T: Future + Send + 'static,
     T::Output: Send + 'static,
@@ -145,13 +145,13 @@ where
     signal: Option<SignalHandle>,
 }
 
-impl<T, F> BackgroundService<T, F>
+impl<T, F> BackgroundTask<T, F>
 where
     T: Future + Send + 'static,
     T::Output: Send + 'static,
     F: Fn(SignalHandle) -> T,
 {
-    /// Creates a new `BackgroundService` instance with the specified factory
+    /// Creates a new `BackgroundTask` instance with the specified factory
     /// function.
     pub fn new(factory: F) -> Self {
         Self { factory, handle: None, signal: None }
@@ -176,10 +176,10 @@ where
     pub fn start(
         &mut self,
         manual_stop: bool,
-    ) -> Result<(), BackgroundServiceError> {
+    ) -> Result<(), BackgroundTaskError> {
         // Check if the background service is already started
         if self.is_started() {
-            return Err(BackgroundServiceError::AlreadyStarted);
+            return Err(BackgroundTaskError::AlreadyStarted)
         }
 
         // Create a signal handle and store it in the `signal` field
@@ -208,12 +208,12 @@ where
     }
 
     /// Triggers a signal to stop the background service.
-    pub fn trigger_signal(&self) -> Result<(), BackgroundServiceError> {
+    pub fn trigger_signal(&self) -> Result<(), BackgroundTaskError> {
         // Trigger the signal handle, if it exists
         self.signal
             .as_ref()
             .and_then(|s| Some(s.trigger()))
-            .ok_or(BackgroundServiceError::SignalNotExists)?;
+            .ok_or(BackgroundTaskError::SignalNotExists)?;
         Ok(())
     }
 
@@ -227,6 +227,7 @@ where
     /// Returns the join handle of the background service task and replaces
     /// it with `None`.
     pub fn handle(&mut self) -> Option<JoinHandle<Option<T::Output>>> {
-        std::mem::replace(&mut self.handle, None) // Replace the handle with None and return it.
+        std::mem::replace(&mut self.handle, None) // Replace the handle with
+                                                  // None and return it.
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "bancho-state-server"
+name = "bancho-server"
 version = "0.1.0"
 edition = "2021"
 authors = ["Pure-Peace"]
@@ -7,7 +7,7 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 [[bin]]
-name = "bancho-state-server"
+name = "bancho-server"
 path = "src/main.rs"
 
 
@@ -23,13 +23,12 @@ clap = { version = "4.0", features = ["derive"] }
 clap-serde-derive = "0.2.0"
 
 
+peace_services = { path = "../../core/services" }
+peace_pb = { path = "../../core/pb", features = ["reflection", "bancho"] }
+
 peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
 peace_rpc = { path = "../../frame/rpc", features = [
     "tls",
     "admin_endpoints",
     "reflection",
 ] }
-
-
-peace_pb = { path = "../../core/pb", features = ["reflection", "bancho_state"] }
-peace_services = { path = "../../core/services" }

@@ -1,0 +1,38 @@
+[package]
+name = "db-peace-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+[[bin]]
+name = "db-cli"
+path = "src/db-cli.rs"
+
+[[bin]]
+name = "db-peace-cli"
+path = "src/db-peace-cli.rs"
+
+[[bin]]
+name = "db-peace-migrate"
+path = "src/db-peace-migrate.rs"
+
+
+[dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }
+dotenvy = { version = "0.15" }
+md5 = { version = "0.7" }
+sea-orm-cli = { version = "0.11", default-features = false, features = [
+    "codegen",
+    "cli",
+    "runtime-tokio-rustls",
+] }
+sea-orm-migration = { version = "0.11", features = ["runtime-tokio-rustls"] }
+
+clap3 = { package = "clap", version = "3.2", features = ["derive"] }
+clap4 = { package = "clap", version = "4.0", features = ["derive"] }
+
+peace_db = { path = "../../core/db" }
+peace_domain = { path = "../../core/domain" }
+peace_repositories = { path = "../../core/repositories" }

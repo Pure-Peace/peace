@@ -1,5 +1,5 @@
 use crate::BanchoState;
-use peace_pb::bancho_state_rpc::*;
+use peace_pb::services::bancho_state_rpc::*;
 use tonic::{Request, Response, Status};
 
 #[tonic::async_trait]

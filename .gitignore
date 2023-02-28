@@ -26,3 +26,6 @@ config.toml
 *.key
 
 .vscode
+
+/core/pb/generated/*.bin
+/core/pb/generated/*.rs

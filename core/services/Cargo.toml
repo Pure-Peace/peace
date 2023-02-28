@@ -1,0 +1,19 @@
+[package]
+name = "peace_services"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+
+[dependencies]
+tonic = "0.8"
+
+peace_logs = { path = "../../frame/logs" }
+peace_db = { path = "../../core/db" }
+peace_domain = { path = "../../core/domain" }
+
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros"] }

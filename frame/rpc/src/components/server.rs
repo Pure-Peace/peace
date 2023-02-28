@@ -9,7 +9,7 @@ use tonic::{
 use tools::async_collections::{shutdown_signal, SignalHandle};
 
 #[cfg(feature = "admin_endpoints")]
-use peace_pb::frame::logs::logs_rpc_server::LogsRpcServer;
+use peace_pb::logs::logs_rpc_server::LogsRpcServer;
 
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
@@ -19,15 +19,16 @@ pub async fn serve(app_cfg: impl Application) {
     // Create a server with the given configuration.
     let mut svr = app_cfg.service(server(&cfg)).await;
 
-    // If the 'reflection' feature is enabled and the configuration specifies it,
-    // add reflection to the server.
+    // If the 'reflection' feature is enabled and the configuration specifies
+    // it, add reflection to the server.
     #[cfg(feature = "reflection")]
     if cfg.rpc_reflection {
         svr = add_reflection(svr, &app_cfg)
     };
 
-    // If the 'admin_endpoints' feature is enabled and the configuration specifies it,
-    // add the logs service to the server with the appropriate authorization interceptor.
+    // If the 'admin_endpoints' feature is enabled and the configuration
+    // specifies it, add the logs service to the server with the appropriate
+    // authorization interceptor.
     #[cfg(feature = "admin_endpoints")]
     if cfg.rpc_admin_endpoints {
         let svc = peace_logs::grpc::LogsRpcService::default();
@@ -61,7 +62,8 @@ pub async fn serve(app_cfg: impl Application) {
 /// # Arguments
 ///
 /// * svr - The Router instance that contains the gRPC services to be served.
-/// * cfg - A reference to the RpcFrameConfig object that contains configuration options for the gRPC server.
+/// * cfg - A reference to the RpcFrameConfig object that contains configuration
+///   options for the gRPC server.
 pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
     // Create a server handle for handling graceful shutdown.
     let handle = server_handle();
@@ -82,18 +84,21 @@ pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
         let uds = tokio::net::UnixListener::bind(path).unwrap();
         // Create a stream of incoming connections from the UDS listener.
         let uds_stream = tokio_stream::wrappers::UnixListenerStream::new(uds);
-        // Serve incoming requests with the UDS stream and wait for a shutdown signal.
+        // Serve incoming requests with the UDS stream and wait for a shutdown
+        // signal.
         svr.serve_with_incoming_shutdown(uds_stream, handle.wait_signal())
             .await
             .unwrap();
     } else {
-        // Serve incoming requests with the specified address and wait for a shutdown signal.
+        // Serve incoming requests with the specified address and wait for a
+        // shutdown signal.
         svr.serve_with_shutdown(cfg.rpc_addr, handle.wait_signal())
             .await
             .unwrap();
     }
 
-    // If the Unix Domain Socket option is not enabled, serve incoming requests with the specified address and wait for a shutdown signal.
+    // If the Unix Domain Socket option is not enabled, serve incoming requests
+    // with the specified address and wait for a shutdown signal.
     #[cfg(not(unix))]
     svr.serve_with_shutdown(cfg.rpc_addr, handle.wait_signal()).await.unwrap();
 }
@@ -102,19 +107,23 @@ pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
 ///
 /// # Arguments
 ///
-/// * cfg - A reference to the RpcFrameConfig object containing configuration for the gRPC server
+/// * cfg - A reference to the RpcFrameConfig object containing configuration
+///   for the gRPC server
 ///
 /// # Returns
 ///
-/// A string containing the address of the gRPC server, formatted as protocol://address:port or path for Unix Domain Sockets
+/// A string containing the address of the gRPC server, formatted as
+/// protocol://address:port or path for Unix Domain Sockets
 pub fn addr(cfg: &RpcFrameConfig) -> String {
     #[cfg(unix)]
-    // If the server is using Unix Domain Sockets, return the path as the address
+    // If the server is using Unix Domain Sockets, return the path as the
+    // address
     if let Some(path) = cfg.uds {
-        return format!("{}", path);
+        return format!("{}", path)
     }
 
-    // If the server is not using Unix Domain Sockets, return the address and protocol as the address
+    // If the server is not using Unix Domain Sockets, return the address and
+    // protocol as the address
     format!(
         "{}://{}",
         if cfg.rpc_tls_config.tls { "https" } else { "http" },
@@ -153,12 +162,14 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
 
     if let Some(limit) = cfg.rpc_concurrency_limit_per_connection {
         // if the configuration specifies a concurrency limit per connection
-        svr = svr.concurrency_limit_per_connection(limit) // set the concurrency limit per connection
+        svr = svr.concurrency_limit_per_connection(limit) // set the concurrency
+                                                          // limit per connection
     };
 
     if let Some(timeout) = cfg.rpc_req_timeout {
         // if the configuration specifies a request timeout
-        svr = svr.timeout(Duration::from_secs(timeout)) // set the request timeout
+        svr = svr.timeout(Duration::from_secs(timeout)) // set the request
+                                                        // timeout
     };
 
     svr // return the created server
@@ -168,13 +179,13 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
 ///
 /// # Arguments
 ///
-/// * `cfg` - A reference to the `RpcFrameConfig` struct that contains configuration details
-///           related to the RPC server.
+/// * `cfg` - A reference to the `RpcFrameConfig` struct that contains
+///   configuration details related to the RPC server.
 ///
 /// # Panics
 ///
-/// This function will panic if `--ssl-cert` or `--ssl-key` options are not passed in.
-///
+/// This function will panic if `--ssl-cert` or `--ssl-key` options are not
+/// passed in.
 #[cfg(feature = "tls")]
 pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
     // Read the SSL certificate file into a byte buffer.
@@ -196,13 +207,15 @@ pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
     // Create a new identity using the certificate and key byte buffers.
     let identity = tonic::transport::Identity::from_pem(cert, key);
 
-    // Create a new server builder with TLS configuration using the created identity.
+    // Create a new server builder with TLS configuration using the created
+    // identity.
     Server::builder()
         .tls_config(tonic::transport::ServerTlsConfig::new().identity(identity))
         .unwrap()
 }
 
-/// Adds reflection to a `Router` using the provided `Application` configuration.
+/// Adds reflection to a `Router` using the provided `Application`
+/// configuration.
 ///
 /// # Arguments
 ///
@@ -220,11 +233,12 @@ pub fn add_reflection(svr: Router, app_cfg: &impl Application) -> Router {
     #[cfg(feature = "admin_endpoints")]
     if app_cfg.frame_cfg().rpc_admin_endpoints {
         reflection = reflection.register_encoded_file_descriptor_set(
-            peace_pb::frame::logs::LOGS_DESCRIPTOR_SET,
+            peace_pb::logs::LOGS_DESCRIPTOR_SET,
         );
     };
 
-    // Register the encoded file descriptor sets for each service in the application configuration
+    // Register the encoded file descriptor sets for each service in the
+    // application configuration
     if let Some(descriptors) = app_cfg.service_descriptors() {
         for i in descriptors {
             reflection = reflection.register_encoded_file_descriptor_set(i);

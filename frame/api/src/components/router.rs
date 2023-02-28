@@ -37,17 +37,17 @@ pub async fn app(app: impl Application) -> Router {
         .fallback(responder::handle_404)
 }
 
-pub fn openapi_router(mut openapi: OpenApi, cfg: &ApiFrameConfig) -> Router {
+pub fn openapi_router(mut api_docs: OpenApi, cfg: &ApiFrameConfig) -> Router {
     if !cfg.admin_endpoints {
-        openapi = remove_admin_routes(openapi)
+        api_docs = remove_admin_routes(api_docs)
     }
     SwaggerUi::new(cfg.swagger_path.clone())
-        .url(cfg.openapi_json.clone(), openapi)
+        .url(cfg.openapi_json.clone(), api_docs)
         .into()
 }
 
-pub fn remove_admin_routes(mut openapi: OpenApi) -> OpenApi {
-    let admin_pathes = openapi
+pub fn remove_admin_routes(mut api_docs: OpenApi) -> OpenApi {
+    let admin_pathes = api_docs
         .paths
         .paths
         .keys()
@@ -56,10 +56,10 @@ pub fn remove_admin_routes(mut openapi: OpenApi) -> OpenApi {
         .collect::<Vec<String>>();
 
     for key in admin_pathes {
-        openapi.paths.paths.remove(&key);
+        api_docs.paths.paths.remove(&key);
     }
 
-    openapi
+    api_docs
 }
 
 /// The `admin_routers` provides some api endpoints for managing the server,

@@ -1,7 +1,7 @@
-use bancho_state::repositorys::*;
-use bancho_state::service::*;
+use bancho_state::repositories::*;
+use bancho_state::services::*;
 use clap_serde_derive::ClapSerde;
-use peace_pb::services::bancho_state_rpc::{
+use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{Application, RpcFrameConfig};
@@ -14,23 +14,20 @@ use tonic::{
 #[derive(Clone)]
 pub struct BanchoState {
     pub app_state_repository: DynAppStateRepository,
-    pub packets_repository: DynPacketsRepository,
+    pub bancho_state_service: DynPacketsRepository,
     pub background_repository: DynBackgroundServiceRepository,
-    pub sessions_repository: DynSessionsRepository,
 }
 
 impl BanchoState {
     pub fn new(
         app_state_repository: DynAppStateRepository,
-        packets_repository: DynPacketsRepository,
+        bancho_state_service: DynPacketsRepository,
         background_repository: DynBackgroundServiceRepository,
-        sessions_repository: DynSessionsRepository,
     ) -> BanchoState {
         Self {
             app_state_repository,
-            packets_repository,
+            bancho_state_service,
             background_repository,
-            sessions_repository,
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::IntoLevelFilter;
-use peace_pb::frame::logs::{
+use peace_pb::logs::{
     logs_rpc_server::LogsRpc, BoolValue, EmptyRequest, ExecSuccess,
     SetLevelRequest, StringValue,
 };
@@ -64,7 +64,7 @@ impl LogsRpc for LogsRpcService {
 
 #[cfg(test)]
 mod test {
-    use peace_pb::frame::logs::{
+    use peace_pb::logs::{
         logs_rpc_server::LogsRpc, BoolValue, LogLevel, SetLevelRequest,
     };
 
