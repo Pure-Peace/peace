@@ -16,4 +16,4 @@ use utoipa::OpenApi;
     ),
     modifiers(&AdminAuth)
 )]
-pub struct PeaceApiDocs;
+pub struct PeaceApiAdminEndpointsDocs;

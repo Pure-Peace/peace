@@ -106,6 +106,6 @@ impl Application for App {
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {
-        GatewayApiDocs::openapi()
+        GatewayApiDocs::new_docs()
     }
 }

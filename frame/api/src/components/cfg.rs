@@ -95,7 +95,7 @@ pub struct ApiServiceConfig {
     pub tcp_keepalive_retries: Option<u32>,
 
     /// The `swagger ui` base uri path.
-    #[arg(long, default_value = "/swagger-ui/")]
+    #[arg(long, default_value = "/swagger-ui")]
     pub swagger_path: String,
 
     /// The `openapi.json` uri path.

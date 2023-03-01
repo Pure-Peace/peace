@@ -1,6 +1,6 @@
 use crate::{
-    Application,
-    {responder, responder::shutdown_server, ApiFrameConfig},
+    Application, PeaceApiAdminEndpointsDocs,
+    {responder, responder::shutdown_server},
 };
 use axum::{
     body::Body,
@@ -14,7 +14,7 @@ use peace_logs::Level;
 use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::trace::{DefaultOnFailure, TraceLayer};
-use utoipa::openapi::OpenApi;
+use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 /// App router with some middleware.
@@ -37,31 +37,6 @@ pub async fn app(app: impl Application) -> Router {
         .fallback(responder::handle_404)
 }
 
-pub fn openapi_router(mut api_docs: OpenApi, cfg: &ApiFrameConfig) -> Router {
-    if !cfg.admin_endpoints {
-        api_docs = remove_admin_routes(api_docs)
-    }
-    SwaggerUi::new(cfg.swagger_path.clone())
-        .url(cfg.openapi_json.clone(), api_docs)
-        .into()
-}
-
-pub fn remove_admin_routes(mut api_docs: OpenApi) -> OpenApi {
-    let admin_pathes = api_docs
-        .paths
-        .paths
-        .keys()
-        .filter(|k| k.starts_with("/admin"))
-        .map(|k| k.to_string())
-        .collect::<Vec<String>>();
-
-    for key in admin_pathes {
-        api_docs.paths.paths.remove(&key);
-    }
-
-    api_docs
-}
-
 /// The `admin_routers` provides some api endpoints for managing the server,
 /// such as setting the log level and stopping the server.
 ///
@@ -80,7 +55,17 @@ pub fn admin_routers(admin_token: Option<&str>) -> Router {
 pub async fn app_router(app: impl Application) -> Router {
     let cfg = app.frame_cfg();
     let mut router =
-        openapi_router(app.apidocs(), cfg).merge(app.router().await);
+        Into::<Router>::into(SwaggerUi::new(cfg.swagger_path.clone()).url(
+            cfg.openapi_json.clone(),
+            {
+                let mut docs = app.apidocs();
+                if cfg.admin_endpoints {
+                    docs.merge(PeaceApiAdminEndpointsDocs::openapi())
+                }
+                docs
+            },
+        ))
+        .merge(app.router().await);
 
     if cfg.admin_endpoints {
         router = router.merge(admin_routers(cfg.admin_token.as_deref()))
