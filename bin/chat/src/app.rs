@@ -1,20 +1,15 @@
-#[macro_use]
-extern crate peace_rpc;
-
-pub mod rpc;
-
 use clap_serde_derive::ClapSerde;
 use peace_db::peace::PeaceDbConfig;
-use peace_pb::chat_rpc::{
-    chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET,
-};
+use peace_pb::chat_rpc::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_rpc::{Application, RpcFrameConfig};
-use rpc::ChatService;
 use std::sync::Arc;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
 };
+
+#[derive(Debug, Default, Clone)]
+pub struct Chat {}
 
 /// Command Line Interface (CLI) for Chat service.
 #[peace_config]
@@ -49,7 +44,7 @@ impl Application for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let svc = ChatService::default();
+        let svc = Chat::default();
         configured_server.add_service(ChatRpcServer::new(svc))
     }
 }

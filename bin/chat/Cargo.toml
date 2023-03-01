@@ -1,5 +1,5 @@
 [package]
-name = "bancho-server"
+name = "chat-server"
 version = "0.1.0"
 edition = "2021"
 authors = ["Pure-Peace"]
@@ -7,7 +7,7 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 [[bin]]
-name = "bancho-server"
+name = "chat-server"
 path = "src/main.rs"
 
 

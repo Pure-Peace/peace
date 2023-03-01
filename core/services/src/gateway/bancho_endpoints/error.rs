@@ -1,6 +1,8 @@
-use crate::bancho::constants::{CHO_PROTOCOL, CHO_TOKEN};
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use super::{CHO_PROTOCOL, CHO_TOKEN};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use bancho_packets::{server, PacketBuilder};
 
 #[derive(thiserror::Error, Debug)]

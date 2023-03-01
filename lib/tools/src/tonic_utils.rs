@@ -29,7 +29,7 @@ impl<T> RpcRequest<T> {
     /// # Returns
     ///
     /// The modified RpcRequest.
-    pub fn client_ip_header(mut self, ip: impl ToString) -> Self {
+    pub fn with_client_ip_header(mut self, ip: impl ToString) -> Self {
         self.metadata_mut().insert(
             X_REAL_IP,
             ip.to_string()

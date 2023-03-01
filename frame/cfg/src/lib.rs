@@ -311,6 +311,9 @@ pub mod macros {
         pub use paste;
         pub use peace_logs::{self, log::LevelFilter, LogLevel};
         pub use serde::{Deserialize, Serialize};
+        pub use tonic::transport::{
+            Certificate, Channel, ClientTlsConfig, Endpoint,
+        };
     }
 
     /// Add a `get` method to the given struct.
@@ -410,7 +413,7 @@ pub mod macros {
         (service_name: $service_name: ty, config_name: $config_name: ty, default_uri: $default_uri: literal) => {
             $crate::macros::____private::paste::paste! {
                 pub type [<$service_name:camel>] =
-                    [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<tonic::transport::Channel>;
+                    [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<$crate::macros::____private::Channel>;
 
                 #[derive(
                     clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
@@ -475,9 +478,9 @@ pub mod macros {
                     #[inline]
                     async fn connect_client(&self) -> Result<Self::RpcClient, $crate::macros::____private::Error> {
                         async fn connect_endpoint(
-                            endpoint: tonic::transport::Endpoint,
+                            endpoint: $crate::macros::____private::Endpoint,
                             lazy_connect: bool,
-                        ) -> Result<tonic::transport::Channel, $crate::macros::____private::Error> {
+                        ) -> Result<$crate::macros::____private::Channel, $crate::macros::____private::Error> {
                             Ok(if lazy_connect {
                                 endpoint.connect_lazy()
                             } else {
@@ -492,7 +495,7 @@ pub mod macros {
                             let service_factory =
                                 tower::service_fn(|_| tokio::net::UnixStream::connect(uds));
                             let endpoint =
-                                tonic::transport::Endpoint::try_from("http://[::]:50051")?;
+                                $crate::macros::____private::Endpoint::try_from("http://[::]:50051")?;
 
                             let channel = if self.lazy_connect() {
                                 endpoint.connect_with_connector_lazy(service_factory)
@@ -508,11 +511,11 @@ pub mod macros {
                             let pem =
                                 tokio::fs::read(self.ssl_cert().as_ref().unwrap())
                                     .await?;
-                            let ca = tonic::transport::Certificate::from_pem(pem);
-                            let tls = tonic::transport::ClientTlsConfig::new().ca_certificate(ca);
+                            let ca = $crate::macros::____private::Certificate::from_pem(pem);
+                            let tls = $crate::macros::____private::ClientTlsConfig::new().ca_certificate(ca);
                             return Ok(Self::RpcClient::new(
                                 connect_endpoint(
-                                    tonic::transport::Channel::from_shared(self.uri().to_owned())?
+                                    $crate::macros::____private::Channel::from_shared(self.uri().to_owned())?
                                         .tls_config(tls)?,
                                     self.lazy_connect(),
                                 )
@@ -522,7 +525,7 @@ pub mod macros {
 
                         Ok(Self::RpcClient::new(
                             connect_endpoint(
-                                tonic::transport::Channel::from_shared(self.uri().to_owned())?,
+                                $crate::macros::____private::Channel::from_shared(self.uri().to_owned())?,
                                 self.lazy_connect(),
                             )
                             .await?,

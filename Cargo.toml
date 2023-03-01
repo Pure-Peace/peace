@@ -5,6 +5,8 @@ members = [
     "bin/bancho",
     "bin/bancho-state",
     "bin/db-cli",
+    "bin/gateway",
+    "bin/chat",
     "core/db",
     "core/domain",
     "core/pb",

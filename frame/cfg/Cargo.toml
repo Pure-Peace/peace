@@ -12,6 +12,7 @@ derive = ["peace_cfg_derive"]
 paste = "1.0"
 async-trait = "0.1"
 anyhow = "1.0"
+tonic = { version = "0.8", features = ["tls"] }
 
 # cfg
 clap = { version = "4.0", features = ["derive"] }

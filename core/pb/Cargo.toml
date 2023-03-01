@@ -8,10 +8,9 @@ repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
 
-
 [dependencies]
-tonic = "0.8"
-prost = "0.11"
+tonic = { version = "0.8" }
+prost = { version = "0.11" }
 
 bitmask-enum = { version = "2.1" }
 

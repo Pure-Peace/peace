@@ -1,13 +1,5 @@
-use crate::Error;
+use super::Error;
 use peace_pb::bancho_rpc::{ClientHashes, LoginRequest};
-
-pub fn split_string(s: &str, sep: char) -> Vec<String> {
-    s.trim()
-        .split(sep)
-        .filter(|s| !s.trim().is_empty())
-        .map(|s| s.trim().to_owned())
-        .collect::<Vec<String>>()
-}
 
 pub fn parse_osu_login_request_body(
     body: Vec<u8>,
@@ -15,23 +7,23 @@ pub fn parse_osu_login_request_body(
     let body = String::from_utf8(body)
         .map_err(|_| Error::Login("invalid request body".into()))?;
 
-    let mut lines = split_string(&body, '\n');
+    let mut lines = tools::split_string(&body, '\n');
 
     if lines.len() < 3 {
-        return Err(Error::Login("invalid data".into()));
+        return Err(Error::Login("invalid data".into()))
     }
 
     let username = std::mem::take(&mut lines[0]);
     let password = std::mem::take(&mut lines[1]);
 
     if username.is_empty() || password.len() != 32 {
-        return Err(Error::Login("invalid user info".into()));
+        return Err(Error::Login("invalid user info".into()))
     }
 
-    let mut client_info = split_string(&lines[2], '|');
+    let mut client_info = tools::split_string(&lines[2], '|');
 
     if client_info.len() < 5 {
-        return Err(Error::Login("invalid client info".into()));
+        return Err(Error::Login("invalid client info".into()))
     }
 
     let client_version = std::mem::take(&mut client_info[0]);
@@ -43,10 +35,10 @@ pub fn parse_osu_login_request_body(
     let display_city = client_info[2].as_str() == "1";
 
     // Client hashes
-    let mut client_hashes = split_string(&client_info[3], ':');
+    let mut client_hashes = tools::split_string(&client_info[3], ':');
 
     if client_hashes.len() < 5 {
-        return Err(Error::Login("invalid client hashes".into()));
+        return Err(Error::Login("invalid client hashes".into()))
     }
 
     // Only allow friend's pm

@@ -1,3 +1,5 @@
 mod components;
-pub mod service;
+pub mod services;
+
 pub use components::*;
+pub use services::*;

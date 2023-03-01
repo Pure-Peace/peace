@@ -1,4 +1,5 @@
-use crate::bancho_state::service::DynBanchoStateService;
+use super::BanchoService;
+use crate::bancho_state::DynBanchoStateService;
 use bancho_packets::{server, PacketBuilder};
 use peace_domain::users::Password;
 use peace_pb::{
@@ -6,62 +7,44 @@ use peace_pb::{
     bancho_state_rpc::*,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{net::IpAddr, sync::Arc};
+use std::net::IpAddr;
 use tonic::{async_trait, transport::Channel, Request, Response, Status};
-
-pub type DynBanchoService = Arc<dyn BanchoService + Send + Sync>;
-
-#[async_trait]
-pub trait BanchoService {
-    async fn ping(
-        &self,
-        request: Request<PingRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-
-    async fn login(
-        &self,
-        client_ip: IpAddr,
-        request: Request<LoginRequest>,
-    ) -> Result<Response<LoginSuccess>, Status>;
-
-    async fn request_status_update(
-        &self,
-        request: Request<RequestStatusUpdateRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-
-    async fn presence_request_all(
-        &self,
-        request: Request<PresenceRequestAllRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-
-    async fn spectate_stop(
-        &self,
-        request: Request<SpectateStopRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-
-    async fn spectate_cant(
-        &self,
-        request: Request<SpectateCantRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-
-    async fn lobby_part(
-        &self,
-        request: Request<LobbyPartRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-
-    async fn lobby_join(
-        &self,
-        request: Request<LobbyJoinRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
-}
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
     Remote(BanchoServiceRemote),
     Local(BanchoServiceLocal),
 }
-#[async_trait]
 
+#[derive(Clone)]
+pub struct BanchoServiceRemote(BanchoRpcClient<Channel>);
+
+impl BanchoServiceRemote {
+    pub fn new(bancho_rpc_client: BanchoRpcClient<Channel>) -> Self {
+        Self(bancho_rpc_client)
+    }
+
+    pub fn client(&self) -> BanchoRpcClient<Channel> {
+        self.0.clone()
+    }
+}
+
+#[derive(Clone)]
+pub struct BanchoServiceLocal {
+    users_repository: DynUsersRepository,
+    bancho_state_service: DynBanchoStateService,
+}
+
+impl BanchoServiceLocal {
+    pub fn new(
+        users_repository: DynUsersRepository,
+        bancho_state_service: DynBanchoStateService,
+    ) -> Self {
+        Self { users_repository, bancho_state_service }
+    }
+}
+
+#[async_trait]
 impl BanchoService for BanchoServiceImpl {
     async fn ping(
         &self,
@@ -235,29 +218,5 @@ impl BanchoService for BanchoServiceImpl {
                 Ok(Response::new(reply))
             },
         }
-    }
-}
-
-#[derive(Clone)]
-pub struct BanchoServiceRemote(BanchoRpcClient<Channel>);
-
-impl BanchoServiceRemote {
-    pub fn client(&self) -> BanchoRpcClient<Channel> {
-        self.0.clone()
-    }
-}
-
-#[derive(Clone)]
-pub struct BanchoServiceLocal {
-    users_repository: DynUsersRepository,
-    bancho_state_service: DynBanchoStateService,
-}
-
-impl BanchoServiceLocal {
-    pub fn new(
-        users_repository: DynUsersRepository,
-        bancho_state_service: DynBanchoStateService,
-    ) -> Self {
-        Self { users_repository, bancho_state_service }
     }
 }

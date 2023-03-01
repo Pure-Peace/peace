@@ -9,10 +9,8 @@ use peace_rpc::{
     interceptor::client_ip, Application, RpcClientConfig, RpcFrameConfig,
 };
 use peace_services::{
-    bancho::service::{
-        BanchoServiceImpl, BanchoServiceLocal, DynBanchoService,
-    },
-    bancho_state::service::{
+    bancho::{BanchoServiceImpl, BanchoServiceLocal, DynBanchoService},
+    bancho_state::{
         BanchoStateServiceImpl, BanchoStateServiceRemote, DynBanchoStateService,
     },
 };
@@ -89,6 +87,7 @@ impl Application for App {
 
         let users_repository = Arc::new(UsersRepositoryImpl::new(peace_db_conn))
             as DynUsersRepository;
+
         let bancho_state_service = Arc::new(BanchoStateServiceImpl::Remote(
             BanchoStateServiceRemote::new(bancho_state_rpc_client),
         )) as DynBanchoStateService;

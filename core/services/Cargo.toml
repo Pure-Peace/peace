@@ -9,14 +9,22 @@ homepage = "https://github.com/pure-peace/peace"
 
 [dependencies]
 tokio = { version = "1" }
-tonic = "0.8"
-futures = "0.3"
-chrono = "0.4"
+tonic = { version = "0.8" }
+axum = { version = "0.6.0" }
+utoipa = { version = "3.0.3" }
+futures = { version = "0.3" }
+chrono = { version = "0.4" }
+async-trait = { version = "0.1" }
+anyhow = { version = "1.0" }
+thiserror = { version = "1.0" }
 uuid = { version = "1.3", features = ["v4"] }
+serde = { version = "1.0", features = ["derive"] }
+
 
 bancho-packets = { path = "../../lib/bancho-packets" }
-tools = { path = "../../lib/tools", features = ["async_collections"] }
+tools = { path = "../../lib/tools", features = ["all"] }
 
+peace_api = { path = "../../frame/api" }
 peace_logs = { path = "../../frame/logs" }
 peace_db = { path = "../../core/db" }
 peace_pb = { path = "../../core/pb" }

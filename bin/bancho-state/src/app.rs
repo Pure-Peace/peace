@@ -3,7 +3,7 @@ use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{Application, RpcFrameConfig};
-use peace_services::bancho_state::service::{
+use peace_services::bancho_state::{
     BackgroundServiceImpl, BanchoStateServiceImpl, BanchoStateServiceLocal,
     DynBackgroundService, DynBanchoStateService,
 };
