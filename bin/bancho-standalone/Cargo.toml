@@ -1,0 +1,33 @@
+[package]
+name = "bancho-standalone"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+[features]
+default = ["tls"]
+tls = ["peace_api/tls"]
+
+[[bin]]
+name = "bancho-standalone-server"
+path = "src/main.rs"
+
+
+[dependencies]
+axum = { version = "0.6.0" }
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+utoipa = { version = "3.0.3" }
+serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive"] }
+clap-serde-derive = "0.2.0"
+
+
+peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
+peace_api = { path = "../../frame/api", features = ["tls"] }
+
+peace_pb = { path = "../../core/pb" }
+peace_db = { path = "../../core/db" }
+peace_services = { path = "../../core/services" }
+peace_repositories = { path = "../../core/repositories" }
