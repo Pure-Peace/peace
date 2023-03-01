@@ -45,7 +45,10 @@ pub async fn serve(app_cfg: impl Application) {
     }
 
     #[cfg(not(feature = "tls"))]
-    tokio::join!(launch_http_server(app, &cfg, config), shutdown_signal());
+    tokio::join!(
+        launch_http_server(app, &cfg, config),
+        shutdown_signal(shutdown)
+    );
     warn!("!!! SERVER STOPPED !!!")
 }
 
@@ -75,11 +78,15 @@ pub fn print_api_docs(cfg: &ApiFrameConfig) {
 }
 
 pub fn addr(cfg: &ApiFrameConfig) -> String {
+    #[cfg(feature = "tls")]
     if cfg.tls_config.tls {
         format!("https://{}", cfg.https_addr)
     } else {
         format!("http://{}", cfg.http_addr)
     }
+
+    #[cfg(not(feature = "tls"))]
+    format!("http://{}", cfg.http_addr)
 }
 
 #[cfg(feature = "tls")]

@@ -12,8 +12,6 @@ default = []
 tls = ["axum-server/tls-rustls", "axum/http2"]
 
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 # core
 futures = "0.3"
@@ -48,4 +46,5 @@ derive_deref = "1.1"
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }
 peace_cfg = { path = "../../frame/cfg" }
+
 tools = { path = "../../lib/tools", features = ["async_collections"] }

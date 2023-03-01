@@ -10,36 +10,28 @@ macro_rules! descriptor {
     };
 }
 
-#[cfg(feature = "logs")]
 pub mod logs {
     proto!("peace.frame.logs");
 
-    #[cfg(feature = "reflection")]
     pub const LOGS_DESCRIPTOR_SET: &[u8] = descriptor!("logs_descriptor");
 }
 
-#[cfg(feature = "bancho")]
 pub mod bancho_rpc {
     proto!("peace.services.bancho");
 
-    #[cfg(feature = "reflection")]
     pub const BANCHO_DESCRIPTOR_SET: &[u8] = descriptor!("bancho_descriptor");
 }
 
-#[cfg(feature = "peace_db")]
 pub mod peace_db_rpc {
     proto!("peace.services.db.peace");
 
-    #[cfg(feature = "reflection")]
     pub const PEACE_DB_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace_db_descriptor");
 }
 
-#[cfg(feature = "bancho_state")]
 pub mod bancho_state_rpc {
     proto!("peace.services.bancho.state");
 
-    #[cfg(feature = "reflection")]
     pub const BANCHO_STATE_DESCRIPTOR_SET: &[u8] =
         descriptor!("bancho_state_descriptor");
 
@@ -167,10 +159,8 @@ pub mod bancho_state_rpc {
     }
 }
 
-#[cfg(feature = "chat")]
 pub mod chat_rpc {
     proto!("peace.services.chat");
 
-    #[cfg(feature = "reflection")]
     pub const CHAT_DESCRIPTOR_SET: &[u8] = descriptor!("chat_descriptor");
 }

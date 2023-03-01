@@ -14,6 +14,12 @@ impl ClientIp {
     }
 }
 
+impl Into<IpAddr> for ClientIp {
+    fn into(self) -> IpAddr {
+        self.0
+    }
+}
+
 impl Deref for ClientIp {
     type Target = IpAddr;
 

@@ -23,12 +23,15 @@ clap = { version = "4.0", features = ["derive"] }
 clap-serde-derive = "0.2.0"
 
 
-peace_services = { path = "../../core/services" }
-peace_pb = { path = "../../core/pb", features = ["reflection", "bancho"] }
-
 peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
 peace_rpc = { path = "../../frame/rpc", features = [
     "tls",
     "admin_endpoints",
     "reflection",
 ] }
+
+
+peace_pb = { path = "../../core/pb" }
+peace_db = { path = "../../core/db" }
+peace_services = { path = "../../core/services" }
+peace_repositories = { path = "../../core/repositories" }

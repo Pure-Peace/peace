@@ -1,10 +1,12 @@
-use bancho_state::repositories::*;
-use bancho_state::services::*;
 use clap_serde_derive::ClapSerde;
 use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{Application, RpcFrameConfig};
+use peace_services::bancho_state::service::{
+    BackgroundServiceImpl, BanchoStateServiceImpl, BanchoStateServiceLocal,
+    DynBackgroundService, DynBanchoStateService,
+};
 use std::sync::Arc;
 use tonic::{
     async_trait,
@@ -13,22 +15,16 @@ use tonic::{
 
 #[derive(Clone)]
 pub struct BanchoState {
-    pub app_state_repository: DynAppStateRepository,
-    pub bancho_state_service: DynPacketsRepository,
-    pub background_repository: DynBackgroundServiceRepository,
+    pub bancho_state_service: DynBanchoStateService,
+    pub background_service: DynBackgroundService,
 }
 
 impl BanchoState {
     pub fn new(
-        app_state_repository: DynAppStateRepository,
-        bancho_state_service: DynPacketsRepository,
-        background_repository: DynBackgroundServiceRepository,
+        bancho_state_service: DynBanchoStateService,
+        background_service: DynBackgroundService,
     ) -> BanchoState {
-        Self {
-            app_state_repository,
-            bancho_state_service,
-            background_repository,
-        }
+        Self { bancho_state_service, background_service }
     }
 }
 
@@ -53,7 +49,8 @@ pub struct App {
 }
 
 impl App {
-    /// Create a new BanchoState application instance with the provided configuration.
+    /// Create a new BanchoState application instance with the provided
+    /// configuration.
     pub fn new(cfg: Arc<BanchoStateConfig>) -> Self {
         Self { cfg }
     }
@@ -73,24 +70,15 @@ impl Application for App {
 
     /// Start the BanchoState application and return a Router.
     async fn service(&self, mut configured_server: Server) -> Router {
-        let app_state = Arc::new(AppState::default()) as DynAppStateRepository;
-        let packets_repository =
-            Arc::new(BanchoStatePacketsRepository::default())
-                as DynPacketsRepository;
-        let background_repository =
-            Arc::new(BanchoStateBackgroundServiceRepository::default())
-                as DynBackgroundServiceRepository;
-        let sessions_repository =
-            Arc::new(BanchoStateSessionsRepository::default())
-                as DynSessionsRepository;
+        let bancho_state_service = Arc::new(BanchoStateServiceImpl::Local(
+            BanchoStateServiceLocal::default(),
+        )) as DynBanchoStateService;
+        let background_service =
+            Arc::new(BackgroundServiceImpl::default()) as DynBackgroundService;
 
         // Create a new BanchoState instance.
-        let bancho_state = BanchoState::new(
-            app_state,
-            packets_repository,
-            background_repository,
-            sessions_repository,
-        );
+        let bancho_state =
+            BanchoState::new(bancho_state_service, background_service);
 
         // Add the BanchoState service to the server.
         configured_server.add_service(BanchoStateRpcServer::new(bancho_state))

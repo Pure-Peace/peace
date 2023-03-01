@@ -1,113 +1,64 @@
-use crate::BanchoState;
-use peace_pb::services::bancho_state_rpc::*;
+use crate::Bancho;
+use peace_pb::bancho_rpc::*;
+use peace_rpc::extensions::ClientIp;
 use tonic::{Request, Response, Status};
 
 #[tonic::async_trait]
-impl bancho_state_rpc_server::BanchoStateRpc for BanchoState {
-    async fn broadcast_bancho_packets(
+impl bancho_rpc_server::BanchoRpc for Bancho {
+    async fn ping(
         &self,
-        request: Request<BroadcastBanchoPacketsRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.packets_repository.broadcast_bancho_packets(request).await
+        request: Request<PingRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.ping(request).await
     }
 
-    async fn enqueue_bancho_packets(
+    async fn login(
         &self,
-        request: Request<EnqueueBanchoPacketsRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.packets_repository.enqueue_bancho_packets(request).await
+        request: Request<LoginRequest>,
+    ) -> Result<Response<LoginSuccess>, Status> {
+        let client_ip = ClientIp::from_request(&request)?;
+        self.bancho_service.login(client_ip.into(), request).await
     }
 
-    async fn batch_enqueue_bancho_packets(
+    async fn request_status_update(
         &self,
-        request: Request<BatchEnqueueBanchoPacketsRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.packets_repository.batch_enqueue_bancho_packets(request).await
+        request: Request<RequestStatusUpdateRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.request_status_update(request).await
     }
 
-    async fn dequeue_bancho_packets(
+    async fn presence_request_all(
         &self,
-        request: Request<DequeueBanchoPacketsRequest>,
-    ) -> Result<Response<BanchoPackets>, Status> {
-        self.packets_repository.dequeue_bancho_packets(request).await
+        request: Request<PresenceRequestAllRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.presence_request_all(request).await
     }
 
-    async fn batch_dequeue_bancho_packets(
+    async fn spectate_stop(
         &self,
-        request: Request<BatchDequeueBanchoPacketsRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.packets_repository.batch_dequeue_bancho_packets(request).await
+        request: Request<SpectateStopRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.spectate_stop(request).await
     }
 
-    async fn create_user_session(
+    async fn spectate_cant(
         &self,
-        request: Request<CreateUserSessionRequest>,
-    ) -> Result<Response<CreateUserSessionResponse>, Status> {
-        self.sessions_repository
-            .create_user_session(
-                self.app_state_repository.user_sessions(),
-                request,
-            )
-            .await
+        request: Request<SpectateCantRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.spectate_cant(request).await
     }
 
-    async fn delete_user_session(
+    async fn lobby_part(
         &self,
-        request: Request<RawUserQuery>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.sessions_repository
-            .delete_user_session(
-                self.app_state_repository.user_sessions(),
-                request,
-            )
-            .await
+        request: Request<LobbyPartRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.lobby_part(request).await
     }
 
-    async fn check_user_session_exists(
+    async fn lobby_join(
         &self,
-        request: Request<RawUserQuery>,
-    ) -> Result<Response<UserSessionExistsResponse>, Status> {
-        self.sessions_repository
-            .check_user_session_exists(
-                self.app_state_repository.user_sessions(),
-                request,
-            )
-            .await
-    }
-
-    async fn get_user_session(
-        &self,
-        request: Request<RawUserQuery>,
-    ) -> Result<Response<GetUserSessionResponse>, Status> {
-        self.sessions_repository
-            .get_user_session(
-                self.app_state_repository.user_sessions(),
-                request,
-            )
-            .await
-    }
-
-    async fn get_user_session_with_fields(
-        &self,
-        request: Request<RawUserQueryWithFields>,
-    ) -> Result<Response<GetUserSessionResponse>, Status> {
-        self.sessions_repository
-            .get_user_session_with_fields(
-                self.app_state_repository.user_sessions(),
-                request,
-            )
-            .await
-    }
-
-    async fn get_all_sessions(
-        &self,
-        _request: Request<GetAllSessionsRequest>,
-    ) -> Result<Response<GetAllSessionsResponse>, Status> {
-        self.sessions_repository
-            .get_all_sessions(
-                self.app_state_repository.user_sessions(),
-                _request,
-            )
-            .await
+        request: Request<LobbyJoinRequest>,
+    ) -> Result<Response<BanchoReply>, Status> {
+        self.bancho_service.lobby_join(request).await
     }
 }

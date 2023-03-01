@@ -1,9 +1,11 @@
-use crate::{User, UserSessions};
-use async_trait::async_trait;
-use peace_pb::bancho_state_rpc::*;
+use super::{User, UserSessions};
+use peace_db::async_trait;
+use peace_pb::bancho_state_rpc::{
+    bancho_state_rpc_client::BanchoStateRpcClient, *,
+};
 use std::{collections::hash_map::Values, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
-use tonic::{Request, Response, Status};
+use tonic::{transport::Channel, Request, Response, Status};
 use tools::async_collections::BackgroundTask;
 
 pub const SESSION_NOT_FOUND: &'static str = "session no exists";
@@ -12,64 +14,94 @@ pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
 pub type DynBackgroundService = Arc<dyn BackgroundService + Send + Sync>;
 
 #[async_trait]
+pub trait BackgroundService {
+    fn start(&self);
+}
+
+#[async_trait]
 pub trait BanchoStateService {
     async fn broadcast_bancho_packets(
         &self,
         request: Request<BroadcastBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status>;
+
     async fn enqueue_bancho_packets(
         &self,
         request: Request<EnqueueBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status>;
+
     async fn batch_enqueue_bancho_packets(
         &self,
         request: Request<BatchEnqueueBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status>;
+
     async fn dequeue_bancho_packets(
         &self,
         request: Request<DequeueBanchoPacketsRequest>,
     ) -> Result<Response<BanchoPackets>, Status>;
+
     async fn batch_dequeue_bancho_packets(
         &self,
         request: Request<BatchDequeueBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status>;
+
     async fn create_user_session(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<CreateUserSessionRequest>,
     ) -> Result<Response<CreateUserSessionResponse>, Status>;
+
     async fn delete_user_session(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<ExecSuccess>, Status>;
+
     async fn check_user_session_exists(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<UserSessionExistsResponse>, Status>;
+
     async fn get_user_session(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<GetUserSessionResponse>, Status>;
+
     async fn get_user_session_with_fields(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQueryWithFields>,
     ) -> Result<Response<GetUserSessionResponse>, Status>;
+
     async fn get_all_sessions(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         _request: Request<GetAllSessionsRequest>,
     ) -> Result<Response<GetAllSessionsResponse>, Status>;
 }
 
+#[derive(Debug, Clone)]
+pub struct BanchoStateServiceRemote(BanchoStateRpcClient<Channel>);
+
+impl BanchoStateServiceRemote {
+    pub fn new(client: BanchoStateRpcClient<Channel>) -> Self {
+        Self(client)
+    }
+
+    pub fn client(&self) -> BanchoStateRpcClient<Channel> {
+        self.0.clone()
+    }
+}
+
 #[derive(Debug, Default, Clone)]
-pub struct BanchoStateServiceImpl;
+pub struct BanchoStateServiceLocal {
+    user_sessions: Arc<RwLock<UserSessions>>,
+}
+
+impl BanchoStateServiceLocal {
+    pub fn new(user_sessions: Arc<RwLock<UserSessions>>) -> Self {
+        Self { user_sessions }
+    }
+}
 
 #[async_trait]
-impl BanchoStateService for BanchoStateServiceImpl {
+impl BanchoStateService for BanchoStateServiceLocal {
     async fn broadcast_bancho_packets(
         &self,
         request: Request<BroadcastBanchoPacketsRequest>,
@@ -107,11 +139,11 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
     async fn create_user_session(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<CreateUserSessionRequest>,
     ) -> Result<Response<CreateUserSessionResponse>, Status> {
         // Create a new user session using the provided request.
-        let session_id = user_sessions
+        let session_id = self
+            .user_sessions
             .write()
             .await
             .create(request.into_inner().into())
@@ -126,13 +158,12 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
     async fn delete_user_session(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<ExecSuccess>, Status> {
         let query = request.into_inner().into();
 
         // Delete the session using the query.
-        user_sessions.write().await.delete(&query).await;
+        self.user_sessions.write().await.delete(&query).await;
 
         // Log that the session was deleted.
         info!(target: "session.delete", "Session <{query:?}> deleted");
@@ -143,11 +174,11 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
     async fn check_user_session_exists(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<UserSessionExistsResponse>, Status> {
         // Retrieve the user session from the user session store.
-        let user = user_sessions
+        let user = self
+            .user_sessions
             .read()
             .await
             .get(&request.into_inner().into())
@@ -166,11 +197,11 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
     async fn get_user_session(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQuery>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         // Get the user session based on the provided query
-        let user = user_sessions
+        let user = self
+            .user_sessions
             .read()
             .await
             .get(&request.into_inner().into())
@@ -197,7 +228,6 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
     async fn get_user_session_with_fields(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         request: Request<RawUserQueryWithFields>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         // Extract the query and fields from the request
@@ -205,7 +235,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
         let query = req.query.ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
         // Retrieve the user session from the database
-        let user = user_sessions
+        let user = self
+            .user_sessions
             .read()
             .await
             .get(&query.into())
@@ -242,11 +273,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
     async fn get_all_sessions(
         &self,
-        user_sessions: Arc<RwLock<UserSessions>>,
         _request: Request<GetAllSessionsRequest>,
     ) -> Result<Response<GetAllSessionsResponse>, Status> {
         // Get a read lock on the `user_sessions` hash map
-        let user_sessions = user_sessions.read().await;
+        let user_sessions = self.user_sessions.read().await;
 
         // Define a helper function to collect data from the hash map
         async fn collect_data<K>(
@@ -295,9 +325,145 @@ impl BanchoStateService for BanchoStateServiceImpl {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum BanchoStateServiceImpl {
+    Remote(BanchoStateServiceRemote),
+    Local(BanchoStateServiceLocal),
+}
+
 #[async_trait]
-pub trait BackgroundService {
-    fn start(&self);
+impl BanchoStateService for BanchoStateServiceImpl {
+    async fn broadcast_bancho_packets(
+        &self,
+        request: Request<BroadcastBanchoPacketsRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().broadcast_bancho_packets(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.broadcast_bancho_packets(request).await,
+        }
+    }
+
+    async fn enqueue_bancho_packets(
+        &self,
+        request: Request<EnqueueBanchoPacketsRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().enqueue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.enqueue_bancho_packets(request).await,
+        }
+    }
+
+    async fn batch_enqueue_bancho_packets(
+        &self,
+        request: Request<BatchEnqueueBanchoPacketsRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().batch_enqueue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.batch_enqueue_bancho_packets(request).await,
+        }
+    }
+
+    async fn dequeue_bancho_packets(
+        &self,
+        request: Request<DequeueBanchoPacketsRequest>,
+    ) -> Result<Response<BanchoPackets>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().dequeue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.dequeue_bancho_packets(request).await,
+        }
+    }
+
+    async fn batch_dequeue_bancho_packets(
+        &self,
+        request: Request<BatchDequeueBanchoPacketsRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().batch_dequeue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.batch_dequeue_bancho_packets(request).await,
+        }
+    }
+
+    async fn create_user_session(
+        &self,
+        request: Request<CreateUserSessionRequest>,
+    ) -> Result<Response<CreateUserSessionResponse>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().create_user_session(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.create_user_session(request).await,
+        }
+    }
+
+    async fn delete_user_session(
+        &self,
+        request: Request<RawUserQuery>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().delete_user_session(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.delete_user_session(request).await,
+        }
+    }
+
+    async fn check_user_session_exists(
+        &self,
+        request: Request<RawUserQuery>,
+    ) -> Result<Response<UserSessionExistsResponse>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().check_user_session_exists(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.check_user_session_exists(request).await,
+        }
+    }
+
+    async fn get_user_session(
+        &self,
+        request: Request<RawUserQuery>,
+    ) -> Result<Response<GetUserSessionResponse>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().get_user_session(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.get_user_session(request).await,
+        }
+    }
+
+    async fn get_user_session_with_fields(
+        &self,
+        request: Request<RawUserQueryWithFields>,
+    ) -> Result<Response<GetUserSessionResponse>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().get_user_session_with_fields(request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.get_user_session_with_fields(request).await,
+        }
+    }
+
+    async fn get_all_sessions(
+        &self,
+        _request: Request<GetAllSessionsRequest>,
+    ) -> Result<Response<GetAllSessionsResponse>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) =>
+                svc.client().get_all_sessions(_request).await,
+            BanchoStateServiceImpl::Local(svc) =>
+                svc.get_all_sessions(_request).await,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]

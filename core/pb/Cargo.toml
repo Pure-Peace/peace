@@ -7,30 +7,15 @@ authors = ["Pure-Peace"]
 repository = "https://github.com/pure-peace/peace"
 homepage = "https://github.com/pure-peace/peace"
 
-[features]
-default = []
-reflection = []
 
-all = ["reflection", "frame", "services"]
-
-frame = ["logs"]
-logs = []
-
-services = ["bancho", "bancho_state", "peace_db", "chat"]
-bancho = []
-bancho_state = ["bitmask-enum"]
-peace_db = []
-chat = []
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 tonic = "0.8"
 prost = "0.11"
 
-bitmask-enum = { version = "2.1", optional = true }
+bitmask-enum = { version = "2.1" }
 
 
 [build-dependencies]
 tonic-build = "0.8"
+paste = "1.0"

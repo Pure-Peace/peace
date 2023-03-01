@@ -1,4 +1,3 @@
 mod components;
-pub mod repositories;
-pub mod services;
+pub mod service;
 pub use components::*;

@@ -33,7 +33,6 @@ pub struct ApiServiceConfig {
     pub http_addr: SocketAddr,
 
     /// The address and port the `https` server listens on.
-    #[cfg(feature = "tls")]
     #[default("127.0.0.1:443".parse().unwrap())]
     #[arg(short = 'S', long, default_value = "127.0.0.1:443")]
     pub https_addr: SocketAddr,
@@ -67,7 +66,6 @@ pub struct ApiServiceConfig {
     pub hostname_routing: bool,
 
     /// Redirect http to https.
-    #[cfg(feature = "tls")]
     #[default(false)]
     #[arg(short, long)]
     pub force_https: bool,

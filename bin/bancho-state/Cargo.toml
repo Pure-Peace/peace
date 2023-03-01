@@ -31,5 +31,5 @@ peace_rpc = { path = "../../frame/rpc", features = [
 ] }
 
 
-peace_pb = { path = "../../core/pb", features = ["reflection", "bancho_state"] }
+peace_pb = { path = "../../core/pb" }
 peace_services = { path = "../../core/services" }

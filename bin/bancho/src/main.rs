@@ -13,10 +13,14 @@ pub use rpc::*;
 /// The main entry point of the application.
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a new instance of the `App.
     let app = App::new(BanchoConfig::get());
+
+    // Initialize the logger with the frame configuration of the `App`.
     peace_logs::init(&app.cfg.frame_cfg);
 
-    server::serve(app).await;
+    // Start serving the RPC server with the `App` instance.
+    peace_rpc::server::serve(app).await;
 
     Ok(())
 }

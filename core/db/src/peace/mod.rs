@@ -1,6 +1,8 @@
-use peace_cfg::define_db_config;
+use std::ops::Deref;
+
+use crate::define_db;
 
 pub mod entity;
 pub mod migration;
 
-define_db_config!(config_name: PeaceDbConfig, command_prefix: peace);
+define_db!(db_name: peace);
