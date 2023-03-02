@@ -48,6 +48,10 @@ pub async fn get_all_sessions(
     bancho_state_service
         .get_all_sessions(Request::new(GetAllSessionsRequest {}))
         .await
-        .map(|res| format!("{:?}", res.into_inner()).into_response())
+        .map(|res| {
+            serde_json::to_string_pretty(&res.into_inner())
+                .unwrap()
+                .into_response()
+        })
         .unwrap_or_else(|err| err.message().to_string().into_response())
 }
