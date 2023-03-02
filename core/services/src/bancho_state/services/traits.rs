@@ -1,14 +1,36 @@
+use crate::bancho_state::{User, UserSessionsInner};
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::*;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
 pub type DynBackgroundService = Arc<dyn BackgroundService + Send + Sync>;
+pub type DynUserSessionsService = Arc<dyn UserSessionsService + Send + Sync>;
 
 #[async_trait]
 pub trait BackgroundService {
     fn start(&self);
+}
+
+#[async_trait]
+pub trait UserSessionsService {
+    fn inner(&self) -> Arc<RwLock<UserSessionsInner>>;
+
+    async fn create(&self, user: User) -> String;
+
+    async fn delete(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>>;
+
+    async fn delete_user(&self, user: &User) -> Option<Arc<RwLock<User>>>;
+
+    async fn get(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>>;
+
+    async fn exists(&self, query: &UserQuery) -> bool;
+
+    async fn clear(&self);
+
+    async fn len(&self) -> usize;
 }
 
 #[async_trait]

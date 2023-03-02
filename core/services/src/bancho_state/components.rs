@@ -1,9 +1,8 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
-
 use chrono::{DateTime, Utc};
 use peace_pb::bancho_state_rpc::{
     ConnectionInfo, CreateUserSessionRequest, UserQuery,
 };
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -61,9 +60,9 @@ impl From<CreateUserSessionRequest> for User {
     }
 }
 
-/// A struct representing a collection of user sessions
+/// A struct representing a collection of user sessions.
 #[derive(Debug, Default, Clone)]
-pub struct UserSessions {
+pub struct UserSessionsInner {
     /// A hash map that maps session IDs to user data
     pub indexed_by_session_id: HashMap<String, Arc<RwLock<User>>>,
     /// A hash map that maps user IDs to user data
@@ -76,7 +75,7 @@ pub struct UserSessions {
     pub len: usize,
 }
 
-impl UserSessions {
+impl UserSessionsInner {
     /// Creates a new user session or updates an existing one with the given user data.
     ///
     /// # Arguments

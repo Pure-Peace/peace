@@ -1,5 +1,7 @@
 use super::BanchoStateService;
-use crate::bancho_state::{DynBanchoStateService, User, UserSessions};
+use crate::bancho_state::{
+    DynBanchoStateService, DynUserSessionsService, User, UserSessionsService,
+};
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_client::BanchoStateRpcClient, *,
@@ -10,7 +12,7 @@ use tonic::{transport::Channel, Request, Response, Status};
 
 pub const SESSION_NOT_FOUND: &'static str = "session no exists";
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum BanchoStateServiceImpl {
     Remote(BanchoStateServiceRemote),
     Local(BanchoStateServiceLocal),
@@ -25,8 +27,8 @@ impl BanchoStateServiceImpl {
         Self::Remote(BanchoStateServiceRemote(client))
     }
 
-    pub fn local(user_sessions: Arc<RwLock<UserSessions>>) -> Self {
-        Self::Local(BanchoStateServiceLocal::new(user_sessions))
+    pub fn local(user_sessions_service: DynUserSessionsService) -> Self {
+        Self::Local(BanchoStateServiceLocal::new(user_sessions_service))
     }
 }
 
@@ -43,14 +45,14 @@ impl BanchoStateServiceRemote {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct BanchoStateServiceLocal {
-    user_sessions: Arc<RwLock<UserSessions>>,
+    user_sessions_service: DynUserSessionsService,
 }
 
 impl BanchoStateServiceLocal {
-    pub fn new(user_sessions: Arc<RwLock<UserSessions>>) -> Self {
-        Self { user_sessions }
+    pub fn new(user_sessions_service: DynUserSessionsService) -> Self {
+        Self { user_sessions_service }
     }
 }
 
@@ -127,9 +129,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Local(svc) => {
                 // Create a new user session using the provided request.
                 let session_id = svc
-                    .user_sessions
-                    .write()
-                    .await
+                    .user_sessions_service
                     .create(request.into_inner().into())
                     .await;
 
@@ -154,7 +154,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let query = request.into_inner().into();
 
                 // Delete the session using the query.
-                svc.user_sessions.write().await.delete(&query).await;
+                svc.user_sessions_service.delete(&query).await;
 
                 // Log that the session was deleted.
                 info!(target: "session.delete", "Session <{query:?}> deleted");
@@ -176,10 +176,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Local(svc) => {
                 // Retrieve the user session from the user session store.
                 let user = svc
-                    .user_sessions
-                    .read()
-                    .await
+                    .user_sessions_service
                     .get(&request.into_inner().into())
+                    .await
                     .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
                 // Update the user's last active time and retrieve their ID.
@@ -206,10 +205,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Local(svc) => {
                 // Get the user session based on the provided query
                 let user = svc
-                    .user_sessions
-                    .read()
-                    .await
+                    .user_sessions_service
                     .get(&request.into_inner().into())
+                    .await
                     .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
                 // Get a read lock on the user session data
@@ -249,10 +247,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 // Retrieve the user session from the database
                 let user = svc
-                    .user_sessions
-                    .read()
-                    .await
+                    .user_sessions_service
                     .get(&query.into())
+                    .await
                     .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
                 // Initialize the response and extract the requested fields
@@ -295,8 +292,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 svc.client().get_all_sessions(_request).await
             },
             BanchoStateServiceImpl::Local(svc) => {
+                let inner = svc.user_sessions_service.inner();
                 // Get a read lock on the `user_sessions` hash map
-                let user_sessions = svc.user_sessions.read().await;
+                let user_sessions = inner.read().await;
 
                 // Define a helper function to collect data from the hash map
                 async fn collect_data<K>(

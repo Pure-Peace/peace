@@ -4,10 +4,9 @@ use peace_pb::bancho_state_rpc::{
 };
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_services::bancho_state::{
-    BackgroundServiceImpl, BanchoStateServiceImpl, UserSessions,
+    BackgroundServiceImpl, BanchoStateServiceImpl, UserSessionsServiceImpl,
 };
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -57,7 +56,7 @@ impl Application for App {
 
     /// Start the BanchoState application and return a Router.
     async fn service(&self, mut configured_server: Server) -> Router {
-        let user_sessions = Arc::new(RwLock::new(UserSessions::default()));
+        let user_sessions = UserSessionsServiceImpl::default().into_service();
 
         let bancho_state_service =
             BanchoStateServiceImpl::local(user_sessions).into_service();

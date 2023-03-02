@@ -5,14 +5,13 @@ use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_services::{
     bancho::BanchoServiceImpl,
-    bancho_state::{BanchoStateServiceImpl, UserSessions},
+    bancho_state::{BanchoStateServiceImpl, UserSessionsServiceImpl},
     gateway::bancho_endpoints::{
         repository::BanchoGatewayRepositoryImpl, routes::BanchoRouter,
         BanchoEndpointsDocs, BanchoGatewayServiceImpl,
     },
 };
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use utoipa::OpenApi;
 
 #[peace_config]
@@ -56,7 +55,7 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let user_sessions = Arc::new(RwLock::new(UserSessions::default()));
+        let user_sessions = UserSessionsServiceImpl::default().into_service();
 
         let bancho_state_service =
             BanchoStateServiceImpl::local(user_sessions).into_service();
