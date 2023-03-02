@@ -11,7 +11,7 @@ pub use app::*;
 #[tokio::main(flavor = "multi_thread")]
 pub async fn main() {
     // Create a new instance of the `App.
-    let app = App::new(GatewayConfig::get());
+    let app = App::new(BanchoStandaloneConfig::get());
 
     // Initialize the logger with the frame configuration of the `App`.
     peace_logs::init(&app.cfg.frame_cfg);

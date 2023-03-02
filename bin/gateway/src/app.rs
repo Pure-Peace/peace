@@ -28,7 +28,7 @@ define_rpc_client_config!(
 
 #[peace_config]
 #[command(
-    name = "peace-gateway",
+    name = "gateway",
     author,
     version,
     about,

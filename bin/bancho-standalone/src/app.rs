@@ -22,7 +22,7 @@ use utoipa::OpenApi;
     about,
     propagate_version = true
 )]
-pub struct GatewayConfig {
+pub struct BanchoStandaloneConfig {
     #[command(flatten)]
     pub frame_cfg: ApiFrameConfig,
 
@@ -32,11 +32,11 @@ pub struct GatewayConfig {
 
 #[derive(Clone)]
 pub struct App {
-    pub cfg: Arc<GatewayConfig>,
+    pub cfg: Arc<BanchoStandaloneConfig>,
 }
 
 impl App {
-    pub fn new(cfg: Arc<GatewayConfig>) -> Self {
+    pub fn new(cfg: Arc<BanchoStandaloneConfig>) -> Self {
         Self { cfg }
     }
 }
