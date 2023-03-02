@@ -61,14 +61,18 @@ pub mod bancho_state_rpc {
     impl From<RawUserQuery> for UserQuery {
         fn from(raw: RawUserQuery) -> UserQuery {
             match raw.query_type() {
-                QueryType::SessionId =>
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
-                QueryType::UserId =>
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
-                QueryType::Username =>
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
-                QueryType::UsernameUnicode =>
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
+                QueryType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                QueryType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
             }
         }
     }
@@ -112,17 +116,38 @@ pub mod bancho_state_rpc {
     impl From<RawBanchoPacketTarget> for BanchoPacketTarget {
         fn from(raw: RawBanchoPacketTarget) -> BanchoPacketTarget {
             match raw.target_type() {
-                TargetType::SessionId =>
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::UserId =>
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
-                TargetType::Username =>
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::UsernameUnicode =>
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::Channel =>
-                    Self::Channel(raw.string_val.expect(CONVERT_PANIC)),
+                TargetType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Channel => {
+                    Self::Channel(raw.string_val.expect(CONVERT_PANIC))
+                },
             }
+        }
+    }
+
+    impl TryInto<UserQuery> for BanchoPacketTarget {
+        type Error = ();
+
+        fn try_into(self) -> Result<UserQuery, Self::Error> {
+            Ok(match self {
+                Self::SessionId(session_id) => UserQuery::SessionId(session_id),
+                Self::UserId(user_id) => UserQuery::UserId(user_id),
+                Self::Username(username) => UserQuery::Username(username),
+                Self::UsernameUnicode(username_unicode) => {
+                    UserQuery::UsernameUnicode(username_unicode)
+                },
+                Self::Channel(_) => return Err(()),
+            })
         }
     }
 
