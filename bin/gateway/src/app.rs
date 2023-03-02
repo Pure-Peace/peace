@@ -7,9 +7,8 @@ use peace_services::{
     bancho_state::BanchoStateServiceImpl,
     gateway::{
         bancho_endpoints::{
-            repository::BanchoGatewayRepositoryImpl,
             routes::{BanchoDebugRouter, BanchoRouter},
-            BanchoGatewayServiceImpl,
+            BanchoGatewayRepositoryImpl, BanchoGatewayServiceImpl,
         },
         docs::GatewayApiDocs,
     },

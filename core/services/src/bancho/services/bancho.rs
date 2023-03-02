@@ -90,19 +90,21 @@ impl BanchoService for BanchoServiceImpl {
         match self {
             Self::Remote(svc) => svc.client().login(request).await,
             Self::Local(svc) => {
-                let req = request.into_inner();
+                let LoginRequest { username, password, client_version, .. } =
+                    request.into_inner();
+                info!("Receive login request: {username} [{client_version}] ({client_ip})");
 
                 let user = svc
                     .users_repository
                     .get_user_model_by_username(
-                        Some(req.username.as_str()),
-                        Some(req.username.as_str()),
+                        Some(username.as_str()),
+                        Some(username.as_str()),
                     )
                     .await?;
 
                 Password::verify_password(
                     user.password.as_str(),
-                    req.password.as_str(),
+                    password.as_str(),
                 )
                 .map_err(|err| Status::unauthenticated(err.to_string()))?;
 

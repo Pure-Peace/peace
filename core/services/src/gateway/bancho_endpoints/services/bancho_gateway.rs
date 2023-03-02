@@ -1,6 +1,9 @@
-use crate::bancho_state::DynBanchoStateService;
-
-use super::{repository::DynBanchoGatewayRepository, Error};
+use super::traits::{
+    BanchoGatewayService, DynBanchoGatewayRepository, DynBanchoGatewayService,
+};
+use crate::{
+    bancho_state::DynBanchoStateService, gateway::bancho_endpoints::Error,
+};
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::PacketReader;
@@ -10,69 +13,6 @@ use peace_pb::bancho_state_rpc::{
 };
 use std::{net::IpAddr, sync::Arc};
 use tonic::Request;
-
-pub type DynBanchoGatewayService = Arc<dyn BanchoGatewayService + Send + Sync>;
-
-#[async_trait]
-pub trait BanchoGatewayService {
-    async fn bancho_get(&self) -> Response;
-
-    async fn bancho_post(
-        &self,
-        session_id: Option<BanchoClientToken>,
-        version: Option<BanchoClientVersion>,
-        ip: IpAddr,
-        body: Vec<u8>,
-    ) -> Result<Response, Error>;
-
-    async fn get_screenshot(&self) -> Response;
-
-    async fn download_beatmapset(&self, beatmapset_id: i32) -> Response;
-
-    async fn client_register(&self) -> Response;
-
-    async fn ask_peppy(&self) -> Response;
-
-    async fn difficulty_rating(&self) -> Response;
-
-    async fn osu_error(&self) -> Response;
-
-    async fn osu_screenshot(&self) -> Response;
-
-    async fn osu_getfriends(&self) -> Response;
-
-    async fn osu_getbeatmapinfo(&self) -> Response;
-
-    async fn osu_getfavourites(&self) -> Response;
-
-    async fn osu_addfavourite(&self) -> Response;
-
-    async fn lastfm(&self) -> Response;
-
-    async fn osu_search(&self) -> Response;
-
-    async fn osu_search_set(&self) -> Response;
-
-    async fn osu_submit_modular_selector(&self) -> Response;
-
-    async fn osu_getreplay(&self) -> Response;
-
-    async fn osu_rate(&self) -> Response;
-
-    async fn osu_osz2_getscores(&self) -> Response;
-
-    async fn osu_comment(&self) -> Response;
-
-    async fn osu_markasread(&self) -> Response;
-
-    async fn osu_getseasonal(&self) -> Response;
-
-    async fn bancho_connect(&self) -> Response;
-
-    async fn check_updates(&self) -> Response;
-
-    async fn update_beatmap(&self) -> Response;
-}
 
 pub struct BanchoGatewayServiceImpl {
     bancho_gateway_repository: DynBanchoGatewayRepository,
@@ -121,9 +61,7 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
         let mut reader = PacketReader::new(&body);
 
         while let Some(packet) = reader.next() {
-            debug!(
-            "bancho packet received: {packet:?} (<{user_id}> [{session_id}])"
-        );
+            debug!("bancho packet received: {packet:?} (<{user_id}> [{session_id}])");
 
             if let Err(err) = self
                 .bancho_gateway_repository
@@ -144,9 +82,7 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
             .await;
 
         if let Err(err) = packets {
-            error!(
-            "dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])"
-        );
+            error!("dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])");
             return Ok("ok".into_response());
         }
 

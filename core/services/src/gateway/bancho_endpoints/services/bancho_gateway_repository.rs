@@ -1,5 +1,9 @@
-use super::{parser, Error, CHO_PROTOCOL, CHO_TOKEN};
-use crate::{bancho::DynBanchoService, bancho_state::DynBanchoStateService};
+use super::traits::{BanchoGatewayRepository, DynBanchoGatewayRepository};
+use crate::{
+    bancho::DynBanchoService,
+    bancho_state::DynBanchoStateService,
+    gateway::bancho_endpoints::{parser, Error, CHO_PROTOCOL, CHO_TOKEN},
+};
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId};
@@ -8,9 +12,6 @@ use peace_pb::{bancho_rpc::LoginSuccess, bancho_state_rpc::UserQuery};
 use std::{net::IpAddr, sync::Arc};
 use tonic::Request;
 use tools::tonic_utils::RpcRequest;
-
-pub type DynBanchoGatewayRepository =
-    Arc<dyn BanchoGatewayRepository + Send + Sync>;
 
 #[derive(Clone)]
 pub struct BanchoGatewayRepositoryImpl {
@@ -29,25 +30,6 @@ impl BanchoGatewayRepositoryImpl {
     pub fn into_service(self) -> DynBanchoGatewayRepository {
         Arc::new(self) as DynBanchoGatewayRepository
     }
-}
-
-#[async_trait]
-pub trait BanchoGatewayRepository {
-    async fn bancho_login(
-        &self,
-        body: Vec<u8>,
-        client_ip: IpAddr,
-        version: Option<BanchoClientVersion>,
-    ) -> Result<Response, Error>;
-
-    async fn check_user_session(&self, query: UserQuery) -> Result<i32, Error>;
-
-    async fn process_bancho_packet(
-        &self,
-        session_id: &str,
-        user_id: i32,
-        packet: &Packet<'_>,
-    ) -> Result<Response, Error>;
 }
 
 #[async_trait]

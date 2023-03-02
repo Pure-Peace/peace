@@ -7,10 +7,9 @@ use peace_services::{
     bancho::BanchoServiceImpl,
     bancho_state::{BanchoStateServiceImpl, UserSessionsServiceImpl},
     gateway::bancho_endpoints::{
-        repository::BanchoGatewayRepositoryImpl,
         routes::{BanchoDebugRouter, BanchoRouter},
         BanchoDebugEndpointsDocs, BanchoEndpointsDocs,
-        BanchoGatewayServiceImpl,
+        BanchoGatewayRepositoryImpl, BanchoGatewayServiceImpl,
     },
 };
 use std::sync::Arc;
