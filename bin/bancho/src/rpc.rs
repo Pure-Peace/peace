@@ -1,10 +1,21 @@
-use crate::Bancho;
 use peace_pb::bancho_rpc::*;
 use peace_rpc::extensions::ClientIp;
+use peace_services::bancho::DynBanchoService;
 use tonic::{Request, Response, Status};
 
+#[derive(Clone)]
+pub struct BanchoRpcImpl {
+    pub bancho_service: DynBanchoService,
+}
+
+impl BanchoRpcImpl {
+    pub fn new(bancho_service: DynBanchoService) -> Self {
+        Self { bancho_service }
+    }
+}
+
 #[tonic::async_trait]
-impl bancho_rpc_server::BanchoRpc for Bancho {
+impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
     async fn ping(
         &self,
         request: Request<PingRequest>,

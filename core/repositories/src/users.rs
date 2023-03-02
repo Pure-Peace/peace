@@ -44,6 +44,10 @@ impl UsersRepositoryImpl {
     pub fn new(conn: DatabaseConnection) -> UsersRepositoryImpl {
         Self { conn }
     }
+
+    pub fn into_service(self) -> DynUsersRepository {
+        Arc::new(self) as DynUsersRepository
+    }
 }
 
 #[async_trait]

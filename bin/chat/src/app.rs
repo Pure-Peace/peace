@@ -1,3 +1,4 @@
+use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::peace::PeaceDbConfig;
 use peace_pb::chat_rpc::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
@@ -8,10 +9,6 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
-#[derive(Debug, Default, Clone)]
-pub struct Chat {}
-
-/// Command Line Interface (CLI) for Chat service.
 #[peace_config]
 #[command(name = "chat", author, version, about, propagate_version = true)]
 pub struct ChatServiceConfig {
@@ -44,7 +41,7 @@ impl Application for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let svc = Chat::default();
-        configured_server.add_service(ChatRpcServer::new(svc))
+        let chat_rpc = ChatRpcImpl::default();
+        configured_server.add_service(ChatRpcServer::new(chat_rpc))
     }
 }

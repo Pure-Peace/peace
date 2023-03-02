@@ -2,17 +2,17 @@ use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application};
 use peace_db::{peace::PeaceDbConfig, DbConfig};
-use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
+use peace_repositories::users::UsersRepositoryImpl;
 use peace_services::{
-    bancho::*,
-    bancho_state::*,
+    bancho::BanchoServiceImpl,
+    bancho_state::{BanchoStateServiceImpl, UserSessions},
     gateway::bancho_endpoints::{
-        repository::{BanchoGatewayRepositoryImpl, DynBanchoGatewayRepository},
-        routes::BanchoRouter,
-        *,
+        repository::BanchoGatewayRepositoryImpl, routes::BanchoRouter,
+        BanchoEndpointsDocs, BanchoGatewayServiceImpl,
     },
 };
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use utoipa::OpenApi;
 
 #[peace_config]
@@ -56,29 +56,31 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let bancho_state_service = Arc::new(BanchoStateServiceImpl::Local(
-            BanchoStateServiceLocal::default(),
-        )) as DynBanchoStateService;
+        let user_sessions = Arc::new(RwLock::new(UserSessions::default()));
 
-        let users_repository = Arc::new(UsersRepositoryImpl::new(peace_db_conn))
-            as DynUsersRepository;
+        let bancho_state_service =
+            BanchoStateServiceImpl::local(user_sessions).into_service();
 
-        let bancho_service =
-            Arc::new(BanchoServiceImpl::Local(BanchoServiceLocal::new(
-                users_repository,
-                bancho_state_service.clone(),
-            ))) as DynBanchoService;
+        let users_repository =
+            UsersRepositoryImpl::new(peace_db_conn).into_service();
 
-        let bancho_gateway_repository =
-            Arc::new(BanchoGatewayRepositoryImpl::new(
-                bancho_service,
-                bancho_state_service.clone(),
-            )) as DynBanchoGatewayRepository;
+        let bancho_service = BanchoServiceImpl::local(
+            users_repository,
+            bancho_state_service.clone(),
+        )
+        .into_service();
 
-        let bancho_gateway_service = Arc::new(BanchoGatewayServiceImpl::new(
+        let bancho_gateway_repository = BanchoGatewayRepositoryImpl::new(
+            bancho_service,
+            bancho_state_service.clone(),
+        )
+        .into_service();
+
+        let bancho_gateway_service = BanchoGatewayServiceImpl::new(
             bancho_gateway_repository,
             bancho_state_service,
-        )) as DynBanchoGatewayService;
+        )
+        .into_service();
 
         let bancho_router = BanchoRouter::new_router(bancho_gateway_service);
 

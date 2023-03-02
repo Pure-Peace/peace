@@ -1,5 +1,5 @@
 use super::BanchoStateService;
-use crate::bancho_state::{User, UserSessions};
+use crate::bancho_state::{DynBanchoStateService, User, UserSessions};
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_client::BanchoStateRpcClient, *,
@@ -14,6 +14,20 @@ pub const SESSION_NOT_FOUND: &'static str = "session no exists";
 pub enum BanchoStateServiceImpl {
     Remote(BanchoStateServiceRemote),
     Local(BanchoStateServiceLocal),
+}
+
+impl BanchoStateServiceImpl {
+    pub fn into_service(self) -> DynBanchoStateService {
+        Arc::new(self) as DynBanchoStateService
+    }
+
+    pub fn remote(client: BanchoStateRpcClient<Channel>) -> Self {
+        Self::Remote(BanchoStateServiceRemote(client))
+    }
+
+    pub fn local(user_sessions: Arc<RwLock<UserSessions>>) -> Self {
+        Self::Local(BanchoStateServiceLocal::new(user_sessions))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -47,8 +61,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<BroadcastBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().broadcast_bancho_packets(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().broadcast_bancho_packets(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => unimplemented!(),
         }
     }
@@ -58,8 +73,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<EnqueueBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().enqueue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().enqueue_bancho_packets(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => unimplemented!(),
         }
     }
@@ -69,8 +85,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<BatchEnqueueBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().batch_enqueue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().batch_enqueue_bancho_packets(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => unimplemented!(),
         }
     }
@@ -80,8 +97,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<DequeueBanchoPacketsRequest>,
     ) -> Result<Response<BanchoPackets>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().dequeue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().dequeue_bancho_packets(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => unimplemented!(),
         }
     }
@@ -91,8 +109,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<BatchDequeueBanchoPacketsRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().batch_dequeue_bancho_packets(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().batch_dequeue_bancho_packets(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => unimplemented!(),
         }
     }
@@ -102,8 +121,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<CreateUserSessionRequest>,
     ) -> Result<Response<CreateUserSessionResponse>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().create_user_session(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().create_user_session(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => {
                 // Create a new user session using the provided request.
                 let session_id = svc
@@ -127,8 +147,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<ExecSuccess>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().delete_user_session(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().delete_user_session(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => {
                 let query = request.into_inner().into();
 
@@ -149,8 +170,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<UserSessionExistsResponse>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().check_user_session_exists(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().check_user_session_exists(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => {
                 // Retrieve the user session from the user session store.
                 let user = svc
@@ -178,8 +200,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().get_user_session(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().get_user_session(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => {
                 // Get the user session based on the provided query
                 let user = svc
@@ -215,8 +238,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         request: Request<RawUserQueryWithFields>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().get_user_session_with_fields(request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().get_user_session_with_fields(request).await
+            },
             BanchoStateServiceImpl::Local(svc) => {
                 // Extract the query and fields from the request
                 let req = request.into_inner();
@@ -267,8 +291,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
         _request: Request<GetAllSessionsRequest>,
     ) -> Result<Response<GetAllSessionsResponse>, Status> {
         match self {
-            BanchoStateServiceImpl::Remote(svc) =>
-                svc.client().get_all_sessions(_request).await,
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().get_all_sessions(_request).await
+            },
             BanchoStateServiceImpl::Local(svc) => {
                 // Get a read lock on the `user_sessions` hash map
                 let user_sessions = svc.user_sessions.read().await;

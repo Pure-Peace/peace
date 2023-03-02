@@ -1,18 +1,16 @@
+use crate::BanchoRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::{
     bancho_rpc::bancho_rpc_server::BanchoRpcServer,
     bancho_state_rpc::{self, BANCHO_STATE_DESCRIPTOR_SET},
 };
-use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
+use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
     interceptor::client_ip, Application, RpcClientConfig, RpcFrameConfig,
 };
 use peace_services::{
-    bancho::{BanchoServiceImpl, BanchoServiceLocal, DynBanchoService},
-    bancho_state::{
-        BanchoStateServiceImpl, BanchoStateServiceRemote, DynBanchoStateService,
-    },
+    bancho::BanchoServiceImpl, bancho_state::BanchoStateServiceImpl,
 };
 use std::sync::Arc;
 use tonic::{
@@ -20,23 +18,11 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
-#[derive(Clone)]
-pub struct Bancho {
-    pub bancho_service: DynBanchoService,
-}
-
-impl Bancho {
-    pub fn new(bancho_service: DynBanchoService) -> Bancho {
-        Self { bancho_service }
-    }
-}
-
 define_rpc_client_config!(
     service_name: bancho_state_rpc,
     config_name: BanchoStateRpcConfig
 );
 
-/// Command Line Interface (CLI) for Bancho service.
 #[peace_config]
 #[command(name = "bancho", author, version, about, propagate_version = true)]
 pub struct BanchoConfig {
@@ -85,20 +71,21 @@ impl Application for App {
                 panic!("{}", err)
             });
 
-        let users_repository = Arc::new(UsersRepositoryImpl::new(peace_db_conn))
-            as DynUsersRepository;
+        let users_repository =
+            UsersRepositoryImpl::new(peace_db_conn).into_service();
 
-        let bancho_state_service = Arc::new(BanchoStateServiceImpl::Remote(
-            BanchoStateServiceRemote::new(bancho_state_rpc_client),
-        )) as DynBanchoStateService;
+        let bancho_state_service =
+            BanchoStateServiceImpl::remote(bancho_state_rpc_client)
+                .into_service();
 
-        let bancho_service = Arc::new(BanchoServiceImpl::Local(
-            BanchoServiceLocal::new(users_repository, bancho_state_service),
-        )) as DynBanchoService;
+        let bancho_service =
+            BanchoServiceImpl::local(users_repository, bancho_state_service)
+                .into_service();
 
-        let bancho = Bancho::new(bancho_service);
+        let bancho_rpc = BanchoRpcImpl::new(bancho_service);
 
-        configured_server
-            .add_service(BanchoRpcServer::with_interceptor(bancho, client_ip))
+        configured_server.add_service(BanchoRpcServer::with_interceptor(
+            bancho_rpc, client_ip,
+        ))
     }
 }

@@ -86,6 +86,10 @@ impl BanchoGatewayServiceImpl {
     ) -> Self {
         Self { bancho_gateway_repository, bancho_state_service }
     }
+
+    pub fn into_service(self) -> DynBanchoGatewayService {
+        Arc::new(self) as DynBanchoGatewayService
+    }
 }
 
 #[async_trait]
@@ -105,7 +109,7 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
             return self
                 .bancho_gateway_repository
                 .bancho_login(body, ip, version)
-                .await
+                .await;
         }
 
         let session_id = session_id.unwrap();
@@ -143,10 +147,10 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
             error!(
             "dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])"
         );
-            return Ok("ok".into_response())
+            return Ok("ok".into_response());
         }
 
-        return Ok(packets.unwrap().into_inner().data.into_response())
+        return Ok(packets.unwrap().into_inner().data.into_response());
     }
 
     async fn get_screenshot(&self) -> Response {

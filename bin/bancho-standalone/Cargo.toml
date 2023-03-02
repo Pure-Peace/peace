@@ -24,7 +24,7 @@ clap = { version = "4.0", features = ["derive"] }
 clap-serde-derive = "0.2.0"
 
 
-peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
+peace_logs = { path = "../../frame/logs", features = ["cli"] }
 peace_api = { path = "../../frame/api", features = ["tls"] }
 
 peace_pb = { path = "../../core/pb" }

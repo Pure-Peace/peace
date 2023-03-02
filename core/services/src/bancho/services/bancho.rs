@@ -1,4 +1,4 @@
-use super::BanchoService;
+use super::{BanchoService, DynBanchoService};
 use crate::bancho_state::DynBanchoStateService;
 use bancho_packets::{server, PacketBuilder};
 use peace_domain::users::Password;
@@ -7,13 +7,33 @@ use peace_pb::{
     bancho_state_rpc::*,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::net::IpAddr;
+use std::{net::IpAddr, sync::Arc};
 use tonic::{async_trait, transport::Channel, Request, Response, Status};
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
     Remote(BanchoServiceRemote),
     Local(BanchoServiceLocal),
+}
+
+impl BanchoServiceImpl {
+    pub fn into_service(self) -> DynBanchoService {
+        Arc::new(self) as DynBanchoService
+    }
+
+    pub fn remote(client: BanchoRpcClient<Channel>) -> Self {
+        Self::Remote(BanchoServiceRemote(client))
+    }
+
+    pub fn local(
+        users_repository: DynUsersRepository,
+        bancho_state_service: DynBanchoStateService,
+    ) -> Self {
+        Self::Local(BanchoServiceLocal::new(
+            users_repository,
+            bancho_state_service,
+        ))
+    }
 }
 
 #[derive(Clone)]
@@ -127,8 +147,9 @@ impl BanchoService for BanchoServiceImpl {
         request: Request<RequestStatusUpdateRequest>,
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
-            Self::Remote(svc) =>
-                svc.client().request_status_update(request).await,
+            Self::Remote(svc) => {
+                svc.client().request_status_update(request).await
+            },
             Self::Local(svc) => {
                 println!("Got a request: {:?}", request);
 
@@ -144,8 +165,9 @@ impl BanchoService for BanchoServiceImpl {
         request: Request<PresenceRequestAllRequest>,
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
-            Self::Remote(svc) =>
-                svc.client().presence_request_all(request).await,
+            Self::Remote(svc) => {
+                svc.client().presence_request_all(request).await
+            },
             Self::Local(svc) => {
                 println!("Got a request: {:?}", request);
 

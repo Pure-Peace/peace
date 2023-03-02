@@ -1,10 +1,17 @@
 use super::BackgroundService;
+use crate::bancho_state::DynBackgroundService;
 use async_trait::async_trait;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tools::async_collections::BackgroundTask;
 
 #[derive(Debug, Default, Clone)]
 pub struct BackgroundServiceImpl;
+
+impl BackgroundServiceImpl {
+    pub fn into_service(self) -> DynBackgroundService {
+        Arc::new(self) as DynBackgroundService
+    }
+}
 
 #[async_trait]
 impl BackgroundService for BackgroundServiceImpl {

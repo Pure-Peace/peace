@@ -25,6 +25,10 @@ impl BanchoGatewayRepositoryImpl {
     ) -> Self {
         Self { bancho_service, bancho_state_service }
     }
+
+    pub fn into_service(self) -> DynBanchoGatewayRepository {
+        Arc::new(self) as DynBanchoGatewayRepository
+    }
 }
 
 #[async_trait]
@@ -55,13 +59,13 @@ impl BanchoGatewayRepository for BanchoGatewayRepositoryImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<Response, Error> {
         if version.is_none() {
-            return Err(Error::Login("empty client version".into()))
+            return Err(Error::Login("empty client version".into()));
         }
 
         let data = parser::parse_osu_login_request_body(body)?;
 
         if data.client_version != version.unwrap().as_str() {
-            return Err(Error::Login("mismatched client version".into()))
+            return Err(Error::Login("mismatched client version".into()));
         }
 
         let req = RpcRequest::new(data).with_client_ip_header(client_ip);
