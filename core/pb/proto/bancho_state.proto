@@ -131,6 +131,7 @@ message UserData {
   ConnectionInfo connection_info = 6;
   string created_at = 7;
   string last_active = 8;
+  int32 queued_packets = 9;
 }
 
 message GetAllSessionsResponse {

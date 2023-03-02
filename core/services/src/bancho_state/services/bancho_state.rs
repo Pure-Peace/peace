@@ -293,9 +293,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 svc.client().get_all_sessions(_request).await
             },
             BanchoStateServiceImpl::Local(svc) => {
-                let inner = svc.user_sessions_service.inner();
+                let user_sessions = svc.user_sessions_service.user_sessions();
                 // Get a read lock on the `user_sessions` hash map
-                let user_sessions = inner.read().await;
+                let user_sessions = user_sessions.read().await;
 
                 // Define a helper function to collect data from the hash map
                 async fn collect_data<K>(
@@ -324,6 +324,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
                             ),
                             created_at: session.created_at.to_string(),
                             last_active: last_active.to_string(),
+                            queued_packets: session.queued_packets().await
+                                as i32,
                         }
                     }))
                     .await
