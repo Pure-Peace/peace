@@ -129,9 +129,9 @@ where
     /// A [`ConfigFileType`] instance representing the file type.
     fn from(path: P) -> Self {
         let binding = path.as_ref().extension().unwrap().to_ascii_lowercase();
-        let ext = binding.to_str().unwrap();
+        let ext = binding.to_str().unwrap().trim();
         match ext {
-            "yml" => Self::Yaml,
+            "yml" | "yaml" => Self::Yaml,
             "json" => Self::Json,
             "toml" => Self::Toml,
             _ => panic!("Unsupported config file type \".{}\"", ext),
@@ -213,14 +213,16 @@ where
     T: ClapSerde,
 {
     File::open(f.path).map(|mut file| match f.ext_type {
-        ConfigFileType::Yaml =>
-            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
-        ConfigFileType::Json =>
-            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
+        ConfigFileType::Yaml => {
+            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
+        },
+        ConfigFileType::Json => {
+            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
+        },
         ConfigFileType::Toml => {
-            let mut buf = Vec::new();
-            file.read_to_end(&mut buf).unwrap();
-            toml::from_slice(&buf).unwrap()
+            let mut input = String::new();
+            file.read_to_string(&mut input).unwrap();
+            toml::from_str(&input).unwrap()
         },
     })
 }
