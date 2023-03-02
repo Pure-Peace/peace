@@ -6,23 +6,16 @@ use crate::{
 #[inline]
 /// #0: OSU_USER_CHANGE_ACTION
 pub fn user_change_action(
-    action: u8,
-    info: impl Str,
+    online_status: u8,
+    description: impl Str,
     beatmap_md5: impl Str,
-    play_mods_value: u32,
-    game_mode: u8,
+    mods: u32,
+    mode: u8,
     beatmap_id: i32,
 ) -> Vec<u8> {
     packet!(
         PacketId::OSU_USER_CHANGE_ACTION,
-        data!(
-            action,
-            info,
-            beatmap_md5,
-            play_mods_value,
-            game_mode,
-            beatmap_id
-        )
+        data!(online_status, description, beatmap_md5, mods, mode, beatmap_id)
     )
 }
 

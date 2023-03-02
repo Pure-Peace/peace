@@ -242,10 +242,11 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Local(svc) => {
                 // Extract the query and fields from the request
                 let req = request.into_inner();
-                let query =
-                    req.query.ok_or(Status::not_found(SESSION_NOT_FOUND))?;
+                let query = req
+                    .user_query
+                    .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
-                // Retrieve the user session from the database
+                // Retrieve the user session
                 let user = svc
                     .user_sessions_service
                     .get(&query.into())
@@ -256,7 +257,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let mut res = GetUserSessionResponse::default();
                 let fields = UserSessionFields::from(req.fields);
 
-                // Read the user session data from the database
+                // Get user read lock
                 let user = user.read().await;
 
                 // Set the response fields based on the requested fields

@@ -53,7 +53,7 @@ message RawUserQuery {
 }
 
 message RawUserQueryWithFields {
-  RawUserQuery query = 1;
+  RawUserQuery user_query = 1;
   int32 fields = 2;
 }
 

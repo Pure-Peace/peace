@@ -46,8 +46,8 @@ pub fn change_username(
 /// #11: BANCHO_USER_STATS
 pub fn user_stats(
     user_id: i32,
-    action: u8,
-    info: impl Str,
+    online_status: u8,
+    description: impl Str,
     beatmap_md5: impl Str,
     mods: u32,
     mode: u8,
@@ -63,8 +63,8 @@ pub fn user_stats(
         PacketId::BANCHO_USER_STATS,
         data!(
             user_id,
-            action,
-            info,
+            online_status,
+            description,
             beatmap_md5,
             mods,
             mode,
