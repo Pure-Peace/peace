@@ -1,6 +1,6 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
-    BanchoStatus, DynBanchoStateService, DynUserSessionsService, User,
+    BanchoStatus, DynBanchoStateService, DynUserSessionsService, Session, User,
     UserPlayingStats,
 };
 use async_trait::async_trait;
@@ -8,7 +8,6 @@ use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_client::BanchoStateRpcClient, *,
 };
 use std::{collections::hash_map::Values, sync::Arc};
-use tokio::sync::RwLock;
 use tonic::{transport::Channel, Request, Response, Status};
 
 pub const SESSION_NOT_FOUND: &'static str = "session no exists";
@@ -131,7 +130,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Create a new user session using the provided request.
                 let session_id = svc
                     .user_sessions_service
-                    .create(request.into_inner().into())
+                    .create(Session::from_request(request.into_inner())?)
                     .await;
 
                 // Log the session creation.
@@ -175,8 +174,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 svc.client().check_user_session_exists(request).await
             },
             BanchoStateServiceImpl::Local(svc) => {
-                // Retrieve the user session from the user session store.
-                let user = svc
+                // Get session based on the provided query
+                let session = svc
                     .user_sessions_service
                     .get(&request.into_inner().into())
                     .await
@@ -184,9 +183,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 // Update the user's last active time and retrieve their ID.
                 let user_id = {
-                    let mut user = user.write().await;
+                    let mut user = session.user.write().await;
                     user.update_active();
-                    user.user_id
+                    user.id
                 };
 
                 // Return the user ID in a response.
@@ -204,24 +203,24 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 svc.client().get_user_session(request).await
             },
             BanchoStateServiceImpl::Local(svc) => {
-                // Get the user session based on the provided query
-                let user = svc
+                // Get session based on the provided query
+                let session = svc
                     .user_sessions_service
                     .get(&request.into_inner().into())
                     .await
                     .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
                 // Get a read lock on the user session data
-                let user = user.read().await;
+                let user = session.user.read().await;
 
                 // Create a response with the user session details
                 Ok(Response::new(GetUserSessionResponse {
                     // Copy the session ID into the response
-                    session_id: Some(user.session_id.to_owned()),
+                    session_id: Some(session.id.to_owned()),
                     // Copy the user ID into the response
-                    user_id: Some(user.user_id),
+                    user_id: Some(user.id),
                     // Copy the username into the response
-                    username: Some(user.session_id.to_owned()),
+                    username: Some(user.username.to_owned()),
                     // Copy the Unicode username into the response, if it exists
                     username_unicode: user
                         .username_unicode
@@ -247,8 +246,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .user_query
                     .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
-                // Retrieve the user session
-                let user = svc
+                // Get session based on the provided query
+                let session = svc
                     .user_sessions_service
                     .get(&query.into())
                     .await
@@ -259,19 +258,19 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let fields = UserSessionFields::from(req.fields);
 
                 // Get user read lock
-                let user = user.read().await;
+                let user = session.user.read().await;
 
                 // Set the response fields based on the requested fields
                 if fields.intersects(UserSessionFields::SessionId) {
-                    res.session_id = Some(user.session_id.to_owned());
+                    res.session_id = Some(session.id.to_owned());
                 }
 
                 if fields.intersects(UserSessionFields::UserId) {
-                    res.user_id = Some(user.user_id);
+                    res.user_id = Some(user.id);
                 }
 
                 if fields.intersects(UserSessionFields::Username) {
-                    res.username = Some(user.session_id.to_owned());
+                    res.username = Some(user.username.to_owned());
                 }
 
                 if fields.intersects(UserSessionFields::UsernameUnicode) {
@@ -300,25 +299,31 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 // Define a helper function to collect data from the hash map
                 async fn collect_data<K>(
-                    values: Values<'_, K, Arc<RwLock<User>>>,
+                    values: Values<'_, K, Arc<Session>>,
                 ) -> Vec<UserData> {
                     // Use `join_all` to asynchronously process all elements in
                     // the `values` iterator
-                    futures::future::join_all(values.map(|u| async {
-                        // Get a read lock on the user object
-                        let u = u.read().await;
+                    futures::future::join_all(values.map(|session| async {
+                        let User {
+                            id: user_id,
+                            username,
+                            username_unicode,
+                            privileges,
+                            last_active,
+                            ..
+                        } = &*session.user.read().await;
 
-                        // Create a `UserData` object with the user's session
-                        // data
                         UserData {
-                            session_id: u.session_id.to_owned(),
-                            user_id: u.user_id,
-                            username: u.username.to_owned(),
-                            username_unicode: u.username_unicode.to_owned(),
-                            privileges: u.privileges,
-                            connection_info: Some(u.connection_info.to_owned()),
-                            created_at: u.created_at.to_string(),
-                            last_active: u.last_active.to_string(),
+                            session_id: session.id.to_owned(),
+                            user_id: *user_id,
+                            username: username.to_owned(),
+                            username_unicode: username_unicode.to_owned(),
+                            privileges: *privileges,
+                            connection_info: Some(
+                                session.connection_info.to_owned(),
+                            ),
+                            created_at: session.created_at.to_string(),
+                            last_active: last_active.to_string(),
                         }
                     }))
                     .await
@@ -367,8 +372,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .user_query
                     .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
 
-                // Retrieve the user session
-                let user = svc
+                // Get session based on the provided query
+                let session = svc
                     .user_sessions_service
                     .get(&query.into())
                     .await
@@ -376,7 +381,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 let user_stats_packet = {
                     let User {
-                        user_id,
+                        id: user_id,
                         bancho_status:
                             BanchoStatus {
                                 online_status,
@@ -397,7 +402,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                                 ..
                             },
                         ..
-                    } = &*user.read().await;
+                    } = &*session.user.read().await;
 
                     bancho_packets::server::user_stats(
                         *user_id,

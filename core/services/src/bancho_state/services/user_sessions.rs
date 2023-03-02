@@ -1,5 +1,5 @@
 use crate::bancho_state::{
-    DynUserSessionsService, User, UserSessionsInner, UserSessionsService,
+    DynUserSessionsService, Session, UserSessionsInner, UserSessionsService,
 };
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::UserQuery;
@@ -23,19 +23,15 @@ impl UserSessionsService for UserSessionsServiceImpl {
         self.inner.clone()
     }
 
-    async fn create(&self, user: User) -> String {
-        self.inner.write().await.create(user).await
+    async fn create(&self, session: Session) -> String {
+        self.inner.write().await.create(session).await
     }
 
-    async fn delete(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>> {
+    async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
         self.inner.write().await.delete(query).await
     }
 
-    async fn delete_user(&self, user: &User) -> Option<Arc<RwLock<User>>> {
-        self.inner.write().await.delete_user(user)
-    }
-
-    async fn get(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>> {
+    async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
         self.inner.read().await.get(query)
     }
 

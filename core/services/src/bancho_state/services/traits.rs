@@ -1,4 +1,4 @@
-use crate::bancho_state::{User, UserSessionsInner};
+use crate::bancho_state::{Session, UserSessionsInner};
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::*;
 use std::sync::Arc;
@@ -18,13 +18,11 @@ pub trait BackgroundService {
 pub trait UserSessionsService {
     fn inner(&self) -> Arc<RwLock<UserSessionsInner>>;
 
-    async fn create(&self, user: User) -> String;
+    async fn create(&self, user: Session) -> String;
 
-    async fn delete(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>>;
+    async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>>;
 
-    async fn delete_user(&self, user: &User) -> Option<Arc<RwLock<User>>>;
-
-    async fn get(&self, query: &UserQuery) -> Option<Arc<RwLock<User>>>;
+    async fn get(&self, query: &UserQuery) -> Option<Arc<Session>>;
 
     async fn exists(&self, query: &UserQuery) -> bool;
 

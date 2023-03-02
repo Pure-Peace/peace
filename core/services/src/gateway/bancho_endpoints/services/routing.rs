@@ -83,7 +83,7 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
     }
 
     async fn osu_getfriends(&self) -> Response {
-        unimplemented!()
+        "".into_response()
     }
 
     async fn osu_getbeatmapinfo(&self) -> Response {
