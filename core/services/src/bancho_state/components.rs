@@ -4,7 +4,7 @@ use peace_pb::bancho_state_rpc::{
     ConnectionInfo, CreateUserSessionRequest, UserQuery,
 };
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{Mutex, MutexGuard, RwLock};
 use tonic::Status;
 use uuid::Uuid;
 
@@ -221,6 +221,37 @@ impl Session {
             connection_info
                 .ok_or(Status::invalid_argument("invalid connection info"))?,
         ))
+    }
+
+    pub async fn queued_packets(&self) -> usize {
+        self.packets_queue.lock().await.len()
+    }
+
+    pub async fn push_packet(&self, packet: PacketDataPtr) -> usize {
+        let mut queue = self.packets_queue.lock().await;
+        queue.push(packet);
+        queue.len()
+    }
+
+    pub async fn enqueue_packets<I>(&self, packets: I) -> usize
+    where
+        I: IntoIterator<Item = PacketDataPtr>,
+    {
+        let mut queue = self.packets_queue.lock().await;
+        queue.extend(packets);
+        queue.len()
+    }
+
+    pub async fn dequeue_packet(
+        &self,
+        lock: Option<MutexGuard<'_, PacketsQueue>>,
+    ) -> Option<PacketDataPtr> {
+        let mut queue = lock.unwrap_or(self.packets_queue.lock().await);
+        if !queue.is_empty() {
+            Some(queue.remove(0))
+        } else {
+            None
+        }
     }
 }
 
