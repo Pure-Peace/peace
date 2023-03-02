@@ -1,3 +1,4 @@
+use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_pb::bancho_state_rpc::{
     ConnectionInfo, CreateUserSessionRequest, UserQuery,
@@ -5,6 +6,139 @@ use peace_pb::bancho_state_rpc::{
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
 use uuid::Uuid;
+
+#[rustfmt::skip]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash)]
+pub enum GameMode {
+    #[default]
+    Standard            = 0,
+    Taiko               = 1,
+    Fruits              = 2,
+    Mania               = 3,
+
+    StandardRelax       = 4,
+    TaikoRelax          = 5,
+    FruitsRelax         = 6,
+    StandardAutopilot   = 8,
+
+    StandardScoreV2     = 12,
+}
+
+#[rustfmt::skip]
+#[derive(Default)]
+#[bitmask(u32)]
+pub enum Mods {
+    #[default]
+    NoMod         = 0,
+    NoFail        = 1 << 0,
+    Easy          = 1 << 1,
+    TouchScreen   = 1 << 2,
+    Hidden        = 1 << 3,
+    HardRock      = 1 << 4,
+    SuddenDeath   = 1 << 5,
+    DoubleTime    = 1 << 6,
+    Relax         = 1 << 7,
+    HalfTime      = 1 << 8,
+    NightCore     = 1 << 9,
+    FlashLight    = 1 << 10,
+    Auto          = 1 << 11,
+    SpunOut       = 1 << 12,
+    AutoPilot     = 1 << 13,
+    Perfect       = 1 << 14,
+    Key4          = 1 << 15,
+    Key5          = 1 << 16,
+    Key6          = 1 << 17,
+    Key7          = 1 << 18,
+    Key8          = 1 << 19,
+    FadeIn        = 1 << 20,
+    Random        = 1 << 21,
+    Cinema        = 1 << 22,
+    Target        = 1 << 23,
+    Key9          = 1 << 24,
+    KeyCoop       = 1 << 25,
+    Key1          = 1 << 26,
+    Key3          = 1 << 27,
+    Key2          = 1 << 28,
+    ScoreV2       = 1 << 29,
+    Mirror        = 1 << 30,
+
+    KeyMods = Self::Key1.bits
+        | Self::Key2.bits
+        | Self::Key3.bits
+        | Self::Key4.bits
+        | Self::Key5.bits
+        | Self::Key6.bits
+        | Self::Key7.bits
+        | Self::Key8.bits
+        | Self::Key9.bits,
+
+    ScoreIncrease = Self::Hidden.bits
+        | Self::HardRock.bits
+        | Self::FadeIn.bits
+        | Self::DoubleTime.bits
+        | Self::FlashLight.bits,
+
+    SpeedChanging =
+        Self::DoubleTime.bits | Self::NightCore.bits | Self::HalfTime.bits,
+
+    StandardOnly = Self::AutoPilot.bits | Self::SpunOut.bits | Self::Target.bits,
+    ManiaOnly = Self::Mirror.bits
+        | Self::Random.bits
+        | Self::FadeIn.bits
+        | Self::KeyMods.bits,
+}
+
+#[rustfmt::skip]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
+pub enum UserPresenceFilter {
+    #[default]
+    None    = 0,
+    All     = 1,
+    Friends = 2,
+}
+
+#[rustfmt::skip]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
+pub enum UserOnlineStatus {
+    #[default]
+    Idle          = 0,
+    Afk           = 1,
+    Playing       = 2,
+    Editing       = 3,
+    Modding       = 4,
+    Multiplayer   = 5,
+    Watching      = 6,
+    Unknown       = 7,
+    Testing       = 8,
+    Submitting    = 9,
+    Paused        = 10,
+    Lobby         = 11,
+    Multiplaying  = 12,
+    Direct        = 13,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct UserPlayingStats {
+    pub rank: i32,
+    pub pp_v2: f32,
+    pub accuracy: f32,
+    pub total_hits: i32,
+    pub total_score: i64,
+    pub ranked_score: i64,
+    pub playcount: i32,
+    pub playtime: i64,
+    pub max_combo: i32,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BanchoStatus {
+    pub online_status: UserOnlineStatus,
+    pub description: String,
+    pub beatmap_id: i32,
+    pub beatmap_md5: String,
+    pub mods: Mods,
+    pub mode: GameMode,
+}
 
 /// User object representing a connected client.
 #[derive(Debug, Default, Clone)]
@@ -25,6 +159,10 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     /// The timestamp of when the user was last active.
     pub last_active: DateTime<Utc>,
+
+    pub bancho_status: BanchoStatus,
+
+    pub playing_stats: UserPlayingStats,
 }
 
 impl User {
@@ -56,6 +194,7 @@ impl From<CreateUserSessionRequest> for User {
             connection_info: connection_info.unwrap(),
             created_at: Utc::now(),
             last_active: Utc::now(),
+            ..Default::default()
         }
     }
 }
