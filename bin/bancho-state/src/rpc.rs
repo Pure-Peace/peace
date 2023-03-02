@@ -97,4 +97,11 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
     ) -> Result<Response<GetAllSessionsResponse>, Status> {
         self.bancho_state_service.get_all_sessions(_request).await
     }
+
+    async fn send_user_stats_packet(
+        &self,
+        request: Request<SendUserStatsPacketRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.bancho_state_service.send_user_stats_packet(request).await
+    }
 }

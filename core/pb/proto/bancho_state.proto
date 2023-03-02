@@ -30,6 +30,8 @@ service BanchoStateRPC {
 
   // For debug
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
+
+  rpc SendUserStatsPacket(SendUserStatsPacketRequest) returns (ExecSuccess);
 }
 
 message ExecSuccess {}
@@ -137,4 +139,9 @@ message GetAllSessionsResponse {
   repeated UserData indexed_by_user_id = 3;
   repeated UserData indexed_by_username = 4;
   repeated UserData indexed_by_username_unicode = 5;
+}
+
+message SendUserStatsPacketRequest {
+  RawUserQuery user_query = 1;
+  RawBanchoPacketTarget to = 2;
 }

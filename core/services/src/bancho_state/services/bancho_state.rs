@@ -1,6 +1,7 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
-    DynBanchoStateService, DynUserSessionsService, User,
+    BanchoStatus, DynBanchoStateService, DynUserSessionsService, User,
+    UserPlayingStats,
 };
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::{
@@ -347,6 +348,83 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     indexed_by_username,
                     indexed_by_username_unicode,
                 }))
+            },
+        }
+    }
+
+    async fn send_user_stats_packet(
+        &self,
+        request: Request<SendUserStatsPacketRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) => {
+                svc.client().send_user_stats_packet(request).await
+            },
+            BanchoStateServiceImpl::Local(svc) => {
+                // Extract the query and fields from the request
+                let req = request.into_inner();
+                let query = req
+                    .user_query
+                    .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
+
+                // Retrieve the user session
+                let user = svc
+                    .user_sessions_service
+                    .get(&query.into())
+                    .await
+                    .ok_or(Status::not_found(SESSION_NOT_FOUND))?;
+
+                let user_stats_packet = {
+                    let User {
+                        user_id,
+                        bancho_status:
+                            BanchoStatus {
+                                online_status,
+                                description,
+                                beatmap_id,
+                                beatmap_md5,
+                                mods,
+                                mode,
+                            },
+                        playing_stats:
+                            UserPlayingStats {
+                                rank,
+                                pp_v2,
+                                accuracy,
+                                total_score,
+                                ranked_score,
+                                playcount,
+                                ..
+                            },
+                        ..
+                    } = &*user.read().await;
+
+                    bancho_packets::server::user_stats(
+                        *user_id,
+                        *online_status as u8,
+                        description.to_owned(),
+                        beatmap_md5.to_owned(),
+                        mods.bits(),
+                        *mode as u8,
+                        *beatmap_id,
+                        *ranked_score,
+                        *accuracy,
+                        *playcount,
+                        *total_score,
+                        *rank,
+                        *pp_v2 as i16,
+                    )
+                };
+
+                self.enqueue_bancho_packets(Request::new(
+                    EnqueueBanchoPacketsRequest {
+                        target: req.to,
+                        packets: user_stats_packet,
+                    },
+                ))
+                .await?;
+
+                Ok(Response::new(ExecSuccess {}))
             },
         }
     }

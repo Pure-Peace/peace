@@ -156,8 +156,25 @@ impl BanchoService for BanchoServiceImpl {
             Self::Remote(svc) => {
                 svc.client().request_status_update(request).await
             },
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                let RequestStatusUpdateRequest { session_id } =
+                    request.into_inner();
+
+                let _resp = svc
+                    .bancho_state_service
+                    .send_user_stats_packet(Request::new(
+                        SendUserStatsPacketRequest {
+                            user_query: Some(
+                                UserQuery::SessionId(session_id.to_owned())
+                                    .into(),
+                            ),
+                            to: Some(
+                                BanchoPacketTarget::SessionId(session_id)
+                                    .into(),
+                            ),
+                        },
+                    ))
+                    .await?;
 
                 Ok(Response::new(HandleCompleted {}))
             },

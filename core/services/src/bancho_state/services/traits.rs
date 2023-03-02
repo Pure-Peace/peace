@@ -89,4 +89,9 @@ pub trait BanchoStateService {
         &self,
         _request: Request<GetAllSessionsRequest>,
     ) -> Result<Response<GetAllSessionsResponse>, Status>;
+
+    async fn send_user_stats_packet(
+        &self,
+        request: Request<SendUserStatsPacketRequest>,
+    ) -> Result<Response<ExecSuccess>, Status>;
 }
