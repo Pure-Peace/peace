@@ -72,12 +72,16 @@ impl BanchoService for BanchoServiceImpl {
     ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => svc.client().ping(request).await,
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                let _ = svc
+                    .bancho_state_service
+                    .check_user_session_exists(Request::new(
+                        UserQuery::SessionId(request.into_inner().session_id)
+                            .into(),
+                    ))
+                    .await;
 
-                let reply = HandleCompleted {};
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }
