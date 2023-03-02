@@ -3,17 +3,17 @@ syntax = "proto3";
 package peace.services.bancho;
 
 service BanchoRPC {
-  rpc Ping(PingRequest) returns (BanchoReply);
   rpc Login(LoginRequest) returns (LoginSuccess);
-  rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (BanchoReply);
-  rpc PresenceRequestAll(PresenceRequestAllRequest) returns (BanchoReply);
-  rpc SpectateStop(SpectateStopRequest) returns (BanchoReply);
-  rpc SpectateCant(SpectateCantRequest) returns (BanchoReply);
-  rpc LobbyPart(LobbyPartRequest) returns (BanchoReply);
-  rpc LobbyJoin(LobbyJoinRequest) returns (BanchoReply);
+  rpc Ping(PingRequest) returns (HandleCompleted);
+  rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (HandleCompleted);
+  rpc PresenceRequestAll(PresenceRequestAllRequest) returns (HandleCompleted);
+  rpc SpectateStop(SpectateStopRequest) returns (HandleCompleted);
+  rpc SpectateCant(SpectateCantRequest) returns (HandleCompleted);
+  rpc LobbyPart(LobbyPartRequest) returns (HandleCompleted);
+  rpc LobbyJoin(LobbyJoinRequest) returns (HandleCompleted);
 }
 
-message BanchoReply { optional bytes packet = 1; }
+message HandleCompleted {}
 
 message PingRequest { string session_id = 1; }
 

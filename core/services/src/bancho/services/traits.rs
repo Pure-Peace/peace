@@ -9,7 +9,7 @@ pub trait BanchoService {
     async fn ping(
         &self,
         request: Request<PingRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 
     async fn login(
         &self,
@@ -20,30 +20,30 @@ pub trait BanchoService {
     async fn request_status_update(
         &self,
         request: Request<RequestStatusUpdateRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 
     async fn presence_request_all(
         &self,
         request: Request<PresenceRequestAllRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 
     async fn spectate_stop(
         &self,
         request: Request<SpectateStopRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 
     async fn spectate_cant(
         &self,
         request: Request<SpectateCantRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 
     async fn lobby_part(
         &self,
         request: Request<LobbyPartRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 
     async fn lobby_join(
         &self,
         request: Request<LobbyJoinRequest>,
-    ) -> Result<Response<BanchoReply>, Status>;
+    ) -> Result<Response<HandleCompleted>, Status>;
 }

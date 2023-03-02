@@ -69,13 +69,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn ping(
         &self,
         request: Request<PingRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => svc.client().ping(request).await,
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
+                let reply = HandleCompleted {};
 
                 Ok(Response::new(reply))
             },
@@ -147,7 +147,7 @@ impl BanchoService for BanchoServiceImpl {
     async fn request_status_update(
         &self,
         request: Request<RequestStatusUpdateRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => {
                 svc.client().request_status_update(request).await
@@ -155,9 +155,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }
@@ -165,7 +163,7 @@ impl BanchoService for BanchoServiceImpl {
     async fn presence_request_all(
         &self,
         request: Request<PresenceRequestAllRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => {
                 svc.client().presence_request_all(request).await
@@ -173,9 +171,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }
@@ -183,15 +179,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn spectate_stop(
         &self,
         request: Request<SpectateStopRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => svc.client().spectate_stop(request).await,
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }
@@ -199,15 +193,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn spectate_cant(
         &self,
         request: Request<SpectateCantRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => svc.client().spectate_cant(request).await,
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }
@@ -215,15 +207,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn lobby_part(
         &self,
         request: Request<LobbyPartRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => svc.client().lobby_part(request).await,
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }
@@ -231,15 +221,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn lobby_join(
         &self,
         request: Request<LobbyJoinRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         match self {
             Self::Remote(svc) => svc.client().lobby_join(request).await,
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                let reply = BanchoReply { packet: None };
-
-                Ok(Response::new(reply))
+                Ok(Response::new(HandleCompleted {}))
             },
         }
     }

@@ -19,7 +19,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
     async fn ping(
         &self,
         request: Request<PingRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.ping(request).await
     }
 
@@ -34,42 +34,42 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
     async fn request_status_update(
         &self,
         request: Request<RequestStatusUpdateRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.request_status_update(request).await
     }
 
     async fn presence_request_all(
         &self,
         request: Request<PresenceRequestAllRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.presence_request_all(request).await
     }
 
     async fn spectate_stop(
         &self,
         request: Request<SpectateStopRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.spectate_stop(request).await
     }
 
     async fn spectate_cant(
         &self,
         request: Request<SpectateCantRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.spectate_cant(request).await
     }
 
     async fn lobby_part(
         &self,
         request: Request<LobbyPartRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.lobby_part(request).await
     }
 
     async fn lobby_join(
         &self,
         request: Request<LobbyJoinRequest>,
-    ) -> Result<Response<BanchoReply>, Status> {
+    ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service.lobby_join(request).await
     }
 }
