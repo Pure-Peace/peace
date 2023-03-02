@@ -1,29 +1,29 @@
-use super::Error;
+use super::BanchoError;
 use peace_pb::bancho_rpc::{ClientHashes, LoginRequest};
 
 pub fn parse_osu_login_request_body(
     body: Vec<u8>,
-) -> Result<LoginRequest, Error> {
+) -> Result<LoginRequest, BanchoError> {
     let body = String::from_utf8(body)
-        .map_err(|_| Error::Login("invalid request body".into()))?;
+        .map_err(|_| BanchoError::Login("invalid request body".into()))?;
 
     let mut lines = tools::split_string(&body, '\n');
 
     if lines.len() < 3 {
-        return Err(Error::Login("invalid data".into()))
+        return Err(BanchoError::Login("invalid data".into()));
     }
 
     let username = std::mem::take(&mut lines[0]);
     let password = std::mem::take(&mut lines[1]);
 
     if username.is_empty() || password.len() != 32 {
-        return Err(Error::Login("invalid user info".into()))
+        return Err(BanchoError::Login("invalid user info".into()));
     }
 
     let mut client_info = tools::split_string(&lines[2], '|');
 
     if client_info.len() < 5 {
-        return Err(Error::Login("invalid client info".into()))
+        return Err(BanchoError::Login("invalid client info".into()));
     }
 
     let client_version = std::mem::take(&mut client_info[0]);
@@ -38,7 +38,7 @@ pub fn parse_osu_login_request_body(
     let mut client_hashes = tools::split_string(&client_info[3], ':');
 
     if client_hashes.len() < 5 {
-        return Err(Error::Login("invalid client hashes".into()))
+        return Err(BanchoError::Login("invalid client hashes".into()));
     }
 
     // Only allow friend's pm

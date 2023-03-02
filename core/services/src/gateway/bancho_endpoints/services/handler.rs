@@ -2,20 +2,20 @@ use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
     bancho_state::DynBanchoStateService,
-    gateway::bancho_endpoints::{parser, Error, CHO_PROTOCOL, CHO_TOKEN},
+    gateway::bancho_endpoints::{parser, BanchoError, CHO_PROTOCOL, CHO_TOKEN},
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId, PacketReader};
 use peace_api::extractors::{BanchoClientToken, BanchoClientVersion};
 use peace_pb::{
-    bancho_rpc::LoginSuccess,
+    bancho_rpc::{LoginSuccess, RequestStatusUpdateRequest},
     bancho_state_rpc::{
         BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
     },
 };
 use std::{net::IpAddr, sync::Arc};
-use tonic::Request;
+use tonic::{Request, Status};
 use tools::tonic_utils::RpcRequest;
 
 #[derive(Clone)]
@@ -44,15 +44,15 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         body: Vec<u8>,
         client_ip: IpAddr,
         version: Option<BanchoClientVersion>,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, BanchoError> {
         if version.is_none() {
-            return Err(Error::Login("empty client version".into()));
+            return Err(BanchoError::Login("empty client version".into()));
         }
 
         let data = parser::parse_osu_login_request_body(body)?;
 
         if data.client_version != version.unwrap().as_str() {
-            return Err(Error::Login("mismatched client version".into()));
+            return Err(BanchoError::Login("mismatched client version".into()));
         }
 
         let req = RpcRequest::new(data).with_client_ip_header(client_ip);
@@ -61,7 +61,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .bancho_service
             .login(client_ip, req.to_request())
             .await
-            .map_err(|err| Error::Login(err.message().into()))?
+            .map_err(|err| BanchoError::Login(err.message().into()))?
             .into_inner();
 
         Ok((
@@ -74,19 +74,19 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     async fn bancho_post_responder(
         &self,
         user_id: i32,
-        session_id: BanchoClientToken,
+        BanchoClientToken(session_id): BanchoClientToken,
         body: Vec<u8>,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, BanchoError> {
         let mut reader = PacketReader::new(&body);
 
         while let Some(packet) = reader.next() {
             debug!("bancho packet received: {packet:?} (<{user_id}> [{session_id}])");
 
-            if let Err(err) =
-                self.process_bancho_packet(&session_id, user_id, &packet).await
-            {
-                error!("bancho packet ({packet:?}) handle err: {err:?} (<{user_id}> [{session_id}])")
-            }
+            self.process_bancho_packet(&session_id, user_id, packet)
+                .await
+                .unwrap_or_else(|err| {
+                    error!("{err} (<{user_id}> [{session_id}])")
+                });
         }
 
         let packets = self
@@ -96,32 +96,40 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                     BanchoPacketTarget::SessionId(session_id.to_owned()).into(),
                 ),
             }))
-            .await;
+            .await
+            .map_err(|err| {
+                let err = BanchoError::DequeuePakcetsError { source: err };
+                error!("{err}");
+                err
+            })?
+            .into_inner();
 
-        if let Err(err) = packets {
-            error!("dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])");
-            return Ok("ok".into_response());
-        }
-
-        return Ok(packets.unwrap().into_inner().data.into_response());
+        return Ok(packets.data.into_response());
     }
 
-    async fn check_user_session(&self, query: UserQuery) -> Result<i32, Error> {
+    async fn check_user_session(
+        &self,
+        query: UserQuery,
+    ) -> Result<i32, BanchoError> {
         Ok(self
             .bancho_state_service
             .check_user_session_exists(Request::new(query.into()))
             .await
-            .map_err(|err| Error::Login(err.message().into()))?
+            .map_err(|err| BanchoError::Login(err.message().into()))?
             .into_inner()
             .user_id)
     }
 
     async fn process_bancho_packet(
         &self,
-        _session_id: &str,
+        session_id: &str,
         _user_id: i32,
-        packet: &Packet<'_>,
-    ) -> Result<Response, Error> {
+        packet: Packet<'_>,
+    ) -> Result<(), BanchoError> {
+        fn handing_err(err: Status) -> BanchoError {
+            BanchoError::PacketHandlingError { source: err }
+        }
+
         match packet.id {
             PacketId::OSU_PING => {},
             // Message
@@ -132,7 +140,16 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                 todo!() // chat.send_private_message
             },
             // User
-            PacketId::OSU_USER_REQUEST_STATUS_UPDATE => todo!(),
+            PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
+                self.bancho_service
+                    .request_status_update(Request::new(
+                        RequestStatusUpdateRequest {
+                            session_id: session_id.to_owned(),
+                        },
+                    ))
+                    .await
+                    .map_err(handing_err)?;
+            },
             PacketId::OSU_USER_PRESENCE_REQUEST_ALL => todo!(),
             PacketId::OSU_USER_STATS_REQUEST => todo!(),
             PacketId::OSU_USER_CHANGE_ACTION => todo!(),
@@ -179,9 +196,13 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
             PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
             _ => {
-                warn!("unhandled packet: {packet:?}")
+                return Err(BanchoError::UnhandledPacket(format!(
+                    "{:?}",
+                    packet.id
+                )))
             },
-        }
-        todo!()
+        };
+
+        Ok(())
     }
 }

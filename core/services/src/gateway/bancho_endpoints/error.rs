@@ -4,31 +4,47 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use bancho_packets::{server, PacketBuilder};
+use tonic::Status;
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("Login failed: {0}")]
+pub enum BanchoError {
+    #[error("login failed: {0}")]
     Login(String),
+    #[error("unhandled packet: {0}")]
+    UnhandledPacket(String),
+    #[error("failed to handling packet: {source}")]
+    PacketHandlingError {
+        #[source]
+        source: Status,
+    },
+    #[error("failed to dequeue packets: {source}")]
+    DequeuePakcetsError {
+        #[source]
+        source: Status,
+    },
 }
 
-impl Error {
+impl BanchoError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::Login(_) => StatusCode::OK,
+            Self::UnhandledPacket(_) => StatusCode::OK,
+            Self::PacketHandlingError { .. } => StatusCode::OK,
+            Self::DequeuePakcetsError { .. } => StatusCode::OK,
         }
     }
 }
 
-impl From<Error> for Response {
-    fn from(err: Error) -> Self {
+impl From<BanchoError> for Response {
+    fn from(err: BanchoError) -> Self {
         err.into_response()
     }
 }
 
-impl IntoResponse for Error {
+impl IntoResponse for BanchoError {
     fn into_response(self) -> Response {
         match self {
-            Error::Login(_) => (
+            BanchoError::Login(_) => (
                 [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
                 PacketBuilder::new()
                     .add(server::login_reply(
@@ -41,7 +57,6 @@ impl IntoResponse for Error {
             )
                 .into_response(),
 
-            #[allow(unreachable_patterns)]
             _ => (self.status_code(), self.to_string()).into_response(),
         }
     }

@@ -1,7 +1,7 @@
 use super::traits::{
     BanchoRoutingService, DynBanchoHandlerService, DynBanchoRoutingService,
 };
-use crate::gateway::bancho_endpoints::Error;
+use crate::gateway::bancho_endpoints::BanchoError;
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use peace_api::extractors::*;
@@ -34,7 +34,7 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
         version: Option<BanchoClientVersion>,
         ip: IpAddr,
         body: Vec<u8>,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, BanchoError> {
         if session_id.is_none() {
             return self
                 .bancho_handler_service
