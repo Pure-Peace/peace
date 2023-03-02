@@ -9,7 +9,7 @@ use peace_services::{
     gateway::bancho_endpoints::{
         routes::{BanchoDebugRouter, BanchoRouter},
         BanchoDebugEndpointsDocs, BanchoEndpointsDocs,
-        BanchoGatewayRepositoryImpl, BanchoGatewayServiceImpl,
+        BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
     },
 };
 use std::sync::Arc;
@@ -73,19 +73,19 @@ impl Application for App {
         )
         .into_service();
 
-        let bancho_gateway_repository = BanchoGatewayRepositoryImpl::new(
+        let bancho_handler_service = BanchoHandlerServiceImpl::new(
             bancho_service,
             bancho_state_service.clone(),
         )
         .into_service();
 
-        let bancho_gateway_service = BanchoGatewayServiceImpl::new(
-            bancho_gateway_repository,
+        let bancho_routing_service = BanchoRoutingServiceImpl::new(
+            bancho_handler_service,
             bancho_state_service.clone(),
         )
         .into_service();
 
-        let mut router = BanchoRouter::new_router(bancho_gateway_service);
+        let mut router = BanchoRouter::new_router(bancho_routing_service);
 
         if self.cfg.debug_endpoints {
             router = router

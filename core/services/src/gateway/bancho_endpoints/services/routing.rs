@@ -1,5 +1,5 @@
 use super::traits::{
-    BanchoGatewayService, DynBanchoGatewayRepository, DynBanchoGatewayService,
+    BanchoRoutingService, DynBanchoHandlerService, DynBanchoRoutingService,
 };
 use crate::{
     bancho_state::DynBanchoStateService, gateway::bancho_endpoints::Error,
@@ -14,26 +14,26 @@ use peace_pb::bancho_state_rpc::{
 use std::{net::IpAddr, sync::Arc};
 use tonic::Request;
 
-pub struct BanchoGatewayServiceImpl {
-    bancho_gateway_repository: DynBanchoGatewayRepository,
+pub struct BanchoRoutingServiceImpl {
+    bancho_handler_service: DynBanchoHandlerService,
     bancho_state_service: DynBanchoStateService,
 }
 
-impl BanchoGatewayServiceImpl {
+impl BanchoRoutingServiceImpl {
     pub fn new(
-        bancho_gateway_repository: DynBanchoGatewayRepository,
+        bancho_handler_service: DynBanchoHandlerService,
         bancho_state_service: DynBanchoStateService,
     ) -> Self {
-        Self { bancho_gateway_repository, bancho_state_service }
+        Self { bancho_handler_service, bancho_state_service }
     }
 
-    pub fn into_service(self) -> DynBanchoGatewayService {
-        Arc::new(self) as DynBanchoGatewayService
+    pub fn into_service(self) -> DynBanchoRoutingService {
+        Arc::new(self) as DynBanchoRoutingService
     }
 }
 
 #[async_trait]
-impl BanchoGatewayService for BanchoGatewayServiceImpl {
+impl BanchoRoutingService for BanchoRoutingServiceImpl {
     async fn bancho_get(&self) -> Response {
         tools::pkg_metadata!().into_response()
     }
@@ -47,14 +47,14 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
     ) -> Result<Response, Error> {
         if session_id.is_none() {
             return self
-                .bancho_gateway_repository
+                .bancho_handler_service
                 .bancho_login(body, ip, version)
                 .await;
         }
 
         let session_id = session_id.unwrap();
         let user_id = self
-            .bancho_gateway_repository
+            .bancho_handler_service
             .check_user_session(UserQuery::SessionId(session_id.to_owned()))
             .await?;
 
@@ -64,7 +64,7 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
             debug!("bancho packet received: {packet:?} (<{user_id}> [{session_id}])");
 
             if let Err(err) = self
-                .bancho_gateway_repository
+                .bancho_handler_service
                 .process_bancho_packet(&session_id, user_id, &packet)
                 .await
             {

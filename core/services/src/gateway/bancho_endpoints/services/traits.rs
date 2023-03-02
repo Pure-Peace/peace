@@ -6,12 +6,12 @@ use peace_api::extractors::{BanchoClientToken, BanchoClientVersion};
 use peace_pb::bancho_state_rpc::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
-pub type DynBanchoGatewayService = Arc<dyn BanchoGatewayService + Send + Sync>;
-pub type DynBanchoGatewayRepository =
-    Arc<dyn BanchoGatewayRepository + Send + Sync>;
+pub type DynBanchoRoutingService = Arc<dyn BanchoRoutingService + Send + Sync>;
+pub type DynBanchoHandlerService =
+    Arc<dyn BanchoHandlerService + Send + Sync>;
 
 #[async_trait]
-pub trait BanchoGatewayService {
+pub trait BanchoRoutingService {
     /// get /
     async fn bancho_get(&self) -> Response;
 
@@ -98,7 +98,7 @@ pub trait BanchoGatewayService {
 }
 
 #[async_trait]
-pub trait BanchoGatewayRepository {
+pub trait BanchoHandlerService {
     async fn bancho_login(
         &self,
         body: Vec<u8>,

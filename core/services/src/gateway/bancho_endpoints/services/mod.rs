@@ -1,7 +1,7 @@
-pub mod bancho_gateway;
-pub mod bancho_gateway_repository;
+pub mod handler;
+pub mod routing;
 pub mod traits;
 
-pub use bancho_gateway::*;
-pub use bancho_gateway_repository::*;
+pub use handler::*;
+pub use routing::*;
 pub use traits::*;

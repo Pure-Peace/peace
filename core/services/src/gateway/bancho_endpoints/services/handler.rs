@@ -1,4 +1,4 @@
-use super::traits::{BanchoGatewayRepository, DynBanchoGatewayRepository};
+use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
     bancho_state::DynBanchoStateService,
@@ -14,12 +14,12 @@ use tonic::Request;
 use tools::tonic_utils::RpcRequest;
 
 #[derive(Clone)]
-pub struct BanchoGatewayRepositoryImpl {
+pub struct BanchoHandlerServiceImpl {
     bancho_service: DynBanchoService,
     bancho_state_service: DynBanchoStateService,
 }
 
-impl BanchoGatewayRepositoryImpl {
+impl BanchoHandlerServiceImpl {
     pub fn new(
         bancho_service: DynBanchoService,
         bancho_state_service: DynBanchoStateService,
@@ -27,13 +27,13 @@ impl BanchoGatewayRepositoryImpl {
         Self { bancho_service, bancho_state_service }
     }
 
-    pub fn into_service(self) -> DynBanchoGatewayRepository {
-        Arc::new(self) as DynBanchoGatewayRepository
+    pub fn into_service(self) -> DynBanchoHandlerService {
+        Arc::new(self) as DynBanchoHandlerService
     }
 }
 
 #[async_trait]
-impl BanchoGatewayRepository for BanchoGatewayRepositoryImpl {
+impl BanchoHandlerService for BanchoHandlerServiceImpl {
     async fn bancho_login(
         &self,
         body: Vec<u8>,
@@ -83,6 +83,7 @@ impl BanchoGatewayRepository for BanchoGatewayRepositoryImpl {
         packet: &Packet<'_>,
     ) -> Result<Response, Error> {
         match packet.id {
+            PacketId::OSU_PING => {},
             // Message
             PacketId::OSU_SEND_PUBLIC_MESSAGE => {
                 todo!() // chat.send_public_message

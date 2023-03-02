@@ -1,4 +1,4 @@
-use crate::gateway::bancho_endpoints::{DynBanchoGatewayService, Error};
+use crate::gateway::bancho_endpoints::{DynBanchoRoutingService, Error};
 use axum::{extract::Path, response::Response, routing::*, Extension, Router};
 use peace_api::extractors::*;
 
@@ -6,7 +6,7 @@ pub struct BanchoRouter;
 
 impl BanchoRouter {
     pub fn new_router<T: Clone + Sync + Send + 'static>(
-        bancho_gateway_service: DynBanchoGatewayService,
+        bancho_routing_service: DynBanchoRoutingService,
     ) -> Router<T> {
         Router::new()
             .route("/", get(bancho_get))
@@ -38,7 +38,7 @@ impl BanchoRouter {
             .route("/web/bancho_connect.php", get(bancho_connect))
             .route("/web/check-updates", get(check_updates))
             .route("/web/maps/:beatmap_file_name", get(update_beatmap))
-            .layer(Extension(bancho_gateway_service))
+            .layer(Extension(bancho_routing_service))
     }
 }
 
@@ -52,9 +52,9 @@ impl BanchoRouter {
     )
 )]
 pub async fn bancho_get(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.bancho_get().await
+    routing_service.bancho_get().await
 }
 
 /// Bancho post handler
@@ -67,13 +67,13 @@ pub async fn bancho_get(
     )
 )]
 pub async fn bancho_post(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
     session_id: Option<BanchoClientToken>,
     version: Option<BanchoClientVersion>,
     ClientIp(ip): ClientIp,
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, Error> {
-    gateway_service.bancho_post(session_id, version, ip, body.into()).await
+    routing_service.bancho_post(session_id, version, ip, body.into()).await
 }
 
 /// Bancho get_screenshot
@@ -86,9 +86,9 @@ pub async fn bancho_post(
     )
 )]
 pub async fn get_screenshot(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.get_screenshot().await
+    routing_service.get_screenshot().await
 }
 
 /// Bancho download_beatmapset
@@ -101,10 +101,10 @@ pub async fn get_screenshot(
     )
 )]
 pub async fn download_beatmapset(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
     Path(beatmapset_id): Path<i32>,
 ) -> Response {
-    gateway_service.download_beatmapset(beatmapset_id).await
+    routing_service.download_beatmapset(beatmapset_id).await
 }
 
 /// Bancho client_register
@@ -117,9 +117,9 @@ pub async fn download_beatmapset(
     )
 )]
 pub async fn client_register(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.client_register().await
+    routing_service.client_register().await
 }
 
 /// Bancho ask_peppy
@@ -132,9 +132,9 @@ pub async fn client_register(
     )
 )]
 pub async fn ask_peppy(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.ask_peppy().await
+    routing_service.ask_peppy().await
 }
 
 /// Bancho difficulty_rating
@@ -147,9 +147,9 @@ pub async fn ask_peppy(
     )
 )]
 pub async fn difficulty_rating(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.difficulty_rating().await
+    routing_service.difficulty_rating().await
 }
 
 /// Bancho osu_error
@@ -162,9 +162,9 @@ pub async fn difficulty_rating(
     )
 )]
 pub async fn osu_error(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_error().await
+    routing_service.osu_error().await
 }
 
 /// Bancho osu_screenshot
@@ -177,9 +177,9 @@ pub async fn osu_error(
     )
 )]
 pub async fn osu_screenshot(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_screenshot().await
+    routing_service.osu_screenshot().await
 }
 
 /// Bancho osu_getfriends
@@ -192,9 +192,9 @@ pub async fn osu_screenshot(
     )
 )]
 pub async fn osu_getfriends(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_getfriends().await
+    routing_service.osu_getfriends().await
 }
 
 /// Bancho osu_getbeatmapinfo
@@ -207,9 +207,9 @@ pub async fn osu_getfriends(
     )
 )]
 pub async fn osu_getbeatmapinfo(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_getbeatmapinfo().await
+    routing_service.osu_getbeatmapinfo().await
 }
 
 /// Bancho osu_getfavourites
@@ -222,9 +222,9 @@ pub async fn osu_getbeatmapinfo(
     )
 )]
 pub async fn osu_getfavourites(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_getfavourites().await
+    routing_service.osu_getfavourites().await
 }
 
 /// Bancho osu_addfavourite
@@ -237,9 +237,9 @@ pub async fn osu_getfavourites(
     )
 )]
 pub async fn osu_addfavourite(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_addfavourite().await
+    routing_service.osu_addfavourite().await
 }
 
 /// Bancho lastfm
@@ -252,9 +252,9 @@ pub async fn osu_addfavourite(
     )
 )]
 pub async fn lastfm(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.lastfm().await
+    routing_service.lastfm().await
 }
 
 /// Bancho osu_search
@@ -267,9 +267,9 @@ pub async fn lastfm(
     )
 )]
 pub async fn osu_search(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_search().await
+    routing_service.osu_search().await
 }
 
 /// Bancho osu_search_set
@@ -282,9 +282,9 @@ pub async fn osu_search(
     )
 )]
 pub async fn osu_search_set(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_search_set().await
+    routing_service.osu_search_set().await
 }
 
 /// Bancho osu_submit_modular_selector
@@ -297,9 +297,9 @@ pub async fn osu_search_set(
     )
 )]
 pub async fn osu_submit_modular_selector(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_submit_modular_selector().await
+    routing_service.osu_submit_modular_selector().await
 }
 
 /// Bancho osu_getreplay
@@ -312,9 +312,9 @@ pub async fn osu_submit_modular_selector(
     )
 )]
 pub async fn osu_getreplay(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_getreplay().await
+    routing_service.osu_getreplay().await
 }
 
 /// Bancho osu_rate
@@ -327,9 +327,9 @@ pub async fn osu_getreplay(
     )
 )]
 pub async fn osu_rate(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_rate().await
+    routing_service.osu_rate().await
 }
 
 /// Bancho osu_osz2_getscores
@@ -342,9 +342,9 @@ pub async fn osu_rate(
     )
 )]
 pub async fn osu_osz2_getscores(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_osz2_getscores().await
+    routing_service.osu_osz2_getscores().await
 }
 
 /// Bancho osu_comment
@@ -357,9 +357,9 @@ pub async fn osu_osz2_getscores(
     )
 )]
 pub async fn osu_comment(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_comment().await
+    routing_service.osu_comment().await
 }
 
 /// Bancho osu_markasread
@@ -372,9 +372,9 @@ pub async fn osu_comment(
     )
 )]
 pub async fn osu_markasread(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_markasread().await
+    routing_service.osu_markasread().await
 }
 
 /// Bancho osu_getseasonal
@@ -387,9 +387,9 @@ pub async fn osu_markasread(
     )
 )]
 pub async fn osu_getseasonal(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.osu_getseasonal().await
+    routing_service.osu_getseasonal().await
 }
 
 /// Bancho bancho_connect
@@ -402,9 +402,9 @@ pub async fn osu_getseasonal(
     )
 )]
 pub async fn bancho_connect(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.bancho_connect().await
+    routing_service.bancho_connect().await
 }
 
 /// Bancho check_updates
@@ -417,9 +417,9 @@ pub async fn bancho_connect(
     )
 )]
 pub async fn check_updates(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.check_updates().await
+    routing_service.check_updates().await
 }
 
 /// Bancho update_beatmap
@@ -432,7 +432,7 @@ pub async fn check_updates(
     )
 )]
 pub async fn update_beatmap(
-    Extension(gateway_service): Extension<DynBanchoGatewayService>,
+    Extension(routing_service): Extension<DynBanchoRoutingService>,
 ) -> Response {
-    gateway_service.update_beatmap().await
+    routing_service.update_beatmap().await
 }
