@@ -10,10 +10,11 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::{Read, Write},
-    ops::Deref,
     path::{Path, PathBuf},
     process,
 };
+
+const DEFAULT_CONFIG_PATH: &str = "config.json";
 
 /// A generic configuration struct that holds a configuration file path,
 /// a boolean flag to save the current parameters as a configuration file,
@@ -68,16 +69,8 @@ pub struct TlsConfig {
 #[derive(Args)]
 pub struct ConfigPath {
     /// Configuration file path (Support `.yml`, `.json`, `toml`).
-    #[arg(short = 'c', long = "config", default_value = "config.json")]
-    pub path: PathBuf,
-}
-
-impl Deref for ConfigPath {
-    type Target = Path;
-
-    fn deref(&self) -> &Self::Target {
-        self.path.as_path()
-    }
+    #[arg(short = 'c', long = "config")]
+    pub path: Option<PathBuf>,
 }
 
 /// An enum representing supported configuration file types.
@@ -91,14 +84,14 @@ pub enum ConfigFileType {
 /// A struct representing a configuration file path and its associated file
 /// type.
 #[derive(Debug, Clone)]
-pub struct ConfigFile<'a> {
+pub struct ConfigFile {
     /// The path of the configuration file.
-    pub path: &'a Path,
+    pub path: Box<PathBuf>,
     /// The file type of the configuration file.
     pub ext_type: ConfigFileType,
 }
 
-impl<'a> ConfigFile<'a> {
+impl ConfigFile {
     /// Creates a new [`ConfigFile`] instance from the provided file path.
     ///
     /// # Arguments
@@ -108,8 +101,9 @@ impl<'a> ConfigFile<'a> {
     /// # Returns
     ///
     /// A new [`ConfigFile`] instance.
-    pub fn new(path: &'a Path) -> Self {
-        Self { path, ext_type: ConfigFileType::from(path) }
+    pub fn new(path: Box<PathBuf>) -> Self {
+        let ext_type = ConfigFileType::from(path.as_path());
+        Self { path, ext_type }
     }
 }
 
@@ -176,7 +170,7 @@ pub fn write_config<T>(f: &ConfigFile, content: T)
 where
     T: serde::Serialize,
 {
-    File::create(f.path)
+    File::create(f.path.as_path())
         .unwrap()
         .write_all(
             cfg_to_string!(
@@ -212,7 +206,7 @@ pub fn read_config_from_file<T>(
 where
     T: ClapSerde,
 {
-    File::open(f.path).map(|mut file| match f.ext_type {
+    File::open(f.path.as_path()).map(|mut file| match f.ext_type {
         ConfigFileType::Yaml => {
             serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
         },
@@ -242,20 +236,23 @@ where
     fn parse_cfg() -> T {
         // Parse the base configuration from command line arguments.
         let cfg = BaseConfig::<T>::parse();
-        // Create a new configuration file based on the parsed configuration
-        // path.
-        let f = ConfigFile::new(&cfg.config_path);
-        // Attempt to read the configuration file and deserialize it into the
-        // target type `T`. If there is an error reading the file, use the
-        // default configuration from the base configuration instead.
-        let cfg_t =
-            read_config_from_file::<T>(&f).map(T::from).unwrap_or(cfg.config);
+
+        let (cfg_t, f) = if let Some(path) = cfg.config_path.path {
+            let f = ConfigFile::new(Box::new(path));
+            let t = read_config_from_file::<T>(&f)
+                .map(T::from)
+                .unwrap_or(cfg.config);
+            (t, Some(f))
+        } else {
+            (cfg.config, None)
+        };
 
         // If the command is to create a new configuration file, write the
         // current configuration to the specified file path and exit the
         // program.
         if let Some(Commands::CreateConfig(path)) = cfg.command {
-            let f = ConfigFile::new(&path);
+            let path = path.path.unwrap_or(DEFAULT_CONFIG_PATH.into());
+            let f = ConfigFile::new(Box::new(path));
             write_config(&f, &cfg_t);
             println!(
                 "[OK] Configuration files have been written to: `{}`",
@@ -267,7 +264,12 @@ where
         // If the save_as_config option is specified, write the current
         // configuration to the configuration file.
         if cfg.save_as_config {
-            write_config(&f, &cfg_t);
+            write_config(
+                &f.unwrap_or(ConfigFile::new(Box::new(
+                    DEFAULT_CONFIG_PATH.into(),
+                ))),
+                &cfg_t,
+            );
         }
 
         // Return the final configuration.
