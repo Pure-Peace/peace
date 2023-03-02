@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 #[derive(Debug, Default, Clone)]
 pub struct UserSessionsServiceImpl {
-    inner: Arc<RwLock<UserSessionsInner>>,
+    user_sessions: Arc<RwLock<UserSessionsInner>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -19,31 +19,31 @@ impl UserSessionsServiceImpl {
 
 #[async_trait]
 impl UserSessionsService for UserSessionsServiceImpl {
-    fn inner(&self) -> Arc<RwLock<UserSessionsInner>> {
-        self.inner.clone()
+    fn user_sessions(&self) -> Arc<RwLock<UserSessionsInner>> {
+        self.user_sessions.clone()
     }
 
     async fn create(&self, session: Session) -> String {
-        self.inner.write().await.create(session).await
+        self.user_sessions.write().await.create(session).await
     }
 
     async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        self.inner.write().await.delete(query).await
+        self.user_sessions.write().await.delete(query).await
     }
 
     async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        self.inner.read().await.get(query)
+        self.user_sessions.read().await.get(query)
     }
 
     async fn exists(&self, query: &UserQuery) -> bool {
-        self.inner.read().await.exists(query)
+        self.user_sessions.read().await.exists(query)
     }
 
     async fn clear(&self) {
-        self.inner.write().await.clear()
+        self.user_sessions.write().await.clear()
     }
 
     async fn len(&self) -> usize {
-        self.inner.read().await.len()
+        self.user_sessions.read().await.len()
     }
 }

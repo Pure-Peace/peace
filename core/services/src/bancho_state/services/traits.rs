@@ -16,7 +16,7 @@ pub trait BackgroundService {
 
 #[async_trait]
 pub trait UserSessionsService {
-    fn inner(&self) -> Arc<RwLock<UserSessionsInner>>;
+    fn user_sessions(&self) -> Arc<RwLock<UserSessionsInner>>;
 
     async fn create(&self, user: Session) -> String;
 
