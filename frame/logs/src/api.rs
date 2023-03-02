@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tower_http::auth::RequireAuthorizationLayer;
+use tower_http::auth::AddAuthorizationLayer;
 use tracing::log::LevelFilter;
 use tracing_subscriber::reload;
 
@@ -171,7 +171,7 @@ pub fn admin_routers(
         .route("/admin/logs/debug_mode/:enabled", put(debug_mode));
 
     if let Some(token) = &admin_token {
-        router.layer(RequireAuthorizationLayer::bearer(token))
+        router.layer(AddAuthorizationLayer::bearer(token))
     } else {
         router
     }

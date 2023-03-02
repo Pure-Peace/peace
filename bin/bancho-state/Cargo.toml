@@ -19,8 +19,8 @@ tokio = { version = "1", features = [
     "parking_lot",
 ] }
 serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4.0", features = ["derive"] }
-clap-serde-derive = { version = "0.2.0" }
+clap = { version = "4.1", features = ["derive"] }
+clap-serde-derive = { version = "0.2" }
 
 
 peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }

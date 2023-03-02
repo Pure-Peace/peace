@@ -16,12 +16,12 @@ path = "src/main.rs"
 
 
 [dependencies]
-axum = { version = "0.6.0" }
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-utoipa = { version = "3.0.3" }
+axum = { version = "0.6" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+utoipa = { version = "3.0" }
 serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4.0", features = ["derive"] }
-clap-serde-derive = "0.2.0"
+clap = { version = "4.1", features = ["derive"] }
+clap-serde-derive = { version = "0.2" }
 
 
 peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }

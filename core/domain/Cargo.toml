@@ -17,8 +17,8 @@ thiserror = "1.0"
 
 # password
 rust-argon2 = { version = "1.0" }
-rand = { version = "0.8.5" }
-once_cell = { version = "1.17" }
+rand = { version = "0.8" }
+once_cell = { version = "1" }
 
 
 tools = { path = "../../lib/tools" }

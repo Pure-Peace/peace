@@ -33,9 +33,9 @@ serde_json = { version = "1.0" }
 serde_yaml = { version = "0.9" }
 
 # utils
-clap = { version = "4.0", features = ["derive"] }
-clap-serde-derive = { version = "0.2.0" }
-once_cell = { version = "1.16" }
+clap = { version = "4.1", features = ["derive"] }
+clap-serde-derive = { version = "0.2" }
+once_cell = { version = "1" }
 
 
 # local crates

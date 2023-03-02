@@ -6,7 +6,7 @@ use axum::{
     http::{request::Parts, Request},
     response::{IntoResponse, Response},
 };
-pub use axum_client_ip::ClientIp;
+pub use axum_client_ip::InsecureClientIp as ClientIp;
 use derive_deref::Deref;
 use hyper::header::USER_AGENT;
 use std::fmt::Display;

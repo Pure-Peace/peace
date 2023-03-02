@@ -9,16 +9,16 @@ default = ["derive"]
 derive = ["peace_cfg_derive"]
 
 [dependencies]
-paste = "1.0"
-async-trait = "0.1"
-anyhow = "1.0"
+paste = { version = "1.0" }
+async-trait = { version = "0.1" }
+anyhow = { version = "1.0" }
 tonic = { version = "0.8", features = ["tls"] }
 
 # cfg
-clap = { version = "4.0", features = ["derive"] }
-clap-serde-derive = { version = "0.2.0" }
-once_cell = { version = "1.16" }
-toml = { version = "0.5" }
+clap = { version = "4.1", features = ["derive"] }
+clap-serde-derive = { version = "0.2" }
+once_cell = { version = "1" }
+toml = { version = "0.7" }
 
 # serde
 serde = { version = "1.0", features = ["derive"] }

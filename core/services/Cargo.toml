@@ -10,8 +10,8 @@ homepage = "https://github.com/pure-peace/peace"
 [dependencies]
 tokio = { version = "1" }
 tonic = { version = "0.8" }
-axum = { version = "0.6.0" }
-utoipa = { version = "3.0.3" }
+axum = { version = "0.6" }
+utoipa = { version = "3.0" }
 futures = { version = "0.3" }
 chrono = { version = "0.4" }
 async-trait = { version = "0.1" }

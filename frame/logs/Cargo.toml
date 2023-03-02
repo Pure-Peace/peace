@@ -19,7 +19,7 @@ cli = ["clap", "clap-serde-derive"]
 [dependencies]
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-once_cell = { version = "1.16" }
+once_cell = { version = "1" }
 serde = { version = "1.0", features = ["derive"] }
 
 # grpc optional
@@ -27,18 +27,18 @@ tonic = { version = "0.8", optional = true }
 peace_pb = { path = "../../core/pb", optional = true }
 
 # axum optional
-axum = { version = "0.6.0", optional = true }
+axum = { version = "0.6", optional = true }
 serde_json = { version = "1.0", optional = true }
-tower-http = { version = "0.3", features = ["auth"], optional = true }
+tower-http = { version = "0.4", features = ["auth"], optional = true }
 
 # cli optional
-clap = { version = "4.0", features = ["derive"], optional = true }
-clap-serde-derive = { version = "0.2.0", optional = true }
+clap = { version = "4.1", features = ["derive"], optional = true }
+clap-serde-derive = { version = "0.2", optional = true }
 
 
 # openapi optional
-utoipa = { version = "3.0.3", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "3.0.2", features = ["axum"] }
+utoipa = { version = "3.0", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "3.0", features = ["axum"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
