@@ -66,7 +66,18 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().broadcast_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(svc) => {
+                let packet = Arc::new(request.into_inner().packets);
+
+                let user_sessions = svc.user_sessions_service.user_sessions();
+                let user_sessions = user_sessions.read().await;
+
+                for session in user_sessions.indexed_by_session_id.values() {
+                    session.push_packet(packet.clone()).await;
+                }
+
+                Ok(Response::new(ExecSuccess {}))
+            },
         }
     }
 
@@ -78,7 +89,29 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().enqueue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(svc) => {
+                let EnqueueBanchoPacketsRequest { target, packets } =
+                    request.into_inner();
+
+                let packet = Arc::new(packets);
+                let target = Into::<BanchoPacketTarget>::into(
+                    target
+                        .ok_or(Status::invalid_argument("target not exists"))?,
+                );
+
+                if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
+                    svc.user_sessions_service
+                        .get(&user_query)
+                        .await
+                        .ok_or(Status::not_found(SESSION_NOT_FOUND))?
+                        .push_packet(packet)
+                        .await;
+                } else {
+                    todo!("channel handle")
+                }
+
+                Ok(Response::new(ExecSuccess {}))
+            },
         }
     }
 
@@ -90,7 +123,14 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().batch_enqueue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(_svc) => {
+                let batch = request.into_inner().requests;
+                for req in batch {
+                    self.enqueue_bancho_packets(Request::new(req)).await?;
+                }
+
+                Ok(Response::new(ExecSuccess {}))
+            },
         }
     }
 
@@ -102,7 +142,33 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().dequeue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(svc) => {
+                let target = Into::<BanchoPacketTarget>::into(
+                    request
+                        .into_inner()
+                        .target
+                        .ok_or(Status::invalid_argument("target not exists"))?,
+                );
+
+                let mut data = Vec::new();
+
+                if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
+                    while let Some(packet) = svc
+                        .user_sessions_service
+                        .get(&user_query)
+                        .await
+                        .ok_or(Status::not_found(SESSION_NOT_FOUND))?
+                        .dequeue_packet(None)
+                        .await
+                    {
+                        data.extend(packet.iter());
+                    }
+                } else {
+                    todo!("channel handle")
+                }
+
+                Ok(Response::new(BanchoPackets { data }))
+            },
         }
     }
 
