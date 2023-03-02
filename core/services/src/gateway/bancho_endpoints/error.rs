@@ -40,6 +40,8 @@ impl IntoResponse for Error {
                     .build(),
             )
                 .into_response(),
+
+            #[allow(unreachable_patterns)]
             _ => (self.status_code(), self.to_string()).into_response(),
         }
     }

@@ -157,7 +157,7 @@ impl BanchoGatewayService for BanchoGatewayServiceImpl {
         unimplemented!()
     }
 
-    async fn download_beatmapset(&self, beatmapset_id: i32) -> Response {
+    async fn download_beatmapset(&self, _beatmapset_id: i32) -> Response {
         unimplemented!()
     }
 

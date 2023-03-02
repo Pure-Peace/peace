@@ -96,8 +96,8 @@ impl BanchoGatewayRepository for BanchoGatewayRepositoryImpl {
 
     async fn process_bancho_packet(
         &self,
-        session_id: &str,
-        user_id: i32,
+        _session_id: &str,
+        _user_id: i32,
         packet: &Packet<'_>,
     ) -> Result<Response, Error> {
         match packet.id {

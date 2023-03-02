@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::define_db;
 
 pub mod entity;

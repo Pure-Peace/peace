@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate peace_logs;
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate anyhow;
 

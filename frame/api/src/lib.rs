@@ -43,8 +43,8 @@ pub trait Application: Clone + Send + Sync + 'static {
     /// and the server will try to execute the corresponding implementation according to the path.
     async fn match_hostname(
         &self,
-        host: Host,
-        req: &Request<Body>,
+        _host: Host,
+        _req: &Request<Body>,
     ) -> Option<Router> {
         None
     }

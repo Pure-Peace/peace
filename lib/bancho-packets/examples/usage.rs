@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use bancho_packets::*;
 
 fn main() {

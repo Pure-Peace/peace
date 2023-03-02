@@ -72,7 +72,7 @@ impl BanchoService for BanchoServiceImpl {
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
             Self::Remote(svc) => svc.client().ping(request).await,
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };
@@ -150,7 +150,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Remote(svc) => {
                 svc.client().request_status_update(request).await
             },
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };
@@ -168,7 +168,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Remote(svc) => {
                 svc.client().presence_request_all(request).await
             },
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };
@@ -184,7 +184,7 @@ impl BanchoService for BanchoServiceImpl {
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
             Self::Remote(svc) => svc.client().spectate_stop(request).await,
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };
@@ -200,7 +200,7 @@ impl BanchoService for BanchoServiceImpl {
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
             Self::Remote(svc) => svc.client().spectate_cant(request).await,
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };
@@ -216,7 +216,7 @@ impl BanchoService for BanchoServiceImpl {
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
             Self::Remote(svc) => svc.client().lobby_part(request).await,
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };
@@ -232,7 +232,7 @@ impl BanchoService for BanchoServiceImpl {
     ) -> Result<Response<BanchoReply>, Status> {
         match self {
             Self::Remote(svc) => svc.client().lobby_join(request).await,
-            Self::Local(svc) => {
+            Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
                 let reply = BanchoReply { packet: None };

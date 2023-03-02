@@ -1,6 +1,6 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
-    DynBanchoStateService, DynUserSessionsService, User, UserSessionsService,
+    DynBanchoStateService, DynUserSessionsService, User,
 };
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::{
@@ -66,7 +66,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().broadcast_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
         }
     }
 
@@ -78,7 +78,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().enqueue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
         }
     }
 
@@ -90,7 +90,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().batch_enqueue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
         }
     }
 
@@ -102,7 +102,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().dequeue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
         }
     }
 
@@ -114,7 +114,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Remote(svc) => {
                 svc.client().batch_dequeue_bancho_packets(request).await
             },
-            BanchoStateServiceImpl::Local(svc) => unimplemented!(),
+            BanchoStateServiceImpl::Local(_svc) => unimplemented!(),
         }
     }
 

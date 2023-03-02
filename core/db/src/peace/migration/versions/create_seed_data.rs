@@ -1,4 +1,3 @@
-use sea_orm::DbBackend;
 use sea_orm_migration::prelude::*;
 
 use super::init_tables::users::Users;
@@ -31,7 +30,7 @@ impl MigrationTrait for Migration {
         Ok(())
     }
 
-    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+    async fn down(&self, _manager: &SchemaManager) -> Result<(), DbErr> {
         Ok(())
     }
 }
