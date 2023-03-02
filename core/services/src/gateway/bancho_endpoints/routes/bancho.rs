@@ -1,10 +1,5 @@
-use super::{DynBanchoGatewayService, Error};
-use axum::{
-    extract::Path,
-    response::{IntoResponse, Response},
-    routing::*,
-    Extension, Router,
-};
+use crate::gateway::bancho_endpoints::{DynBanchoGatewayService, Error};
+use axum::{extract::Path, response::Response, routing::*, Extension, Router};
 use peace_api::extractors::*;
 
 pub struct BanchoRouter;
@@ -43,7 +38,6 @@ impl BanchoRouter {
             .route("/web/bancho_connect.php", get(bancho_connect))
             .route("/web/check-updates", get(check_updates))
             .route("/web/maps/:beatmap_file_name", get(update_beatmap))
-            .route("/test", get(test))
             .layer(Extension(bancho_gateway_service))
     }
 }
@@ -441,8 +435,4 @@ pub async fn update_beatmap(
     Extension(gateway_service): Extension<DynBanchoGatewayService>,
 ) -> Response {
     gateway_service.update_beatmap().await
-}
-
-pub async fn test() -> Response {
-    "ok".into_response()
 }

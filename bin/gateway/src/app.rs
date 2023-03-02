@@ -7,7 +7,8 @@ use peace_services::{
     bancho_state::BanchoStateServiceImpl,
     gateway::{
         bancho_endpoints::{
-            repository::BanchoGatewayRepositoryImpl, routes::BanchoRouter,
+            repository::BanchoGatewayRepositoryImpl,
+            routes::{BanchoDebugRouter, BanchoRouter},
             BanchoGatewayServiceImpl,
         },
         docs::GatewayApiDocs,
@@ -27,13 +28,7 @@ define_rpc_client_config!(
 );
 
 #[peace_config]
-#[command(
-    name = "gateway",
-    author,
-    version,
-    about,
-    propagate_version = true
-)]
+#[command(name = "gateway", author, version, about, propagate_version = true)]
 pub struct GatewayConfig {
     #[command(flatten)]
     pub frame_cfg: ApiFrameConfig,
@@ -43,6 +38,9 @@ pub struct GatewayConfig {
 
     #[command(flatten)]
     pub bancho_state: BanchoStateRpcConfig,
+
+    #[arg(long)]
+    pub debug_endpoints: bool,
 }
 
 #[derive(Clone)]
@@ -91,16 +89,21 @@ impl Application for App {
 
         let bancho_gateway_service = BanchoGatewayServiceImpl::new(
             bancho_gateway_repository,
-            bancho_state_service,
+            bancho_state_service.clone(),
         )
         .into_service();
 
-        let bancho_router = BanchoRouter::new_router(bancho_gateway_service);
+        let mut router = BanchoRouter::new_router(bancho_gateway_service);
 
-        bancho_router
+        if self.cfg.debug_endpoints {
+            router = router
+                .merge(BanchoDebugRouter::new_router(bancho_state_service))
+        }
+
+        router
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {
-        GatewayApiDocs::new_docs()
+        GatewayApiDocs::new_docs(self.cfg.debug_endpoints)
     }
 }

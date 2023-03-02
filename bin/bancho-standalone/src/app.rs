@@ -7,8 +7,10 @@ use peace_services::{
     bancho::BanchoServiceImpl,
     bancho_state::{BanchoStateServiceImpl, UserSessionsServiceImpl},
     gateway::bancho_endpoints::{
-        repository::BanchoGatewayRepositoryImpl, routes::BanchoRouter,
-        BanchoEndpointsDocs, BanchoGatewayServiceImpl,
+        repository::BanchoGatewayRepositoryImpl,
+        routes::{BanchoDebugRouter, BanchoRouter},
+        BanchoDebugEndpointsDocs, BanchoEndpointsDocs,
+        BanchoGatewayServiceImpl,
     },
 };
 use std::sync::Arc;
@@ -28,6 +30,9 @@ pub struct BanchoStandaloneConfig {
 
     #[command(flatten)]
     pub peace_db: PeaceDbConfig,
+
+    #[arg(long)]
+    pub debug_endpoints: bool,
 }
 
 #[derive(Clone)]
@@ -77,16 +82,27 @@ impl Application for App {
 
         let bancho_gateway_service = BanchoGatewayServiceImpl::new(
             bancho_gateway_repository,
-            bancho_state_service,
+            bancho_state_service.clone(),
         )
         .into_service();
 
-        let bancho_router = BanchoRouter::new_router(bancho_gateway_service);
+        let mut router = BanchoRouter::new_router(bancho_gateway_service);
 
-        bancho_router
+        if self.cfg.debug_endpoints {
+            router = router
+                .merge(BanchoDebugRouter::new_router(bancho_state_service))
+        }
+
+        router
     }
 
     fn apidocs(&self) -> utoipa::openapi::OpenApi {
-        BanchoEndpointsDocs::openapi()
+        let mut docs = BanchoEndpointsDocs::openapi();
+
+        if self.cfg.debug_endpoints {
+            docs.merge(BanchoDebugEndpointsDocs::openapi())
+        }
+
+        docs
     }
 }

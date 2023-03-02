@@ -47,7 +47,7 @@ macro_rules! define_db_config {
 
                     /// Database configurations
                     #[derive(
-                        clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,
+                        clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, Serialize, Deserialize,
                     )]
                     pub struct $struct_name {
                         /// Database connection URL.
