@@ -6,9 +6,14 @@ use crate::{
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use bancho_packets::{Packet, PacketId};
-use peace_api::extractors::BanchoClientVersion;
-use peace_pb::{bancho_rpc::LoginSuccess, bancho_state_rpc::UserQuery};
+use bancho_packets::{Packet, PacketId, PacketReader};
+use peace_api::extractors::{BanchoClientToken, BanchoClientVersion};
+use peace_pb::{
+    bancho_rpc::LoginSuccess,
+    bancho_state_rpc::{
+        BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
+    },
+};
 use std::{net::IpAddr, sync::Arc};
 use tonic::Request;
 use tools::tonic_utils::RpcRequest;
@@ -64,6 +69,41 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             packet.unwrap_or("ok".into()),
         )
             .into_response())
+    }
+
+    async fn bancho_post_responder(
+        &self,
+        user_id: i32,
+        session_id: BanchoClientToken,
+        body: Vec<u8>,
+    ) -> Result<Response, Error> {
+        let mut reader = PacketReader::new(&body);
+
+        while let Some(packet) = reader.next() {
+            debug!("bancho packet received: {packet:?} (<{user_id}> [{session_id}])");
+
+            if let Err(err) =
+                self.process_bancho_packet(&session_id, user_id, &packet).await
+            {
+                error!("bancho packet ({packet:?}) handle err: {err:?} (<{user_id}> [{session_id}])")
+            }
+        }
+
+        let packets = self
+            .bancho_state_service
+            .dequeue_bancho_packets(Request::new(DequeueBanchoPacketsRequest {
+                target: Some(
+                    BanchoPacketTarget::SessionId(session_id.to_owned()).into(),
+                ),
+            }))
+            .await;
+
+        if let Err(err) = packets {
+            error!("dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])");
+            return Ok("ok".into_response());
+        }
+
+        return Ok(packets.unwrap().into_inner().data.into_response());
     }
 
     async fn check_user_session(&self, query: UserQuery) -> Result<i32, Error> {

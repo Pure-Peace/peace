@@ -7,8 +7,7 @@ use peace_pb::bancho_state_rpc::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
 pub type DynBanchoRoutingService = Arc<dyn BanchoRoutingService + Send + Sync>;
-pub type DynBanchoHandlerService =
-    Arc<dyn BanchoHandlerService + Send + Sync>;
+pub type DynBanchoHandlerService = Arc<dyn BanchoHandlerService + Send + Sync>;
 
 #[async_trait]
 pub trait BanchoRoutingService {
@@ -104,6 +103,13 @@ pub trait BanchoHandlerService {
         body: Vec<u8>,
         client_ip: IpAddr,
         version: Option<BanchoClientVersion>,
+    ) -> Result<Response, Error>;
+
+    async fn bancho_post_responder(
+        &self,
+        user_id: i32,
+        session_id: BanchoClientToken,
+        body: Vec<u8>,
     ) -> Result<Response, Error>;
 
     async fn check_user_session(&self, query: UserQuery) -> Result<i32, Error>;

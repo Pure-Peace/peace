@@ -1,30 +1,20 @@
 use super::traits::{
     BanchoRoutingService, DynBanchoHandlerService, DynBanchoRoutingService,
 };
-use crate::{
-    bancho_state::DynBanchoStateService, gateway::bancho_endpoints::Error,
-};
+use crate::gateway::bancho_endpoints::Error;
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use bancho_packets::PacketReader;
 use peace_api::extractors::*;
-use peace_pb::bancho_state_rpc::{
-    BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
-};
+use peace_pb::bancho_state_rpc::UserQuery;
 use std::{net::IpAddr, sync::Arc};
-use tonic::Request;
 
 pub struct BanchoRoutingServiceImpl {
     bancho_handler_service: DynBanchoHandlerService,
-    bancho_state_service: DynBanchoStateService,
 }
 
 impl BanchoRoutingServiceImpl {
-    pub fn new(
-        bancho_handler_service: DynBanchoHandlerService,
-        bancho_state_service: DynBanchoStateService,
-    ) -> Self {
-        Self { bancho_handler_service, bancho_state_service }
+    pub fn new(bancho_handler_service: DynBanchoHandlerService) -> Self {
+        Self { bancho_handler_service }
     }
 
     pub fn into_service(self) -> DynBanchoRoutingService {
@@ -53,40 +43,15 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
         }
 
         let session_id = session_id.unwrap();
+
         let user_id = self
             .bancho_handler_service
             .check_user_session(UserQuery::SessionId(session_id.to_owned()))
             .await?;
 
-        let mut reader = PacketReader::new(&body);
-
-        while let Some(packet) = reader.next() {
-            debug!("bancho packet received: {packet:?} (<{user_id}> [{session_id}])");
-
-            if let Err(err) = self
-                .bancho_handler_service
-                .process_bancho_packet(&session_id, user_id, &packet)
-                .await
-            {
-                error!("bancho packet ({packet:?}) handle err: {err:?} (<{user_id}> [{session_id}])")
-            }
-        }
-
-        let packets = self
-            .bancho_state_service
-            .dequeue_bancho_packets(Request::new(DequeueBanchoPacketsRequest {
-                target: Some(
-                    BanchoPacketTarget::SessionId(session_id.to_owned()).into(),
-                ),
-            }))
-            .await;
-
-        if let Err(err) = packets {
-            error!("dequeue bancho packets err: {err:?} (<{user_id}> [{session_id}])");
-            return Ok("ok".into_response());
-        }
-
-        return Ok(packets.unwrap().into_inner().data.into_response());
+        self.bancho_handler_service
+            .bancho_post_responder(user_id, session_id, body)
+            .await
     }
 
     async fn get_screenshot(&self) -> Response {

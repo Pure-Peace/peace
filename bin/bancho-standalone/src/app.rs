@@ -79,11 +79,9 @@ impl Application for App {
         )
         .into_service();
 
-        let bancho_routing_service = BanchoRoutingServiceImpl::new(
-            bancho_handler_service,
-            bancho_state_service.clone(),
-        )
-        .into_service();
+        let bancho_routing_service =
+            BanchoRoutingServiceImpl::new(bancho_handler_service)
+                .into_service();
 
         let mut router = BanchoRouter::new_router(bancho_routing_service);
 
