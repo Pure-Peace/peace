@@ -1,10 +1,9 @@
 use super::{BanchoService, DynBanchoService};
 use crate::{
-    bancho::{BanchoServiceError, LoginError},
+    bancho::{BanchoServiceError, DynPasswordService, LoginError},
     bancho_state::DynBanchoStateService,
 };
 use bancho_packets::{server, PacketBuilder};
-use peace_domain::users::Password;
 use peace_pb::{
     bancho_rpc::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state_rpc::*,
@@ -32,10 +31,12 @@ impl BanchoServiceImpl {
     pub fn local(
         users_repository: DynUsersRepository,
         bancho_state_service: DynBanchoStateService,
+        password_service: DynPasswordService,
     ) -> Self {
         Self::Local(BanchoServiceLocal::new(
             users_repository,
             bancho_state_service,
+            password_service,
         ))
     }
 }
@@ -57,14 +58,16 @@ impl BanchoServiceRemote {
 pub struct BanchoServiceLocal {
     users_repository: DynUsersRepository,
     bancho_state_service: DynBanchoStateService,
+    password_service: DynPasswordService,
 }
 
 impl BanchoServiceLocal {
     pub fn new(
         users_repository: DynUsersRepository,
         bancho_state_service: DynBanchoStateService,
+        password_service: DynPasswordService,
     ) -> Self {
-        Self { users_repository, bancho_state_service }
+        Self { users_repository, bancho_state_service, password_service }
     }
 }
 
@@ -120,11 +123,10 @@ impl BanchoService for BanchoServiceImpl {
                     .await
                     .map_err(LoginError::UserNotExists)?;
 
-                Password::verify_password(
-                    user.password.as_str(),
-                    password.as_str(),
-                )
-                .map_err(LoginError::PasswordError)?;
+                svc.password_service
+                    .verify_password(user.password.as_str(), password.as_str())
+                    .await
+                    .map_err(LoginError::PasswordError)?;
 
                 let CreateUserSessionResponse { session_id } = svc
                     .bancho_state_service

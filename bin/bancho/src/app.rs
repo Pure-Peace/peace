@@ -10,7 +10,8 @@ use peace_rpc::{
     interceptor::client_ip, Application, RpcClientConfig, RpcFrameConfig,
 };
 use peace_services::{
-    bancho::BanchoServiceImpl, bancho_state::BanchoStateServiceImpl,
+    bancho::{BanchoServiceImpl, PasswordServiceImpl},
+    bancho_state::BanchoStateServiceImpl,
 };
 use std::sync::Arc;
 use tonic::{
@@ -78,9 +79,14 @@ impl Application for App {
             BanchoStateServiceImpl::remote(bancho_state_rpc_client)
                 .into_service();
 
-        let bancho_service =
-            BanchoServiceImpl::local(users_repository, bancho_state_service)
-                .into_service();
+        let password_service = PasswordServiceImpl::default().into_service();
+
+        let bancho_service = BanchoServiceImpl::local(
+            users_repository,
+            bancho_state_service,
+            password_service,
+        )
+        .into_service();
 
         let bancho_rpc = BanchoRpcImpl::new(bancho_service);
 

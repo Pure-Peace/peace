@@ -1,9 +1,11 @@
 use crate::bancho::BanchoServiceError;
+use peace_domain::users::PasswordError;
 use peace_pb::bancho_rpc::*;
 use std::{net::IpAddr, sync::Arc};
 use tonic::async_trait;
 
 pub type DynBanchoService = Arc<dyn BanchoService + Send + Sync>;
+pub type DynPasswordService = Arc<dyn PasswordService + Send + Sync>;
 
 #[async_trait]
 pub trait BanchoService {
@@ -47,4 +49,13 @@ pub trait BanchoService {
         &self,
         request: LobbyJoinRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
+}
+
+#[async_trait]
+pub trait PasswordService {
+    async fn verify_password(
+        &self,
+        hashed_password: &str,
+        password: &str,
+    ) -> Result<(), PasswordError>;
 }
