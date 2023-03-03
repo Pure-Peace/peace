@@ -1,19 +1,19 @@
+use crate::GetUserError;
 use peace_db::{peace::entity::users, *};
 use peace_domain::users::{
     CreateUser, UsernameAscii, UsernameSafe, UsernameUnicode,
 };
 use std::sync::Arc;
-use tonic::Status;
 
 pub type DynUsersRepository = Arc<dyn UsersRepository + Send + Sync>;
 
 #[async_trait]
 pub trait UsersRepository {
-    async fn get_user_model_by_username(
+    async fn get_user_by_username(
         &self,
         username: Option<&str>,
         username_unicode: Option<&str>,
-    ) -> Result<users::Model, Status>;
+    ) -> Result<users::Model, GetUserError>;
 
     async fn find_user_by_username(
         &self,
@@ -52,11 +52,11 @@ impl UsersRepositoryImpl {
 
 #[async_trait]
 impl UsersRepository for UsersRepositoryImpl {
-    async fn get_user_model_by_username(
+    async fn get_user_by_username(
         &self,
         username: Option<&str>,
         username_unicode: Option<&str>,
-    ) -> Result<users::Model, Status> {
+    ) -> Result<users::Model, GetUserError> {
         let username = username.and_then(|n| {
             UsernameAscii::from_str(n).ok().map(|n| n.safe_name())
         });
@@ -66,8 +66,8 @@ impl UsersRepository for UsersRepositoryImpl {
 
         self.find_user_by_username(username, username_unicode)
             .await
-            .map_err(|err| Status::internal(err.to_string()))?
-            .ok_or(Status::not_found("user not found"))
+            .map_err(GetUserError::DbErr)?
+            .ok_or(GetUserError::UserNotExists)
     }
 
     async fn find_user_by_username(

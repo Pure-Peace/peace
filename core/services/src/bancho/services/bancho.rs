@@ -111,11 +111,12 @@ impl BanchoService for BanchoServiceImpl {
 
                 let user = svc
                     .users_repository
-                    .get_user_model_by_username(
+                    .get_user_by_username(
                         Some(username.as_str()),
                         Some(username.as_str()),
                     )
-                    .await?;
+                    .await
+                    .map_err(LoginError::UserNotExists)?;
 
                 Password::verify_password(
                     user.password.as_str(),

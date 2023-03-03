@@ -4,12 +4,15 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use peace_domain::users::PasswordError;
+use peace_repositories::GetUserError;
 use tonic::{Code, Status};
 
 #[derive(thiserror::Error, Debug)]
 pub enum LoginError {
     #[error(transparent)]
     PasswordError(#[from] PasswordError),
+    #[error(transparent)]
+    UserNotExists(#[from] GetUserError),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -22,7 +25,7 @@ pub enum BanchoServiceError {
     LoginError(#[from] LoginError),
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
-    #[error(transparent)]
+    #[error("{0}")]
     RpcError(#[from] Status),
 }
 

@@ -9,6 +9,9 @@ homepage = "https://github.com/pure-peace/peace"
 
 [dependencies]
 tonic = { version = "0.8" }
+anyhow = { version = "1.0" }
+thiserror = { version = "1.0" }
+
 
 peace_logs = { path = "../../frame/logs" }
 peace_db = { path = "../../core/db" }
