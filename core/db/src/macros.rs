@@ -82,9 +82,9 @@ macro_rules! define_db_config {
                         #[arg(long)]
                         pub [<$prefix _db_max_lifetime>]: Option<u64>,
 
-                        /// Enable SQLx statement logging (default true).
-                        #[default(true)]
-                        #[arg(long, default_value = "true")]
+                        /// Enable SQLx statement logging.
+                        #[default(false)]
+                        #[arg(long)]
                         pub [<$prefix _db_sqlx_logging>]: bool,
 
                         /// Set SQLx statement logging level (default [`LogLevel::Info`]) (ignored if `sqlx_logging` is false).
