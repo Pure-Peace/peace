@@ -18,7 +18,7 @@ pub enum BanchoStateError {
     BanchoPacketTarget,
     #[error(transparent)]
     CreateSessionError(#[from] CreateSessionError),
-    #[error("{0}")]
+    #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }
 

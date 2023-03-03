@@ -25,7 +25,7 @@ pub enum BanchoServiceError {
     LoginError(#[from] LoginError),
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
-    #[error("{0}")]
+    #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }
 
