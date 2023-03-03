@@ -3,14 +3,20 @@ use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tools::async_collections::{BackgroundTask, BackgroundTaskError};
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
-pub type DynBackgroundService = Arc<dyn BackgroundService + Send + Sync>;
+pub type DynBanchoStateBackgroundService =
+    Arc<dyn BanchoStateBackgroundService + Send + Sync>;
 pub type DynUserSessionsService = Arc<dyn UserSessionsService + Send + Sync>;
 
 #[async_trait]
-pub trait BackgroundService {
-    fn start(&self);
+pub trait BanchoStateBackgroundService {
+    fn start_all(&self);
+    fn start_user_sessions_recycle(&self);
+    fn stop_user_sessions_recycle(
+        &self,
+    ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;
 }
 
 #[async_trait]

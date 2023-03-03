@@ -1,7 +1,8 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
-    BanchoStateError, BanchoStatus, DynBanchoStateService,
-    DynUserSessionsService, Session, User, UserPlayingStats,
+    BanchoStateError, BanchoStatus, DynBanchoStateBackgroundService,
+    DynBanchoStateService, DynUserSessionsService, Session, User,
+    UserPlayingStats,
 };
 use async_trait::async_trait;
 use peace_pb::bancho_state_rpc::{
@@ -25,8 +26,14 @@ impl BanchoStateServiceImpl {
         Self::Remote(BanchoStateServiceRemote(client))
     }
 
-    pub fn local(user_sessions_service: DynUserSessionsService) -> Self {
-        Self::Local(BanchoStateServiceLocal::new(user_sessions_service))
+    pub fn local(
+        user_sessions_service: DynUserSessionsService,
+        bancho_state_background_service: DynBanchoStateBackgroundService,
+    ) -> Self {
+        Self::Local(BanchoStateServiceLocal::new(
+            user_sessions_service,
+            bancho_state_background_service,
+        ))
     }
 }
 
@@ -46,11 +53,15 @@ impl BanchoStateServiceRemote {
 #[derive(Clone)]
 pub struct BanchoStateServiceLocal {
     user_sessions_service: DynUserSessionsService,
+    bancho_state_background_service: DynBanchoStateBackgroundService,
 }
 
 impl BanchoStateServiceLocal {
-    pub fn new(user_sessions_service: DynUserSessionsService) -> Self {
-        Self { user_sessions_service }
+    pub fn new(
+        user_sessions_service: DynUserSessionsService,
+        bancho_state_background_service: DynBanchoStateBackgroundService,
+    ) -> Self {
+        Self { user_sessions_service, bancho_state_background_service }
     }
 }
 

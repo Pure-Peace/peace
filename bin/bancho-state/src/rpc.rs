@@ -1,21 +1,15 @@
 use peace_pb::bancho_state_rpc::*;
-use peace_services::bancho_state::{
-    DynBackgroundService, DynBanchoStateService,
-};
+use peace_services::bancho_state::DynBanchoStateService;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
 pub struct BanchoStateRpcImpl {
     pub bancho_state_service: DynBanchoStateService,
-    pub background_service: DynBackgroundService,
 }
 
 impl BanchoStateRpcImpl {
-    pub fn new(
-        bancho_state_service: DynBanchoStateService,
-        background_service: DynBackgroundService,
-    ) -> Self {
-        Self { bancho_state_service, background_service }
+    pub fn new(bancho_state_service: DynBanchoStateService) -> Self {
+        Self { bancho_state_service }
     }
 }
 

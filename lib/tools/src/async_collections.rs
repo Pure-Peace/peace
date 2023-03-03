@@ -1,5 +1,6 @@
 use std::{
     future::Future,
+    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -127,71 +128,55 @@ pub enum BackgroundTaskError {
     FailedToTriggerSignal,
 }
 
-#[derive(Debug)]
-pub struct BackgroundTask<T, F>
-where
-    T: Future + Send + 'static,
-    T::Output: Send + 'static,
-    F: Fn(SignalHandle) -> T,
-{
-    /// A factory function that creates the future to be executed by the
-    /// background service.
-    factory: F,
+pub struct BackgroundTaskFactory {
+    boxed_function: Arc<
+        dyn Fn(
+            SignalHandle,
+        ) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
+    >,
+}
 
+impl BackgroundTaskFactory {
+    pub fn new(
+        boxed_function: Arc<
+            dyn Fn(
+                SignalHandle,
+            )
+                -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
+        >,
+    ) -> Self {
+        Self { boxed_function }
+    }
+
+    pub fn new_future(
+        &self,
+        signal: SignalHandle,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>> {
+        (self.boxed_function)(signal)
+    }
+}
+
+#[derive(Clone)]
+pub struct BackgroundTask {
     /// The join handle of the background service task.
-    handle: Option<JoinHandle<Option<T::Output>>>,
+    handle: Option<Arc<JoinHandle<Option<()>>>>,
 
     /// The signal handle used to gracefully stop the background service.
     signal: Option<SignalHandle>,
 }
 
-impl<T, F> BackgroundTask<T, F>
-where
-    T: Future + Send + 'static,
-    T::Output: Send + 'static,
-    F: Fn(SignalHandle) -> T,
-{
-    /// Creates a new `BackgroundTask` instance with the specified factory
-    /// function.
-    pub fn new(factory: F) -> Self {
-        Self { factory, handle: None, signal: None }
-    }
-
-    /// Returns true if the background service is started, false otherwise.
-    pub fn is_started(&self) -> bool {
-        match self.handle.as_ref() {
-            Some(h) => !h.is_finished(),
-            None => false,
-        }
-    }
-
-    /// Starts the background service.
-    ///
-    /// If `manual_stop` is true, the future returned by the factory function
-    /// will be executed until completion, even if a signal to stop the service
-    /// is received.
-    ///
-    /// If `manual_stop` is false, the future returned by the factory function
-    /// will be executed until a signal to stop the service is received.
-    pub fn start(
-        &mut self,
-        manual_stop: bool,
-    ) -> Result<(), BackgroundTaskError> {
-        // Check if the background service is already started
-        if self.is_started() {
-            return Err(BackgroundTaskError::AlreadyStarted)
-        }
-
+impl BackgroundTask {
+    pub fn start(factory: BackgroundTaskFactory, manual_stop: bool) -> Self {
         // Create a signal handle and store it in the `signal` field
         let signal = SignalHandle::new();
-        self.signal = Some(signal.clone());
+        let signal_cloned = signal.clone();
 
         // Call the factory function with the signal handle as an argument to
         // create the future to be executed by the background service
-        let fut = (self.factory)(signal.clone());
+        let fut = factory.new_future(signal.clone());
 
         // Spawn a new task to execute the future
-        self.handle = Some(tokio::spawn(async move {
+        let handle = Some(Arc::new(tokio::spawn(async move {
             if manual_stop {
                 // If manual stop is enabled, await the future until completion
                 Some(fut.await)
@@ -203,8 +188,21 @@ where
                     _ = signal.wait_signal() => None
                 }
             }
-        }));
-        Ok(())
+        })));
+
+        Self { handle, signal: Some(signal_cloned) }
+    }
+
+    /// Returns true if the background service is started, false otherwise.
+    pub fn is_started(&self) -> bool {
+        match self.handle.as_ref() {
+            Some(h) => !h.is_finished(),
+            None => false,
+        }
+    }
+
+    pub fn signal(&self) -> Option<SignalHandle> {
+        self.signal.clone()
     }
 
     /// Triggers a signal to stop the background service.
@@ -226,8 +224,7 @@ where
 
     /// Returns the join handle of the background service task and replaces
     /// it with `None`.
-    pub fn handle(&mut self) -> Option<JoinHandle<Option<T::Output>>> {
-        std::mem::replace(&mut self.handle, None) // Replace the handle with
-                                                  // None and return it.
+    pub fn handle(&mut self) -> Option<Arc<JoinHandle<Option<()>>>> {
+        self.handle.clone()
     }
 }

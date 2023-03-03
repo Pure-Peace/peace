@@ -4,7 +4,8 @@ use peace_pb::bancho_state_rpc::{
 };
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_services::bancho_state::{
-    BackgroundServiceImpl, BanchoStateServiceImpl, UserSessionsServiceImpl,
+    BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
+    UserSessionsServiceImpl,
 };
 use std::sync::Arc;
 use tonic::{
@@ -58,15 +59,22 @@ impl Application for App {
     async fn service(&self, mut configured_server: Server) -> Router {
         let user_sessions = UserSessionsServiceImpl::default().into_service();
 
-        let bancho_state_service =
-            BanchoStateServiceImpl::local(user_sessions).into_service();
+        let bancho_state_background_service =
+            BanchoStateBackgroundServiceImpl::new(
+                user_sessions.user_sessions().clone(),
+            )
+            .into_service();
 
-        let background_service =
-            BackgroundServiceImpl::default().into_service();
+        bancho_state_background_service.start_all();
+
+        let bancho_state_service = BanchoStateServiceImpl::local(
+            user_sessions,
+            bancho_state_background_service,
+        )
+        .into_service();
 
         // Create a new BanchoState instance.
-        let bancho_state_rpc =
-            BanchoStateRpcImpl::new(bancho_state_service, background_service);
+        let bancho_state_rpc = BanchoStateRpcImpl::new(bancho_state_service);
 
         // Add the BanchoState service to the server.
         configured_server
