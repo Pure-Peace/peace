@@ -17,8 +17,6 @@ use peace_pb::{
     },
 };
 use std::{error::Error, net::IpAddr, sync::Arc};
-use tonic::Request;
-use tools::tonic_utils::RpcRequest;
 
 #[derive(Clone)]
 pub struct BanchoHandlerServiceImpl {
@@ -51,20 +49,16 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             return Err(LoginError::EmptyClientVersion);
         }
 
-        let data = parser::parse_osu_login_request_body(body)?;
-
-        if data.client_version != version.unwrap().as_str() {
+        let request = parser::parse_osu_login_request_body(body)?;
+        if request.client_version != version.unwrap().as_str() {
             return Err(LoginError::MismatchedClientVersion);
         }
 
-        let req = RpcRequest::new(data).with_client_ip_header(client_ip);
-
         let LoginSuccess { session_id, packet } = self
             .bancho_service
-            .login(client_ip, req.to_request())
+            .login(client_ip, request)
             .await
-            .map_err(LoginError::BanchoServiceError)?
-            .into_inner();
+            .map_err(LoginError::BanchoServiceError)?;
 
         Ok((
             [(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL],
@@ -93,19 +87,17 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
 
         let packets = self
             .bancho_state_service
-            .dequeue_bancho_packets(Request::new(DequeueBanchoPacketsRequest {
+            .dequeue_bancho_packets(DequeueBanchoPacketsRequest {
                 target: Some(
                     BanchoPacketTarget::SessionId(session_id.to_owned()).into(),
                 ),
-            }))
+            })
             .await
             .map_err(|err| {
                 let err = BanchoHttpError::DequeuePakcetsError(err);
                 error!("{err}");
                 err
-            })?
-            .into_inner();
-
+            })?;
         return Ok(packets.data.into_response());
     }
 
@@ -115,10 +107,9 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     ) -> Result<i32, BanchoHttpError> {
         Ok(self
             .bancho_state_service
-            .check_user_session_exists(Request::new(query.into()))
+            .check_user_session_exists(query)
             .await
             .map_err(BanchoHttpError::SessionNotExists)?
-            .into_inner()
             .user_id)
     }
 
@@ -144,11 +135,9 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             // User
             PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
                 self.bancho_service
-                    .request_status_update(Request::new(
-                        RequestStatusUpdateRequest {
-                            session_id: session_id.to_owned(),
-                        },
-                    ))
+                    .request_status_update(RequestStatusUpdateRequest {
+                        session_id: session_id.to_owned(),
+                    })
                     .await
                     .map_err(handing_err)?;
             },

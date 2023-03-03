@@ -20,7 +20,11 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         &self,
         request: Request<PingRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
-        self.bancho_service.ping(request).await.map_err(|err| err.into())
+        self.bancho_service
+            .ping(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn login(
@@ -29,9 +33,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
     ) -> Result<Response<LoginSuccess>, Status> {
         let client_ip = ClientIp::from_request(&request)?;
         self.bancho_service
-            .login(client_ip.into(), request)
+            .login(client_ip.into(), request.into_inner())
             .await
             .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn request_status_update(
@@ -39,9 +44,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         request: Request<RequestStatusUpdateRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .request_status_update(request)
+            .request_status_update(request.into_inner())
             .await
             .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn presence_request_all(
@@ -49,9 +55,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         request: Request<PresenceRequestAllRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .presence_request_all(request)
+            .presence_request_all(request.into_inner())
             .await
             .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn spectate_stop(
@@ -59,9 +66,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         request: Request<SpectateStopRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .spectate_stop(request)
+            .spectate_stop(request.into_inner())
             .await
             .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn spectate_cant(
@@ -69,22 +77,31 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         request: Request<SpectateCantRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .spectate_cant(request)
+            .spectate_cant(request.into_inner())
             .await
             .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn lobby_part(
         &self,
         request: Request<LobbyPartRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
-        self.bancho_service.lobby_part(request).await.map_err(|err| err.into())
+        self.bancho_service
+            .lobby_part(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 
     async fn lobby_join(
         &self,
         request: Request<LobbyJoinRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
-        self.bancho_service.lobby_join(request).await.map_err(|err| err.into())
+        self.bancho_service
+            .lobby_join(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
     }
 }

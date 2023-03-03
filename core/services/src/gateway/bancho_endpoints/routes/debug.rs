@@ -4,8 +4,6 @@ use axum::{
     routing::*,
     Extension, Router,
 };
-use peace_pb::bancho_state_rpc::GetAllSessionsRequest;
-use tonic::Request;
 
 pub struct BanchoDebugRouter;
 
@@ -46,12 +44,8 @@ pub async fn get_all_sessions(
     Extension(bancho_state_service): Extension<DynBanchoStateService>,
 ) -> Response {
     bancho_state_service
-        .get_all_sessions(Request::new(GetAllSessionsRequest {}))
+        .get_all_sessions()
         .await
-        .map(|res| {
-            serde_json::to_string_pretty(&res.into_inner())
-                .unwrap()
-                .into_response()
-        })
+        .map(|res| serde_json::to_string_pretty(&res).unwrap().into_response())
         .unwrap_or_else(|err| err.into_response())
 }

@@ -14,10 +14,10 @@ Cargo.lock
 .env
 
 # configs
-/.idea/
-config.yml
-config.json
-config.toml
+*.yml
+*.yaml
+*.json
+*.toml
 
 # certs
 *.cer
@@ -26,6 +26,7 @@ config.toml
 *.key
 
 .vscode
+/.idea/
 
 /core/pb/generated/*.bin
 /core/pb/generated/*.rs

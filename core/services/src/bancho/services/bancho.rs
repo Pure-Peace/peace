@@ -11,7 +11,8 @@ use peace_pb::{
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, sync::Arc};
-use tonic::{async_trait, transport::Channel, Request, Response};
+use tonic::{async_trait, transport::Channel};
+use tools::tonic_utils::RawRequest;
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
@@ -71,24 +72,24 @@ impl BanchoServiceLocal {
 impl BanchoService for BanchoServiceImpl {
     async fn ping(
         &self,
-        request: Request<PingRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: PingRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .ping(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
                 let _ = svc
                     .bancho_state_service
-                    .check_user_session_exists(Request::new(
-                        UserQuery::SessionId(request.into_inner().session_id)
-                            .into(),
+                    .check_user_session_exists(UserQuery::SessionId(
+                        request.session_id,
                     ))
                     .await;
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
@@ -96,17 +97,18 @@ impl BanchoService for BanchoServiceImpl {
     async fn login(
         &self,
         client_ip: IpAddr,
-        request: Request<LoginRequest>,
-    ) -> Result<Response<LoginSuccess>, BanchoServiceError> {
+        request: LoginRequest,
+    ) -> Result<LoginSuccess, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
-                .login(request)
+                .login(RawRequest::add_client_ip(request, client_ip))
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
                 let LoginRequest { username, password, client_version, .. } =
-                    request.into_inner();
+                    request;
                 info!("Receive login request: {username} [{client_version}] ({client_ip})");
 
                 let user = svc
@@ -126,26 +128,23 @@ impl BanchoService for BanchoServiceImpl {
 
                 let CreateUserSessionResponse { session_id } = svc
                     .bancho_state_service
-                    .create_user_session(Request::new(
-                        CreateUserSessionRequest {
-                            user_id: user.id,
-                            username: user.name,
-                            username_unicode: user.name_unicode,
-                            privileges: 1,
-                            connection_info: Some(ConnectionInfo {
-                                ip: client_ip.to_string(),
-                                region: "".into(),
-                                latitude: 0.,
-                                longitude: 0.,
-                            }),
-                        },
-                    ))
-                    .await?
-                    .into_inner();
+                    .create_user_session(CreateUserSessionRequest {
+                        user_id: user.id,
+                        username: user.name,
+                        username_unicode: user.name_unicode,
+                        privileges: 1,
+                        connection_info: Some(ConnectionInfo {
+                            ip: client_ip.to_string(),
+                            region: "".into(),
+                            latitude: 0.,
+                            longitude: 0.,
+                        }),
+                    })
+                    .await?;
 
                 info!(target: "bancho.login", "user <{}:{}> logged in (session_id: {})", user.name_safe, user.id, session_id);
 
-                Ok(Response::new(LoginSuccess {
+                Ok(LoginSuccess {
                     session_id,
                     packet: Some(
                         PacketBuilder::new()
@@ -155,132 +154,133 @@ impl BanchoService for BanchoServiceImpl {
                             .add(server::notification("welcome to peace!"))
                             .build(),
                     ),
-                }))
+                })
             },
         }
     }
 
     async fn request_status_update(
         &self,
-        request: Request<RequestStatusUpdateRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: RequestStatusUpdateRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .request_status_update(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let RequestStatusUpdateRequest { session_id } =
-                    request.into_inner();
+                let RequestStatusUpdateRequest { session_id } = request;
 
                 let _resp = svc
                     .bancho_state_service
-                    .send_user_stats_packet(Request::new(
-                        SendUserStatsPacketRequest {
-                            user_query: Some(
-                                UserQuery::SessionId(session_id.to_owned())
-                                    .into(),
-                            ),
-                            to: Some(
-                                BanchoPacketTarget::SessionId(session_id)
-                                    .into(),
-                            ),
-                        },
-                    ))
+                    .send_user_stats_packet(SendUserStatsPacketRequest {
+                        user_query: Some(
+                            UserQuery::SessionId(session_id.to_owned()).into(),
+                        ),
+                        to: Some(
+                            BanchoPacketTarget::SessionId(session_id).into(),
+                        ),
+                    })
                     .await?;
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
 
     async fn presence_request_all(
         &self,
-        request: Request<PresenceRequestAllRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: PresenceRequestAllRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .presence_request_all(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
 
     async fn spectate_stop(
         &self,
-        request: Request<SpectateStopRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: SpectateStopRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .spectate_stop(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
 
     async fn spectate_cant(
         &self,
-        request: Request<SpectateCantRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: SpectateCantRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .spectate_cant(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
 
     async fn lobby_part(
         &self,
-        request: Request<LobbyPartRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: LobbyPartRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .lobby_part(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
 
     async fn lobby_join(
         &self,
-        request: Request<LobbyJoinRequest>,
-    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
+        request: LobbyJoinRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
                 .lobby_join(request)
                 .await
-                .map_err(BanchoServiceError::RpcError),
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(Response::new(HandleCompleted {}))
+                Ok(HandleCompleted {})
             },
         }
     }
