@@ -53,5 +53,5 @@ pub async fn get_all_sessions(
                 .unwrap()
                 .into_response()
         })
-        .unwrap_or_else(|err| err.message().to_string().into_response())
+        .unwrap_or_else(|err| err.into_response())
 }

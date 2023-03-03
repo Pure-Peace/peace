@@ -2,20 +2,22 @@ use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
     bancho_state::DynBanchoStateService,
-    gateway::bancho_endpoints::{parser, BanchoError, CHO_PROTOCOL, CHO_TOKEN},
+    gateway::bancho_endpoints::{
+        extractors::{BanchoClientToken, BanchoClientVersion},
+        parser, BanchoHttpError, LoginError, CHO_PROTOCOL, CHO_TOKEN,
+    },
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId, PacketReader};
-use peace_api::extractors::{BanchoClientToken, BanchoClientVersion};
 use peace_pb::{
     bancho_rpc::{LoginSuccess, RequestStatusUpdateRequest},
     bancho_state_rpc::{
         BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
     },
 };
-use std::{net::IpAddr, sync::Arc};
-use tonic::{Request, Status};
+use std::{error::Error, net::IpAddr, sync::Arc};
+use tonic::Request;
 use tools::tonic_utils::RpcRequest;
 
 #[derive(Clone)]
@@ -44,15 +46,15 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         body: Vec<u8>,
         client_ip: IpAddr,
         version: Option<BanchoClientVersion>,
-    ) -> Result<Response, BanchoError> {
+    ) -> Result<Response, LoginError> {
         if version.is_none() {
-            return Err(BanchoError::Login("empty client version".into()));
+            return Err(LoginError::EmptyClientVersion);
         }
 
         let data = parser::parse_osu_login_request_body(body)?;
 
         if data.client_version != version.unwrap().as_str() {
-            return Err(BanchoError::Login("mismatched client version".into()));
+            return Err(LoginError::MismatchedClientVersion);
         }
 
         let req = RpcRequest::new(data).with_client_ip_header(client_ip);
@@ -61,7 +63,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .bancho_service
             .login(client_ip, req.to_request())
             .await
-            .map_err(|err| BanchoError::Login(err.message().into()))?
+            .map_err(LoginError::BanchoServiceError)?
             .into_inner();
 
         Ok((
@@ -76,7 +78,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         user_id: i32,
         BanchoClientToken(session_id): BanchoClientToken,
         body: Vec<u8>,
-    ) -> Result<Response, BanchoError> {
+    ) -> Result<Response, BanchoHttpError> {
         let mut reader = PacketReader::new(&body);
 
         while let Some(packet) = reader.next() {
@@ -98,7 +100,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             }))
             .await
             .map_err(|err| {
-                let err = BanchoError::DequeuePakcetsError { source: err };
+                let err = BanchoHttpError::DequeuePakcetsError(err);
                 error!("{err}");
                 err
             })?
@@ -110,12 +112,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     async fn check_user_session(
         &self,
         query: UserQuery,
-    ) -> Result<i32, BanchoError> {
+    ) -> Result<i32, BanchoHttpError> {
         Ok(self
             .bancho_state_service
             .check_user_session_exists(Request::new(query.into()))
             .await
-            .map_err(|err| BanchoError::Login(err.message().into()))?
+            .map_err(BanchoHttpError::SessionNotExists)?
             .into_inner()
             .user_id)
     }
@@ -125,9 +127,9 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         session_id: &str,
         _user_id: i32,
         packet: Packet<'_>,
-    ) -> Result<(), BanchoError> {
-        fn handing_err(err: Status) -> BanchoError {
-            BanchoError::PacketHandlingError { source: err }
+    ) -> Result<(), BanchoHttpError> {
+        fn handing_err(err: impl Error) -> BanchoHttpError {
+            BanchoHttpError::PacketHandlingError(anyhow!("{err:?}"))
         }
 
         match packet.id {
@@ -195,12 +197,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST => todo!(),
             PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
             PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
-            _ => {
-                return Err(BanchoError::UnhandledPacket(format!(
-                    "{:?}",
-                    packet.id
-                )))
-            },
+            _ => return Err(BanchoHttpError::UnhandledPacket(packet.id)),
         };
 
         Ok(())

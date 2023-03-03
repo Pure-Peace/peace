@@ -1,10 +1,18 @@
-use super::parser;
+use super::{parser, BanchoHttpError};
 use axum::{
-    async_trait, body::Bytes, extract::FromRequest, http::Request,
-    response::Response,
+    async_trait,
+    body::Bytes,
+    extract::{FromRequest, FromRequestParts},
+    headers::HeaderName,
+    http::{request::Parts, Request},
 };
-use peace_api::extractors::BanchoRequestBody;
+use derive_deref::Deref;
+use hyper::header::USER_AGENT;
 use peace_pb::bancho_rpc::LoginRequest;
+
+pub const OSU_USER_AGENT: HeaderName = HeaderName::from_static("osu!");
+pub const OSU_VERSION: HeaderName = HeaderName::from_static("osu-version");
+pub const OSU_TOKEN: HeaderName = HeaderName::from_static("osu-token");
 
 #[derive(Debug)]
 pub struct OsuClientLoginBody(pub LoginRequest);
@@ -17,7 +25,7 @@ where
     B: Send + 'static,
     S: Send + Sync,
 {
-    type Rejection = Response;
+    type Rejection = BanchoHttpError;
 
     async fn from_request(
         req: Request<B>,
@@ -25,6 +33,119 @@ where
     ) -> Result<Self, Self::Rejection> {
         let body = BanchoRequestBody::from_request(req, state).await?.0;
 
-        Ok(Self(parser::parse_osu_login_request_body(body.into())?))
+        Ok(Self(
+            parser::parse_osu_login_request_body(body.into())
+                .map_err(|err| BanchoHttpError::LoginFailed(err.into()))?,
+        ))
+    }
+}
+
+/// Represents the version of the Bancho client.
+#[derive(Debug, Deref, Serialize, Deserialize)]
+pub struct BanchoClientVersion(pub String);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for BanchoClientVersion
+where
+    S: Send + Sync,
+{
+    type Rejection = BanchoHttpError;
+
+    /// Extracts the `osu-version` header from the request parts and constructs
+    /// a `BanchoClientVersion` instance from it.
+    ///
+    /// Returns a `Result` containing the `BanchoClientVersion` instance if
+    /// successful, or an `Error` if the `osu-version` header is invalid.
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        parts
+            .headers
+            .get(OSU_VERSION)
+            .and_then(|hv| hv.to_str().ok())
+            .and_then(|s| Some(s.to_owned()))
+            .map(Self)
+            .ok_or(BanchoHttpError::InvalidOsuVersionHeader)
+    }
+}
+
+impl std::fmt::Display for BanchoClientVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// Wrapper for the `osu-token` header value.
+#[derive(Debug, Deref, Serialize, Deserialize)]
+pub struct BanchoClientToken(pub String);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for BanchoClientToken
+where
+    S: Send + Sync,
+{
+    type Rejection = BanchoHttpError;
+
+    /// Parses the `osu-token` header value from the incoming request and returns it
+    /// as a `BanchoClientToken` instance.
+    ///
+    /// Returns an error if the `osu-token` header is not present or if it cannot be
+    /// converted to a string.
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        parts
+            .headers
+            .get(OSU_TOKEN)
+            .and_then(|hv| hv.to_str().ok())
+            .and_then(|s| Some(s.to_owned()))
+            .map(Self)
+            .ok_or(BanchoHttpError::InvalidOsuTokenHeader)
+    }
+}
+
+impl std::fmt::Display for BanchoClientToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// A wrapper around the body of a Bancho request.
+#[derive(Debug, Deref)]
+pub struct BanchoRequestBody(pub Bytes);
+
+#[async_trait]
+impl<S, B> FromRequest<S, B> for BanchoRequestBody
+where
+    Bytes: FromRequest<S, B>,
+    B: Send + 'static,
+    S: Send + Sync,
+{
+    type Rejection = BanchoHttpError;
+
+    /// Attempts to extract the request body from the provided `Request`.
+    async fn from_request(
+        req: Request<B>,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        // Ensure the request came from a valid client.
+        if !req
+            .headers()
+            .get(USER_AGENT)
+            .and_then(|hv| hv.to_str().ok())
+            .map(|ua| ua == OSU_USER_AGENT.as_str())
+            .unwrap_or(false)
+        {
+            return Err(BanchoHttpError::InvalidUserAgentHeader);
+        }
+
+        // Extract the request body and wrap it in a `BanchoRequestBody`.
+        Ok(Self(
+            Bytes::from_request(req, state)
+                .await
+                .map_err(|_| BanchoHttpError::ParseRequestError)?,
+        ))
     }
 }

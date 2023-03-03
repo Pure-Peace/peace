@@ -1,4 +1,7 @@
-use crate::gateway::bancho_endpoints::{BanchoError, DynBanchoRoutingService};
+use crate::gateway::bancho_endpoints::{
+    extractors::{BanchoClientToken, BanchoClientVersion, BanchoRequestBody},
+    BanchoHttpError, DynBanchoRoutingService,
+};
 use axum::{extract::Path, response::Response, routing::*, Extension, Router};
 use peace_api::extractors::*;
 
@@ -72,7 +75,7 @@ pub async fn bancho_post(
     version: Option<BanchoClientVersion>,
     ClientIp(ip): ClientIp,
     BanchoRequestBody(body): BanchoRequestBody,
-) -> Result<Response, BanchoError> {
+) -> Result<Response, BanchoHttpError> {
     routing_service.bancho_post(session_id, version, ip, body.into()).await
 }
 

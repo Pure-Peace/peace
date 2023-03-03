@@ -1,3 +1,4 @@
+use super::CreateSessionError;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_pb::bancho_state_rpc::{
@@ -5,7 +6,6 @@ use peace_pb::bancho_state_rpc::{
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard, RwLock};
-use tonic::Status;
 use uuid::Uuid;
 
 #[rustfmt::skip]
@@ -200,7 +200,7 @@ impl Session {
 
     pub fn from_request(
         request: CreateUserSessionRequest,
-    ) -> Result<Self, Status> {
+    ) -> Result<Self, CreateSessionError> {
         let CreateUserSessionRequest {
             user_id,
             username,
@@ -218,8 +218,7 @@ impl Session {
                 last_active: Utc::now(),
                 ..Default::default()
             },
-            connection_info
-                .ok_or(Status::invalid_argument("invalid connection info"))?,
+            connection_info.ok_or(CreateSessionError::InvalidConnectionInfo)?,
         ))
     }
 

@@ -1,5 +1,8 @@
 use super::{BanchoService, DynBanchoService};
-use crate::bancho_state::DynBanchoStateService;
+use crate::{
+    bancho::{BanchoServiceError, LoginError},
+    bancho_state::DynBanchoStateService,
+};
 use bancho_packets::{server, PacketBuilder};
 use peace_domain::users::Password;
 use peace_pb::{
@@ -8,7 +11,7 @@ use peace_pb::{
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, sync::Arc};
-use tonic::{async_trait, transport::Channel, Request, Response, Status};
+use tonic::{async_trait, transport::Channel, Request, Response};
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
@@ -69,9 +72,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn ping(
         &self,
         request: Request<PingRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => svc.client().ping(request).await,
+            Self::Remote(svc) => svc
+                .client()
+                .ping(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(svc) => {
                 let _ = svc
                     .bancho_state_service
@@ -90,9 +97,13 @@ impl BanchoService for BanchoServiceImpl {
         &self,
         client_ip: IpAddr,
         request: Request<LoginRequest>,
-    ) -> Result<Response<LoginSuccess>, Status> {
+    ) -> Result<Response<LoginSuccess>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => svc.client().login(request).await,
+            Self::Remote(svc) => svc
+                .client()
+                .login(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(svc) => {
                 let LoginRequest { username, password, client_version, .. } =
                     request.into_inner();
@@ -110,7 +121,7 @@ impl BanchoService for BanchoServiceImpl {
                     user.password.as_str(),
                     password.as_str(),
                 )
-                .map_err(|err| Status::unauthenticated(err.to_string()))?;
+                .map_err(LoginError::PasswordError)?;
 
                 let CreateUserSessionResponse { session_id } = svc
                     .bancho_state_service
@@ -151,11 +162,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn request_status_update(
         &self,
         request: Request<RequestStatusUpdateRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => {
-                svc.client().request_status_update(request).await
-            },
+            Self::Remote(svc) => svc
+                .client()
+                .request_status_update(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(svc) => {
                 let RequestStatusUpdateRequest { session_id } =
                     request.into_inner();
@@ -184,11 +197,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn presence_request_all(
         &self,
         request: Request<PresenceRequestAllRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => {
-                svc.client().presence_request_all(request).await
-            },
+            Self::Remote(svc) => svc
+                .client()
+                .presence_request_all(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
@@ -200,9 +215,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn spectate_stop(
         &self,
         request: Request<SpectateStopRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => svc.client().spectate_stop(request).await,
+            Self::Remote(svc) => svc
+                .client()
+                .spectate_stop(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
@@ -214,9 +233,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn spectate_cant(
         &self,
         request: Request<SpectateCantRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => svc.client().spectate_cant(request).await,
+            Self::Remote(svc) => svc
+                .client()
+                .spectate_cant(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
@@ -228,9 +251,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn lobby_part(
         &self,
         request: Request<LobbyPartRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => svc.client().lobby_part(request).await,
+            Self::Remote(svc) => svc
+                .client()
+                .lobby_part(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
@@ -242,9 +269,13 @@ impl BanchoService for BanchoServiceImpl {
     async fn lobby_join(
         &self,
         request: Request<LobbyJoinRequest>,
-    ) -> Result<Response<HandleCompleted>, Status> {
+    ) -> Result<Response<HandleCompleted>, BanchoServiceError> {
         match self {
-            Self::Remote(svc) => svc.client().lobby_join(request).await,
+            Self::Remote(svc) => svc
+                .client()
+                .lobby_join(request)
+                .await
+                .map_err(BanchoServiceError::RpcError),
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 

@@ -1,8 +1,10 @@
-use crate::gateway::bancho_endpoints::BanchoError;
+use crate::gateway::bancho_endpoints::{
+    extractors::{BanchoClientToken, BanchoClientVersion},
+    BanchoHttpError, LoginError,
+};
 use async_trait::async_trait;
 use axum::response::Response;
 use bancho_packets::Packet;
-use peace_api::extractors::{BanchoClientToken, BanchoClientVersion};
 use peace_pb::bancho_state_rpc::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
@@ -21,7 +23,7 @@ pub trait BanchoRoutingService {
         version: Option<BanchoClientVersion>,
         ip: IpAddr,
         body: Vec<u8>,
-    ) -> Result<Response, BanchoError>;
+    ) -> Result<Response, BanchoHttpError>;
 
     /// get /ss/{screenshot}
     async fn get_screenshot(&self) -> Response;
@@ -103,24 +105,24 @@ pub trait BanchoHandlerService {
         body: Vec<u8>,
         client_ip: IpAddr,
         version: Option<BanchoClientVersion>,
-    ) -> Result<Response, BanchoError>;
+    ) -> Result<Response, LoginError>;
 
     async fn bancho_post_responder(
         &self,
         user_id: i32,
         session_id: BanchoClientToken,
         body: Vec<u8>,
-    ) -> Result<Response, BanchoError>;
+    ) -> Result<Response, BanchoHttpError>;
 
     async fn check_user_session(
         &self,
         query: UserQuery,
-    ) -> Result<i32, BanchoError>;
+    ) -> Result<i32, BanchoHttpError>;
 
     async fn process_bancho_packet(
         &self,
         session_id: &str,
         _user_id: i32,
         packet: Packet<'_>,
-    ) -> Result<(), BanchoError>;
+    ) -> Result<(), BanchoHttpError>;
 }

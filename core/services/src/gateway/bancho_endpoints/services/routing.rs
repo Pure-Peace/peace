@@ -1,10 +1,12 @@
 use super::traits::{
     BanchoRoutingService, DynBanchoHandlerService, DynBanchoRoutingService,
 };
-use crate::gateway::bancho_endpoints::BanchoError;
+use crate::gateway::bancho_endpoints::{
+    extractors::{BanchoClientToken, BanchoClientVersion},
+    BanchoHttpError,
+};
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use peace_api::extractors::*;
 use peace_pb::bancho_state_rpc::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
@@ -34,12 +36,13 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
         version: Option<BanchoClientVersion>,
         ip: IpAddr,
         body: Vec<u8>,
-    ) -> Result<Response, BanchoError> {
+    ) -> Result<Response, BanchoHttpError> {
         if session_id.is_none() {
             return self
                 .bancho_handler_service
                 .bancho_login(body, ip, version)
-                .await;
+                .await
+                .map_err(BanchoHttpError::LoginFailed);
         }
 
         let session_id = session_id.unwrap();
