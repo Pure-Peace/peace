@@ -1,6 +1,5 @@
 use super::BanchoStateBackgroundService;
 use crate::bancho_state::{DynBanchoStateBackgroundService, UserSessionsInner};
-use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
 use bancho_packets::server;
 use chrono::Utc;
@@ -10,15 +9,16 @@ use std::{
 };
 use tokio::sync::RwLock;
 use tools::async_collections::{
-    BackgroundTask, BackgroundTaskError, BackgroundTaskFactory, SignalHandle,
+    BackgroundTask, BackgroundTaskError, BackgroundTaskFactory,
+    BackgroundTaskManager, SignalHandle,
 };
 
-const DEACTIVE: i64 = 20;
-const SLEEP: Duration = Duration::from_secs(5);
+const DEACTIVE: i64 = 180;
+const SLEEP: Duration = Duration::from_secs(180);
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Tasks {
-    user_sessions_recycle: Arc<ArcSwapOption<BackgroundTask>>,
+    user_sessions_recycle: BackgroundTaskManager,
 }
 
 #[derive(Clone)]
@@ -33,12 +33,7 @@ impl BanchoStateBackgroundServiceImpl {
     }
 
     pub fn new(user_sessions_inner: Arc<RwLock<UserSessionsInner>>) -> Self {
-        Self {
-            user_sessions_inner,
-            tasks: Tasks {
-                user_sessions_recycle: Arc::new(ArcSwapOption::empty()),
-            },
-        }
+        Self { user_sessions_inner, tasks: Tasks::default() }
     }
 
     pub fn user_sessions_recycle_factory(&self) -> BackgroundTaskFactory {
@@ -108,9 +103,10 @@ impl BanchoStateBackgroundServiceImpl {
                         }
                     };
 
-                    info!(target: "user_sessions_recycling",
-                        "user sessions recycling task done in {:?}",
-                        start.elapsed()
+                    info!(
+                        target: "user_sessions_recycling",
+                        "user sessions recycling task done in {:?} ({} sessions cleared)",
+                        start.elapsed(), users_deactive.len()
                     );
                 }
             };
@@ -134,23 +130,14 @@ impl BanchoStateBackgroundService for BanchoStateBackgroundServiceImpl {
     }
 
     fn start_user_sessions_recycle(&self) {
-        if self.tasks.user_sessions_recycle.load().is_some() {
-            return;
-        }
-
-        self.tasks.user_sessions_recycle.store(Some(Arc::new(
-            BackgroundTask::start(self.user_sessions_recycle_factory(), true),
-        )));
+        self.tasks
+            .user_sessions_recycle
+            .start(self.user_sessions_recycle_factory(), true);
     }
 
     fn stop_user_sessions_recycle(
         &self,
     ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError> {
-        if let Some(task) = self.tasks.user_sessions_recycle.load_full() {
-            task.trigger_signal()?;
-            return Ok(self.tasks.user_sessions_recycle.swap(None));
-        }
-
-        Ok(None)
+        self.tasks.user_sessions_recycle.stop()
     }
 }
