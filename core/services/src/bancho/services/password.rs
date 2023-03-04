@@ -7,6 +7,8 @@ use tokio::sync::Mutex;
 
 pub type HashedPassword = String;
 pub type RawPassword = String;
+pub type PasswordCacheStore =
+    Arc<Mutex<HashMap<HashedPassword, PasswordCache>>>;
 
 pub struct PasswordCache {
     raw: RawPassword,
@@ -17,11 +19,15 @@ impl PasswordCache {
     pub fn new(raw: RawPassword) -> Self {
         Self { raw, last_hit: Utc::now() }
     }
+
+    pub fn last_hit(&self) -> &DateTime<Utc> {
+        &self.last_hit
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct PasswordServiceImpl {
-    cache: Arc<Mutex<HashMap<HashedPassword, PasswordCache>>>,
+    cache: PasswordCacheStore,
 }
 
 impl PasswordServiceImpl {
