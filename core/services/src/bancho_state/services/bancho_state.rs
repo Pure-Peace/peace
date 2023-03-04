@@ -9,7 +9,7 @@ use peace_pb::bancho_state_rpc::{
     bancho_state_rpc_client::BanchoStateRpcClient, *,
 };
 use std::{collections::hash_map::Values, sync::Arc};
-use tonic::transport::Channel;
+use tonic::{transport::Channel, Code};
 
 #[derive(Clone)]
 pub enum BanchoStateServiceImpl {
@@ -266,7 +266,13 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .client()
                 .check_user_session_exists(Into::<RawUserQuery>::into(query))
                 .await
-                .map_err(BanchoStateError::RpcError)
+                .map_err(|status| {
+                    if status.code() == Code::NotFound {
+                        BanchoStateError::SessionNotExists
+                    } else {
+                        BanchoStateError::RpcError(status)
+                    }
+                })
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 // Get session based on the provided query

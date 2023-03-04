@@ -1,7 +1,7 @@
 use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
-    bancho_state::DynBanchoStateService,
+    bancho_state::{BanchoStateError, DynBanchoStateService},
     gateway::bancho_endpoints::{
         extractors::{BanchoClientToken, BanchoClientVersion},
         parser, BanchoHttpError, LoginError, CHO_PROTOCOL, CHO_TOKEN,
@@ -16,7 +16,7 @@ use peace_pb::{
         BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
     },
 };
-use std::{error::Error, net::IpAddr, sync::Arc};
+use std::{error::Error, net::IpAddr, sync::Arc, time::Instant};
 
 #[derive(Clone)]
 pub struct BanchoHandlerServiceImpl {
@@ -76,13 +76,16 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         let mut reader = PacketReader::new(&body);
 
         while let Some(packet) = reader.next() {
-            debug!("bancho packet received: {packet:?} (<{user_id}> [{session_id}])");
+            info!(target: "bancho_packet_handling", "packet received: {packet}");
+            let start = Instant::now();
 
             self.process_bancho_packet(&session_id, user_id, packet)
                 .await
                 .unwrap_or_else(|err| {
-                    error!("{err} (<{user_id}> [{session_id}])")
+                    error!(target: "bancho_packet_handling", "{err:?} (<{user_id}> [{session_id}])")
                 });
+
+            info!(target: "bancho_packet_handling", "packet handled in {:?}", start.elapsed());
         }
 
         let packets = self
@@ -109,7 +112,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .bancho_state_service
             .check_user_session_exists(query)
             .await
-            .map_err(BanchoHttpError::SessionNotExists)?
+            .map_err(|err| match err {
+                BanchoStateError::SessionNotExists => {
+                    BanchoHttpError::SessionNotExists(err)
+                },
+                _ => BanchoHttpError::BanchoStateError(err),
+            })?
             .user_id)
     }
 

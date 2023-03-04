@@ -54,6 +54,8 @@ pub enum BanchoHttpError {
     #[error("failed to parse request")]
     ParseRequestError,
     #[error(transparent)]
+    BanchoStateError(#[from] BanchoStateError),
+    #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
 }
 
@@ -76,18 +78,24 @@ impl From<BanchoHttpError> for Response {
 impl IntoResponse for BanchoHttpError {
     fn into_response(self) -> Response {
         match self {
-            Self::LoginFailed(_) => (
-                [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
-                PacketBuilder::new()
-                    .add(server::login_reply(
-                        bancho_packets::LoginResult::Failed(
-                            bancho_packets::LoginFailedResaon::InvalidCredentials,
-                        ),
-                    ))
-                    .add(server::notification(self.to_string()))
-                    .build(),
-            )
-                .into_response(),
+            Self::LoginFailed(_) => {
+                (
+                    [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
+                    PacketBuilder::new()
+                        .add(server::login_reply(
+                            bancho_packets::LoginResult::Failed(
+                                bancho_packets::LoginFailedResaon::InvalidCredentials,
+                            ),
+                        ))
+                        .add(server::notification(self.to_string()))
+                        .build()
+                )
+                    .into_response()
+            },
+
+            Self::SessionNotExists(_) => {
+                PacketBuilder::new().add(server::bancho_restart(0)).build().into_response()
+            },
 
             _ => (self.status_code(), self.to_string()).into_response(),
         }

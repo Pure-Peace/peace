@@ -41,6 +41,16 @@ pub struct Packet<'a> {
     pub payload: Option<&'a [u8]>,
 }
 
+impl<'a> std::fmt::Display for Packet<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "Packet {{ {}, payload: {} }}",
+            self.id,
+            self.payload.is_some()
+        ))
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 /// Bancho packet header, including [`PacketId`] and payload (data) length.
@@ -189,6 +199,12 @@ pub enum PacketId {
     OSU_TOURNAMENT_JOIN_MATCH_CHANNEL     = 108,
     OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL    = 109,
     OSU_UNKNOWN_PACKET                    = 255,
+}
+
+impl std::fmt::Display for PacketId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:?}", self))
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
