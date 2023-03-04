@@ -21,7 +21,7 @@ pub trait BanchoStateBackgroundService {
 
 #[async_trait]
 pub trait UserSessionsService {
-    fn user_sessions(&self) -> Arc<RwLock<UserSessionsInner>>;
+    fn user_sessions(&self) -> &Arc<RwLock<UserSessionsInner>>;
 
     async fn create(&self, user: Session) -> String;
 
@@ -95,5 +95,10 @@ pub trait BanchoStateService {
     async fn send_user_stats_packet(
         &self,
         request: SendUserStatsPacketRequest,
+    ) -> Result<ExecSuccess, BanchoStateError>;
+
+    async fn send_all_presences(
+        &self,
+        request: SendAllPresencesRequest,
     ) -> Result<ExecSuccess, BanchoStateError>;
 }

@@ -11,7 +11,9 @@ use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId, PacketReader};
 use peace_pb::{
-    bancho_rpc::{LoginSuccess, RequestStatusUpdateRequest},
+    bancho_rpc::{
+        LoginSuccess, PresenceRequestAllRequest, RequestStatusUpdateRequest,
+    },
     bancho_state_rpc::{
         BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
     },
@@ -149,7 +151,14 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                     .await
                     .map_err(handing_err)?;
             },
-            PacketId::OSU_USER_PRESENCE_REQUEST_ALL => todo!(),
+            PacketId::OSU_USER_PRESENCE_REQUEST_ALL => {
+                self.bancho_service
+                    .presence_request_all(PresenceRequestAllRequest {
+                        session_id: session_id.to_owned(),
+                    })
+                    .await
+                    .map_err(handing_err)?;
+            },
             PacketId::OSU_USER_STATS_REQUEST => todo!(),
             PacketId::OSU_USER_CHANGE_ACTION => todo!(),
             PacketId::OSU_USER_RECEIVE_UPDATES => todo!(),
