@@ -82,8 +82,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
             BanchoStateServiceImpl::Local(svc) => {
                 let packet = Arc::new(request.packets);
 
-                let user_sessions = svc.user_sessions_service.user_sessions();
-                let user_sessions = user_sessions.read().await;
+                let user_sessions =
+                    svc.user_sessions_service.user_sessions().read().await;
 
                 for session in user_sessions.indexed_by_session_id.values() {
                     session.push_packet(packet.clone()).await;
@@ -110,7 +110,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 let packet = Arc::new(packets);
                 let target = Into::<BanchoPacketTarget>::into(
-                    target.ok_or(BanchoStateError::BanchoPacketTarget)?,
+                    target.ok_or(BanchoStateError::InvalidArgument)?,
                 );
 
                 if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
@@ -164,9 +164,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 let target = Into::<BanchoPacketTarget>::into(
-                    request
-                        .target
-                        .ok_or(BanchoStateError::BanchoPacketTarget)?,
+                    request.target.ok_or(BanchoStateError::InvalidArgument)?,
                 );
 
                 let mut data = Vec::new();
@@ -401,9 +399,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
-                let user_sessions = svc.user_sessions_service.user_sessions();
                 // Get a read lock on the `user_sessions` hash map
-                let user_sessions = user_sessions.read().await;
+                let user_sessions =
+                    svc.user_sessions_service.user_sessions().read().await;
 
                 // Define a helper function to collect data from the hash map
                 async fn collect_data<K>(
@@ -479,6 +477,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
+                let to = request.to.ok_or(BanchoStateError::InvalidArgument)?;
+
                 // Extract the query and fields from the request
                 let query = request
                     .user_query
@@ -534,8 +534,96 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 };
 
                 self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-                    target: request.to,
+                    target: Some(to),
                     packets: user_stats_packet,
+                })
+                .await?;
+
+                Ok(ExecSuccess {})
+            },
+        }
+    }
+
+    async fn send_all_presences(
+        &self,
+        request: SendAllPresencesRequest,
+    ) -> Result<ExecSuccess, BanchoStateError> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) => svc
+                .client()
+                .send_all_presences(request)
+                .await
+                .map_err(BanchoStateError::RpcError)
+                .map(|resp| resp.into_inner()),
+            BanchoStateServiceImpl::Local(svc) => {
+                let to = Into::<BanchoPacketTarget>::into(
+                    request.to.ok_or(BanchoStateError::InvalidArgument)?,
+                );
+
+                let presences_packets = {
+                    let user_sessions =
+                        svc.user_sessions_service.user_sessions().read().await;
+
+                    let mut presences_packets = Vec::with_capacity(
+                        user_sessions.indexed_by_session_id.len() - 1,
+                    );
+
+                    for session in user_sessions.indexed_by_session_id.values()
+                    {
+                        match &to {
+                            BanchoPacketTarget::SessionId(session_id) => {
+                                if &session.id == session_id {
+                                    continue;
+                                }
+                            },
+                            _ => {},
+                        }
+
+                        let user = session.user.read().await;
+
+                        match &to {
+                            BanchoPacketTarget::UserId(user_id) => {
+                                if &user.id == user_id {
+                                    continue;
+                                }
+                            },
+                            BanchoPacketTarget::Username(username) => {
+                                if &user.username == username {
+                                    continue;
+                                }
+                            },
+                            BanchoPacketTarget::UsernameUnicode(
+                                username_unicode,
+                            ) => {
+                                if let Some(n) = &user.username_unicode {
+                                    if n == username_unicode {
+                                        continue;
+                                    }
+                                }
+                            },
+                            _ => {},
+                        }
+
+                        presences_packets.extend(
+                            bancho_packets::server::user_presence(
+                                user.id,
+                                user.username.to_owned(),
+                                0,  // todo
+                                0,  // todo
+                                1,  // todo
+                                0., // todo
+                                0., // todo
+                                1,  // todo
+                            ),
+                        );
+                    }
+
+                    presences_packets
+                };
+
+                self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
+                    target: Some(to.into()),
+                    packets: presences_packets,
                 })
                 .await?;
 

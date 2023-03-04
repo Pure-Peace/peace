@@ -12,10 +12,10 @@ pub enum CreateSessionError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum BanchoStateError {
+    #[error("invalid argument")]
+    InvalidArgument,
     #[error("session not exists")]
     SessionNotExists,
-    #[error("invalid bancho packet target")]
-    BanchoPacketTarget,
     #[error(transparent)]
     CreateSessionError(#[from] CreateSessionError),
     #[error("{}", .0.message())]
@@ -26,7 +26,7 @@ impl BanchoStateError {
     fn tonic_code(&self) -> Code {
         match self {
             Self::SessionNotExists => Code::NotFound,
-            Self::BanchoPacketTarget => Code::InvalidArgument,
+            Self::InvalidArgument => Code::InvalidArgument,
             _ => Code::Unknown,
         }
     }

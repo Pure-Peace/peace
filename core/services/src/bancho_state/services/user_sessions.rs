@@ -19,8 +19,8 @@ impl UserSessionsServiceImpl {
 
 #[async_trait]
 impl UserSessionsService for UserSessionsServiceImpl {
-    fn user_sessions(&self) -> Arc<RwLock<UserSessionsInner>> {
-        self.user_sessions.clone()
+    fn user_sessions(&self) -> &Arc<RwLock<UserSessionsInner>> {
+        &self.user_sessions
     }
 
     async fn create(&self, session: Session) -> String {

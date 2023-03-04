@@ -32,6 +32,7 @@ service BanchoStateRPC {
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 
   rpc SendUserStatsPacket(SendUserStatsPacketRequest) returns (ExecSuccess);
+  rpc SendAllPresences(SendAllPresencesRequest) returns (ExecSuccess);
 }
 
 message ExecSuccess {}
@@ -146,3 +147,5 @@ message SendUserStatsPacketRequest {
   RawUserQuery user_query = 1;
   RawBanchoPacketTarget to = 2;
 }
+
+message SendAllPresencesRequest { RawBanchoPacketTarget to = 1; }
