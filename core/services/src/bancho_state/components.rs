@@ -302,25 +302,39 @@ impl UserSessionsInner {
 
     #[inline]
     pub async fn delete(&mut self, query: &UserQuery) -> Option<Arc<Session>> {
-        let Session { id, user, .. } = &*self.get(query)?;
+        let Session { id: session_id, user, .. } = &*self.get(query)?;
         let user = user.read().await;
+        self.delete_inner(
+            &user.id,
+            &user.username,
+            session_id,
+            user.username_unicode.as_ref().map(|s| s.as_str()),
+        )
+    }
 
+    #[inline]
+    pub(crate) fn delete_inner(
+        &mut self,
+        user_id: &i32,
+        username: &str,
+        session_id: &str,
+        username_unicode: Option<&str>,
+    ) -> Option<Arc<Session>> {
         let mut removed = None;
 
         self.indexed_by_user_id
-            .remove(&user.id)
+            .remove(user_id)
             .and_then(|s| Some(removed = Some(s)));
 
         self.indexed_by_username
-            .remove(&user.username)
+            .remove(username)
             .and_then(|s| Some(removed = Some(s)));
 
         self.indexed_by_session_id
-            .remove(id)
+            .remove(session_id)
             .and_then(|s| Some(removed = Some(s)));
 
-        user.username_unicode
-            .as_ref()
+        username_unicode
             .and_then(|s| self.indexed_by_username_unicode.remove(s))
             .and_then(|s| Some(removed = Some(s)));
 

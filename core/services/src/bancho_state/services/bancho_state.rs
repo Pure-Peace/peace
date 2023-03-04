@@ -53,6 +53,7 @@ impl BanchoStateServiceRemote {
 #[derive(Clone)]
 pub struct BanchoStateServiceLocal {
     user_sessions_service: DynUserSessionsService,
+    #[allow(dead_code)]
     bancho_state_background_service: DynBanchoStateBackgroundService,
 }
 
