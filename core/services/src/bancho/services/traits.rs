@@ -43,6 +43,36 @@ pub trait BanchoService {
         request: PresenceRequestAllRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 
+    async fn request_stats(
+        &self,
+        request: StatsRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError>;
+
+    async fn change_action(
+        &self,
+        request: ChangeActionRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError>;
+
+    async fn receive_updates(
+        &self,
+        request: ReceiveUpdatesRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError>;
+
+    async fn toggle_block_non_friend_dms(
+        &self,
+        request: ToggleBlockNonFriendDmsRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError>;
+
+    async fn user_logout(
+        &self,
+        request: UserLogoutRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError>;
+
+    async fn request_presence(
+        &self,
+        request: PresenceRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError>;
+
     async fn spectate_stop(
         &self,
         request: SpectateStopRequest,

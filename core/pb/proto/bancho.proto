@@ -7,6 +7,13 @@ service BanchoRPC {
   rpc Ping(PingRequest) returns (HandleCompleted);
   rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (HandleCompleted);
   rpc PresenceRequestAll(PresenceRequestAllRequest) returns (HandleCompleted);
+  rpc RequestStats(StatsRequest) returns (HandleCompleted);
+  rpc ChangeAction(ChangeActionRequest) returns (HandleCompleted);
+  rpc ReceiveUpdates(ReceiveUpdatesRequest) returns (HandleCompleted);
+  rpc ToggleBlockNonFriendDms(ToggleBlockNonFriendDmsRequest)
+      returns (HandleCompleted);
+  rpc UserLogout(UserLogoutRequest) returns (HandleCompleted);
+  rpc RequestPresence(PresenceRequest) returns (HandleCompleted);
   rpc SpectateStop(SpectateStopRequest) returns (HandleCompleted);
   rpc SpectateCant(SpectateCantRequest) returns (HandleCompleted);
   rpc LobbyPart(LobbyPartRequest) returns (HandleCompleted);
@@ -51,3 +58,15 @@ message SpectateCantRequest { string session_id = 1; }
 message LobbyPartRequest { string session_id = 1; }
 
 message LobbyJoinRequest { string session_id = 1; }
+
+message StatsRequest { string session_id = 1; }
+
+message ChangeActionRequest { string session_id = 1; }
+
+message ReceiveUpdatesRequest { string session_id = 1; }
+
+message ToggleBlockNonFriendDmsRequest { string session_id = 1; }
+
+message UserLogoutRequest { string session_id = 1; }
+
+message PresenceRequest { string session_id = 1; }

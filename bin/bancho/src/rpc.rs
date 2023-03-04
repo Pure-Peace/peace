@@ -61,6 +61,72 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .map(|resp| Response::new(resp))
     }
 
+    async fn request_stats(
+        &self,
+        request: Request<StatsRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .request_stats(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn change_action(
+        &self,
+        request: Request<ChangeActionRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .change_action(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn receive_updates(
+        &self,
+        request: Request<ReceiveUpdatesRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .receive_updates(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn toggle_block_non_friend_dms(
+        &self,
+        request: Request<ToggleBlockNonFriendDmsRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .toggle_block_non_friend_dms(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn user_logout(
+        &self,
+        request: Request<UserLogoutRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .user_logout(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn request_presence(
+        &self,
+        request: Request<PresenceRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .request_presence(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
     async fn spectate_stop(
         &self,
         request: Request<SpectateStopRequest>,

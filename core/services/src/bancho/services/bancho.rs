@@ -145,7 +145,7 @@ impl BanchoService for BanchoServiceImpl {
                     .bancho_state_service
                     .create_user_session(CreateUserSessionRequest {
                         user_id: user.id,
-                        username: user.name,
+                        username: user.name.to_owned(),
                         username_unicode: user.name_unicode,
                         privileges: 1,
                         connection_info: Some(ConnectionInfo {
@@ -157,18 +157,30 @@ impl BanchoService for BanchoServiceImpl {
                     })
                     .await?;
 
+                let packet_builder = PacketBuilder::new()
+                    .add(server::protocol_version(19))
+                    .add(server::login_reply(
+                        bancho_packets::LoginResult::Success(user.id),
+                    ))
+                    .add(server::bancho_privileges(1))
+                    .add(server::silence_end(0)) // todo
+                    .add(server::user_stats(
+                        user.id, 0, "", "", 0, 0, 0, 0, 0., 0, 0, 0,
+                        0, // todo
+                    ))
+                    .add(server::user_presence(
+                        user.id, user.name, 0, 0, 1, 0., 0., 0, // todo
+                    ))
+                    .add(server::friends_list(&[])) // todo
+                    .add(server::channel_info("peace", "peace", 0))
+                    .add(server::channel_info_end())
+                    .add(server::notification("welcome to peace!"));
+
                 info!(target: "bancho.login", "user <{}:{}> logged in (session_id: {})", user.name_safe, user.id, session_id);
 
                 Ok(LoginSuccess {
                     session_id,
-                    packet: Some(
-                        PacketBuilder::new()
-                            .add(server::login_reply(
-                                bancho_packets::LoginResult::Success(user.id),
-                            ))
-                            .add(server::notification("welcome to peace!"))
-                            .build(),
-                    ),
+                    packet: Some(packet_builder.build()),
                 })
             },
         }
@@ -213,6 +225,120 @@ impl BanchoService for BanchoServiceImpl {
             Self::Remote(svc) => svc
                 .client()
                 .presence_request_all(request)
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                println!("Got a request: {:?}", request);
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn request_stats(
+        &self,
+        request: StatsRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .request_stats(request)
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                println!("Got a request: {:?}", request);
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn change_action(
+        &self,
+        request: ChangeActionRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .change_action(request)
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                println!("Got a request: {:?}", request);
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn receive_updates(
+        &self,
+        request: ReceiveUpdatesRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .receive_updates(request)
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                println!("Got a request: {:?}", request);
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn toggle_block_non_friend_dms(
+        &self,
+        request: ToggleBlockNonFriendDmsRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .toggle_block_non_friend_dms(request)
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                println!("Got a request: {:?}", request);
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn user_logout(
+        &self,
+        request: UserLogoutRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .user_logout(request)
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                println!("Got a request: {:?}", request);
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn request_presence(
+        &self,
+        request: PresenceRequest,
+    ) -> Result<HandleCompleted, BanchoServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .request_presence(request)
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
