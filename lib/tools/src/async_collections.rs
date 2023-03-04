@@ -1,3 +1,4 @@
+use arc_swap::ArcSwapOption;
 use std::{
     future::Future,
     pin::Pin,
@@ -153,6 +154,41 @@ impl BackgroundTaskFactory {
         signal: SignalHandle,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>> {
         (self.boxed_function)(signal)
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct BackgroundTaskManager {
+    task: Arc<ArcSwapOption<BackgroundTask>>,
+}
+
+impl BackgroundTaskManager {
+    pub fn new() -> Self {
+        Self { task: Arc::new(ArcSwapOption::empty()) }
+    }
+
+    pub fn start(&self, factory: BackgroundTaskFactory, manual_stop: bool) {
+        if self.task.load().is_some() {
+            return;
+        }
+
+        self.task
+            .store(Some(Arc::new(BackgroundTask::start(factory, manual_stop))));
+    }
+
+    pub fn stop(
+        &self,
+    ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError> {
+        if let Some(task) = self.task.load_full() {
+            task.trigger_signal()?;
+            return Ok(self.task.swap(None));
+        }
+
+        Ok(None)
+    }
+
+    pub fn task(&self) -> &Arc<ArcSwapOption<BackgroundTask>> {
+        &self.task
     }
 }
 
