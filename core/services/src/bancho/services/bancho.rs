@@ -1,6 +1,9 @@
 use super::{BanchoService, DynBanchoService};
 use crate::{
-    bancho::{BanchoServiceError, DynPasswordService, LoginError},
+    bancho::{
+        BanchoServiceError, DynBanchoBackgroundService, DynPasswordService,
+        LoginError,
+    },
     bancho_state::DynBanchoStateService,
 };
 use bancho_packets::{server, PacketBuilder};
@@ -32,11 +35,13 @@ impl BanchoServiceImpl {
         users_repository: DynUsersRepository,
         bancho_state_service: DynBanchoStateService,
         password_service: DynPasswordService,
+        bancho_background_service: DynBanchoBackgroundService,
     ) -> Self {
         Self::Local(BanchoServiceLocal::new(
             users_repository,
             bancho_state_service,
             password_service,
+            bancho_background_service,
         ))
     }
 }
@@ -59,6 +64,8 @@ pub struct BanchoServiceLocal {
     users_repository: DynUsersRepository,
     bancho_state_service: DynBanchoStateService,
     password_service: DynPasswordService,
+    #[allow(dead_code)]
+    bancho_background_service: DynBanchoBackgroundService,
 }
 
 impl BanchoServiceLocal {
@@ -66,8 +73,14 @@ impl BanchoServiceLocal {
         users_repository: DynUsersRepository,
         bancho_state_service: DynBanchoStateService,
         password_service: DynPasswordService,
+        bancho_background_service: DynBanchoBackgroundService,
     ) -> Self {
-        Self { users_repository, bancho_state_service, password_service }
+        Self {
+            users_repository,
+            bancho_state_service,
+            password_service,
+            bancho_background_service,
+        }
     }
 }
 

@@ -4,7 +4,9 @@ use peace_api::{ApiFrameConfig, Application};
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_services::{
-    bancho::{BanchoServiceImpl, PasswordServiceImpl},
+    bancho::{
+        BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
+    },
     bancho_state::{
         BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
         UserSessionsServiceImpl,
@@ -83,10 +85,17 @@ impl Application for App {
 
         let password_service = PasswordServiceImpl::default().into_service();
 
+        let bancho_background_service =
+            BanchoBackgroundServiceImpl::new(password_service.cache().clone())
+                .into_service();
+
+        bancho_background_service.start_all();
+
         let bancho_service = BanchoServiceImpl::local(
             users_repository,
             bancho_state_service.clone(),
             password_service,
+            bancho_background_service,
         )
         .into_service();
 

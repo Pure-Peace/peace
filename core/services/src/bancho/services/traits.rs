@@ -1,3 +1,4 @@
+use super::PasswordCacheStore;
 use crate::bancho::BanchoServiceError;
 use peace_domain::users::PasswordError;
 use peace_pb::bancho_rpc::*;
@@ -65,6 +66,8 @@ pub trait BanchoService {
 
 #[async_trait]
 pub trait PasswordService {
+    fn cache(&self) -> &PasswordCacheStore;
+
     async fn verify_password(
         &self,
         hashed_password: &str,

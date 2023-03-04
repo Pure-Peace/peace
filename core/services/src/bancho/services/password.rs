@@ -38,6 +38,10 @@ impl PasswordServiceImpl {
 
 #[async_trait]
 impl PasswordService for PasswordServiceImpl {
+    fn cache(&self) -> &PasswordCacheStore {
+        &self.cache
+    }
+
     async fn verify_password(
         &self,
         hashed_password: &str,

@@ -10,7 +10,9 @@ use peace_rpc::{
     interceptor::client_ip, Application, RpcClientConfig, RpcFrameConfig,
 };
 use peace_services::{
-    bancho::{BanchoServiceImpl, PasswordServiceImpl},
+    bancho::{
+        BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
+    },
     bancho_state::BanchoStateServiceImpl,
 };
 use std::sync::Arc;
@@ -81,10 +83,17 @@ impl Application for App {
 
         let password_service = PasswordServiceImpl::default().into_service();
 
+        let bancho_background_service =
+            BanchoBackgroundServiceImpl::new(password_service.cache().clone())
+                .into_service();
+
+        bancho_background_service.start_all();
+
         let bancho_service = BanchoServiceImpl::local(
             users_repository,
             bancho_state_service,
             password_service,
+            bancho_background_service,
         )
         .into_service();
 
