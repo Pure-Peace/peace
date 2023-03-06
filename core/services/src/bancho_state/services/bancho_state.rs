@@ -5,8 +5,9 @@ use crate::bancho_state::{
     UserPlayingStats,
 };
 use async_trait::async_trait;
-use peace_pb::bancho_state_rpc::{
-    bancho_state_rpc_client::BanchoStateRpcClient, *,
+use peace_pb::{
+    bancho_state_rpc::{bancho_state_rpc_client::BanchoStateRpcClient, *},
+    base::ExecSuccess,
 };
 use std::{collections::hash_map::Values, sync::Arc};
 use tonic::{transport::Channel, Code};
