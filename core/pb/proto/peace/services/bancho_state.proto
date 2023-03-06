@@ -1,22 +1,24 @@
 syntax = "proto3";
 
-package peace.services.bancho.state;
+import "peace/base.proto";
+
+package peace.services.bancho_state;
 
 service BanchoStateRPC {
   rpc BroadcastBanchoPackets(BroadcastBanchoPacketsRequest)
-      returns (ExecSuccess);
+      returns (peace.base.ExecSuccess);
 
-  rpc EnqueueBanchoPackets(EnqueueBanchoPacketsRequest) returns (ExecSuccess);
+  rpc EnqueueBanchoPackets(EnqueueBanchoPacketsRequest) returns (peace.base.ExecSuccess);
   rpc BatchEnqueueBanchoPackets(BatchEnqueueBanchoPacketsRequest)
-      returns (ExecSuccess);
+      returns (peace.base.ExecSuccess);
 
   rpc DequeueBanchoPackets(DequeueBanchoPacketsRequest) returns (BanchoPackets);
   rpc BatchDequeueBanchoPackets(BatchDequeueBanchoPacketsRequest)
-      returns (ExecSuccess);
+      returns (peace.base.ExecSuccess);
 
   rpc CreateUserSession(CreateUserSessionRequest)
       returns (CreateUserSessionResponse);
-  rpc DeleteUserSession(RawUserQuery) returns (ExecSuccess);
+  rpc DeleteUserSession(RawUserQuery) returns (peace.base.ExecSuccess);
 
   // Check specified user session, if session not exists will return error(404)
   rpc CheckUserSessionExists(RawUserQuery) returns (UserSessionExistsResponse);
@@ -31,11 +33,10 @@ service BanchoStateRPC {
   // For debug
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 
-  rpc SendUserStatsPacket(SendUserStatsPacketRequest) returns (ExecSuccess);
-  rpc SendAllPresences(SendAllPresencesRequest) returns (ExecSuccess);
+  rpc SendUserStatsPacket(SendUserStatsPacketRequest) returns (peace.base.ExecSuccess);
+  rpc SendAllPresences(SendAllPresencesRequest) returns (peace.base.ExecSuccess);
 }
 
-message ExecSuccess {}
 
 message BroadcastBanchoPacketsRequest { bytes packets = 1; }
 

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package peace.base;
+
+message ExecSuccess {}
+
+message EmptyRequest {}
+
+message BoolValue { bool value = 1; }
+
+message StringValue { string value = 1; }

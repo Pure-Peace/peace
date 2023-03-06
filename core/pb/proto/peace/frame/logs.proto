@@ -1,19 +1,21 @@
 syntax = "proto3";
 
+import "peace/base.proto";
+
 package peace.frame.logs;
 
 service LogsRPC {
   // Set the global log level.
-  rpc SetLevel(SetLevelRequest) returns (ExecSuccess);
+  rpc SetLevel(SetLevelRequest) returns (peace.base.ExecSuccess);
   // Toggle debug mode.
   //
   // Turning on debug will display information such as code line number, source
   // file, thread id, etc.
-  rpc SetDebugMode(BoolValue) returns (ExecSuccess);
+  rpc SetDebugMode(peace.base.BoolValue) returns (peace.base.ExecSuccess);
   // Set the log env filter.
-  rpc SetEnvFilter(StringValue) returns (StringValue);
+  rpc SetEnvFilter(peace.base.StringValue) returns (peace.base.StringValue);
   // Get current log configs.
-  rpc GetConfig(EmptyRequest) returns (StringValue);
+  rpc GetConfig(peace.base.EmptyRequest) returns (peace.base.StringValue);
 }
 
 enum LogLevel {
@@ -24,13 +26,5 @@ enum LogLevel {
   DEBUG = 4;
   TRACE = 5;
 }
-
-message ExecSuccess {}
-
-message EmptyRequest {}
-
-message BoolValue { bool value = 1; }
-
-message StringValue { string value = 1; }
 
 message SetLevelRequest { LogLevel level = 1; }

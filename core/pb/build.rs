@@ -11,12 +11,13 @@ macro_rules! define_attr {
 define_attr!(SERDE, serde::Deserialize, serde::Serialize);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    build("logs", None);
-    build("peace_db", None);
-    build("chat", None);
-    build("bancho", None);
+    build("base", None);
+    build("frame.logs", None);
+    build("services.chat", None);
+    build("services.bancho", None);
+    build("services.geoip", None);
     build(
-        "bancho_state",
+        "services.bancho_state",
         Some(&[(
             SERDE,
             &["UserData", "ConnectionInfo", "GetAllSessionsResponse"],
@@ -27,17 +28,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn descriptor(pkg: &str) -> PathBuf {
-    out_dir().join(format!("{}_descriptor.bin", pkg))
+    out_dir().join(format!("peace.{}.descriptor.bin", pkg))
 }
 
 fn proto(pkg: &str) -> String {
-    format!("proto/{}.proto", pkg)
+    format!("proto/peace/{}.proto", pkg)
 }
 
 fn build(pkg: &str, type_attrs: Option<&[(&str, &[&str])]>) {
     configure(type_attrs)
         .file_descriptor_set_path(descriptor(pkg))
-        .compile(&[proto(pkg)], &["proto"])
+        .compile(&[proto(pkg.replace('.', "/").as_str())], &["proto"])
         .unwrap();
 }
 
