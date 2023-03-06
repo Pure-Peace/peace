@@ -243,13 +243,21 @@ impl Session {
 
     pub async fn dequeue_packet(
         &self,
-        lock: Option<MutexGuard<'_, PacketsQueue>>,
+        queue_lock: Option<&mut MutexGuard<'_, PacketsQueue>>,
     ) -> Option<PacketDataPtr> {
-        let mut queue = lock.unwrap_or(self.packets_queue.lock().await);
-        if !queue.is_empty() {
-            Some(queue.remove(0))
-        } else {
-            None
+        fn dequeue(
+            queue: &mut MutexGuard<'_, PacketsQueue>,
+        ) -> Option<PacketDataPtr> {
+            if !queue.is_empty() {
+                Some(queue.remove(0))
+            } else {
+                None
+            }
+        }
+
+        match queue_lock {
+            Some(mut queue) => dequeue(&mut queue),
+            None => dequeue(&mut self.packets_queue.lock().await),
         }
     }
 }
@@ -350,15 +358,12 @@ impl UserSessionsInner {
     pub fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
         match query {
             UserQuery::UserId(user_id) => self.indexed_by_user_id.get(user_id),
-            UserQuery::Username(username) => {
-                self.indexed_by_username.get(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.get(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.get(session_id)
-            },
+            UserQuery::Username(username) =>
+                self.indexed_by_username.get(username),
+            UserQuery::UsernameUnicode(username_unicode) =>
+                self.indexed_by_username_unicode.get(username_unicode),
+            UserQuery::SessionId(session_id) =>
+                self.indexed_by_session_id.get(session_id),
         }
         .cloned()
     }
@@ -366,18 +371,14 @@ impl UserSessionsInner {
     #[inline]
     pub fn exists(&self, query: &UserQuery) -> bool {
         match query {
-            UserQuery::UserId(user_id) => {
-                self.indexed_by_user_id.contains_key(user_id)
-            },
-            UserQuery::Username(username) => {
-                self.indexed_by_username.contains_key(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.contains_key(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.contains_key(session_id)
-            },
+            UserQuery::UserId(user_id) =>
+                self.indexed_by_user_id.contains_key(user_id),
+            UserQuery::Username(username) =>
+                self.indexed_by_username.contains_key(username),
+            UserQuery::UsernameUnicode(username_unicode) =>
+                self.indexed_by_username_unicode.contains_key(username_unicode),
+            UserQuery::SessionId(session_id) =>
+                self.indexed_by_session_id.contains_key(session_id),
         }
     }
 

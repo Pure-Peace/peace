@@ -170,12 +170,17 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let mut data = Vec::new();
 
                 if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
-                    while let Some(packet) = svc
+                    let session = svc
                         .user_sessions_service
                         .get(&user_query)
                         .await
-                        .ok_or(BanchoStateError::SessionNotExists)?
-                        .dequeue_packet(None)
+                        .ok_or(BanchoStateError::SessionNotExists)?;
+
+                    let mut session_packet_queue =
+                        session.packets_queue.lock().await;
+
+                    while let Some(packet) = session
+                        .dequeue_packet(Some(&mut session_packet_queue))
                         .await
                     {
                         data.extend(packet.iter());
@@ -571,11 +576,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     for session in user_sessions.indexed_by_session_id.values()
                     {
                         match &to {
-                            BanchoPacketTarget::SessionId(session_id) => {
+                            BanchoPacketTarget::SessionId(session_id) =>
                                 if &session.id == session_id {
-                                    continue;
-                                }
-                            },
+                                    continue
+                                },
                             _ => {},
                         }
 
@@ -584,23 +588,22 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         match &to {
                             BanchoPacketTarget::UserId(user_id) => {
                                 if &user.id == user_id {
-                                    continue;
+                                    continue
                                 }
                             },
                             BanchoPacketTarget::Username(username) => {
                                 if &user.username == username {
-                                    continue;
+                                    continue
                                 }
                             },
                             BanchoPacketTarget::UsernameUnicode(
                                 username_unicode,
-                            ) => {
+                            ) =>
                                 if let Some(n) = &user.username_unicode {
                                     if n == username_unicode {
-                                        continue;
+                                        continue
                                     }
-                                }
-                            },
+                                },
                             _ => {},
                         }
 
