@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+import "peace/base.proto";
+
+package peace.services.geoip;
+
+service GeoipRPC {
+  rpc LookupWithIpAddress(IpAddress) returns (GeoipData);
+  rpc TryReload(GeoDbPath) returns (peace.base.ExecSuccess);
+}
+
+message IpAddress { string ip = 1; }
+
+message GeoDbPath { string geo_db_path = 1; }
+
+message GeoipData {
+  Location location = 1;
+  Continent continent = 2;
+  Country country = 3;
+  Region region = 4;
+  City city = 5;
+}
+
+message Location {
+  optional double latitude = 1;
+  optional double longitude = 2;
+  optional string timezone = 3;
+}
+
+message Continent {
+  optional uint32 geoname_id = 1;
+  optional string code = 2;
+  optional string name = 3;
+}
+
+message Country {
+  optional uint32 geoname_id = 1;
+  optional string code = 2;
+  optional string name = 3;
+}
+
+message Region {
+  optional uint32 geoname_id = 1;
+  optional string code = 2;
+  optional string name = 3;
+}
+
+message City {
+  optional uint32 geoname_id = 1;
+  optional string name = 2;
+}
