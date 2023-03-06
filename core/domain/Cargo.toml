@@ -10,10 +10,11 @@ homepage = "https://github.com/pure-peace/peace"
 
 
 [dependencies]
+tonic = { version = "0.8" }
 serde = { version = "1.0", features = ["derive"] }
-async-trait = "0.1"
-regex = "1.7"
-thiserror = "1.0"
+async-trait = { version = "0.1" }
+regex = { version = "1.7" }
+thiserror = { version = "1.0" }
 
 # password
 rust-argon2 = { version = "1.0" }
@@ -22,3 +23,5 @@ once_cell = { version = "1" }
 
 
 tools = { path = "../../lib/tools" }
+
+peace_pb = { path = "../../core/pb" }
