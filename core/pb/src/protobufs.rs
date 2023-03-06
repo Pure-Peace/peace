@@ -178,3 +178,9 @@ pub mod chat_rpc {
 
     pub const CHAT_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.chat.descriptor");
 }
+
+pub mod geoip_rpc {
+    proto!("peace.services.geoip");
+
+    pub const GEOIP_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.geoip.descriptor");
+}

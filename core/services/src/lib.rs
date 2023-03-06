@@ -13,3 +13,4 @@ pub mod bancho;
 pub mod bancho_state;
 pub mod chat;
 pub mod gateway;
+pub mod geoip;
