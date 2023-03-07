@@ -47,6 +47,6 @@ derive_deref = { workspace = true }
 
 # local crates
 peace_logs = { workspace = true, features = ["openapi_axum", "cli"] }
-peace_cfg = { path = "../../frame/cfg" }
+peace_cfg = { workspace = true }
 
 tools = { workspace = true, features = ["async_collections"] }

@@ -31,15 +31,15 @@ uuid = { workspace = true, features = ["v4"] }
 serde = { workspace = true, features = ["derive"] }
 
 
-bancho-packets = { path = "../../lib/bancho-packets" }
+bancho-packets = { workspace = true }
 tools = { workspace = true, features = ["all"] }
 
-peace_api = { path = "../../frame/api" }
-peace_logs = { path = "../../frame/logs" }
-peace_db = { path = "../../core/db" }
-peace_pb = { path = "../../core/pb" }
-peace_domain = { path = "../../core/domain" }
-peace_repositories = { path = "../../core/repositories" }
+peace_api = { workspace = true }
+peace_logs = { workspace = true }
+peace_db = { workspace = true }
+peace_pb = { workspace = true }
+peace_domain = { workspace = true }
+peace_repositories = { workspace = true }
 
 
 [dev-dependencies]

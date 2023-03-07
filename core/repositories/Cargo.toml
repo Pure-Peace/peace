@@ -14,9 +14,9 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 
 
-peace_logs = { path = "../../frame/logs" }
-peace_db = { path = "../../core/db" }
-peace_domain = { path = "../../core/domain" }
+peace_logs = { workspace = true }
+peace_db = { workspace = true }
+peace_domain = { workspace = true }
 
 
 [dev-dependencies]

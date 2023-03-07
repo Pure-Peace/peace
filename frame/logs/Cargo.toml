@@ -25,7 +25,7 @@ serde = { workspace = true, features = ["derive"] }
 
 # grpc optional
 tonic = { workspace = true, optional = true }
-peace_pb = { path = "../../core/pb", optional = true }
+peace_pb = { workspace = true, optional = true }
 
 # axum optional
 axum = { workspace = true, optional = true }

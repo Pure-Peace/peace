@@ -29,5 +29,5 @@ peace_rpc = { workspace = true, features = [
 ] }
 
 
-peace_pb = { path = "../../core/pb" }
-peace_services = { path = "../../core/services" }
+peace_pb = { workspace = true }
+peace_services = { workspace = true }

@@ -29,7 +29,7 @@ clap-serde-derive = { workspace = true }
 peace_logs = { workspace = true, features = ["cli"] }
 peace_api = { workspace = true, features = ["tls"] }
 
-peace_pb = { path = "../../core/pb" }
-peace_db = { path = "../../core/db" }
-peace_services = { path = "../../core/services" }
-peace_repositories = { path = "../../core/repositories" }
+peace_pb = { workspace = true }
+peace_db = { workspace = true }
+peace_services = { workspace = true }
+peace_repositories = { workspace = true }

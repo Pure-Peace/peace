@@ -30,4 +30,4 @@ serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 
 peace_cfg_derive = { path = "./derive", optional = true }
-peace_logs = { path = "../../frame/logs" }
+peace_logs = { workspace = true }

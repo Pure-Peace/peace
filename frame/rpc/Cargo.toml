@@ -42,11 +42,11 @@ once_cell = { workspace = true }
 
 # local crates
 peace_logs = { workspace = true, features = ["cli"] }
-peace_cfg = { path = "../../frame/cfg" }
+peace_cfg = { workspace = true }
 
 tools = { workspace = true, features = ["async_collections"] }
 
-peace_pb = { path = "../../core/pb", optional = true }
+peace_pb = { workspace = true, optional = true }
 
 
 [target.'cfg(unix)'.dependencies]

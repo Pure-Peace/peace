@@ -24,6 +24,6 @@ rand = { workspace = true }
 once_cell = { workspace = true }
 
 
-tools = { path = "../../lib/tools" }
+tools = { workspace = true }
 
-peace_pb = { path = "../../core/pb" }
+peace_pb = { workspace = true }

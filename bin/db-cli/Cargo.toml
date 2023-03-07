@@ -35,6 +35,6 @@ sea-orm-migration = { workspace = true, features = ["runtime-tokio-rustls"] }
 clap3 = { workspace = true, features = ["derive"] }
 clap4 = { workspace = true, features = ["derive"] }
 
-peace_db = { path = "../../core/db" }
-peace_domain = { path = "../../core/domain" }
-peace_repositories = { path = "../../core/repositories" }
+peace_db = { workspace = true }
+peace_domain = { workspace = true }
+peace_repositories = { workspace = true }
