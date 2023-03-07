@@ -2,21 +2,22 @@
 name = "peace_pb"
 description = "Peace Protocol Buffers (PB)"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 
 [dependencies]
-tonic = { version = "0.8" }
-prost = { version = "0.11" }
-serde = { version = "1.0", features = ["derive"] }
+tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 
-bitmask-enum = { version = "2.1" }
+bitmask-enum = { workspace = true }
 
 
 [build-dependencies]
-tonic-build = "0.8"
-paste = "1.0"
+tonic-build = { workspace = true }
+paste = { workspace = true }

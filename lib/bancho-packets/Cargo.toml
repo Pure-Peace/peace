@@ -1,12 +1,14 @@
 [package]
 name = "bancho-packets"
 version = "4.1.0"
-authors = ["PurePeace <purepeace_@outlook.com>"]
-edition = "2021"
-license = "MIT"
-repository = "https://github.com/pure-peace/peace"
 description = "osu! bancho packet Reading & Writing library."
+documentation = "https://docs.rs/bancho-packets"
 readme = "README.md"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [features]
 default = ["serde", "derive"]

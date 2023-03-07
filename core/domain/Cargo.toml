@@ -1,25 +1,27 @@
 [package]
 name = "peace_domain"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
 
 [features]
 
 
 [dependencies]
-tonic = { version = "0.8" }
-serde = { version = "1.0", features = ["derive"] }
-async-trait = { version = "0.1" }
-regex = { version = "1.7" }
-thiserror = { version = "1.0" }
+tonic = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+async-trait = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
 
 # password
-rust-argon2 = { version = "1.0" }
-rand = { version = "0.8" }
-once_cell = { version = "1" }
+rust-argon2 = { workspace = true }
+rand = { workspace = true }
+once_cell = { workspace = true }
 
 
 tools = { path = "../../lib/tools" }

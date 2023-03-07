@@ -1,10 +1,12 @@
 [package]
 name = "db-peace-cli"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
 
 [[bin]]
 name = "db-cli"
@@ -20,18 +22,18 @@ path = "src/db-peace-migrate.rs"
 
 
 [dependencies]
-tokio = { version = "1", features = ["rt", "macros"] }
-dotenvy = { version = "0.15" }
-md5 = { version = "0.7" }
-sea-orm-cli = { version = "0.11", default-features = false, features = [
+tokio = { workspace = true, features = ["rt", "macros"] }
+dotenvy = { workspace = true }
+md5 = { workspace = true }
+sea-orm-cli = { workspace = true, features = [
     "codegen",
     "cli",
     "runtime-tokio-rustls",
 ] }
-sea-orm-migration = { version = "0.11", features = ["runtime-tokio-rustls"] }
+sea-orm-migration = { workspace = true, features = ["runtime-tokio-rustls"] }
 
-clap3 = { package = "clap", version = "3.2", features = ["derive"] }
-clap4 = { package = "clap", version = "4.1", features = ["derive"] }
+clap3 = { workspace = true, features = ["derive"] }
+clap4 = { workspace = true, features = ["derive"] }
 
 peace_db = { path = "../../core/db" }
 peace_domain = { path = "../../core/domain" }

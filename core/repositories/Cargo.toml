@@ -1,16 +1,17 @@
 [package]
 name = "peace_repositories"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 
 [dependencies]
-tonic = { version = "0.8" }
-anyhow = { version = "1.0" }
-thiserror = { version = "1.0" }
+tonic = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
 
 
 peace_logs = { path = "../../frame/logs" }
@@ -19,4 +20,4 @@ peace_domain = { path = "../../core/domain" }
 
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros"] }
+tokio = { workspace = true, features = ["macros"] }

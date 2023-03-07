@@ -1,22 +1,24 @@
 [package]
 name = "bancho-packets-derive"
 version = "0.1.0"
-authors = ["PurePeace <purepeace_@outlook.com>"]
-edition = "2021"
-license = "MIT"
-repository = "https://github.com/pure-peace/peace"
 description = "Derive macro for bancho-packets BanchoPacket trait"
 documentation = "https://docs.rs/bancho-packets"
 keywords = ["osu", "bancho"]
 readme = "README.md"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
 
 [lib]
 proc-macro = true
 
 [dependencies]
-quote = "1"
-syn = "1"
-proc-macro2 = "1"
+quote = { workspace = true }
+syn = { workspace = true }
+proc-macro2 = { workspace = true }
 
 
 [dev-dependencies]

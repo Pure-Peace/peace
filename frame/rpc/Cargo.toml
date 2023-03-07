@@ -2,10 +2,12 @@
 name = "peace_rpc"
 description = "Peace gRPC service framework"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
 
 [features]
 default = []
@@ -17,25 +19,25 @@ admin_endpoints = ["peace_logs/grpc", "peace_pb"]
 
 [dependencies]
 # core
-tonic = { version = "0.8" }
-tokio = { version = "1.0" }
-tower-service = { version = "0.3" }
-tower-layer = { version = "0.3" }
-futures-util = { version = "0.3" }
+tonic = { workspace = true }
+tokio = { workspace = true }
+tower-service = { workspace = true }
+tower-layer = { workspace = true }
+futures-util = { workspace = true }
 
 # reflection
-tonic-reflection = { version = "0.6", optional = true }
+tonic-reflection = { workspace = true, optional = true }
 
 
 # serde
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-serde_yaml = { version = "0.9" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 
 # utils
-clap = { version = "4.1", features = ["derive"] }
-clap-serde-derive = { version = "0.2" }
-once_cell = { version = "1" }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+once_cell = { workspace = true }
 
 
 # local crates

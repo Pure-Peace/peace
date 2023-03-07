@@ -2,10 +2,12 @@
 name = "peace_api"
 description = "Peace api service framework"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
 
 [features]
 default = []
@@ -14,34 +16,34 @@ tls = ["axum-server/tls-rustls", "axum/http2"]
 
 [dependencies]
 # core
-futures = { version = "0.3" }
-axum = { version = "0.6", features = ["headers"] }
-axum-server = { version = "0.4" }
-tokio = { version = "1", features = ["full"] }
-hyper = { version = "0.14" }
+futures = { workspace = true }
+axum = { workspace = true, features = ["headers"] }
+axum-server = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+hyper = { workspace = true }
 
 # extension
-tower = { version = "0.4", features = ["load-shed"] }
-tower-http = { version = "0.4", features = ["limit", "trace"] }
-tower-layer = { version = "0.3" }
+tower = { workspace = true, features = ["load-shed"] }
+tower-http = { workspace = true, features = ["limit", "trace"] }
+tower-layer = { workspace = true }
 
 # openapi
-utoipa = { version = "3.0", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "3.0", features = ["axum"] }
+utoipa = { workspace = true, features = ["axum_extras"] }
+utoipa-swagger-ui = { workspace = true, features = ["axum"] }
 
 # serde
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-serde_yaml = { version = "0.9" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 
 # utils
-clap = { version = "4.1", features = ["derive"] }
-clap-serde-derive = { version = "0.2" }
-once_cell = { version = "1" }
-thiserror = { version = "1.0" }
-anyhow = { version = "1.0" }
-axum-client-ip = { version = "0.4" }
-derive_deref = { version = "1.1" }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+once_cell = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+axum-client-ip = { workspace = true }
+derive_deref = { workspace = true }
 
 # local crates
 peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }

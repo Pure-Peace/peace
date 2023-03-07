@@ -1,26 +1,27 @@
 [package]
 name = "peace_db"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 
 [dependencies]
-tokio = { version = "1", features = ["rt", "macros"] }
-sea-orm = { version = "0.11", features = [
+tokio = { workspace = true, features = ["rt", "macros"] }
+sea-orm = { workspace = true, features = [
     "sqlx-all",
     "runtime-tokio-rustls",
     "macros",
 ] }
-sea-orm-migration = { version = "0.11", features = ["runtime-tokio-rustls"] }
-async-trait = { version = "0.1" }
-paste = { version = "1.0" }
+sea-orm-migration = { workspace = true, features = ["runtime-tokio-rustls"] }
+async-trait = { workspace = true }
+paste = { workspace = true }
 
-serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4.1", features = ["derive"] }
-clap-serde-derive = { version = "0.2" }
+serde = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
 
 
 peace_cfg = { path = "../../frame/cfg" }

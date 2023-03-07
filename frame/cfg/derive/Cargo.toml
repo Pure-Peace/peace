@@ -2,7 +2,11 @@
 name = "peace_cfg_derive"
 description = "peace_cfg derive macros"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 
 [lib]

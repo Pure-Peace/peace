@@ -1,10 +1,12 @@
 [package]
 name = "bancho-standalone"
 version = "0.1.0"
-edition = "2021"
-authors = ["Pure-Peace"]
-repository = "https://github.com/pure-peace/peace"
-homepage = "https://github.com/pure-peace/peace"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
 
 [features]
 default = ["tls"]
@@ -16,12 +18,12 @@ path = "src/main.rs"
 
 
 [dependencies]
-axum = { version = "0.6" }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-utoipa = { version = "3.0" }
-serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4.1", features = ["derive"] }
-clap-serde-derive = { version = "0.2" }
+axum = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+utoipa = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
 
 
 peace_logs = { path = "../../frame/logs", features = ["cli"] }

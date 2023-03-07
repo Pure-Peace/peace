@@ -1,6 +1,5 @@
 [workspace]
 resolver = "2"
-
 members = [
     "bin/bancho",
     "bin/bancho-state",
@@ -24,6 +23,92 @@ members = [
     "lib/bancho-packets",
     "lib/bancho-packets/derive",
 ]
+
+[workspace.package]
+authors = ["Pure-Peace <purepeace_@outlook.com>"]
+edition = "2021"
+homepage = "https://peace.osu.icu/"
+repository = "https://github.com/pure-peace/peace"
+license = "MIT"
+
+[workspace.dependencies]
+# grpc
+tonic = "0.8"
+tonic-reflection = "0.6"
+tonic-build = "0.8"
+prost = "0.11"
+
+# async programming
+tokio = "1"
+hyper = "0.14"
+futures = "0.3"
+futures-util = "0.3"
+async-trait = "0.1"
+
+# serde
+serde = "1.0"
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.7"
+
+# axum
+axum = "0.6"
+axum-server = "0.4"
+axum-client-ip = "0.4"
+
+# openapi
+utoipa = "3.0"
+utoipa-swagger-ui = "3.0"
+
+# tower
+tower = "0.4"
+tower-http = "0.4"
+tower-layer = "0.3"
+tower-service = "0.3"
+
+# orm
+sea-orm = "0.11"
+sea-orm-cli = { version = "0.11", default-features = false }
+sea-orm-migration = "0.11"
+
+# cmd
+clap = "4.1"
+clap3 = { package = "clap", version = "3.2" }
+clap4 = { package = "clap", version = "4.1" }
+clap-serde-derive = "0.2"
+dotenvy = "0.15"
+
+# err
+thiserror = "1.0"
+anyhow = "1.0"
+
+# logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# utils
+md5 = "0.7"
+rust-argon2 = "1.0"
+rand = "0.8"
+uuid = "1.3"
+regex = "1.7"
+once_cell = "1"
+chrono = "0.4"
+arc-swap = "1.6"
+memmap2 = "0.5"
+maxminddb = "0.23"
+
+# derives
+bitmask-enum = "2.1"
+enum-primitive-derive = "0.2"
+num-traits = "0.2"
+derive_deref = "1.1"
+
+# macros
+paste = "1.0"
+quote = "1"
+syn = "1"
+proc-macro2 = "1"
 
 
 [profile.release]

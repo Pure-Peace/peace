@@ -2,28 +2,32 @@
 name = "peace_cfg"
 description = "peace framework generic configuration items"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [features]
 default = ["derive"]
 derive = ["peace_cfg_derive"]
 
 [dependencies]
-paste = { version = "1.0" }
-async-trait = { version = "0.1" }
-anyhow = { version = "1.0" }
-tonic = { version = "0.8", features = ["tls"] }
+paste = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+tonic = { workspace = true, features = ["tls"] }
 
 # cfg
-clap = { version = "4.1", features = ["derive"] }
-clap-serde-derive = { version = "0.2" }
-once_cell = { version = "1" }
-toml = { version = "0.7" }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+once_cell = { workspace = true }
+toml = { workspace = true }
 
 # serde
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-serde_yaml = { version = "0.9" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 
 peace_cfg_derive = { path = "./derive", optional = true }
 peace_logs = { path = "../../frame/logs" }
