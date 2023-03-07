@@ -1,0 +1,32 @@
+[package]
+name = "geoip-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pure-Peace"]
+repository = "https://github.com/pure-peace/peace"
+homepage = "https://github.com/pure-peace/peace"
+
+[[bin]]
+name = "geoip-server"
+path = "src/main.rs"
+
+
+[dependencies]
+tonic = { version = "0.8" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4.1", features = ["derive"] }
+clap-serde-derive = { version = "0.2" }
+
+
+peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
+peace_rpc = { path = "../../frame/rpc", features = [
+    "tls",
+    "admin_endpoints",
+    "reflection",
+] }
+
+
+peace_pb = { path = "../../core/pb" }
+peace_services = { path = "../../core/services" }
+peace_domain = { path = "../../core/domain" }

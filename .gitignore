@@ -27,3 +27,5 @@ Cargo.lock
 
 /core/pb/generated/*.bin
 /core/pb/generated/*.rs
+
+*.mmdb

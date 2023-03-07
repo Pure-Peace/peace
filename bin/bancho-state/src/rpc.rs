@@ -1,4 +1,4 @@
-use peace_pb::bancho_state_rpc::*;
+use peace_pb::{bancho_state_rpc::*, base::ExecSuccess};
 use peace_services::bancho_state::DynBanchoStateService;
 use tonic::{Request, Response, Status};
 

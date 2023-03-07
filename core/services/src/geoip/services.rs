@@ -3,7 +3,7 @@ use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
 use maxminddb::{geoip2, Mmap, Reader};
 use peace_domain::geoip::*;
-use peace_pb::geoip_rpc::geoip_rpc_client::GeoipRpcClient;
+use peace_pb::geoip_rpc::{geoip_rpc_client::GeoipRpcClient, IpAddress};
 use std::{net::IpAddr, sync::Arc};
 use tonic::transport::Channel;
 
@@ -34,8 +34,8 @@ impl GeoipServiceImpl {
         Self::Remote(GeoipServiceRemote(geoip_rpc_client))
     }
 
-    pub fn local(geo_db: Reader<Mmap>) -> Self {
-        Self::Local(GeoipServiceLocal::new(geo_db))
+    pub fn local(geoip_service_local: GeoipServiceLocal) -> Self {
+        Self::Local(geoip_service_local)
     }
 }
 
@@ -58,8 +58,21 @@ pub struct GeoipServiceLocal {
 }
 
 impl GeoipServiceLocal {
-    pub fn new(geo_db: Reader<Mmap>) -> Self {
-        Self { geo_db: Arc::new(ArcSwapOption::new(Some(Arc::new(geo_db)))) }
+    pub fn new(geo_db: Arc<Reader<Mmap>>) -> Self {
+        Self { geo_db: Arc::new(ArcSwapOption::new(Some(geo_db))) }
+    }
+
+    pub fn from_path(path: &str) -> Self {
+        let geo_db = GeoipServiceLocal::load_db(path).expect(
+            "
+        Please make sure you have downloaded the `GeoLite2 City` database
+        and put it in the specified location (`GeoLite2-City.mmdb`).
+        If you have not downloaded it,
+        please register and log in to your account here:
+        `https://www.maxmind.com /en/accounts/470006/geoip/downloads`
+        ",
+        );
+        Self::new(geo_db)
     }
 
     pub fn lazy_init() -> Self {
@@ -82,10 +95,10 @@ impl GeoipService for GeoipServiceImpl {
         match self {
             Self::Remote(svc) => svc
                 .client()
-                .lookup_with_ip_address(request)
+                .lookup_with_ip_address(IpAddress { ip: ip_addr.to_string() })
                 .await
-                .map_err(BanchoStateError::RpcError)
-                .map(|resp| resp.into_inner()),
+                .map_err(GeoipError::RpcError)
+                .map(|resp| resp.into_inner().into()),
             Self::Local(svc) => {
                 let geo_db =
                     svc.geo_db.load_full().ok_or(GeoipError::NotInitialized)?;

@@ -8,6 +8,7 @@ members = [
     "bin/gateway",
     "bin/bancho-standalone",
     "bin/chat",
+    "bin/geoip",
     "core/db",
     "core/domain",
     "core/pb",
