@@ -32,7 +32,7 @@ serde = { workspace = true, features = ["derive"] }
 
 
 bancho-packets = { path = "../../lib/bancho-packets" }
-tools = { path = "../../lib/tools", features = ["all"] }
+tools = { workspace = true, features = ["all"] }
 
 peace_api = { path = "../../frame/api" }
 peace_logs = { path = "../../frame/logs" }

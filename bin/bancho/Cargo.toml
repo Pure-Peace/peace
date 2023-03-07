@@ -20,15 +20,13 @@ clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
 
 
-peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
-peace_rpc = { path = "../../frame/rpc", features = [
+peace_logs = { workspace = true, features = ["grpc", "cli"] }
+peace_rpc = { workspace = true, features = [
     "tls",
     "admin_endpoints",
     "reflection",
 ] }
-
-
-peace_pb = { path = "../../core/pb" }
-peace_db = { path = "../../core/db" }
-peace_services = { path = "../../core/services" }
-peace_repositories = { path = "../../core/repositories" }
+peace_pb = { workspace = true }
+peace_db = { workspace = true }
+peace_services = { workspace = true }
+peace_repositories = { workspace = true }

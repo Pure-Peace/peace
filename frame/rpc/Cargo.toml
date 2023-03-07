@@ -41,10 +41,10 @@ once_cell = { workspace = true }
 
 
 # local crates
-peace_logs = { path = "../../frame/logs", features = ["cli"] }
+peace_logs = { workspace = true, features = ["cli"] }
 peace_cfg = { path = "../../frame/cfg" }
 
-tools = { path = "../../lib/tools", features = ["async_collections"] }
+tools = { workspace = true, features = ["async_collections"] }
 
 peace_pb = { path = "../../core/pb", optional = true }
 

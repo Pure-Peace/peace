@@ -110,6 +110,22 @@ quote = "1"
 syn = "1"
 proc-macro2 = "1"
 
+# frameworks
+peace_api = { path = "./frame/api" }
+peace_logs = { path = "./frame/logs" }
+peace_rpc = { path = "./frame/rpc" }
+peace_cfg = { path = "./frame/cfg" }
+
+# core
+peace_pb = { path = "./core/pb" }
+peace_db = { path = "./core/db" }
+peace_domain = { path = "./core/domain" }
+peace_services = { path = "./core/services" }
+peace_repositories = { path = "./core/repositories" }
+
+# libs
+bancho-packets = { path = "./lib/bancho-packets" }
+tools = { path = "./lib/tools" }
 
 [profile.release]
 codegen-units = 1 # Compile crates one after another so the compiler can optimize better

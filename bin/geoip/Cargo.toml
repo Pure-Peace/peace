@@ -21,8 +21,8 @@ clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
 
 
-peace_logs = { path = "../../frame/logs", features = ["grpc", "cli"] }
-peace_rpc = { path = "../../frame/rpc", features = [
+peace_logs = { workspace = true, features = ["grpc", "cli"] }
+peace_rpc = { workspace = true, features = [
     "tls",
     "admin_endpoints",
     "reflection",

@@ -46,7 +46,7 @@ axum-client-ip = { workspace = true }
 derive_deref = { workspace = true }
 
 # local crates
-peace_logs = { path = "../../frame/logs", features = ["openapi_axum", "cli"] }
+peace_logs = { workspace = true, features = ["openapi_axum", "cli"] }
 peace_cfg = { path = "../../frame/cfg" }
 
-tools = { path = "../../lib/tools", features = ["async_collections"] }
+tools = { workspace = true, features = ["async_collections"] }
