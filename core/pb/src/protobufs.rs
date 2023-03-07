@@ -22,13 +22,13 @@ pub mod logs {
     pub const LOGS_DESCRIPTOR_SET: &[u8] = descriptor!("peace.frame.logs.descriptor");
 }
 
-pub mod bancho_rpc {
+pub mod bancho {
     proto!("peace.services.bancho");
 
     pub const BANCHO_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.bancho.descriptor");
 }
 
-pub mod bancho_state_rpc {
+pub mod bancho_state {
     proto!("peace.services.bancho_state");
 
     pub const BANCHO_STATE_DESCRIPTOR_SET: &[u8] =
@@ -173,13 +173,13 @@ pub mod bancho_state_rpc {
     }
 }
 
-pub mod chat_rpc {
+pub mod chat {
     proto!("peace.services.chat");
 
     pub const CHAT_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.chat.descriptor");
 }
 
-pub mod geoip_rpc {
+pub mod geoip {
     proto!("peace.services.geoip");
 
     pub const GEOIP_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.geoip.descriptor");

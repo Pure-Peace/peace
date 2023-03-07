@@ -2,9 +2,9 @@ use crate::BanchoRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::{
-    bancho_rpc::bancho_rpc_server::BanchoRpcServer,
-    bancho_state_rpc::{self, BANCHO_STATE_DESCRIPTOR_SET},
-    geoip_rpc,
+    bancho::bancho_rpc_server::BanchoRpcServer,
+    bancho_state::{self, BANCHO_STATE_DESCRIPTOR_SET},
+    geoip,
 };
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
@@ -24,12 +24,12 @@ use tonic::{
 };
 
 define_rpc_client_config!(
-    service_name: bancho_state_rpc,
+    service_name: bancho_state,
     config_name: BanchoStateRpcConfig
 );
 
 define_rpc_client_config!(
-    service_name: geoip_rpc,
+    service_name: geoip,
     config_name: GeoipRpcConfig,
     default_uri: "http://127.0.0.1:12346"
 );

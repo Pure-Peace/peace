@@ -15,12 +15,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     build("frame.logs", None);
     build("services.chat", None);
     build("services.bancho", None);
-    build("services.geoip", None);
     build(
         "services.bancho_state",
         Some(&[(
             SERDE,
             &["UserData", "ConnectionInfo", "GetAllSessionsResponse"],
+        )]),
+    );
+    build(
+        "services.geoip",
+        Some(&[(
+            SERDE,
+            &[
+                "IpAddress",
+                "GeoipData",
+                "Location",
+                "Continent",
+                "Country",
+                "Region",
+                "City",
+            ],
         )]),
     );
 

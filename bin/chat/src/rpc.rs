@@ -1,4 +1,4 @@
-use peace_pb::chat_rpc::*;
+use peace_pb::chat::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct ChatRpcImpl {}

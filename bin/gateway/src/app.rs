@@ -1,7 +1,7 @@
 use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
-use peace_pb::{bancho_rpc, bancho_state_rpc};
+use peace_pb::{bancho, bancho_state};
 use peace_services::{
     bancho::BanchoServiceImpl,
     bancho_state::BanchoStateServiceImpl,
@@ -16,12 +16,12 @@ use peace_services::{
 use std::sync::Arc;
 
 define_rpc_client_config!(
-    service_name: bancho_rpc,
+    service_name: bancho,
     config_name: BanchoRpcConfig
 );
 
 define_rpc_client_config!(
-    service_name: bancho_state_rpc,
+    service_name: bancho_state,
     config_name: BanchoStateRpcConfig,
     default_uri: "http://127.0.0.1:12345"
 );

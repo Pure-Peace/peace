@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "peace/base.proto";
+import "peace/services/geoip.proto";
 
 package peace.services.bancho_state;
 
@@ -8,7 +9,8 @@ service BanchoStateRPC {
   rpc BroadcastBanchoPackets(BroadcastBanchoPacketsRequest)
       returns (peace.base.ExecSuccess);
 
-  rpc EnqueueBanchoPackets(EnqueueBanchoPacketsRequest) returns (peace.base.ExecSuccess);
+  rpc EnqueueBanchoPackets(EnqueueBanchoPacketsRequest)
+      returns (peace.base.ExecSuccess);
   rpc BatchEnqueueBanchoPackets(BatchEnqueueBanchoPacketsRequest)
       returns (peace.base.ExecSuccess);
 
@@ -33,10 +35,11 @@ service BanchoStateRPC {
   // For debug
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 
-  rpc SendUserStatsPacket(SendUserStatsPacketRequest) returns (peace.base.ExecSuccess);
-  rpc SendAllPresences(SendAllPresencesRequest) returns (peace.base.ExecSuccess);
+  rpc SendUserStatsPacket(SendUserStatsPacketRequest)
+      returns (peace.base.ExecSuccess);
+  rpc SendAllPresences(SendAllPresencesRequest)
+      returns (peace.base.ExecSuccess);
 }
-
 
 message BroadcastBanchoPacketsRequest { bytes packets = 1; }
 
@@ -98,9 +101,7 @@ message BanchoPackets { bytes data = 1; }
 
 message ConnectionInfo {
   string ip = 1;
-  string region = 2;
-  double latitude = 3;
-  double longitude = 4;
+  peace.services.geoip.GeoipData geoip_data = 2;
 }
 
 message CreateUserSessionRequest {

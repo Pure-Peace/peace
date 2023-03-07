@@ -2,7 +2,7 @@ use std::net::IpAddr;
 
 use peace_pb::{
     base::ExecSuccess,
-    geoip_rpc::{GeoipData as RpcGeoipData, *},
+    geoip::{GeoipData as RpcGeoipData, *},
 };
 use peace_services::geoip::DynGeoipService;
 use tonic::{Request, Response, Status};

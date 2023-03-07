@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use maxminddb::{geoip2, Mmap, Reader};
 use peace_api::RpcClientConfig;
 use peace_domain::geoip::*;
-use peace_pb::geoip_rpc::{geoip_rpc_client::GeoipRpcClient, IpAddress};
+use peace_pb::geoip::{geoip_rpc_client::GeoipRpcClient, IpAddress};
 use std::{net::IpAddr, sync::Arc};
 use tonic::transport::Channel;
 

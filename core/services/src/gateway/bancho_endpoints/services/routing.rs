@@ -7,7 +7,7 @@ use crate::gateway::bancho_endpoints::{
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use peace_pb::bancho_state_rpc::UserQuery;
+use peace_pb::bancho_state::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
 pub struct BanchoRoutingServiceImpl {

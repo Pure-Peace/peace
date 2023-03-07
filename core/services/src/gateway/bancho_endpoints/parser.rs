@@ -1,5 +1,5 @@
 use super::ParseLoginDataError;
-use peace_pb::bancho_rpc::{ClientHashes, LoginRequest};
+use peace_pb::bancho::{ClientHashes, LoginRequest};
 
 pub fn parse_osu_login_request_body(
     body: Vec<u8>,

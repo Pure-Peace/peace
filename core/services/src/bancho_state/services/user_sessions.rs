@@ -2,7 +2,7 @@ use crate::bancho_state::{
     DynUserSessionsService, Session, UserSessionsInner, UserSessionsService,
 };
 use async_trait::async_trait;
-use peace_pb::bancho_state_rpc::UserQuery;
+use peace_pb::bancho_state::UserQuery;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

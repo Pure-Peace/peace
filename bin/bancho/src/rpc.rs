@@ -1,4 +1,4 @@
-use peace_pb::bancho_rpc::*;
+use peace_pb::bancho::*;
 use peace_rpc::extensions::ClientIp;
 use peace_services::bancho::DynBanchoService;
 use tonic::{Request, Response, Status};

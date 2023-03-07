@@ -1,7 +1,7 @@
 use super::CreateSessionError;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
-use peace_pb::bancho_state_rpc::{
+use peace_pb::bancho_state::{
     ConnectionInfo, CreateUserSessionRequest, UserQuery,
 };
 use std::{collections::HashMap, sync::Arc};

@@ -1,6 +1,6 @@
 use super::{ChatService, DynChatService};
 use async_trait::async_trait;
-use peace_pb::chat_rpc::chat_rpc_client::ChatRpcClient;
+use peace_pb::chat::chat_rpc_client::ChatRpcClient;
 use std::sync::Arc;
 use tonic::transport::Channel;
 

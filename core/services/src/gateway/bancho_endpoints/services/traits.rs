@@ -5,7 +5,7 @@ use crate::gateway::bancho_endpoints::{
 use async_trait::async_trait;
 use axum::response::Response;
 use bancho_packets::Packet;
-use peace_pb::bancho_state_rpc::UserQuery;
+use peace_pb::bancho_state::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
 pub type DynBanchoRoutingService = Arc<dyn BanchoRoutingService + Send + Sync>;

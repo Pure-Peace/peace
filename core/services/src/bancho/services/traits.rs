@@ -1,7 +1,7 @@
 use super::PasswordCacheStore;
 use crate::bancho::BanchoServiceError;
 use peace_domain::users::PasswordError;
-use peace_pb::bancho_rpc::*;
+use peace_pb::bancho::*;
 use std::{net::IpAddr, sync::Arc};
 use tonic::async_trait;
 use tools::async_collections::{BackgroundTask, BackgroundTaskError};

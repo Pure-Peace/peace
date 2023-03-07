@@ -9,8 +9,8 @@ use crate::{
 };
 use bancho_packets::{server, PacketBuilder};
 use peace_pb::{
-    bancho_rpc::{bancho_rpc_client::BanchoRpcClient, *},
-    bancho_state_rpc::*,
+    bancho::{bancho_rpc_client::BanchoRpcClient, *},
+    bancho_state::*,
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, sync::Arc};
@@ -130,8 +130,15 @@ impl BanchoService for BanchoServiceImpl {
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let LoginRequest { username, password, client_version, .. } =
-                    request;
+                let LoginRequest {
+                    username,
+                    password,
+                    client_version,
+                    utc_offset,
+                    display_city,
+                    only_friend_pm_allowed,
+                    client_hashes,
+                } = request;
                 info!("Receive login request: {username} [{client_version}] ({client_ip})");
 
                 let user = svc
@@ -143,10 +150,17 @@ impl BanchoService for BanchoServiceImpl {
                     .await
                     .map_err(LoginError::UserNotExists)?;
 
-                svc.password_service
+                let () = svc
+                    .password_service
                     .verify_password(user.password.as_str(), password.as_str())
                     .await
                     .map_err(LoginError::PasswordError)?;
+
+                let geoip_data = svc
+                    .geoip_service
+                    .lookup_with_ip_address(client_ip.clone())
+                    .await
+                    .ok();
 
                 let CreateUserSessionResponse { session_id } = svc
                     .bancho_state_service
@@ -155,11 +169,13 @@ impl BanchoService for BanchoServiceImpl {
                         username: user.name.to_owned(),
                         username_unicode: user.name_unicode,
                         privileges: 1,
+                        // client_version
+                        // utc_offset
+                        // display_city
+                        // only_friend_pm_allowed
                         connection_info: Some(ConnectionInfo {
                             ip: client_ip.to_string(),
-                            region: "".into(),
-                            latitude: 0.,
-                            longitude: 0.,
+                            geoip_data: geoip_data.map(|g| g.into()),
                         }),
                     })
                     .await?;

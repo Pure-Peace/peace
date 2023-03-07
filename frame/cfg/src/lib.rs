@@ -376,11 +376,11 @@ pub mod macros {
     /// use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
     ///
     /// // Should import RPC service namespace first
-    /// use peace_pb::services::bancho_rpc;
+    /// use peace_pb::services::bancho;
     ///
     /// // It will generate a config struct named [`BanchoRpcConfig`]
     /// peace_api::define_rpc_client_config!(
-    ///     service_name: bancho_rpc,
+    ///     service_name: bancho,
     ///     config_name: BanchoRpcConfig
     /// );
     ///
@@ -417,7 +417,7 @@ pub mod macros {
         (service_name: $service_name: ty, config_name: $config_name: ty, default_uri: $default_uri: literal) => {
             $crate::macros::____private::paste::paste! {
                 pub type [<$service_name:camel>] =
-                    [<$service_name:snake>]::[<$service_name:snake _client>]::[<$service_name:camel Client>]<$crate::macros::____private::Channel>;
+                    [<$service_name:snake>]::[<$service_name:snake _rpc_client>]::[<$service_name:camel RpcClient>]<$crate::macros::____private::Channel>;
 
                 #[derive(
                     clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, serde::Serialize, serde::Deserialize,

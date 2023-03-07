@@ -1,7 +1,7 @@
 use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::peace::PeaceDbConfig;
-use peace_pb::chat_rpc::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
+use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_rpc::{Application, RpcFrameConfig};
 use std::sync::Arc;
 use tonic::{

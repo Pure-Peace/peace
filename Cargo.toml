@@ -103,6 +103,8 @@ bitmask-enum = "2.1"
 enum-primitive-derive = "0.2"
 num-traits = "0.2"
 derive_deref = "1.1"
+strum = "0.24"
+strum_macros = "0.24"
 
 # macros
 paste = "1.0"

@@ -11,8 +11,8 @@ use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId, PacketReader};
 use peace_pb::{
-    bancho_rpc::*,
-    bancho_state_rpc::{
+    bancho::*,
+    bancho_state::{
         BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
     },
 };

@@ -2,7 +2,7 @@ use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application};
 use peace_db::{peace::PeaceDbConfig, DbConfig};
-use peace_pb::geoip_rpc;
+use peace_pb::geoip;
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_services::{
     bancho::{
@@ -23,7 +23,7 @@ use std::{path::PathBuf, sync::Arc};
 use utoipa::OpenApi;
 
 define_rpc_client_config!(
-    service_name: geoip_rpc,
+    service_name: geoip,
     config_name: GeoipRpcConfig,
     default_uri: "http://127.0.0.1:12346"
 );

@@ -1,5 +1,5 @@
 use clap_serde_derive::ClapSerde;
-use peace_pb::bancho_state_rpc::{
+use peace_pb::bancho_state::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{Application, RpcFrameConfig};
