@@ -13,7 +13,7 @@ pub enum GeoipError {
     OnlyLocalService,
     #[error("failed to load geo-ip database: {0}")]
     FailedToLoadDatabase(#[source] MaxMindDBError),
-    #[error("{0}")]
+    #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }
 

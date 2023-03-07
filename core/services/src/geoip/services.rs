@@ -2,6 +2,7 @@ use super::{DynGeoipService, GeoipError, GeoipService};
 use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
 use maxminddb::{geoip2, Mmap, Reader};
+use peace_api::RpcClientConfig;
 use peace_domain::geoip::*;
 use peace_pb::geoip_rpc::{geoip_rpc_client::GeoipRpcClient, IpAddress};
 use std::{net::IpAddr, sync::Arc};
@@ -36,6 +37,40 @@ impl GeoipServiceImpl {
 
     pub fn local(geoip_service_local: GeoipServiceLocal) -> Self {
         Self::Local(geoip_service_local)
+    }
+
+    pub async fn local_or_remote(
+        geo_db_path: Option<&str>,
+        geoip_rpc_config: Option<
+            &impl RpcClientConfig<RpcClient = GeoipRpcClient<Channel>>,
+        >,
+    ) -> Self {
+        info!("initializing Geoip service...");
+        let mut service = geo_db_path.map(|path| {
+            GeoipServiceImpl::Local(GeoipServiceLocal::from_path(path))
+        });
+
+        if service.is_some() {
+            info!("Geoip service init successful, type: `Local`");
+            return service.unwrap()
+        }
+
+        if let Some(cfg) = geoip_rpc_config {
+            service = cfg
+                .connect_client()
+                .await
+                .map(|client| {
+                    info!("Geoip service init successful, type: `Remote`");
+                    GeoipServiceImpl::remote(client)
+                })
+                .ok();
+        }
+
+        service
+            .unwrap_or_else(|| {
+                warn!("Geoip service init failed, will not be able to use related features");
+                GeoipServiceImpl::Local(GeoipServiceLocal::lazy_init())
+            })
     }
 }
 

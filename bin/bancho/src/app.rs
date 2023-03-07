@@ -4,6 +4,7 @@ use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::{
     bancho_rpc::bancho_rpc_server::BanchoRpcServer,
     bancho_state_rpc::{self, BANCHO_STATE_DESCRIPTOR_SET},
+    geoip_rpc,
 };
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
@@ -14,8 +15,9 @@ use peace_services::{
         BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
     },
     bancho_state::BanchoStateServiceImpl,
+    geoip::GeoipServiceImpl,
 };
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -24,6 +26,12 @@ use tonic::{
 define_rpc_client_config!(
     service_name: bancho_state_rpc,
     config_name: BanchoStateRpcConfig
+);
+
+define_rpc_client_config!(
+    service_name: geoip_rpc,
+    config_name: GeoipRpcConfig,
+    default_uri: "http://127.0.0.1:12346"
 );
 
 #[peace_config]
@@ -37,6 +45,12 @@ pub struct BanchoConfig {
 
     #[command(flatten)]
     pub bancho_state: BanchoStateRpcConfig,
+
+    #[command(flatten)]
+    pub geoip: GeoipRpcConfig,
+
+    #[arg(long, short = 'P')]
+    pub geo_db_path: Option<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -83,6 +97,15 @@ impl Application for App {
 
         let password_service = PasswordServiceImpl::default().into_service();
 
+        let geoip_service = GeoipServiceImpl::local_or_remote(
+            self.cfg.geo_db_path.as_ref().map(|path| {
+                path.to_str().expect("failed to parse geo_db_path")
+            }),
+            Some(&self.cfg.geoip),
+        )
+        .await
+        .into_service();
+
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_service.cache().clone())
                 .into_service();
@@ -94,6 +117,7 @@ impl Application for App {
             bancho_state_service,
             password_service,
             bancho_background_service,
+            geoip_service,
         )
         .into_service();
 

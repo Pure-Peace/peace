@@ -5,6 +5,7 @@ use crate::{
         LoginError,
     },
     bancho_state::DynBanchoStateService,
+    geoip::DynGeoipService,
 };
 use bancho_packets::{server, PacketBuilder};
 use peace_pb::{
@@ -36,12 +37,14 @@ impl BanchoServiceImpl {
         bancho_state_service: DynBanchoStateService,
         password_service: DynPasswordService,
         bancho_background_service: DynBanchoBackgroundService,
+        geoip_service: DynGeoipService,
     ) -> Self {
         Self::Local(BanchoServiceLocal::new(
             users_repository,
             bancho_state_service,
             password_service,
             bancho_background_service,
+            geoip_service,
         ))
     }
 }
@@ -66,6 +69,8 @@ pub struct BanchoServiceLocal {
     password_service: DynPasswordService,
     #[allow(dead_code)]
     bancho_background_service: DynBanchoBackgroundService,
+    #[allow(dead_code)]
+    geoip_service: DynGeoipService,
 }
 
 impl BanchoServiceLocal {
@@ -74,12 +79,14 @@ impl BanchoServiceLocal {
         bancho_state_service: DynBanchoStateService,
         password_service: DynPasswordService,
         bancho_background_service: DynBanchoBackgroundService,
+        geoip_service: DynGeoipService,
     ) -> Self {
         Self {
             users_repository,
             bancho_state_service,
             password_service,
             bancho_background_service,
+            geoip_service,
         }
     }
 }
