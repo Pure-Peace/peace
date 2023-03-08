@@ -1,17 +1,18 @@
 use super::CreateSessionError;
+use arc_swap::{ArcSwap, ArcSwapOption};
+use atomic_float::AtomicF32;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
-use peace_pb::bancho_state::{
-    ConnectionInfo, CreateUserSessionRequest, UserQuery,
-};
+use peace_domain::bancho_state::ConnectionInfo;
+use peace_pb::bancho_state::{CreateUserSessionRequest, UserQuery};
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{self, AtomicI64},
+        atomic::{self, AtomicBool, AtomicI32, AtomicI64},
         Arc,
     },
 };
-use tokio::sync::{Mutex, MutexGuard, RwLock};
+use tokio::sync::{Mutex, MutexGuard};
 use tools::Timestamp;
 use uuid::Uuid;
 
@@ -30,6 +31,13 @@ pub enum GameMode {
     StandardAutopilot   = 8,
 
     StandardScoreV2     = 12,
+}
+
+impl GameMode {
+    #[inline]
+    pub fn val(&self) -> u8 {
+        *self as u8
+    }
 }
 
 #[rustfmt::skip]
@@ -105,6 +113,13 @@ pub enum UserPresenceFilter {
     Friends = 2,
 }
 
+impl UserPresenceFilter {
+    #[inline]
+    pub fn val(&self) -> u8 {
+        *self as u8
+    }
+}
+
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
 pub enum UserOnlineStatus {
@@ -125,88 +140,251 @@ pub enum UserOnlineStatus {
     Direct        = 13,
 }
 
-#[derive(Debug, Default, Clone)]
+impl UserOnlineStatus {
+    #[inline]
+    pub fn val(&self) -> u8 {
+        *self as u8
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct UserPlayingStats {
-    pub rank: i32,
-    pub pp_v2: f32,
-    pub accuracy: f32,
-    pub total_hits: i32,
-    pub total_score: i64,
-    pub ranked_score: i64,
-    pub playcount: i32,
-    pub playtime: i64,
-    pub max_combo: i32,
+    pub rank: AtomicI32,
+    pub pp_v2: AtomicF32,
+    pub accuracy: AtomicF32,
+    pub total_hits: AtomicI32,
+    pub total_score: AtomicI64,
+    pub ranked_score: AtomicI64,
+    pub playcount: AtomicI32,
+    pub playtime: AtomicI64,
+    pub max_combo: AtomicI32,
 }
 
-#[derive(Debug, Default, Clone)]
+impl UserPlayingStats {
+    #[inline]
+    pub fn rank(&self) -> i32 {
+        self.rank.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn pp_v2(&self) -> f32 {
+        self.pp_v2.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn accuracy(&self) -> f32 {
+        self.accuracy.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn total_hits(&self) -> i32 {
+        self.total_hits.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn total_score(&self) -> i64 {
+        self.total_score.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn ranked_score(&self) -> i64 {
+        self.ranked_score.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn playcount(&self) -> i32 {
+        self.playcount.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn playtime(&self) -> i64 {
+        self.playtime.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn max_combo(&self) -> i32 {
+        self.max_combo.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_rank(&self, rank: i32) {
+        self.rank.store(rank, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_pp_v2(&self, pp_v2: f32) {
+        self.pp_v2.store(pp_v2, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_accuracy(&self, accuracy: f32) {
+        self.accuracy.store(accuracy, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_total_hits(&self, total_hits: i32) {
+        self.total_hits.store(total_hits, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_total_score(&self, total_score: i64) {
+        self.total_score.store(total_score, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_ranked_score(&self, ranked_score: i64) {
+        self.ranked_score.store(ranked_score, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_playcount(&self, playcount: i32) {
+        self.playcount.store(playcount, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_playtime(&self, playtime: i64) {
+        self.playtime.store(playtime, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_max_combo(&self, max_combo: i32) {
+        self.max_combo.store(max_combo, atomic::Ordering::SeqCst)
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct BanchoStatus {
-    pub online_status: UserOnlineStatus,
-    pub description: String,
-    pub beatmap_id: i32,
-    pub beatmap_md5: String,
-    pub mods: Mods,
-    pub mode: GameMode,
+    pub online_status: ArcSwap<UserOnlineStatus>,
+    pub description: ArcSwap<String>,
+    pub beatmap_id: AtomicI32,
+    pub beatmap_md5: ArcSwap<String>,
+    pub mods: ArcSwap<Mods>,
+    pub mode: ArcSwap<GameMode>,
 }
 
-/// User object representing a connected client.
-#[derive(Debug, Default, Clone)]
-pub struct User {
-    /// Unique user ID.
-    pub id: i32,
-    /// User's username.
-    pub username: String,
-    /// User's username in unicode, if available.
-    pub username_unicode: Option<String>,
-    /// User's privileges level.
-    pub privileges: i32,
-    pub client_version: String,
-    pub utc_offset: i32,
-    pub display_city: bool,
-    pub only_friend_pm_allowed: bool,
-    pub bancho_status: BanchoStatus,
-    pub playing_stats: UserPlayingStats,
+impl BanchoStatus {
+    #[inline]
+    pub fn online_status(&self) -> UserOnlineStatus {
+        self.online_status.load().as_ref().clone()
+    }
+
+    #[inline]
+    pub fn description(&self) -> String {
+        self.description.load().as_ref().clone()
+    }
+
+    #[inline]
+    pub fn beatmap_id(&self) -> i32 {
+        self.beatmap_id.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn beatmap_md5(&self) -> String {
+        self.beatmap_md5.load().as_ref().clone()
+    }
+
+    #[inline]
+    pub fn mods(&self) -> Mods {
+        self.mods.load().as_ref().clone()
+    }
+
+    #[inline]
+    pub fn mode(&self) -> GameMode {
+        self.mode.load().as_ref().clone()
+    }
+
+    #[inline]
+    pub fn set_online_status(&self, online_status: UserOnlineStatus) {
+        self.online_status.store(online_status.into())
+    }
+
+    #[inline]
+    pub fn set_description(&self, description: String) {
+        self.description.store(description.into())
+    }
+
+    #[inline]
+    pub fn set_beatmap_id(&self, beatmap_id: i32) {
+        self.beatmap_id.store(beatmap_id, atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_beatmap_md5(&self, beatmap_md5: String) {
+        self.beatmap_md5.store(beatmap_md5.into())
+    }
+
+    #[inline]
+    pub fn set_mods(&self, mods: Mods) {
+        self.mods.store(mods.into())
+    }
+
+    #[inline]
+    pub fn set_mode(&self, mode: GameMode) {
+        self.mode.store(mode.into())
+    }
 }
 
 pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
 pub type PacketsQueue = Vec<PacketDataPtr>;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct Session {
     /// Unique session ID of session.
     pub id: String,
     /// Unique user ID.
     pub user_id: i32,
+    /// User's username.
+    pub username: ArcSwap<String>,
+    /// User's username in unicode, if available.
+    pub username_unicode: ArcSwapOption<String>,
+    /// User's privileges level.
+    pub privileges: AtomicI32,
+    pub client_version: String,
+    pub utc_offset: u8,
+    pub display_city: bool,
+    pub only_friend_pm_allowed: AtomicBool,
+    pub bancho_status: BanchoStatus,
+    pub playing_stats: UserPlayingStats,
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
-    pub user: Arc<RwLock<User>>,
-    pub packets_queue: Arc<Mutex<PacketsQueue>>,
+    pub packets_queue: Mutex<PacketsQueue>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
-    pub last_active: Arc<AtomicI64>,
+    pub last_active: AtomicI64,
 }
 
 impl Session {
-    pub fn new(user: User, connection_info: ConnectionInfo) -> Self {
+    pub fn new(
+        user_id: i32,
+        username: String,
+        username_unicode: Option<String>,
+        privileges: i32,
+        client_version: String,
+        utc_offset: u8,
+        display_city: bool,
+        only_friend_pm_allowed: bool,
+        connection_info: ConnectionInfo,
+    ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
-            user_id: user.id,
+            user_id,
+            username: ArcSwap::new(Arc::new(username)),
+            username_unicode: username_unicode
+                .map(|s| ArcSwapOption::new(Some(Arc::new(s))))
+                .unwrap_or_default(),
+            privileges: AtomicI32::new(privileges),
+            client_version,
+            utc_offset,
+            display_city,
+            only_friend_pm_allowed: AtomicBool::new(only_friend_pm_allowed),
+            bancho_status: BanchoStatus::default().into(),
+            playing_stats: UserPlayingStats::default().into(),
             connection_info,
-            user: Arc::new(RwLock::new(user)),
-            packets_queue: Arc::new(Mutex::new(PacketsQueue::new())),
+            packets_queue: Mutex::new(PacketsQueue::new()),
             created_at: Utc::now(),
-            last_active: Arc::new(AtomicI64::new(Timestamp::now())),
+            last_active: AtomicI64::new(Timestamp::now()),
         }
-    }
-
-    #[inline]
-    pub fn update_active(&self) {
-        self.last_active.store(Timestamp::now(), atomic::Ordering::SeqCst);
-    }
-
-    #[inline]
-    pub fn last_active(&self) -> i64 {
-        self.last_active.load(atomic::Ordering::SeqCst)
     }
 
     pub fn from_request(
@@ -225,19 +403,48 @@ impl Session {
         } = request;
 
         Ok(Self::new(
-            User {
-                id: user_id,
-                username,
-                username_unicode,
-                privileges,
-                client_version,
-                utc_offset,
-                display_city,
-                only_friend_pm_allowed,
-                ..Default::default()
-            },
-            connection_info.ok_or(CreateSessionError::InvalidConnectionInfo)?,
+            user_id,
+            username,
+            username_unicode,
+            privileges,
+            client_version,
+            utc_offset as u8,
+            display_city,
+            only_friend_pm_allowed,
+            connection_info
+                .ok_or(CreateSessionError::InvalidConnectionInfo)?
+                .into(),
         ))
+    }
+
+    #[inline]
+    pub fn username(&self) -> String {
+        self.username.load().to_string()
+    }
+
+    #[inline]
+    pub fn username_unicode(&self) -> Option<String> {
+        self.username_unicode.load().as_deref().map(|s| s.to_string())
+    }
+
+    #[inline]
+    pub fn privileges(&self) -> i32 {
+        self.privileges.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn only_friend_pm_allowed(&self) -> bool {
+        self.only_friend_pm_allowed.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn update_active(&self) {
+        self.last_active.store(Timestamp::now(), atomic::Ordering::SeqCst);
+    }
+
+    #[inline]
+    pub fn last_active(&self) -> i64 {
+        self.last_active.load(atomic::Ordering::SeqCst)
     }
 
     pub async fn queued_packets(&self) -> usize {
@@ -297,44 +504,35 @@ pub struct UserSessionsInner {
 
 impl UserSessionsInner {
     #[inline]
-    pub async fn create(&mut self, session: Session) -> String {
+    pub async fn create(&mut self, session: Session) -> Arc<Session> {
         // Delete any existing session with the same user ID
         self.delete(&UserQuery::UserId(session.user_id)).await;
 
-        let session_id = session.id.clone();
-
-        // Clone the relevant data from the user struct
-        let (username, username_unicode) = {
-            let user = session.user.read().await;
-            (user.username.clone(), user.username_unicode.clone())
-        };
-
-        // Create a new pointer to the user data
         let session = Arc::new(session);
 
         // Insert the user data into the relevant hash maps
-        self.indexed_by_session_id.insert(session_id.clone(), session.clone());
+        self.indexed_by_session_id.insert(session.id.clone(), session.clone());
         self.indexed_by_user_id.insert(session.user_id, session.clone());
-        self.indexed_by_username.insert(username, session.clone());
-        username_unicode
-            .and_then(|s| self.indexed_by_username_unicode.insert(s, session));
+        self.indexed_by_username.insert(session.username(), session.clone());
+        session.username_unicode().and_then(|s| {
+            self.indexed_by_username_unicode.insert(s, session.clone())
+        });
 
         // Increment the length of the collection
         self.len += 1;
 
         // Return the session ID of the created or updated session
-        session_id
+        session
     }
 
     #[inline]
     pub async fn delete(&mut self, query: &UserQuery) -> Option<Arc<Session>> {
-        let Session { id: session_id, user, .. } = &*self.get(query)?;
-        let user = user.read().await;
+        let session = self.get(query)?;
         self.delete_inner(
-            &user.id,
-            &user.username,
-            session_id,
-            user.username_unicode.as_ref().map(|s| s.as_str()),
+            &session.user_id,
+            &session.username.load(),
+            &session.id,
+            session.username_unicode.load().as_deref().map(|s| s.as_str()),
         )
     }
 

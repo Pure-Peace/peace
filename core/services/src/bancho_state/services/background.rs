@@ -56,15 +56,14 @@ impl BanchoStateBackgroundServiceImpl {
                         for session in
                             user_sessions.indexed_by_session_id.values()
                         {
-                            let user = session.user.read().await;
                             if current_timestamp - session.last_active() >
                                 DEACTIVE
                             {
                                 users_deactive.push((
-                                    user.id,
-                                    user.username.to_owned(),
+                                    session.user_id,
+                                    session.username(),
                                     session.id.to_owned(),
-                                    user.username_unicode.to_owned(),
+                                    session.username_unicode(),
                                 ));
                             }
                         }
@@ -81,7 +80,7 @@ impl BanchoStateBackgroundServiceImpl {
                                 user_id,
                                 username,
                                 session_id,
-                                username_unicode.as_ref().map(|s| s.as_str()),
+                                username_unicode.as_deref(),
                             );
                         }
                     };

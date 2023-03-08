@@ -1,8 +1,7 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
-    BanchoStateError, BanchoStatus, DynBanchoStateBackgroundService,
-    DynBanchoStateService, DynUserSessionsService, Session, User,
-    UserPlayingStats,
+    BanchoStateError, DynBanchoStateBackgroundService, DynBanchoStateService,
+    DynUserSessionsService, Session,
 };
 use async_trait::async_trait;
 use peace_pb::{
@@ -223,16 +222,18 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 // Create a new user session using the provided request.
-                let session_id = svc
+                let session = svc
                     .user_sessions_service
                     .create(Session::from_request(request)?)
                     .await;
 
                 // Log the session creation.
-                info!(target: "session.create", "Session <{session_id}> created");
+                info!(target: "session.create", "Session <{}> created", session.id);
 
                 // Return the new session ID in a response.
-                Ok(CreateUserSessionResponse { session_id })
+                Ok(CreateUserSessionResponse {
+                    session_id: session.id.to_owned(),
+                })
             },
         }
     }
@@ -316,21 +317,17 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
-                // Get a read lock on the user session data
-                let user = session.user.read().await;
-
                 // Create a response with the user session details
                 Ok(GetUserSessionResponse {
                     // Copy the session ID into the response
                     session_id: Some(session.id.to_owned()),
                     // Copy the user ID into the response
-                    user_id: Some(user.id),
+                    user_id: Some(session.user_id),
                     // Copy the username into the response
-                    username: Some(user.username.to_owned()),
+                    username: Some(session.username().to_owned()),
                     // Copy the Unicode username into the response, if it exists
-                    username_unicode: user
-                        .username_unicode
-                        .as_ref()
+                    username_unicode: session
+                        .username_unicode()
                         .map(|s| s.to_owned()),
                 })
             },
@@ -365,25 +362,22 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let mut res = GetUserSessionResponse::default();
                 let fields = UserSessionFields::from(request.fields);
 
-                // Get user read lock
-                let user = session.user.read().await;
-
                 // Set the response fields based on the requested fields
                 if fields.intersects(UserSessionFields::SessionId) {
                     res.session_id = Some(session.id.to_owned());
                 }
 
                 if fields.intersects(UserSessionFields::UserId) {
-                    res.user_id = Some(user.id);
+                    res.user_id = Some(session.user_id);
                 }
 
                 if fields.intersects(UserSessionFields::Username) {
-                    res.username = Some(user.username.to_owned());
+                    res.username = Some(session.username().to_owned());
                 }
 
                 if fields.intersects(UserSessionFields::UsernameUnicode) {
                     res.username_unicode =
-                        user.username_unicode.as_ref().map(|s| s.to_owned());
+                        session.username_unicode().map(|s| s.to_owned());
                 }
 
                 // Return the response
@@ -414,22 +408,14 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     // Use `join_all` to asynchronously process all elements in
                     // the `values` iterator
                     futures::future::join_all(values.map(|session| async {
-                        let User {
-                            id: user_id,
-                            username,
-                            username_unicode,
-                            privileges,
-                            ..
-                        } = &*session.user.read().await;
-
                         UserData {
                             session_id: session.id.to_owned(),
-                            user_id: *user_id,
-                            username: username.to_owned(),
-                            username_unicode: username_unicode.to_owned(),
-                            privileges: *privileges,
+                            user_id: session.user_id,
+                            username: session.username(),
+                            username_unicode: session.username_unicode(),
+                            privileges: session.privileges(),
                             connection_info: Some(
-                                session.connection_info.to_owned(),
+                                session.connection_info.clone().into(),
                             ),
                             created_at: session.created_at.to_string(),
                             last_active: session.last_active(),
@@ -494,45 +480,24 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
-                let user_stats_packet = {
-                    let User {
-                        id: user_id,
-                        bancho_status:
-                            BanchoStatus {
-                                online_status,
-                                description,
-                                beatmap_id,
-                                beatmap_md5,
-                                mods,
-                                mode,
-                            },
-                        playing_stats:
-                            UserPlayingStats {
-                                rank,
-                                pp_v2,
-                                accuracy,
-                                total_score,
-                                ranked_score,
-                                playcount,
-                                ..
-                            },
-                        ..
-                    } = &*session.user.read().await;
+                let bancho_status = &session.bancho_status;
+                let playing_stats = &session.playing_stats;
 
+                let user_stats_packet = {
                     bancho_packets::server::user_stats(
-                        *user_id,
-                        *online_status as u8,
-                        description.to_owned(),
-                        beatmap_md5.to_owned(),
-                        mods.bits(),
-                        *mode as u8,
-                        *beatmap_id,
-                        *ranked_score,
-                        *accuracy,
-                        *playcount,
-                        *total_score,
-                        *rank,
-                        *pp_v2 as i16,
+                        session.user_id,
+                        bancho_status.online_status.load().val(),
+                        bancho_status.description(),
+                        bancho_status.beatmap_md5(),
+                        bancho_status.mods.load().bits(),
+                        bancho_status.mode.load().val(),
+                        bancho_status.beatmap_id(),
+                        playing_stats.ranked_score(),
+                        playing_stats.accuracy(),
+                        playing_stats.playcount(),
+                        playing_stats.total_score(),
+                        playing_stats.rank(),
+                        playing_stats.pp_v2() as i16,
                     )
                 };
 
@@ -574,30 +539,22 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     for session in user_sessions.indexed_by_session_id.values()
                     {
                         match &to {
-                            BanchoPacketTarget::SessionId(session_id) =>
-                                if &session.id == session_id {
-                                    continue
-                                },
-                            _ => {},
-                        }
-
-                        let user = session.user.read().await;
-
-                        match &to {
-                            BanchoPacketTarget::UserId(user_id) => {
-                                if &user.id == user_id {
-                                    continue
-                                }
-                            },
-                            BanchoPacketTarget::Username(username) => {
-                                if &user.username == username {
-                                    continue
-                                }
-                            },
+                            BanchoPacketTarget::SessionId(session_id)
+                                if &session.id == session_id =>
+                                continue,
+                            BanchoPacketTarget::UserId(user_id)
+                                if &session.user_id == user_id =>
+                                continue,
+                            BanchoPacketTarget::Username(username)
+                                if session.username.load().as_ref() ==
+                                    username =>
+                                continue,
                             BanchoPacketTarget::UsernameUnicode(
                                 username_unicode,
                             ) =>
-                                if let Some(n) = &user.username_unicode {
+                                if let Some(n) =
+                                    session.username_unicode.load().as_deref()
+                                {
                                     if n == username_unicode {
                                         continue
                                     }
@@ -607,14 +564,16 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                         presences_packets.extend(
                             bancho_packets::server::user_presence(
-                                user.id,
-                                user.username.to_owned(),
-                                0,  // todo
-                                0,  // todo
-                                1,  // todo
-                                0., // todo
-                                0., // todo
-                                1,  // todo
+                                session.user_id,
+                                session.username().to_owned(),
+                                session.utc_offset,
+                                0, // todo
+                                1, // todo
+                                session.connection_info.location.longitude
+                                    as f32,
+                                session.connection_info.location.latitude
+                                    as f32,
+                                session.playing_stats.rank(),
                             ),
                         );
                     }

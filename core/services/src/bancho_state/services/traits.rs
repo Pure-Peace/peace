@@ -23,7 +23,7 @@ pub trait BanchoStateBackgroundService {
 pub trait UserSessionsService {
     fn user_sessions(&self) -> &Arc<RwLock<UserSessionsInner>>;
 
-    async fn create(&self, user: Session) -> String;
+    async fn create(&self, user: Session) -> Arc<Session>;
 
     async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>>;
 

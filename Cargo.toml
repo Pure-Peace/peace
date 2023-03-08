@@ -97,6 +97,7 @@ chrono = "0.4"
 arc-swap = "1.6"
 memmap2 = "0.5"
 maxminddb = "0.23"
+atomic_float = "0.1"
 
 # derives
 bitmask-enum = "2.1"

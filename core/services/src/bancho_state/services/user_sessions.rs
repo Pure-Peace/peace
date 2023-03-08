@@ -23,7 +23,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
         &self.user_sessions
     }
 
-    async fn create(&self, session: Session) -> String {
+    async fn create(&self, session: Session) -> Arc<Session> {
         self.user_sessions.write().await.create(session).await
     }
 

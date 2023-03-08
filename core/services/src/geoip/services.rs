@@ -8,17 +8,7 @@ use peace_pb::geoip::{geoip_rpc_client::GeoipRpcClient, IpAddress};
 use std::{net::IpAddr, sync::Arc};
 use tonic::transport::Channel;
 
-macro_rules! map_to_string {
-    ($s: expr) => {
-        $s.map(|s| s.to_string())
-    };
-}
-
-macro_rules! get_name {
-    ($i: expr) => {
-        $i.names.as_ref().and_then(|n| map_to_string!(n.get("en")))
-    };
-}
+const LANGUAGE: &str = "en";
 
 #[derive(Clone)]
 pub enum GeoipServiceImpl {
@@ -145,9 +135,12 @@ impl GeoipService for GeoipServiceImpl {
                     .location
                     .as_ref()
                     .map(|lo| Location {
-                        latitude: lo.latitude,
-                        longitude: lo.longitude,
-                        timezone: map_to_string!(lo.time_zone),
+                        latitude: lo.latitude.unwrap_or_default(),
+                        longitude: lo.longitude.unwrap_or_default(),
+                        timezone: lo
+                            .time_zone
+                            .map(|s| s.to_string())
+                            .unwrap_or_default(),
                     })
                     .unwrap_or_default();
 
@@ -155,9 +148,17 @@ impl GeoipService for GeoipServiceImpl {
                     .continent
                     .as_ref()
                     .map(|co| Continent {
-                        geoname_id: co.geoname_id,
-                        code: map_to_string!(co.code),
-                        name: get_name!(co),
+                        geoname_id: co.geoname_id.unwrap_or_default(),
+                        code: co
+                            .code
+                            .map(|s| s.to_string())
+                            .unwrap_or_default(),
+                        name: co
+                            .names
+                            .as_ref()
+                            .and_then(|names| names.get(LANGUAGE))
+                            .and_then(|s| Some(s.to_string()))
+                            .unwrap_or_default(),
                     })
                     .unwrap_or_default();
 
@@ -165,9 +166,17 @@ impl GeoipService for GeoipServiceImpl {
                     .country
                     .as_ref()
                     .map(|c| Country {
-                        geoname_id: c.geoname_id,
-                        code: map_to_string!(c.iso_code),
-                        name: get_name!(c),
+                        geoname_id: c.geoname_id.unwrap_or_default(),
+                        code: c
+                            .iso_code
+                            .map(|s| s.to_string())
+                            .unwrap_or_default(),
+                        name: c
+                            .names
+                            .as_ref()
+                            .and_then(|names| names.get(LANGUAGE))
+                            .and_then(|s| Some(s.to_string()))
+                            .unwrap_or_default(),
                     })
                     .unwrap_or_default();
 
@@ -177,9 +186,17 @@ impl GeoipService for GeoipServiceImpl {
                     .filter(|regions| !regions.is_empty())
                     .and_then(|regions| regions.get(0))
                     .map(|r| Region {
-                        geoname_id: r.geoname_id,
-                        code: map_to_string!(r.iso_code),
-                        name: get_name!(r),
+                        geoname_id: r.geoname_id.unwrap_or_default(),
+                        code: r
+                            .iso_code
+                            .map(|s| s.to_string())
+                            .unwrap_or_default(),
+                        name: r
+                            .names
+                            .as_ref()
+                            .and_then(|names| names.get(LANGUAGE))
+                            .and_then(|s| Some(s.to_string()))
+                            .unwrap_or_default(),
                     })
                     .unwrap_or_default();
 
@@ -187,8 +204,13 @@ impl GeoipService for GeoipServiceImpl {
                     .city
                     .as_ref()
                     .map(|c| City {
-                        geoname_id: c.geoname_id,
-                        name: get_name!(c),
+                        geoname_id: c.geoname_id.unwrap_or_default(),
+                        name: c
+                            .names
+                            .as_ref()
+                            .and_then(|names| names.get(LANGUAGE))
+                            .and_then(|s| Some(s.to_string()))
+                            .unwrap_or_default(),
                     })
                     .unwrap_or_default();
 

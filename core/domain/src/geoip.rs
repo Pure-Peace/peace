@@ -16,11 +16,11 @@ pub struct GeoipData {
 impl From<RpcGeoipData> for GeoipData {
     fn from(resp: RpcGeoipData) -> Self {
         Self {
-            location: resp.location.unwrap().into(),
-            continent: resp.continent.unwrap().into(),
-            country: resp.country.unwrap().into(),
-            region: resp.region.unwrap().into(),
-            city: resp.city.unwrap().into(),
+            location: resp.location.unwrap_or_default().into(),
+            continent: resp.continent.unwrap_or_default().into(),
+            country: resp.country.unwrap_or_default().into(),
+            region: resp.region.unwrap_or_default().into(),
+            city: resp.city.unwrap_or_default().into(),
         }
     }
 }
@@ -39,17 +39,17 @@ impl Into<RpcGeoipData> for GeoipData {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Location {
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub timezone: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub timezone: String,
 }
 
 impl From<RpcLocation> for Location {
     fn from(resp: RpcLocation) -> Self {
         Self {
-            latitude: resp.latitude.unwrap().into(),
-            longitude: resp.longitude.unwrap().into(),
-            timezone: resp.timezone.unwrap().into(),
+            latitude: resp.latitude.unwrap_or_default(),
+            longitude: resp.longitude.unwrap_or_default(),
+            timezone: resp.timezone.unwrap_or_default(),
         }
     }
 }
@@ -66,17 +66,17 @@ impl Into<RpcLocation> for Location {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Continent {
-    pub geoname_id: Option<u32>,
-    pub code: Option<String>,
-    pub name: Option<String>,
+    pub geoname_id: u32,
+    pub code: String,
+    pub name: String,
 }
 
 impl From<RpcContinent> for Continent {
     fn from(resp: RpcContinent) -> Self {
         Self {
-            geoname_id: resp.geoname_id.unwrap().into(),
-            code: resp.code.unwrap().into(),
-            name: resp.name.unwrap().into(),
+            geoname_id: resp.geoname_id.unwrap_or_default(),
+            code: resp.code.unwrap_or_default(),
+            name: resp.name.unwrap_or_default(),
         }
     }
 }
@@ -93,17 +93,17 @@ impl Into<RpcContinent> for Continent {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Country {
-    pub geoname_id: Option<u32>,
-    pub code: Option<String>,
-    pub name: Option<String>,
+    pub geoname_id: u32,
+    pub code: String,
+    pub name: String,
 }
 
 impl From<RpcCountry> for Country {
     fn from(resp: RpcCountry) -> Self {
         Self {
-            geoname_id: resp.geoname_id.unwrap().into(),
-            code: resp.code.unwrap().into(),
-            name: resp.name.unwrap().into(),
+            geoname_id: resp.geoname_id.unwrap_or_default(),
+            code: resp.code.unwrap_or_default(),
+            name: resp.name.unwrap_or_default(),
         }
     }
 }
@@ -120,17 +120,17 @@ impl Into<RpcCountry> for Country {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct Region {
-    pub geoname_id: Option<u32>,
-    pub code: Option<String>,
-    pub name: Option<String>,
+    pub geoname_id: u32,
+    pub code: String,
+    pub name: String,
 }
 
 impl From<RpcRegion> for Region {
     fn from(resp: RpcRegion) -> Self {
         Self {
-            geoname_id: resp.geoname_id.unwrap().into(),
-            code: resp.code.unwrap().into(),
-            name: resp.name.unwrap().into(),
+            geoname_id: resp.geoname_id.unwrap_or_default(),
+            code: resp.code.unwrap_or_default(),
+            name: resp.name.unwrap_or_default(),
         }
     }
 }
@@ -147,15 +147,15 @@ impl Into<RpcRegion> for Region {
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct City {
-    pub geoname_id: Option<u32>,
-    pub name: Option<String>,
+    pub geoname_id: u32,
+    pub name: String,
 }
 
 impl From<RpcCity> for City {
     fn from(resp: RpcCity) -> Self {
         Self {
-            geoname_id: resp.geoname_id.unwrap().into(),
-            name: resp.name.unwrap().into(),
+            geoname_id: resp.geoname_id.unwrap_or_default(),
+            name: resp.name.unwrap_or_default(),
         }
     }
 }
