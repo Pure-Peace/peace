@@ -4,8 +4,15 @@ use chrono::{DateTime, Utc};
 use peace_pb::bancho_state::{
     ConnectionInfo, CreateUserSessionRequest, UserQuery,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{self, AtomicI64},
+        Arc,
+    },
+};
 use tokio::sync::{Mutex, MutexGuard, RwLock};
+use tools::Timestamp;
 use uuid::Uuid;
 
 #[rustfmt::skip]
@@ -152,20 +159,12 @@ pub struct User {
     pub username_unicode: Option<String>,
     /// User's privileges level.
     pub privileges: i32,
-    /// The timestamp of when the user was last active.
-    pub last_active: DateTime<Utc>,
-
+    pub client_version: String,
+    pub utc_offset: i32,
+    pub display_city: bool,
+    pub only_friend_pm_allowed: bool,
     pub bancho_status: BanchoStatus,
-
     pub playing_stats: UserPlayingStats,
-}
-
-impl User {
-    /// Update the last active timestamp to the current time.
-    #[inline]
-    pub fn update_active(&mut self) {
-        self.last_active = Utc::now();
-    }
 }
 
 pub type PacketData = Vec<u8>;
@@ -184,6 +183,7 @@ pub struct Session {
     pub packets_queue: Arc<Mutex<PacketsQueue>>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
+    pub last_active: Arc<AtomicI64>,
 }
 
 impl Session {
@@ -195,7 +195,18 @@ impl Session {
             user: Arc::new(RwLock::new(user)),
             packets_queue: Arc::new(Mutex::new(PacketsQueue::new())),
             created_at: Utc::now(),
+            last_active: Arc::new(AtomicI64::new(Timestamp::now())),
         }
+    }
+
+    #[inline]
+    pub fn update_active(&self) {
+        self.last_active.store(Timestamp::now(), atomic::Ordering::SeqCst);
+    }
+
+    #[inline]
+    pub fn last_active(&self) -> i64 {
+        self.last_active.load(atomic::Ordering::SeqCst)
     }
 
     pub fn from_request(
@@ -206,6 +217,10 @@ impl Session {
             username,
             username_unicode,
             privileges,
+            client_version,
+            utc_offset,
+            display_city,
+            only_friend_pm_allowed,
             connection_info,
         } = request;
 
@@ -215,7 +230,10 @@ impl Session {
                 username,
                 username_unicode,
                 privileges,
-                last_active: Utc::now(),
+                client_version,
+                utc_offset,
+                display_city,
+                only_friend_pm_allowed,
                 ..Default::default()
             },
             connection_info.ok_or(CreateSessionError::InvalidConnectionInfo)?,

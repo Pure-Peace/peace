@@ -169,10 +169,10 @@ impl BanchoService for BanchoServiceImpl {
                         username: user.name.to_owned(),
                         username_unicode: user.name_unicode,
                         privileges: 1,
-                        // client_version
-                        // utc_offset
-                        // display_city
-                        // only_friend_pm_allowed
+                        client_version,
+                        utc_offset,
+                        display_city,
+                        only_friend_pm_allowed,
                         connection_info: Some(ConnectionInfo {
                             ip: client_ip.to_string(),
                             geoip_data: geoip_data.map(|g| g.into()),

@@ -280,17 +280,15 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 // Get session based on the provided query
-                let session = svc
-                    .user_sessions_service
-                    .get(&query)
-                    .await
-                    .ok_or(BanchoStateError::SessionNotExists)?;
-
-                // Update the user's last active time and retrieve their ID.
                 let user_id = {
-                    let mut user = session.user.write().await;
-                    user.update_active();
-                    user.id
+                    let session = svc
+                        .user_sessions_service
+                        .get(&query)
+                        .await
+                        .ok_or(BanchoStateError::SessionNotExists)?;
+
+                    session.update_active();
+                    session.user_id
                 };
 
                 // Return the user ID in a response.
@@ -421,7 +419,6 @@ impl BanchoStateService for BanchoStateServiceImpl {
                             username,
                             username_unicode,
                             privileges,
-                            last_active,
                             ..
                         } = &*session.user.read().await;
 
@@ -435,7 +432,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                                 session.connection_info.to_owned(),
                             ),
                             created_at: session.created_at.to_string(),
-                            last_active: last_active.to_string(),
+                            last_active: session.last_active(),
                             queued_packets: session.queued_packets().await
                                 as i32,
                         }

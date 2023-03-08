@@ -109,7 +109,11 @@ message CreateUserSessionRequest {
   string username = 2;
   optional string username_unicode = 3;
   int32 privileges = 4;
-  ConnectionInfo connection_info = 5;
+  string client_version = 5;
+  int32 utc_offset = 6;
+  bool display_city = 7;
+  bool only_friend_pm_allowed = 8;
+  ConnectionInfo connection_info = 9;
 }
 
 message CreateUserSessionResponse { string session_id = 1; }
@@ -133,7 +137,7 @@ message UserData {
   int32 privileges = 5;
   ConnectionInfo connection_info = 6;
   string created_at = 7;
-  string last_active = 8;
+  int64 last_active = 8;
   int32 queued_packets = 9;
 }
 

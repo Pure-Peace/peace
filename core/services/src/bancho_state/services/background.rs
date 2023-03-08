@@ -57,8 +57,8 @@ impl BanchoStateBackgroundServiceImpl {
                             user_sessions.indexed_by_session_id.values()
                         {
                             let user = session.user.read().await;
-                            if current_timestamp - user.last_active.timestamp()
-                                > DEACTIVE
+                            if current_timestamp - session.last_active() >
+                                DEACTIVE
                             {
                                 users_deactive.push((
                                     user.id,
