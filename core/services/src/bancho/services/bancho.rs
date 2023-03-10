@@ -251,8 +251,17 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                let PresenceRequestAllRequest { session_id } = request;
+
+                let _resp = svc
+                    .bancho_state_service
+                    .send_all_presences(SendAllPresencesRequest {
+                        to: Some(
+                            BanchoPacketTarget::SessionId(session_id).into(),
+                        ),
+                    })
+                    .await?;
 
                 Ok(HandleCompleted {})
             },
