@@ -485,6 +485,27 @@ impl Session {
             None => dequeue(&mut self.packets_queue.lock().await),
         }
     }
+
+    pub fn user_stats_packet(&self) -> Vec<u8> {
+        let bancho_status = &self.bancho_status;
+        let playing_stats = &self.playing_stats;
+
+        bancho_packets::server::user_stats(
+            self.user_id,
+            bancho_status.online_status.load().val(),
+            bancho_status.description(),
+            bancho_status.beatmap_md5(),
+            bancho_status.mods.load().bits(),
+            bancho_status.mode.load().val(),
+            bancho_status.beatmap_id(),
+            playing_stats.ranked_score(),
+            playing_stats.accuracy(),
+            playing_stats.playcount(),
+            playing_stats.total_score(),
+            playing_stats.rank(),
+            playing_stats.pp_v2() as i16,
+        )
+    }
 }
 
 /// A struct representing a collection of user sessions.

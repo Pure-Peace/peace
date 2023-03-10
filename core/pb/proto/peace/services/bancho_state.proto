@@ -37,6 +37,8 @@ service BanchoStateRPC {
 
   rpc SendUserStatsPacket(SendUserStatsPacketRequest)
       returns (peace.base.ExecSuccess);
+  rpc BatchSendUserStatsPacket(BatchSendUserStatsPacketRequest)
+      returns (peace.base.ExecSuccess);
   rpc SendAllPresences(SendAllPresencesRequest)
       returns (peace.base.ExecSuccess);
 }
@@ -151,6 +153,11 @@ message GetAllSessionsResponse {
 
 message SendUserStatsPacketRequest {
   RawUserQuery user_query = 1;
+  RawBanchoPacketTarget to = 2;
+}
+
+message BatchSendUserStatsPacketRequest {
+  repeated RawUserQuery user_queries = 1;
   RawBanchoPacketTarget to = 2;
 }
 

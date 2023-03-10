@@ -97,6 +97,11 @@ pub trait BanchoStateService {
         request: SendUserStatsPacketRequest,
     ) -> Result<ExecSuccess, BanchoStateError>;
 
+    async fn batch_send_user_stats_packet(
+        &self,
+        request: BatchSendUserStatsPacketRequest,
+    ) -> Result<ExecSuccess, BanchoStateError>;
+
     async fn send_all_presences(
         &self,
         request: SendAllPresencesRequest,

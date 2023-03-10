@@ -480,30 +480,65 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
-                let bancho_status = &session.bancho_status;
-                let playing_stats = &session.playing_stats;
+                self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
+                    target: Some(to),
+                    packets: session.user_stats_packet(),
+                })
+                .await?;
 
-                let user_stats_packet = {
-                    bancho_packets::server::user_stats(
-                        session.user_id,
-                        bancho_status.online_status.load().val(),
-                        bancho_status.description(),
-                        bancho_status.beatmap_md5(),
-                        bancho_status.mods.load().bits(),
-                        bancho_status.mode.load().val(),
-                        bancho_status.beatmap_id(),
-                        playing_stats.ranked_score(),
-                        playing_stats.accuracy(),
-                        playing_stats.playcount(),
-                        playing_stats.total_score(),
-                        playing_stats.rank(),
-                        playing_stats.pp_v2() as i16,
-                    )
-                };
+                Ok(ExecSuccess {})
+            },
+        }
+    }
+
+    async fn batch_send_user_stats_packet(
+        &self,
+        request: BatchSendUserStatsPacketRequest,
+    ) -> Result<ExecSuccess, BanchoStateError> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) => svc
+                .client()
+                .batch_send_user_stats_packet(request)
+                .await
+                .map_err(BanchoStateError::RpcError)
+                .map(|resp| resp.into_inner()),
+            BanchoStateServiceImpl::Local(svc) => {
+                if request.user_queries.len() == 0 {
+                    return Ok(ExecSuccess {})
+                }
+                let to = request.to.ok_or(BanchoStateError::InvalidArgument)?;
+
+                let mut user_stats_packets = Vec::new();
+
+                let user_sessions =
+                    svc.user_sessions_service.user_sessions().read().await;
+
+                for raw_query in request.user_queries {
+                    let query = raw_query.into();
+                    let session = match &query {
+                        UserQuery::UserId(user_id) =>
+                            user_sessions.indexed_by_user_id.get(user_id),
+                        UserQuery::Username(username) =>
+                            user_sessions.indexed_by_username.get(username),
+                        UserQuery::UsernameUnicode(username_unicode) =>
+                            user_sessions
+                                .indexed_by_username_unicode
+                                .get(username_unicode),
+                        UserQuery::SessionId(session_id) =>
+                            user_sessions.indexed_by_session_id.get(session_id),
+                    };
+
+                    if session.is_none() {
+                        continue
+                    }
+
+                    user_stats_packets
+                        .extend(session.unwrap().user_stats_packet());
+                }
 
                 self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
                     target: Some(to),
-                    packets: user_stats_packet,
+                    packets: user_stats_packets,
                 })
                 .await?;
 
