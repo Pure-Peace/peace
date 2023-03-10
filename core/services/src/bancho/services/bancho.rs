@@ -279,9 +279,25 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
-
+            Self::Local(svc) => {
+                let StatsRequest { session_id, request_users } = request;
+                let _resp = svc
+                    .bancho_state_service
+                    .batch_send_user_stats_packet(
+                        BatchSendUserStatsPacketRequest {
+                            user_queries: request_users
+                                .into_iter()
+                                .map(|user_id| {
+                                    UserQuery::UserId(user_id).into()
+                                })
+                                .collect(),
+                            to: Some(
+                                BanchoPacketTarget::SessionId(session_id)
+                                    .into(),
+                            ),
+                        },
+                    )
+                    .await?;
                 Ok(HandleCompleted {})
             },
         }

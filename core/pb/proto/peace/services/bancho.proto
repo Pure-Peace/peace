@@ -59,7 +59,10 @@ message LobbyPartRequest { string session_id = 1; }
 
 message LobbyJoinRequest { string session_id = 1; }
 
-message StatsRequest { string session_id = 1; }
+message StatsRequest {
+  string session_id = 1;
+  repeated int32 request_users = 2;
+}
 
 message ChangeActionRequest { string session_id = 1; }
 

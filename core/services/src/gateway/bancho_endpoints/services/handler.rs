@@ -9,7 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use bancho_packets::{Packet, PacketId, PacketReader};
+use bancho_packets::{Packet, PacketId, PacketReader, PayloadReader};
 use peace_pb::{
     bancho::*,
     bancho_state::{
@@ -46,12 +46,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<Response, LoginError> {
         if version.is_none() {
-            return Err(LoginError::EmptyClientVersion);
+            return Err(LoginError::EmptyClientVersion)
         }
 
         let request = parser::parse_osu_login_request_body(body)?;
         if request.client_version != version.unwrap().as_str() {
-            return Err(LoginError::MismatchedClientVersion);
+            return Err(LoginError::MismatchedClientVersion)
         }
 
         let LoginSuccess { session_id, packet } = self
@@ -101,7 +101,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                 error!("{err}");
                 err
             })?;
-        return Ok(packets.data.into_response());
+        return Ok(packets.data.into_response())
     }
 
     async fn check_user_session(
@@ -113,9 +113,8 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .check_user_session_exists(query)
             .await
             .map_err(|err| match err {
-                BanchoStateError::SessionNotExists => {
-                    BanchoHttpError::SessionNotExists(err)
-                },
+                BanchoStateError::SessionNotExists =>
+                    BanchoHttpError::SessionNotExists(err),
                 _ => BanchoHttpError::BanchoStateError(err),
             })?
             .user_id)
@@ -158,9 +157,18 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                     .map_err(handing_err)?;
             },
             PacketId::OSU_USER_STATS_REQUEST => {
+                let request_users = PayloadReader::new(
+                    packet
+                        .payload
+                        .ok_or(BanchoHttpError::PacketPayloadNotExists)?,
+                )
+                .read::<Vec<i32>>()
+                .ok_or(BanchoHttpError::InvalidPacketPayload)?;
+
                 self.bancho_service
                     .request_stats(StatsRequest {
                         session_id: session_id.to_owned(),
+                        request_users,
                     })
                     .await
                     .map_err(handing_err)?;

@@ -53,6 +53,10 @@ pub enum BanchoHttpError {
     InvalidUserAgentHeader,
     #[error("failed to parse request")]
     ParseRequestError,
+    #[error("packet payload is required")]
+    PacketPayloadNotExists,
+    #[error("invalid packet payload")]
+    InvalidPacketPayload,
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
     #[error(transparent)]
