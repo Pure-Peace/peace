@@ -66,7 +66,10 @@ message StatsRequest {
 
 message ChangeActionRequest { string session_id = 1; }
 
-message ReceiveUpdatesRequest { string session_id = 1; }
+message ReceiveUpdatesRequest {
+  string session_id = 1;
+  int32 presence_filter = 2;
+}
 
 message ToggleBlockNonFriendDmsRequest { string session_id = 1; }
 

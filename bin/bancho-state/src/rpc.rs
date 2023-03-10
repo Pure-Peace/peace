@@ -157,4 +157,26 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .map_err(|err| err.into())
             .map(|resp| Response::new(resp))
     }
+
+    async fn batch_send_user_stats_packet(
+        &self,
+        request: Request<BatchSendUserStatsPacketRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.bancho_state_service
+            .batch_send_user_stats_packet(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn update_presence_filter(
+        &self,
+        request: Request<UpdatePresenceFilterRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.bancho_state_service
+            .update_presence_filter(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
 }

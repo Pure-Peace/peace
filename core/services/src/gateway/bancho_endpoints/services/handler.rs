@@ -1,7 +1,7 @@
 use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
-    bancho_state::{BanchoStateError, DynBanchoStateService},
+    bancho_state::{BanchoStateError, DynBanchoStateService, PresenceFilter},
     gateway::bancho_endpoints::{
         extractors::{BanchoClientToken, BanchoClientVersion},
         parser, BanchoHttpError, LoginError, CHO_PROTOCOL, CHO_TOKEN,
@@ -10,6 +10,7 @@ use crate::{
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::{Packet, PacketId, PacketReader, PayloadReader};
+use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::*,
     bancho_state::{
@@ -182,9 +183,21 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                     .map_err(handing_err)?;
             },
             PacketId::OSU_USER_RECEIVE_UPDATES => {
+                let presence_filter = PresenceFilter::from_i32(
+                    PayloadReader::new(
+                        packet
+                            .payload
+                            .ok_or(BanchoHttpError::PacketPayloadNotExists)?,
+                    )
+                    .read::<i32>()
+                    .ok_or(BanchoHttpError::InvalidPacketPayload)?,
+                )
+                .ok_or(BanchoHttpError::InvalidParams)?;
+
                 self.bancho_service
                     .receive_updates(ReceiveUpdatesRequest {
                         session_id: session_id.to_owned(),
+                        presence_filter: presence_filter.val(),
                     })
                     .await
                     .map_err(handing_err)?;

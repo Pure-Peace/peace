@@ -57,6 +57,8 @@ pub enum BanchoHttpError {
     PacketPayloadNotExists,
     #[error("invalid packet payload")]
     InvalidPacketPayload,
+    #[error("invalid params")]
+    InvalidParams,
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
     #[error(transparent)]

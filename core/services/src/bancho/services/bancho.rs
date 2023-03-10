@@ -333,8 +333,18 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                let ReceiveUpdatesRequest { session_id, presence_filter } =
+                    request;
+
+                svc.bancho_state_service
+                    .update_presence_filter(UpdatePresenceFilterRequest {
+                        user_query: Some(
+                            UserQuery::SessionId(session_id).into(),
+                        ),
+                        presence_filter,
+                    })
+                    .await?;
 
                 Ok(HandleCompleted {})
             },
