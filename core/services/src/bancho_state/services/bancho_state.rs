@@ -1,9 +1,10 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
     BanchoStateError, DynBanchoStateBackgroundService, DynBanchoStateService,
-    DynUserSessionsService, Session,
+    DynUserSessionsService, PresenceFilter, Session,
 };
 use async_trait::async_trait;
+use num_traits::FromPrimitive;
 use peace_pb::{
     bancho_state::{bancho_state_rpc_client::BanchoStateRpcClient, *},
     base::ExecSuccess,
@@ -349,7 +350,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Extract the query and fields from the request
                 let query = request
                     .user_query
-                    .ok_or(BanchoStateError::SessionNotExists)?;
+                    .ok_or(BanchoStateError::InvalidArgument)?;
 
                 // Get session based on the provided query
                 let session = svc
@@ -471,7 +472,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Extract the query and fields from the request
                 let query = request
                     .user_query
-                    .ok_or(BanchoStateError::SessionNotExists)?;
+                    .ok_or(BanchoStateError::InvalidArgument)?;
 
                 // Get session based on the provided query
                 let session = svc
@@ -621,6 +622,41 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     packets: presences_packets,
                 })
                 .await?;
+
+                Ok(ExecSuccess {})
+            },
+        }
+    }
+
+    async fn update_presence_filter(
+        &self,
+        request: UpdatePresenceFilterRequest,
+    ) -> Result<ExecSuccess, BanchoStateError> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) => svc
+                .client()
+                .update_presence_filter(request)
+                .await
+                .map_err(BanchoStateError::RpcError)
+                .map(|resp| resp.into_inner()),
+            BanchoStateServiceImpl::Local(svc) => {
+                // Extract the query and fields from the request
+                let query = request
+                    .user_query
+                    .ok_or(BanchoStateError::SessionNotExists)?;
+
+                let presence_filter =
+                    PresenceFilter::from_i32(request.presence_filter)
+                        .ok_or(BanchoStateError::InvalidParams)?;
+
+                // Get session based on the provided query
+                let session = svc
+                    .user_sessions_service
+                    .get(&query.into())
+                    .await
+                    .ok_or(BanchoStateError::SessionNotExists)?;
+
+                session.set_presence_filter(presence_filter);
 
                 Ok(ExecSuccess {})
             },

@@ -147,6 +147,22 @@ impl UserOnlineStatus {
     }
 }
 
+#[rustfmt::skip]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
+pub enum PresenceFilter {
+    #[default]
+    None    = 0,
+    All     = 1,
+    Friends = 2,
+}
+
+impl PresenceFilter {
+    #[inline]
+    pub fn val(&self) -> i32 {
+        *self as i32
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct UserPlayingStats {
     pub rank: AtomicI32,
@@ -342,6 +358,7 @@ pub struct Session {
     pub privileges: AtomicI32,
     pub client_version: String,
     pub utc_offset: u8,
+    pub presence_filter: ArcSwap<PresenceFilter>,
     pub display_city: bool,
     pub only_friend_pm_allowed: AtomicBool,
     pub bancho_status: BanchoStatus,
@@ -376,6 +393,7 @@ impl Session {
             privileges: AtomicI32::new(privileges),
             client_version,
             utc_offset,
+            presence_filter: Default::default(),
             display_city,
             only_friend_pm_allowed: AtomicBool::new(only_friend_pm_allowed),
             bancho_status: BanchoStatus::default().into(),
@@ -430,6 +448,16 @@ impl Session {
     #[inline]
     pub fn privileges(&self) -> i32 {
         self.privileges.load(atomic::Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn presence_filter(&self) -> PresenceFilter {
+        *self.presence_filter.load().as_ref()
+    }
+
+    #[inline]
+    pub fn set_presence_filter(&self, presence_filter: PresenceFilter) {
+        self.presence_filter.store(Arc::new(presence_filter))
     }
 
     #[inline]

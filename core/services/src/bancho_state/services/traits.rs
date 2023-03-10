@@ -106,4 +106,9 @@ pub trait BanchoStateService {
         &self,
         request: SendAllPresencesRequest,
     ) -> Result<ExecSuccess, BanchoStateError>;
+
+    async fn update_presence_filter(
+        &self,
+        request: UpdatePresenceFilterRequest,
+    ) -> Result<ExecSuccess, BanchoStateError>;
 }
