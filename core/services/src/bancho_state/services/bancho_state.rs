@@ -505,9 +505,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 if request.user_queries.len() == 0 {
-                    return Ok(ExecSuccess {})
+                    return Ok(ExecSuccess {});
                 }
-                let to = request.to.ok_or(BanchoStateError::InvalidArgument)?;
+                let to =
+                    request.to.ok_or(BanchoStateError::InvalidArgument)?.into();
 
                 let mut user_stats_packets = Vec::new();
 
@@ -517,28 +518,62 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 for raw_query in request.user_queries {
                     let query = raw_query.into();
                     let session = match &query {
-                        UserQuery::UserId(user_id) =>
-                            user_sessions.indexed_by_user_id.get(user_id),
-                        UserQuery::Username(username) =>
-                            user_sessions.indexed_by_username.get(username),
-                        UserQuery::UsernameUnicode(username_unicode) =>
+                        UserQuery::UserId(user_id) => {
+                            user_sessions.indexed_by_user_id.get(user_id)
+                        },
+                        UserQuery::Username(username) => {
+                            user_sessions.indexed_by_username.get(username)
+                        },
+                        UserQuery::UsernameUnicode(username_unicode) => {
                             user_sessions
                                 .indexed_by_username_unicode
-                                .get(username_unicode),
-                        UserQuery::SessionId(session_id) =>
-                            user_sessions.indexed_by_session_id.get(session_id),
+                                .get(username_unicode)
+                        },
+                        UserQuery::SessionId(session_id) => {
+                            user_sessions.indexed_by_session_id.get(session_id)
+                        },
                     };
 
-                    if session.is_none() {
-                        continue
+                    let session = match session {
+                        Some(s) => s,
+                        None => continue,
+                    };
+
+                    match &to {
+                        BanchoPacketTarget::SessionId(session_id)
+                            if &session.id == session_id =>
+                        {
+                            continue
+                        },
+                        BanchoPacketTarget::UserId(user_id)
+                            if &session.user_id == user_id =>
+                        {
+                            continue
+                        },
+                        BanchoPacketTarget::Username(username)
+                            if session.username.load().as_ref() == username =>
+                        {
+                            continue
+                        },
+                        BanchoPacketTarget::UsernameUnicode(
+                            username_unicode,
+                        ) => {
+                            if let Some(n) =
+                                session.username_unicode.load().as_deref()
+                            {
+                                if n == username_unicode {
+                                    continue;
+                                }
+                            }
+                        },
+                        _ => {},
                     }
 
-                    user_stats_packets
-                        .extend(session.unwrap().user_stats_packet());
+                    user_stats_packets.extend(session.user_stats_packet());
                 }
 
                 self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-                    target: Some(to),
+                    target: Some(to.into()),
                     packets: user_stats_packets,
                 })
                 .await?;
@@ -577,24 +612,31 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         match &to {
                             BanchoPacketTarget::SessionId(session_id)
                                 if &session.id == session_id =>
-                                continue,
+                            {
+                                continue
+                            },
                             BanchoPacketTarget::UserId(user_id)
                                 if &session.user_id == user_id =>
-                                continue,
+                            {
+                                continue
+                            },
                             BanchoPacketTarget::Username(username)
-                                if session.username.load().as_ref() ==
-                                    username =>
-                                continue,
+                                if session.username.load().as_ref()
+                                    == username =>
+                            {
+                                continue
+                            },
                             BanchoPacketTarget::UsernameUnicode(
                                 username_unicode,
-                            ) =>
+                            ) => {
                                 if let Some(n) =
                                     session.username_unicode.load().as_deref()
                                 {
                                     if n == username_unicode {
-                                        continue
+                                        continue;
                                     }
-                                },
+                                }
+                            },
                             _ => {},
                         }
 
