@@ -2,9 +2,8 @@ use crate::BanchoRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::{
-    bancho::bancho_rpc_server::BanchoRpcServer,
-    bancho_state::{self, BANCHO_STATE_DESCRIPTOR_SET},
-    geoip,
+    bancho::{bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET},
+    bancho_state, geoip,
 };
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
@@ -71,7 +70,7 @@ impl Application for App {
     }
 
     fn service_descriptors(&self) -> Option<&[&[u8]]> {
-        Some(&[BANCHO_STATE_DESCRIPTOR_SET])
+        Some(&[BANCHO_DESCRIPTOR_SET])
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
