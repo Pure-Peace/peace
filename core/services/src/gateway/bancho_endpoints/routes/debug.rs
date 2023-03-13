@@ -4,6 +4,8 @@ use axum::{
     routing::*,
     Extension, Router,
 };
+use peace_pb::bancho_state::UserData;
+use serde_json::{Map, Value};
 
 pub struct BanchoDebugRouter;
 
@@ -43,9 +45,37 @@ pub async fn test() -> Response {
 pub async fn get_all_sessions(
     Extension(bancho_state_service): Extension<DynBanchoStateService>,
 ) -> Response {
+    #[derive(Serialize)]
+    struct AllSessions {
+        len: u64,
+        indexed_by_session_id: Vec<Map<String, Value>>,
+        indexed_by_user_id: Vec<Map<String, Value>>,
+        indexed_by_username: Vec<Map<String, Value>>,
+        indexed_by_username_unicode: Vec<Map<String, Value>>,
+    }
+
+    fn convert(input: Vec<UserData>) -> Vec<Map<String, Value>> {
+        input
+            .into_iter()
+            .map(|i| serde_json::from_str(&i.json).unwrap())
+            .collect()
+    }
+
     bancho_state_service
         .get_all_sessions()
         .await
-        .map(|res| serde_json::to_string_pretty(&res).unwrap().into_response())
+        .map(|res| {
+            serde_json::to_string_pretty(&AllSessions {
+                len: res.len,
+                indexed_by_session_id: convert(res.indexed_by_session_id),
+                indexed_by_user_id: convert(res.indexed_by_user_id),
+                indexed_by_username: convert(res.indexed_by_username),
+                indexed_by_username_unicode: convert(
+                    res.indexed_by_username_unicode,
+                ),
+            })
+            .unwrap()
+            .into_response()
+        })
         .unwrap_or_else(|err| err.into_response())
 }
