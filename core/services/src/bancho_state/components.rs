@@ -200,15 +200,15 @@ pub type PacketsQueue = Vec<PacketDataPtr>;
 
 #[derive(Debug, Default, Serialize)]
 pub struct UserModeStatSets {
-    pub standard: ModeStats,
-    pub taiko: ModeStats,
-    pub fruits: ModeStats,
-    pub mania: ModeStats,
-    pub standard_relax: ModeStats,
-    pub taiko_relax: ModeStats,
-    pub fruits_relax: ModeStats,
-    pub standard_autopilot: ModeStats,
-    pub standard_score_v2: ModeStats,
+    pub standard: Option<ModeStats>,
+    pub taiko: Option<ModeStats>,
+    pub fruits: Option<ModeStats>,
+    pub mania: Option<ModeStats>,
+    pub standard_relax: Option<ModeStats>,
+    pub taiko_relax: Option<ModeStats>,
+    pub fruits_relax: Option<ModeStats>,
+    pub standard_autopilot: Option<ModeStats>,
+    pub standard_score_v2: Option<ModeStats>,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -352,19 +352,23 @@ impl Session {
     }
 
     #[inline]
-    pub fn mode_stats(&self) -> &ModeStats {
+    pub fn mode_stats(&self) -> Option<&ModeStats> {
         match &self.bancho_status.mode.load().as_ref() {
-            GameMode::Standard => &self.mode_stat_sets.standard,
-            GameMode::Taiko => &self.mode_stat_sets.taiko,
-            GameMode::Fruits => &self.mode_stat_sets.fruits,
-            GameMode::Mania => &self.mode_stat_sets.mania,
-            GameMode::StandardRelax => &self.mode_stat_sets.standard_relax,
-            GameMode::TaikoRelax => &self.mode_stat_sets.taiko_relax,
-            GameMode::FruitsRelax => &self.mode_stat_sets.fruits_relax,
-            GameMode::StandardAutopilot => {
-                &self.mode_stat_sets.standard_autopilot
+            GameMode::Standard => self.mode_stat_sets.standard.as_ref(),
+            GameMode::Taiko => self.mode_stat_sets.taiko.as_ref(),
+            GameMode::Fruits => self.mode_stat_sets.fruits.as_ref(),
+            GameMode::Mania => self.mode_stat_sets.mania.as_ref(),
+            GameMode::StandardRelax => {
+                self.mode_stat_sets.standard_relax.as_ref()
             },
-            GameMode::StandardScoreV2 => &self.mode_stat_sets.standard_score_v2,
+            GameMode::TaikoRelax => self.mode_stat_sets.taiko_relax.as_ref(),
+            GameMode::FruitsRelax => self.mode_stat_sets.fruits_relax.as_ref(),
+            GameMode::StandardAutopilot => {
+                self.mode_stat_sets.standard_autopilot.as_ref()
+            },
+            GameMode::StandardScoreV2 => {
+                self.mode_stat_sets.standard_score_v2.as_ref()
+            },
         }
     }
 
@@ -381,12 +385,12 @@ impl Session {
             bancho_status.mods.load().bits(),
             bancho_status.mode.load().val(),
             bancho_status.beatmap_id.val(),
-            mode_stats.ranked_score.val(),
-            mode_stats.accuracy.val(),
-            mode_stats.playcount.val(),
-            mode_stats.total_score.val(),
-            mode_stats.rank.val(),
-            mode_stats.pp_v2.val() as i16,
+            mode_stats.map(|s| s.ranked_score.val()).unwrap_or_default(),
+            mode_stats.map(|s| s.accuracy.val()).unwrap_or_default(),
+            mode_stats.map(|s| s.playcount.val()).unwrap_or_default(),
+            mode_stats.map(|s| s.total_score.val()).unwrap_or_default(),
+            mode_stats.map(|s| s.rank.val()).unwrap_or_default(),
+            mode_stats.map(|s| s.pp_v2.val() as i16).unwrap_or_default(),
         )
     }
 
@@ -400,7 +404,7 @@ impl Session {
             1, // todo
             self.connection_info.location.longitude as f32,
             self.connection_info.location.latitude as f32,
-            self.mode_stats().rank.val(),
+            self.mode_stats().map(|s| s.rank.val()).unwrap_or_default(),
         )
     }
 }
