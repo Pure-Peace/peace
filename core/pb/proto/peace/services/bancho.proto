@@ -83,4 +83,7 @@ message ToggleBlockNonFriendDmsRequest { string session_id = 1; }
 
 message UserLogoutRequest { string session_id = 1; }
 
-message PresenceRequest { string session_id = 1; }
+message PresenceRequest {
+  string session_id = 1;
+  repeated int32 request_users = 2;
+}

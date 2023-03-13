@@ -249,9 +249,18 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             },
             PacketId::OSU_USER_SET_AWAY_MESSAGE => todo!(),
             PacketId::OSU_USER_PRESENCE_REQUEST => {
+                let request_users = PayloadReader::new(
+                    packet
+                        .payload
+                        .ok_or(BanchoHttpError::PacketPayloadNotExists)?,
+                )
+                .read::<Vec<i32>>()
+                .ok_or(BanchoHttpError::InvalidPacketPayload)?;
+
                 self.bancho_service
                     .request_presence(PresenceRequest {
                         session_id: session_id.to_owned(),
+                        request_users,
                     })
                     .await
                     .map_err(handing_err)?;
