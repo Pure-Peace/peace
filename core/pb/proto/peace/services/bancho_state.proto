@@ -137,17 +137,7 @@ message GetUserSessionResponse {
 
 message GetAllSessionsRequest {}
 
-message UserData {
-  string session_id = 1;
-  int32 user_id = 2;
-  string username = 3;
-  optional string username_unicode = 4;
-  int32 privileges = 5;
-  ConnectionInfo connection_info = 6;
-  string created_at = 7;
-  int64 last_active = 8;
-  int32 queued_packets = 9;
-}
+message UserData { string json = 1; }
 
 message GetAllSessionsResponse {
   uint64 len = 1;

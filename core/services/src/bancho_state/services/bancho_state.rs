@@ -444,22 +444,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     // the `values` iterator
                     futures::future::join_all(values.map(|session| async {
                         UserData {
-                            session_id: session.id.to_owned(),
-                            user_id: session.user_id,
-                            username: session.username.to_string(),
-                            username_unicode: session
-                                .username_unicode
-                                .load()
-                                .as_ref()
-                                .map(|s| s.to_string()),
-                            privileges: session.privileges.val(),
-                            connection_info: Some(
-                                session.connection_info.clone().into(),
-                            ),
-                            created_at: session.created_at.to_string(),
-                            last_active: session.last_active.val(),
-                            queued_packets: session.queued_packets().await
-                                as i32,
+                            json: serde_json::to_string(session)
+                                .unwrap_or_else(|err| {
+                                    format!("err: {:?}", err)
+                                }),
                         }
                     }))
                     .await
