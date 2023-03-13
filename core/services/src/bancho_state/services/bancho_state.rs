@@ -12,6 +12,7 @@ use peace_pb::{
 };
 use std::{collections::hash_map::Values, sync::Arc};
 use tonic::{transport::Channel, Code};
+use tools::atomic::AtomicValue;
 
 #[derive(Clone)]
 pub enum BanchoStateServiceImpl {
@@ -80,7 +81,9 @@ impl SessionFilter {
             BanchoPacketTarget::UserId(t) if &session.user_id == t => true,
             BanchoPacketTarget::Username(t)
                 if session.username.load().as_ref() == t =>
-                true,
+            {
+                true
+            },
             BanchoPacketTarget::UsernameUnicode(t) => {
                 if let Some(n) = session.username_unicode.load().as_deref() {
                     n == t
@@ -351,11 +354,13 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     // Copy the user ID into the response
                     user_id: Some(session.user_id),
                     // Copy the username into the response
-                    username: Some(session.username().to_owned()),
+                    username: Some(session.username.to_string()),
                     // Copy the Unicode username into the response, if it exists
                     username_unicode: session
-                        .username_unicode()
-                        .map(|s| s.to_owned()),
+                        .username_unicode
+                        .load()
+                        .as_ref()
+                        .map(|s| s.to_string()),
                 })
             },
         }
@@ -399,12 +404,15 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 }
 
                 if fields.intersects(UserSessionFields::Username) {
-                    res.username = Some(session.username().to_owned());
+                    res.username = Some(session.username.to_string());
                 }
 
                 if fields.intersects(UserSessionFields::UsernameUnicode) {
-                    res.username_unicode =
-                        session.username_unicode().map(|s| s.to_owned());
+                    res.username_unicode = session
+                        .username_unicode
+                        .load()
+                        .as_ref()
+                        .map(|s| s.to_string());
                 }
 
                 // Return the response
@@ -438,14 +446,18 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         UserData {
                             session_id: session.id.to_owned(),
                             user_id: session.user_id,
-                            username: session.username(),
-                            username_unicode: session.username_unicode(),
-                            privileges: session.privileges(),
+                            username: session.username.to_string(),
+                            username_unicode: session
+                                .username_unicode
+                                .load()
+                                .as_ref()
+                                .map(|s| s.to_string()),
+                            privileges: session.privileges.val(),
                             connection_info: Some(
                                 session.connection_info.clone().into(),
                             ),
                             created_at: session.created_at.to_string(),
-                            last_active: session.last_active(),
+                            last_active: session.last_active.val(),
                             queued_packets: session.queued_packets().await
                                 as i32,
                         }
@@ -531,7 +543,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 if request.user_queries.len() == 0 {
-                    return Ok(ExecSuccess {})
+                    return Ok(ExecSuccess {});
                 }
                 let to =
                     request.to.ok_or(BanchoStateError::InvalidArgument)?.into();
@@ -545,14 +557,17 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     for raw_query in request.user_queries {
                         let query = raw_query.into();
                         let session = match &query {
-                            UserQuery::UserId(user_id) =>
-                                user_sessions.indexed_by_user_id.get(user_id),
-                            UserQuery::Username(username) =>
-                                user_sessions.indexed_by_username.get(username),
-                            UserQuery::UsernameUnicode(username_unicode) =>
+                            UserQuery::UserId(user_id) => {
+                                user_sessions.indexed_by_user_id.get(user_id)
+                            },
+                            UserQuery::Username(username) => {
+                                user_sessions.indexed_by_username.get(username)
+                            },
+                            UserQuery::UsernameUnicode(username_unicode) => {
                                 user_sessions
                                     .indexed_by_username_unicode
-                                    .get(username_unicode),
+                                    .get(username_unicode)
+                            },
                             UserQuery::SessionId(session_id) => user_sessions
                                 .indexed_by_session_id
                                 .get(session_id),
@@ -564,7 +579,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         };
 
                         if SessionFilter::session_is_target(&session, &to) {
-                            continue
+                            continue;
                         };
 
                         user_stats_packets.extend(session.user_stats_packet());
@@ -609,7 +624,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     for session in user_sessions.indexed_by_session_id.values()
                     {
                         if SessionFilter::session_is_target(&session, &to) {
-                            continue
+                            continue;
                         };
 
                         presences_packets
@@ -643,7 +658,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 if request.user_queries.len() == 0 {
-                    return Ok(ExecSuccess {})
+                    return Ok(ExecSuccess {});
                 }
                 let to = Into::<BanchoPacketTarget>::into(
                     request.to.ok_or(BanchoStateError::InvalidArgument)?,
@@ -658,14 +673,17 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     for raw_query in request.user_queries {
                         let query = raw_query.into();
                         let session = match &query {
-                            UserQuery::UserId(user_id) =>
-                                user_sessions.indexed_by_user_id.get(user_id),
-                            UserQuery::Username(username) =>
-                                user_sessions.indexed_by_username.get(username),
-                            UserQuery::UsernameUnicode(username_unicode) =>
+                            UserQuery::UserId(user_id) => {
+                                user_sessions.indexed_by_user_id.get(user_id)
+                            },
+                            UserQuery::Username(username) => {
+                                user_sessions.indexed_by_username.get(username)
+                            },
+                            UserQuery::UsernameUnicode(username_unicode) => {
                                 user_sessions
                                     .indexed_by_username_unicode
-                                    .get(username_unicode),
+                                    .get(username_unicode)
+                            },
                             UserQuery::SessionId(session_id) => user_sessions
                                 .indexed_by_session_id
                                 .get(session_id),
@@ -677,7 +695,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         };
 
                         if SessionFilter::session_is_target(&session, &to) {
-                            continue
+                            continue;
                         };
 
                         presences_packets
@@ -726,7 +744,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
-                session.set_presence_filter(presence_filter);
+                session.presence_filter.set(presence_filter.into());
 
                 Ok(ExecSuccess {})
             },

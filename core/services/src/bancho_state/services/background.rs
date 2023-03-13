@@ -8,9 +8,12 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::sync::RwLock;
-use tools::async_collections::{
-    BackgroundTask, BackgroundTaskError, BackgroundTaskFactory,
-    BackgroundTaskManager, SignalHandle,
+use tools::{
+    async_collections::{
+        BackgroundTask, BackgroundTaskError, BackgroundTaskFactory,
+        BackgroundTaskManager, SignalHandle,
+    },
+    atomic::AtomicValue,
 };
 
 const DEACTIVE: i64 = 180;
@@ -56,14 +59,18 @@ impl BanchoStateBackgroundServiceImpl {
                         for session in
                             user_sessions.indexed_by_session_id.values()
                         {
-                            if current_timestamp - session.last_active() >
-                                DEACTIVE
+                            if current_timestamp - session.last_active.val()
+                                > DEACTIVE
                             {
                                 users_deactive.push((
                                     session.user_id,
-                                    session.username(),
+                                    session.username.to_string(),
                                     session.id.to_owned(),
-                                    session.username_unicode(),
+                                    session
+                                        .username_unicode
+                                        .load()
+                                        .as_ref()
+                                        .map(|s| s.to_string()),
                                 ));
                             }
                         }

@@ -1,19 +1,14 @@
 use super::CreateSessionError;
-use arc_swap::{ArcSwap, ArcSwapOption};
-use atomic_float::AtomicF32;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::ConnectionInfo;
 use peace_pb::bancho_state::{CreateUserSessionRequest, UserQuery};
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{self, AtomicBool, AtomicI32, AtomicI64},
-        Arc,
-    },
-};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
-use tools::Timestamp;
+use tools::{
+    atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, I64},
+    Timestamp,
+};
 use uuid::Uuid;
 
 #[rustfmt::skip]
@@ -149,150 +144,28 @@ impl PresenceFilter {
 
 #[derive(Debug, Default)]
 pub struct ModeStats {
-    pub rank: AtomicI32,
-    pub pp_v2: AtomicF32,
-    pub accuracy: AtomicF32,
-    pub total_hits: AtomicI32,
-    pub total_score: AtomicI64,
-    pub ranked_score: AtomicI64,
-    pub playcount: AtomicI32,
-    pub playtime: AtomicI64,
-    pub max_combo: AtomicI32,
-}
-
-impl ModeStats {
-    #[inline]
-    pub fn rank(&self) -> i32 {
-        self.rank.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn pp_v2(&self) -> f32 {
-        self.pp_v2.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn accuracy(&self) -> f32 {
-        self.accuracy.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn total_hits(&self) -> i32 {
-        self.total_hits.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn total_score(&self) -> i64 {
-        self.total_score.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn ranked_score(&self) -> i64 {
-        self.ranked_score.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn playcount(&self) -> i32 {
-        self.playcount.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn playtime(&self) -> i64 {
-        self.playtime.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn max_combo(&self) -> i32 {
-        self.max_combo.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_rank(&self, rank: i32) {
-        self.rank.store(rank, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_pp_v2(&self, pp_v2: f32) {
-        self.pp_v2.store(pp_v2, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_accuracy(&self, accuracy: f32) {
-        self.accuracy.store(accuracy, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_total_hits(&self, total_hits: i32) {
-        self.total_hits.store(total_hits, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_total_score(&self, total_score: i64) {
-        self.total_score.store(total_score, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_ranked_score(&self, ranked_score: i64) {
-        self.ranked_score.store(ranked_score, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_playcount(&self, playcount: i32) {
-        self.playcount.store(playcount, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_playtime(&self, playtime: i64) {
-        self.playtime.store(playtime, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_max_combo(&self, max_combo: i32) {
-        self.max_combo.store(max_combo, atomic::Ordering::SeqCst)
-    }
+    pub rank: I32,
+    pub pp_v2: F32,
+    pub accuracy: F32,
+    pub total_hits: I32,
+    pub total_score: I64,
+    pub ranked_score: I64,
+    pub playcount: I32,
+    pub playtime: I64,
+    pub max_combo: I32,
 }
 
 #[derive(Debug, Default)]
 pub struct BanchoStatus {
-    pub online_status: ArcSwap<UserOnlineStatus>,
-    pub description: ArcSwap<String>,
-    pub beatmap_id: AtomicI32,
-    pub beatmap_md5: ArcSwap<String>,
-    pub mods: ArcSwap<Mods>,
-    pub mode: ArcSwap<GameMode>,
+    pub online_status: Atomic<UserOnlineStatus>,
+    pub description: Atomic<String>,
+    pub beatmap_id: I32,
+    pub beatmap_md5: Atomic<String>,
+    pub mods: Atomic<Mods>,
+    pub mode: Atomic<GameMode>,
 }
 
 impl BanchoStatus {
-    #[inline]
-    pub fn online_status(&self) -> UserOnlineStatus {
-        self.online_status.load().as_ref().clone()
-    }
-
-    #[inline]
-    pub fn description(&self) -> String {
-        self.description.load().as_ref().clone()
-    }
-
-    #[inline]
-    pub fn beatmap_id(&self) -> i32 {
-        self.beatmap_id.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn beatmap_md5(&self) -> String {
-        self.beatmap_md5.load().as_ref().clone()
-    }
-
-    #[inline]
-    pub fn mods(&self) -> Mods {
-        self.mods.load().as_ref().clone()
-    }
-
-    #[inline]
-    pub fn mode(&self) -> GameMode {
-        self.mode.load().as_ref().clone()
-    }
-
     #[inline]
     pub fn update_all(
         &self,
@@ -303,42 +176,12 @@ impl BanchoStatus {
         mods: Mods,
         mode: GameMode,
     ) {
-        self.set_online_status(online_status);
-        self.set_description(description);
-        self.set_beatmap_id(beatmap_id);
-        self.set_beatmap_md5(beatmap_md5);
-        self.set_mods(mods);
-        self.set_mode(mode);
-    }
-
-    #[inline]
-    pub fn set_online_status(&self, online_status: UserOnlineStatus) {
-        self.online_status.store(online_status.into())
-    }
-
-    #[inline]
-    pub fn set_description(&self, description: String) {
-        self.description.store(description.into())
-    }
-
-    #[inline]
-    pub fn set_beatmap_id(&self, beatmap_id: i32) {
-        self.beatmap_id.store(beatmap_id, atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn set_beatmap_md5(&self, beatmap_md5: String) {
-        self.beatmap_md5.store(beatmap_md5.into())
-    }
-
-    #[inline]
-    pub fn set_mods(&self, mods: Mods) {
-        self.mods.store(mods.into())
-    }
-
-    #[inline]
-    pub fn set_mode(&self, mode: GameMode) {
-        self.mode.store(mode.into())
+        self.online_status.set(online_status.into());
+        self.description.set(description.into());
+        self.beatmap_id.set(beatmap_id.into());
+        self.beatmap_md5.set(beatmap_md5.into());
+        self.mods.set(mods.into());
+        self.mode.set(mode.into());
     }
 }
 
@@ -366,16 +209,16 @@ pub struct Session {
     /// Unique user ID.
     pub user_id: i32,
     /// User's username.
-    pub username: ArcSwap<String>,
+    pub username: Atomic<String>,
     /// User's username in unicode, if available.
-    pub username_unicode: ArcSwapOption<String>,
+    pub username_unicode: AtomicOption<String>,
     /// User's privileges level.
-    pub privileges: AtomicI32,
+    pub privileges: I32,
     pub client_version: String,
     pub utc_offset: u8,
-    pub presence_filter: ArcSwap<PresenceFilter>,
+    pub presence_filter: Atomic<PresenceFilter>,
     pub display_city: bool,
-    pub only_friend_pm_allowed: AtomicBool,
+    pub only_friend_pm_allowed: Bool,
     pub bancho_status: BanchoStatus,
     pub mode_stat_sets: UserModeStatSets,
     /// Information about the user's connection.
@@ -383,7 +226,7 @@ pub struct Session {
     pub packets_queue: Mutex<PacketsQueue>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
-    pub last_active: AtomicI64,
+    pub last_active: I64,
 }
 
 impl Session {
@@ -402,22 +245,20 @@ impl Session {
         Self {
             id: Uuid::new_v4().to_string(),
             user_id,
-            username: ArcSwap::new(Arc::new(username)),
-            username_unicode: username_unicode
-                .map(|s| ArcSwapOption::new(Some(Arc::new(s))))
-                .unwrap_or_default(),
-            privileges: AtomicI32::new(privileges),
+            username: username.into(),
+            username_unicode: username_unicode.into(),
+            privileges: privileges.into(),
             client_version,
             utc_offset,
             presence_filter: Default::default(),
             display_city,
-            only_friend_pm_allowed: AtomicBool::new(only_friend_pm_allowed),
+            only_friend_pm_allowed: only_friend_pm_allowed.into(),
             bancho_status: BanchoStatus::default().into(),
             mode_stat_sets: UserModeStatSets::default().into(),
             connection_info,
             packets_queue: Mutex::new(PacketsQueue::new()),
             created_at: Utc::now(),
-            last_active: AtomicI64::new(Timestamp::now()),
+            last_active: Timestamp::now().into(),
         }
     }
 
@@ -453,43 +294,8 @@ impl Session {
     }
 
     #[inline]
-    pub fn username(&self) -> String {
-        self.username.load().to_string()
-    }
-
-    #[inline]
-    pub fn username_unicode(&self) -> Option<String> {
-        self.username_unicode.load().as_deref().map(|s| s.to_string())
-    }
-
-    #[inline]
-    pub fn privileges(&self) -> i32 {
-        self.privileges.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
-    pub fn presence_filter(&self) -> PresenceFilter {
-        *self.presence_filter.load().as_ref()
-    }
-
-    #[inline]
-    pub fn set_presence_filter(&self, presence_filter: PresenceFilter) {
-        self.presence_filter.store(Arc::new(presence_filter))
-    }
-
-    #[inline]
-    pub fn only_friend_pm_allowed(&self) -> bool {
-        self.only_friend_pm_allowed.load(atomic::Ordering::SeqCst)
-    }
-
-    #[inline]
     pub fn update_active(&self) {
-        self.last_active.store(Timestamp::now(), atomic::Ordering::SeqCst);
-    }
-
-    #[inline]
-    pub fn last_active(&self) -> i64 {
-        self.last_active.load(atomic::Ordering::SeqCst)
+        self.last_active.set(Timestamp::now());
     }
 
     #[inline]
@@ -537,7 +343,7 @@ impl Session {
 
     #[inline]
     pub fn mode_stats(&self) -> &ModeStats {
-        match &self.bancho_status.mode() {
+        match &self.bancho_status.mode.load().as_ref() {
             GameMode::Standard => &self.mode_stat_sets.standard,
             GameMode::Taiko => &self.mode_stat_sets.taiko,
             GameMode::Fruits => &self.mode_stat_sets.fruits,
@@ -545,8 +351,9 @@ impl Session {
             GameMode::StandardRelax => &self.mode_stat_sets.standard_relax,
             GameMode::TaikoRelax => &self.mode_stat_sets.taiko_relax,
             GameMode::FruitsRelax => &self.mode_stat_sets.fruits_relax,
-            GameMode::StandardAutopilot =>
-                &self.mode_stat_sets.standard_autopilot,
+            GameMode::StandardAutopilot => {
+                &self.mode_stat_sets.standard_autopilot
+            },
             GameMode::StandardScoreV2 => &self.mode_stat_sets.standard_score_v2,
         }
     }
@@ -559,17 +366,17 @@ impl Session {
         bancho_packets::server::user_stats(
             self.user_id,
             bancho_status.online_status.load().val(),
-            bancho_status.description(),
-            bancho_status.beatmap_md5(),
+            bancho_status.description.to_string(),
+            bancho_status.beatmap_md5.to_string(),
             bancho_status.mods.load().bits(),
             bancho_status.mode.load().val(),
-            bancho_status.beatmap_id(),
-            mode_stats.ranked_score(),
-            mode_stats.accuracy(),
-            mode_stats.playcount(),
-            mode_stats.total_score(),
-            mode_stats.rank(),
-            mode_stats.pp_v2() as i16,
+            bancho_status.beatmap_id.val(),
+            mode_stats.ranked_score.val(),
+            mode_stats.accuracy.val(),
+            mode_stats.playcount.val(),
+            mode_stats.total_score.val(),
+            mode_stats.rank.val(),
+            mode_stats.pp_v2.val() as i16,
         )
     }
 
@@ -577,13 +384,13 @@ impl Session {
     pub fn user_presence_packet(&self) -> Vec<u8> {
         bancho_packets::server::user_presence(
             self.user_id,
-            self.username(),
+            self.username.to_string(),
             self.utc_offset,
             0, // todo
             1, // todo
             self.connection_info.location.longitude as f32,
             self.connection_info.location.latitude as f32,
-            self.mode_stats().rank(),
+            self.mode_stats().rank.val(),
         )
     }
 }
@@ -614,9 +421,11 @@ impl UserSessionsInner {
         // Insert the user data into the relevant hash maps
         self.indexed_by_session_id.insert(session.id.clone(), session.clone());
         self.indexed_by_user_id.insert(session.user_id, session.clone());
-        self.indexed_by_username.insert(session.username(), session.clone());
-        session.username_unicode().and_then(|s| {
-            self.indexed_by_username_unicode.insert(s, session.clone())
+        self.indexed_by_username
+            .insert(session.username.to_string(), session.clone());
+        session.username_unicode.load().as_ref().and_then(|s| {
+            self.indexed_by_username_unicode
+                .insert(s.to_string(), session.clone())
         });
 
         // Increment the length of the collection
@@ -675,12 +484,15 @@ impl UserSessionsInner {
     pub fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
         match query {
             UserQuery::UserId(user_id) => self.indexed_by_user_id.get(user_id),
-            UserQuery::Username(username) =>
-                self.indexed_by_username.get(username),
-            UserQuery::UsernameUnicode(username_unicode) =>
-                self.indexed_by_username_unicode.get(username_unicode),
-            UserQuery::SessionId(session_id) =>
-                self.indexed_by_session_id.get(session_id),
+            UserQuery::Username(username) => {
+                self.indexed_by_username.get(username)
+            },
+            UserQuery::UsernameUnicode(username_unicode) => {
+                self.indexed_by_username_unicode.get(username_unicode)
+            },
+            UserQuery::SessionId(session_id) => {
+                self.indexed_by_session_id.get(session_id)
+            },
         }
         .cloned()
     }
@@ -688,14 +500,18 @@ impl UserSessionsInner {
     #[inline]
     pub fn exists(&self, query: &UserQuery) -> bool {
         match query {
-            UserQuery::UserId(user_id) =>
-                self.indexed_by_user_id.contains_key(user_id),
-            UserQuery::Username(username) =>
-                self.indexed_by_username.contains_key(username),
-            UserQuery::UsernameUnicode(username_unicode) =>
-                self.indexed_by_username_unicode.contains_key(username_unicode),
-            UserQuery::SessionId(session_id) =>
-                self.indexed_by_session_id.contains_key(session_id),
+            UserQuery::UserId(user_id) => {
+                self.indexed_by_user_id.contains_key(user_id)
+            },
+            UserQuery::Username(username) => {
+                self.indexed_by_username.contains_key(username)
+            },
+            UserQuery::UsernameUnicode(username_unicode) => {
+                self.indexed_by_username_unicode.contains_key(username_unicode)
+            },
+            UserQuery::SessionId(session_id) => {
+                self.indexed_by_session_id.contains_key(session_id)
+            },
         }
     }
 

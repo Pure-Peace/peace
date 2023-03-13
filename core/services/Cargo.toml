@@ -26,7 +26,6 @@ bitmask-enum = { workspace = true }
 derive_deref = { workspace = true }
 arc-swap = { workspace = true }
 memmap2 = { workspace = true }
-atomic_float = { workspace = true }
 maxminddb = { workspace = true, features = ["mmap"] }
 uuid = { workspace = true, features = ["v4"] }
 serde = { workspace = true, features = ["derive"] }

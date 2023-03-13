@@ -2,7 +2,7 @@ use crate::bancho_state::{BanchoStateError, Session, UserSessionsInner};
 use async_trait::async_trait;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
-use tokio::sync::{RwLock, RwLockReadGuard};
+use tokio::sync::RwLock;
 use tools::async_collections::{BackgroundTask, BackgroundTaskError};
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
