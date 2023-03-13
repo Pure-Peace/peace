@@ -111,4 +111,9 @@ pub trait BanchoStateService {
         &self,
         request: UpdatePresenceFilterRequest,
     ) -> Result<ExecSuccess, BanchoStateError>;
+
+    async fn update_user_bancho_status(
+        &self,
+        request: UpdateUserBanchoStatusRequest,
+    ) -> Result<ExecSuccess, BanchoStateError>;
 }

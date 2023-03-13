@@ -43,6 +43,8 @@ service BanchoStateRPC {
       returns (peace.base.ExecSuccess);
   rpc UpdatePresenceFilter(UpdatePresenceFilterRequest)
       returns (peace.base.ExecSuccess);
+  rpc UpdateUserBanchoStatus(UpdateUserBanchoStatusRequest)
+      returns (peace.base.ExecSuccess);
 }
 
 message BroadcastBanchoPacketsRequest { bytes packets = 1; }
@@ -168,4 +170,14 @@ message SendAllPresencesRequest { RawBanchoPacketTarget to = 1; }
 message UpdatePresenceFilterRequest {
   RawUserQuery user_query = 1;
   int32 presence_filter = 2;
+}
+
+message UpdateUserBanchoStatusRequest {
+  RawUserQuery user_query = 1;
+  int32 online_status = 2;
+  string description = 3;
+  string beatmap_md5 = 4;
+  uint32 mods = 5;
+  int32 mode = 6;
+  int32 beatmap_id = 7;
 }

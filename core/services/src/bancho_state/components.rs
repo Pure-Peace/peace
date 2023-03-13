@@ -106,22 +106,6 @@ pub enum Mods {
 
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
-pub enum UserPresenceFilter {
-    #[default]
-    None    = 0,
-    All     = 1,
-    Friends = 2,
-}
-
-impl UserPresenceFilter {
-    #[inline]
-    pub fn val(&self) -> u8 {
-        *self as u8
-    }
-}
-
-#[rustfmt::skip]
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
 pub enum UserOnlineStatus {
     #[default]
     Idle          = 0,
@@ -164,7 +148,7 @@ impl PresenceFilter {
 }
 
 #[derive(Debug, Default)]
-pub struct UserPlayingStats {
+pub struct ModeStats {
     pub rank: AtomicI32,
     pub pp_v2: AtomicF32,
     pub accuracy: AtomicF32,
@@ -176,7 +160,7 @@ pub struct UserPlayingStats {
     pub max_combo: AtomicI32,
 }
 
-impl UserPlayingStats {
+impl ModeStats {
     #[inline]
     pub fn rank(&self) -> i32 {
         self.rank.load(atomic::Ordering::SeqCst)
@@ -310,6 +294,24 @@ impl BanchoStatus {
     }
 
     #[inline]
+    pub fn update_all(
+        &self,
+        online_status: UserOnlineStatus,
+        description: String,
+        beatmap_id: i32,
+        beatmap_md5: String,
+        mods: Mods,
+        mode: GameMode,
+    ) {
+        self.set_online_status(online_status);
+        self.set_description(description);
+        self.set_beatmap_id(beatmap_id);
+        self.set_beatmap_md5(beatmap_md5);
+        self.set_mods(mods);
+        self.set_mode(mode);
+    }
+
+    #[inline]
     pub fn set_online_status(&self, online_status: UserOnlineStatus) {
         self.online_status.store(online_status.into())
     }
@@ -345,6 +347,19 @@ pub type PacketDataPtr = Arc<Vec<u8>>;
 pub type PacketsQueue = Vec<PacketDataPtr>;
 
 #[derive(Debug, Default)]
+pub struct UserModeStatSets {
+    pub standard: ModeStats,
+    pub taiko: ModeStats,
+    pub fruits: ModeStats,
+    pub mania: ModeStats,
+    pub standard_relax: ModeStats,
+    pub taiko_relax: ModeStats,
+    pub fruits_relax: ModeStats,
+    pub standard_autopilot: ModeStats,
+    pub standard_score_v2: ModeStats,
+}
+
+#[derive(Debug, Default)]
 pub struct Session {
     /// Unique session ID of session.
     pub id: String,
@@ -362,7 +377,7 @@ pub struct Session {
     pub display_city: bool,
     pub only_friend_pm_allowed: AtomicBool,
     pub bancho_status: BanchoStatus,
-    pub playing_stats: UserPlayingStats,
+    pub mode_stat_sets: UserModeStatSets,
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
     pub packets_queue: Mutex<PacketsQueue>,
@@ -397,7 +412,7 @@ impl Session {
             display_city,
             only_friend_pm_allowed: AtomicBool::new(only_friend_pm_allowed),
             bancho_status: BanchoStatus::default().into(),
-            playing_stats: UserPlayingStats::default().into(),
+            mode_stat_sets: UserModeStatSets::default().into(),
             connection_info,
             packets_queue: Mutex::new(PacketsQueue::new()),
             created_at: Utc::now(),
@@ -514,9 +529,25 @@ impl Session {
         }
     }
 
+    #[inline]
+    pub fn mode_stats(&self) -> &ModeStats {
+        match &self.bancho_status.mode() {
+            GameMode::Standard => &self.mode_stat_sets.standard,
+            GameMode::Taiko => &self.mode_stat_sets.taiko,
+            GameMode::Fruits => &self.mode_stat_sets.fruits,
+            GameMode::Mania => &self.mode_stat_sets.mania,
+            GameMode::StandardRelax => &self.mode_stat_sets.standard_relax,
+            GameMode::TaikoRelax => &self.mode_stat_sets.taiko_relax,
+            GameMode::FruitsRelax => &self.mode_stat_sets.fruits_relax,
+            GameMode::StandardAutopilot =>
+                &self.mode_stat_sets.standard_autopilot,
+            GameMode::StandardScoreV2 => &self.mode_stat_sets.standard_score_v2,
+        }
+    }
+
     pub fn user_stats_packet(&self) -> Vec<u8> {
         let bancho_status = &self.bancho_status;
-        let playing_stats = &self.playing_stats;
+        let mode_stats = self.mode_stats();
 
         bancho_packets::server::user_stats(
             self.user_id,
@@ -526,12 +557,12 @@ impl Session {
             bancho_status.mods.load().bits(),
             bancho_status.mode.load().val(),
             bancho_status.beatmap_id(),
-            playing_stats.ranked_score(),
-            playing_stats.accuracy(),
-            playing_stats.playcount(),
-            playing_stats.total_score(),
-            playing_stats.rank(),
-            playing_stats.pp_v2() as i16,
+            mode_stats.ranked_score(),
+            mode_stats.accuracy(),
+            mode_stats.playcount(),
+            mode_stats.total_score(),
+            mode_stats.rank(),
+            mode_stats.pp_v2() as i16,
         )
     }
 }

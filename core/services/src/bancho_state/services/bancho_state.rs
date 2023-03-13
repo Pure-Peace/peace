@@ -1,7 +1,8 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
     BanchoStateError, DynBanchoStateBackgroundService, DynBanchoStateService,
-    DynUserSessionsService, PresenceFilter, Session,
+    DynUserSessionsService, GameMode, Mods, PresenceFilter, Session,
+    UserOnlineStatus,
 };
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
@@ -651,7 +652,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                                     as f32,
                                 session.connection_info.location.latitude
                                     as f32,
-                                session.playing_stats.rank(),
+                                session.mode_stats().rank(),
                             ),
                         );
                     }
@@ -685,7 +686,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Extract the query and fields from the request
                 let query = request
                     .user_query
-                    .ok_or(BanchoStateError::SessionNotExists)?;
+                    .ok_or(BanchoStateError::InvalidArgument)?;
 
                 let presence_filter =
                     PresenceFilter::from_i32(request.presence_filter)
@@ -699,6 +700,64 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
                 session.set_presence_filter(presence_filter);
+
+                Ok(ExecSuccess {})
+            },
+        }
+    }
+
+    async fn update_user_bancho_status(
+        &self,
+        request: UpdateUserBanchoStatusRequest,
+    ) -> Result<ExecSuccess, BanchoStateError> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) => svc
+                .client()
+                .update_user_bancho_status(request)
+                .await
+                .map_err(BanchoStateError::RpcError)
+                .map(|resp| resp.into_inner()),
+            BanchoStateServiceImpl::Local(svc) => {
+                let UpdateUserBanchoStatusRequest {
+                    user_query,
+                    online_status,
+                    description,
+                    beatmap_md5,
+                    mods,
+                    mode,
+                    beatmap_id,
+                } = request;
+
+                // Extract the query and fields from the request
+                let query =
+                    user_query.ok_or(BanchoStateError::InvalidArgument)?;
+
+                let session = svc
+                    .user_sessions_service
+                    .get(&query.into())
+                    .await
+                    .ok_or(BanchoStateError::SessionNotExists)?;
+
+                let online_status = UserOnlineStatus::from_i32(online_status)
+                    .unwrap_or_default();
+                let mods = Mods::from(mods);
+                let mode = GameMode::from_i32(mode).unwrap_or_default();
+
+                session.bancho_status.update_all(
+                    online_status,
+                    description,
+                    beatmap_id,
+                    beatmap_md5,
+                    mods,
+                    mode,
+                );
+
+                // todo update stats from database
+
+                self.broadcast_bancho_packets(BroadcastBanchoPacketsRequest {
+                    packets: session.user_stats_packet(),
+                })
+                .await?;
 
                 Ok(ExecSuccess {})
             },

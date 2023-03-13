@@ -179,4 +179,15 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .map_err(|err| err.into())
             .map(|resp| Response::new(resp))
     }
+
+    async fn update_user_bancho_status(
+        &self,
+        request: Request<UpdateUserBanchoStatusRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.bancho_state_service
+            .update_user_bancho_status(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
 }
