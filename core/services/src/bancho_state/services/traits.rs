@@ -2,7 +2,7 @@ use crate::bancho_state::{BanchoStateError, Session, UserSessionsInner};
 use async_trait::async_trait;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockReadGuard};
 use tools::async_collections::{BackgroundTask, BackgroundTaskError};
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
@@ -105,6 +105,11 @@ pub trait BanchoStateService {
     async fn send_all_presences(
         &self,
         request: SendAllPresencesRequest,
+    ) -> Result<ExecSuccess, BanchoStateError>;
+
+    async fn batch_send_presences(
+        &self,
+        request: BatchSendPresencesRequest,
     ) -> Result<ExecSuccess, BanchoStateError>;
 
     async fn update_presence_filter(

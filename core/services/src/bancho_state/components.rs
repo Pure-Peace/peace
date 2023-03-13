@@ -387,6 +387,7 @@ pub struct Session {
 }
 
 impl Session {
+    #[inline]
     pub fn new(
         user_id: i32,
         username: String,
@@ -420,6 +421,7 @@ impl Session {
         }
     }
 
+    #[inline]
     pub fn from_request(
         request: CreateUserSessionRequest,
     ) -> Result<Self, CreateSessionError> {
@@ -490,16 +492,19 @@ impl Session {
         self.last_active.load(atomic::Ordering::SeqCst)
     }
 
+    #[inline]
     pub async fn queued_packets(&self) -> usize {
         self.packets_queue.lock().await.len()
     }
 
+    #[inline]
     pub async fn push_packet(&self, packet: PacketDataPtr) -> usize {
         let mut queue = self.packets_queue.lock().await;
         queue.push(packet);
         queue.len()
     }
 
+    #[inline]
     pub async fn enqueue_packets<I>(&self, packets: I) -> usize
     where
         I: IntoIterator<Item = PacketDataPtr>,
@@ -509,6 +514,7 @@ impl Session {
         queue.len()
     }
 
+    #[inline]
     pub async fn dequeue_packet(
         &self,
         queue_lock: Option<&mut MutexGuard<'_, PacketsQueue>>,
@@ -545,6 +551,7 @@ impl Session {
         }
     }
 
+    #[inline]
     pub fn user_stats_packet(&self) -> Vec<u8> {
         let bancho_status = &self.bancho_status;
         let mode_stats = self.mode_stats();
@@ -563,6 +570,20 @@ impl Session {
             mode_stats.total_score(),
             mode_stats.rank(),
             mode_stats.pp_v2() as i16,
+        )
+    }
+
+    #[inline]
+    pub fn user_presence_packet(&self) -> Vec<u8> {
+        bancho_packets::server::user_presence(
+            self.user_id,
+            self.username(),
+            self.utc_offset,
+            0, // todo
+            1, // todo
+            self.connection_info.location.longitude as f32,
+            self.connection_info.location.latitude as f32,
+            self.mode_stats().rank(),
         )
     }
 }

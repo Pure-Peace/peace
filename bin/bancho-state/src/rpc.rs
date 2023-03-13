@@ -190,4 +190,15 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .map_err(|err| err.into())
             .map(|resp| Response::new(resp))
     }
+
+    async fn batch_send_presences(
+        &self,
+        request: Request<BatchSendPresencesRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.bancho_state_service
+            .batch_send_presences(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
 }

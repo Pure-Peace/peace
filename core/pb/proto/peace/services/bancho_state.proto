@@ -41,6 +41,8 @@ service BanchoStateRPC {
       returns (peace.base.ExecSuccess);
   rpc SendAllPresences(SendAllPresencesRequest)
       returns (peace.base.ExecSuccess);
+  rpc BatchSendPresences(BatchSendPresencesRequest)
+      returns (peace.base.ExecSuccess);
   rpc UpdatePresenceFilter(UpdatePresenceFilterRequest)
       returns (peace.base.ExecSuccess);
   rpc UpdateUserBanchoStatus(UpdateUserBanchoStatusRequest)
@@ -166,6 +168,11 @@ message BatchSendUserStatsPacketRequest {
 }
 
 message SendAllPresencesRequest { RawBanchoPacketTarget to = 1; }
+
+message BatchSendPresencesRequest {
+  repeated RawUserQuery user_queries = 1;
+  RawBanchoPacketTarget to = 2;
+}
 
 message UpdatePresenceFilterRequest {
   RawUserQuery user_query = 1;

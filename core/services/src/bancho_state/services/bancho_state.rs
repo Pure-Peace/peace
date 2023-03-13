@@ -68,6 +68,31 @@ impl BanchoStateServiceLocal {
     }
 }
 
+pub struct SessionFilter;
+
+impl SessionFilter {
+    pub fn session_is_target(
+        session: &Session,
+        to: &BanchoPacketTarget,
+    ) -> bool {
+        match to {
+            BanchoPacketTarget::SessionId(t) if &session.id == t => true,
+            BanchoPacketTarget::UserId(t) if &session.user_id == t => true,
+            BanchoPacketTarget::Username(t)
+                if session.username.load().as_ref() == t =>
+                true,
+            BanchoPacketTarget::UsernameUnicode(t) => {
+                if let Some(n) = session.username_unicode.load().as_deref() {
+                    n == t
+                } else {
+                    false
+                }
+            },
+            _ => false,
+        }
+    }
+}
+
 #[async_trait]
 impl BanchoStateService for BanchoStateServiceImpl {
     async fn broadcast_bancho_packets(
@@ -506,72 +531,47 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 if request.user_queries.len() == 0 {
-                    return Ok(ExecSuccess {});
+                    return Ok(ExecSuccess {})
                 }
                 let to =
                     request.to.ok_or(BanchoStateError::InvalidArgument)?.into();
 
-                let mut user_stats_packets = Vec::new();
+                let user_stats_packets = {
+                    let mut user_stats_packets = Vec::new();
 
-                let user_sessions =
-                    svc.user_sessions_service.user_sessions().read().await;
+                    let user_sessions =
+                        svc.user_sessions_service.user_sessions().read().await;
 
-                for raw_query in request.user_queries {
-                    let query = raw_query.into();
-                    let session = match &query {
-                        UserQuery::UserId(user_id) => {
-                            user_sessions.indexed_by_user_id.get(user_id)
-                        },
-                        UserQuery::Username(username) => {
-                            user_sessions.indexed_by_username.get(username)
-                        },
-                        UserQuery::UsernameUnicode(username_unicode) => {
-                            user_sessions
-                                .indexed_by_username_unicode
-                                .get(username_unicode)
-                        },
-                        UserQuery::SessionId(session_id) => {
-                            user_sessions.indexed_by_session_id.get(session_id)
-                        },
-                    };
+                    for raw_query in request.user_queries {
+                        let query = raw_query.into();
+                        let session = match &query {
+                            UserQuery::UserId(user_id) =>
+                                user_sessions.indexed_by_user_id.get(user_id),
+                            UserQuery::Username(username) =>
+                                user_sessions.indexed_by_username.get(username),
+                            UserQuery::UsernameUnicode(username_unicode) =>
+                                user_sessions
+                                    .indexed_by_username_unicode
+                                    .get(username_unicode),
+                            UserQuery::SessionId(session_id) => user_sessions
+                                .indexed_by_session_id
+                                .get(session_id),
+                        };
 
-                    let session = match session {
-                        Some(s) => s,
-                        None => continue,
-                    };
+                        let session = match session {
+                            Some(s) => s,
+                            None => continue,
+                        };
 
-                    match &to {
-                        BanchoPacketTarget::SessionId(session_id)
-                            if &session.id == session_id =>
-                        {
+                        if SessionFilter::session_is_target(&session, &to) {
                             continue
-                        },
-                        BanchoPacketTarget::UserId(user_id)
-                            if &session.user_id == user_id =>
-                        {
-                            continue
-                        },
-                        BanchoPacketTarget::Username(username)
-                            if session.username.load().as_ref() == username =>
-                        {
-                            continue
-                        },
-                        BanchoPacketTarget::UsernameUnicode(
-                            username_unicode,
-                        ) => {
-                            if let Some(n) =
-                                session.username_unicode.load().as_deref()
-                            {
-                                if n == username_unicode {
-                                    continue;
-                                }
-                            }
-                        },
-                        _ => {},
+                        };
+
+                        user_stats_packets.extend(session.user_stats_packet());
                     }
 
-                    user_stats_packets.extend(session.user_stats_packet());
-                }
+                    user_stats_packets
+                };
 
                 self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
                     target: Some(to.into()),
@@ -601,60 +601,87 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 );
 
                 let presences_packets = {
+                    let mut presences_packets = Vec::new();
+
                     let user_sessions =
                         svc.user_sessions_service.user_sessions().read().await;
 
-                    let mut presences_packets = Vec::with_capacity(
-                        user_sessions.indexed_by_session_id.len() - 1,
-                    );
-
                     for session in user_sessions.indexed_by_session_id.values()
                     {
-                        match &to {
-                            BanchoPacketTarget::SessionId(session_id)
-                                if &session.id == session_id =>
-                            {
-                                continue
-                            },
-                            BanchoPacketTarget::UserId(user_id)
-                                if &session.user_id == user_id =>
-                            {
-                                continue
-                            },
-                            BanchoPacketTarget::Username(username)
-                                if session.username.load().as_ref()
-                                    == username =>
-                            {
-                                continue
-                            },
-                            BanchoPacketTarget::UsernameUnicode(
-                                username_unicode,
-                            ) => {
-                                if let Some(n) =
-                                    session.username_unicode.load().as_deref()
-                                {
-                                    if n == username_unicode {
-                                        continue;
-                                    }
-                                }
-                            },
-                            _ => {},
-                        }
+                        if SessionFilter::session_is_target(&session, &to) {
+                            continue
+                        };
 
-                        presences_packets.extend(
-                            bancho_packets::server::user_presence(
-                                session.user_id,
-                                session.username().to_owned(),
-                                session.utc_offset,
-                                0, // todo
-                                1, // todo
-                                session.connection_info.location.longitude
-                                    as f32,
-                                session.connection_info.location.latitude
-                                    as f32,
-                                session.mode_stats().rank(),
-                            ),
-                        );
+                        presences_packets
+                            .extend(session.user_presence_packet());
+                    }
+
+                    presences_packets
+                };
+
+                self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
+                    target: Some(to.into()),
+                    packets: presences_packets,
+                })
+                .await?;
+
+                Ok(ExecSuccess {})
+            },
+        }
+    }
+
+    async fn batch_send_presences(
+        &self,
+        request: BatchSendPresencesRequest,
+    ) -> Result<ExecSuccess, BanchoStateError> {
+        match self {
+            BanchoStateServiceImpl::Remote(svc) => svc
+                .client()
+                .batch_send_presences(request)
+                .await
+                .map_err(BanchoStateError::RpcError)
+                .map(|resp| resp.into_inner()),
+            BanchoStateServiceImpl::Local(svc) => {
+                if request.user_queries.len() == 0 {
+                    return Ok(ExecSuccess {})
+                }
+                let to = Into::<BanchoPacketTarget>::into(
+                    request.to.ok_or(BanchoStateError::InvalidArgument)?,
+                );
+
+                let presences_packets = {
+                    let mut presences_packets = Vec::new();
+
+                    let user_sessions =
+                        svc.user_sessions_service.user_sessions().read().await;
+
+                    for raw_query in request.user_queries {
+                        let query = raw_query.into();
+                        let session = match &query {
+                            UserQuery::UserId(user_id) =>
+                                user_sessions.indexed_by_user_id.get(user_id),
+                            UserQuery::Username(username) =>
+                                user_sessions.indexed_by_username.get(username),
+                            UserQuery::UsernameUnicode(username_unicode) =>
+                                user_sessions
+                                    .indexed_by_username_unicode
+                                    .get(username_unicode),
+                            UserQuery::SessionId(session_id) => user_sessions
+                                .indexed_by_session_id
+                                .get(session_id),
+                        };
+
+                        let session = match session {
+                            Some(s) => s,
+                            None => continue,
+                        };
+
+                        if SessionFilter::session_is_target(&session, &to) {
+                            continue
+                        };
+
+                        presences_packets
+                            .extend(session.user_presence_packet());
                     }
 
                     presences_packets

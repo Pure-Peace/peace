@@ -4,7 +4,7 @@ use crate::bancho_state::{
 use async_trait::async_trait;
 use peace_pb::bancho_state::UserQuery;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockReadGuard};
 
 #[derive(Debug, Default, Clone)]
 pub struct UserSessionsServiceImpl {
