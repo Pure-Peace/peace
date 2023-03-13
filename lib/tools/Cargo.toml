@@ -19,6 +19,8 @@ tonic_utils = ["tonic"]
 [dependencies]
 thiserror = { workspace = true }
 arc-swap = { workspace = true }
+atomic_float = { workspace = true }
+paste = { workspace = true }
 
 # async
 tokio = { workspace = true, optional = true }

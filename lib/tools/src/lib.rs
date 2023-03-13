@@ -1,6 +1,7 @@
 #[cfg(feature = "async_collections")]
 pub mod async_collections;
 
+pub mod atomic;
 pub mod constants;
 pub mod macros;
 #[cfg(feature = "tonic_utils")]
