@@ -3,6 +3,7 @@ use argon2::Config;
 use once_cell::sync::OnceCell;
 use rand::Rng;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, ops::Deref};
 
 pub type UsernameAscii = Username<Ascii>;
@@ -10,7 +11,7 @@ pub type UsernameUnicode = Username<Unicode>;
 
 const PASSWORD_SALT_RNG_LEN: usize = 32;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateUser {
     pub name: Username<Ascii>,
     pub name_unicode: Option<Username<Unicode>>,
@@ -19,7 +20,7 @@ pub struct CreateUser {
     pub country: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Email(String);
 
 impl Email {
@@ -35,7 +36,7 @@ impl Email {
         let s = s.trim().to_ascii_lowercase();
 
         if !Self::regex().is_match(s.as_str()) {
-            return Err(EmailError)
+            return Err(EmailError);
         }
 
         Ok(Self(s))
@@ -82,7 +83,7 @@ impl Checker for Ascii {
     #[inline]
     fn check(s: &str) -> Result<(), UsernameError> {
         if !s.is_ascii() {
-            return Err(UsernameError::InvalidAsciiCharacters)
+            return Err(UsernameError::InvalidAsciiCharacters);
         }
         Ok(())
     }
@@ -98,7 +99,7 @@ impl Checker for Unicode {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UsernameSafe(String);
 
 impl<T> Into<Username<T>> for UsernameSafe
@@ -140,7 +141,7 @@ impl AsRef<String> for UsernameSafe {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Username<T>(String, PhantomData<T>);
 
 impl<T> Username<T>
@@ -157,7 +158,7 @@ where
         let s = s.trim();
         T::check(s)?;
         if s.contains(' ') && s.contains('_') {
-            return Err(UsernameError::UnderscoresAndSpacesNotExistsBoth)
+            return Err(UsernameError::UnderscoresAndSpacesNotExistsBoth);
         }
         Ok(Self::new(s.to_owned()))
     }
@@ -223,7 +224,7 @@ impl PasswordSalt {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Password(String);
 
 impl Password {

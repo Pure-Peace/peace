@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-#[derive(Debug, PartialEq, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, EnumString, Serialize, Deserialize)]
 pub enum CountryCode {
     UN = 0,
     OC = 1,

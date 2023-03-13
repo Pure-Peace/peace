@@ -12,7 +12,7 @@ use tools::{
 use uuid::Uuid;
 
 #[rustfmt::skip]
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash, Serialize, Deserialize)]
 pub enum GameMode {
     #[default]
     Standard            = 0,
@@ -36,7 +36,7 @@ impl GameMode {
 }
 
 #[rustfmt::skip]
-#[derive(Default)]
+#[derive(Default, Deserialize)]
 #[bitmask(u32)]
 pub enum Mods {
     #[default]
@@ -99,8 +99,17 @@ pub enum Mods {
         | Self::KeyMods.bits,
 }
 
+impl serde::Serialize for Mods {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u32(self.bits())
+    }
+}
+
 #[rustfmt::skip]
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Serialize, Deserialize)]
 pub enum UserOnlineStatus {
     #[default]
     Idle          = 0,
@@ -127,7 +136,7 @@ impl UserOnlineStatus {
 }
 
 #[rustfmt::skip]
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Serialize, Deserialize)]
 pub enum PresenceFilter {
     #[default]
     None    = 0,
@@ -142,7 +151,7 @@ impl PresenceFilter {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct ModeStats {
     pub rank: I32,
     pub pp_v2: F32,
@@ -155,7 +164,7 @@ pub struct ModeStats {
     pub max_combo: I32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct BanchoStatus {
     pub online_status: Atomic<UserOnlineStatus>,
     pub description: Atomic<String>,
@@ -189,7 +198,7 @@ pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
 pub type PacketsQueue = Vec<PacketDataPtr>;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct UserModeStatSets {
     pub standard: ModeStats,
     pub taiko: ModeStats,
@@ -202,7 +211,7 @@ pub struct UserModeStatSets {
     pub standard_score_v2: ModeStats,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct Session {
     /// Unique session ID of session.
     pub id: String,
@@ -223,6 +232,7 @@ pub struct Session {
     pub mode_stat_sets: UserModeStatSets,
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
+    #[serde(skip_serializing)]
     pub packets_queue: Mutex<PacketsQueue>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
