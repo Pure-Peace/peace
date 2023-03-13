@@ -21,6 +21,7 @@ thiserror = { workspace = true }
 arc-swap = { workspace = true }
 atomic_float = { workspace = true }
 paste = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 # async
 tokio = { workspace = true, optional = true }

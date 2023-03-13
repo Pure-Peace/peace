@@ -1,5 +1,7 @@
-use arc_swap::{ArcSwapAny, RefCnt};
+pub use arc_swap::*;
 pub use atomic_float::{AtomicF32, AtomicF64};
+
+use serde::{Deserialize, Serialize};
 use std::{
     ops::Deref,
     sync::{atomic::*, Arc},
@@ -27,6 +29,54 @@ impl<T> AtomicOption<T> {
 
     pub fn from_option(option: Option<T>) -> Self {
         Self(option.map(|inner| inner.into()).into())
+    }
+}
+
+impl<T> Serialize for Atomic<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.load_full().serialize(serializer)
+    }
+}
+
+impl<T> Serialize for AtomicOption<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.load_full().serialize(serializer)
+    }
+}
+
+impl<'de, T> Deserialize<'de> for Atomic<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        T::deserialize(deserializer).and_then(|t| Ok(Atomic::new(t)))
+    }
+}
+
+impl<'de, T> Deserialize<'de> for AtomicOption<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        T::deserialize(deserializer).and_then(|t| Ok(AtomicOption::new(t)))
     }
 }
 
@@ -71,7 +121,7 @@ where
     }
 }
 
-macro_rules! implAtomiValue {
+macro_rules! implAtomicValue {
     ($($ty: ty$(,)*)*) => {
         paste::paste! {
             $(
@@ -120,6 +170,25 @@ macro_rules! implAtomiValue {
     };
 }
 
-implAtomiValue!(
+implAtomicValue!(
     bool, i8, u8, i16, u16, i32, u32, i64, u64, isize, usize, f32, f64
 );
+
+macro_rules! implAtomicValueSerde {
+    ($($ty: ty$(,)*)*) => {
+        paste::paste! {
+            $(
+                impl Serialize for [<$ty:camel>] {
+                    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                    where
+                        S: serde::Serializer,
+                    {
+                        serializer.[<serialize_$ty:snake>](self.val())
+                    }
+                }
+            )*
+        }
+    };
+}
+
+implAtomicValueSerde!(bool, i8, u8, i16, u16, i32, u32, i64, u64, f32, f64);
