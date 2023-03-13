@@ -2,8 +2,8 @@ use super::CreateSessionError;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::ConnectionInfo;
-use peace_pb::bancho_state::{CreateUserSessionRequest, UserQuery};
-use std::{collections::HashMap, sync::Arc};
+use peace_pb::bancho_state::CreateUserSessionRequest;
+use std::sync::Arc;
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, I64},
@@ -260,15 +260,12 @@ impl Session {
             privileges: privileges.into(),
             client_version,
             utc_offset,
-            presence_filter: Default::default(),
             display_city,
             only_friend_pm_allowed: only_friend_pm_allowed.into(),
-            bancho_status: BanchoStatus::default().into(),
-            mode_stat_sets: UserModeStatSets::default().into(),
             connection_info,
-            packets_queue: Mutex::new(PacketsQueue::new()),
             created_at: Utc::now(),
             last_active: Timestamp::now().into(),
+            ..Default::default()
         }
     }
 
@@ -406,143 +403,5 @@ impl Session {
             self.connection_info.location.latitude as f32,
             self.mode_stats().map(|s| s.rank.val()).unwrap_or_default(),
         )
-    }
-}
-
-/// A struct representing a collection of user sessions.
-#[derive(Debug, Default, Clone)]
-pub struct UserSessionsInner {
-    /// A hash map that maps session IDs to user data
-    pub indexed_by_session_id: HashMap<String, Arc<Session>>,
-    /// A hash map that maps user IDs to user data
-    pub indexed_by_user_id: HashMap<i32, Arc<Session>>,
-    /// A hash map that maps usernames to user data
-    pub indexed_by_username: HashMap<String, Arc<Session>>,
-    /// A hash map that maps Unicode usernames to user data
-    pub indexed_by_username_unicode: HashMap<String, Arc<Session>>,
-    /// The number of user sessions in the collection
-    pub len: usize,
-}
-
-impl UserSessionsInner {
-    #[inline]
-    pub async fn create(&mut self, session: Session) -> Arc<Session> {
-        // Delete any existing session with the same user ID
-        self.delete(&UserQuery::UserId(session.user_id)).await;
-
-        let session = Arc::new(session);
-
-        // Insert the user data into the relevant hash maps
-        self.indexed_by_session_id.insert(session.id.clone(), session.clone());
-        self.indexed_by_user_id.insert(session.user_id, session.clone());
-        self.indexed_by_username
-            .insert(session.username.to_string(), session.clone());
-        session.username_unicode.load().as_ref().and_then(|s| {
-            self.indexed_by_username_unicode
-                .insert(s.to_string(), session.clone())
-        });
-
-        // Increment the length of the collection
-        self.len += 1;
-
-        // Return the session ID of the created or updated session
-        session
-    }
-
-    #[inline]
-    pub async fn delete(&mut self, query: &UserQuery) -> Option<Arc<Session>> {
-        let session = self.get(query)?;
-        self.delete_inner(
-            &session.user_id,
-            &session.username.load(),
-            &session.id,
-            session.username_unicode.load().as_deref().map(|s| s.as_str()),
-        )
-    }
-
-    #[inline]
-    pub(crate) fn delete_inner(
-        &mut self,
-        user_id: &i32,
-        username: &str,
-        session_id: &str,
-        username_unicode: Option<&str>,
-    ) -> Option<Arc<Session>> {
-        let mut removed = None;
-
-        self.indexed_by_user_id
-            .remove(user_id)
-            .and_then(|s| Some(removed = Some(s)));
-
-        self.indexed_by_username
-            .remove(username)
-            .and_then(|s| Some(removed = Some(s)));
-
-        self.indexed_by_session_id
-            .remove(session_id)
-            .and_then(|s| Some(removed = Some(s)));
-
-        username_unicode
-            .and_then(|s| self.indexed_by_username_unicode.remove(s))
-            .and_then(|s| Some(removed = Some(s)));
-
-        // Decrease the length of the map if a session was removed.
-        if removed.is_some() {
-            self.len -= 1;
-        }
-
-        removed
-    }
-
-    #[inline]
-    pub fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        match query {
-            UserQuery::UserId(user_id) => self.indexed_by_user_id.get(user_id),
-            UserQuery::Username(username) => {
-                self.indexed_by_username.get(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.get(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.get(session_id)
-            },
-        }
-        .cloned()
-    }
-
-    #[inline]
-    pub fn exists(&self, query: &UserQuery) -> bool {
-        match query {
-            UserQuery::UserId(user_id) => {
-                self.indexed_by_user_id.contains_key(user_id)
-            },
-            UserQuery::Username(username) => {
-                self.indexed_by_username.contains_key(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.contains_key(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.contains_key(session_id)
-            },
-        }
-    }
-
-    /// Clears all sessions records from the [`UserSessions`].
-    #[inline]
-    pub fn clear(&mut self) {
-        self.indexed_by_session_id.clear();
-        self.indexed_by_username.clear();
-        self.indexed_by_username_unicode.clear();
-        self.indexed_by_session_id.clear();
-
-        self.len = 0;
-    }
-
-    /// Returns the number of sessions in the [`UserSessions`].
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.len
     }
 }
