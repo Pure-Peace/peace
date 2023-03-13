@@ -1,6 +1,6 @@
 [package]
 name = "bancho-packets"
-version = "4.1.0"
+version = "4.2.0"
 description = "osu! bancho packet Reading & Writing library."
 documentation = "https://docs.rs/bancho-packets"
 readme = "README.md"
