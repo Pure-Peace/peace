@@ -287,6 +287,17 @@ pub struct ScoreFrame {
     pub score_v2: bool,
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone, ReadPacket, WritePacket, PacketLength)]
+pub struct ClientChangeAction {
+    pub online_status: u8,
+    pub description: String,
+    pub beatmap_md5: String,
+    pub mods: u32,
+    pub mode: u8,
+    pub beatmap_id: i32,
+}
+
 /// Generic type for [`str`] and [`String`]
 pub trait Str:
     BanchoPacketWrite

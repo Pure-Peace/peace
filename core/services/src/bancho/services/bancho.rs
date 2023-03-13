@@ -314,9 +314,31 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                let ChangeActionRequest {
+                    session_id,
+                    online_status,
+                    description,
+                    beatmap_md5,
+                    mods,
+                    mode,
+                    beatmap_id,
+                } = request;
 
+                let _resp = svc
+                    .bancho_state_service
+                    .update_user_bancho_status(UpdateUserBanchoStatusRequest {
+                        user_query: Some(
+                            UserQuery::SessionId(session_id).into(),
+                        ),
+                        online_status,
+                        description,
+                        beatmap_md5,
+                        mods,
+                        mode,
+                        beatmap_id,
+                    })
+                    .await?;
                 Ok(HandleCompleted {})
             },
         }

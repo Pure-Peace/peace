@@ -9,7 +9,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use bancho_packets::{Packet, PacketId, PacketReader, PayloadReader};
+use bancho_packets::{
+    ClientChangeAction, Packet, PacketId, PacketReader, PayloadReader,
+};
 use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::*,
@@ -175,9 +177,30 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                     .map_err(handing_err)?;
             },
             PacketId::OSU_USER_CHANGE_ACTION => {
+                let ClientChangeAction {
+                    online_status,
+                    description,
+                    beatmap_md5,
+                    mods,
+                    mode,
+                    beatmap_id,
+                } = PayloadReader::new(
+                    packet
+                        .payload
+                        .ok_or(BanchoHttpError::PacketPayloadNotExists)?,
+                )
+                .read::<ClientChangeAction>()
+                .ok_or(BanchoHttpError::InvalidPacketPayload)?;
+
                 self.bancho_service
                     .change_action(ChangeActionRequest {
                         session_id: session_id.to_owned(),
+                        online_status: online_status as i32,
+                        description,
+                        beatmap_md5,
+                        mods,
+                        mode: mode as i32,
+                        beatmap_id,
                     })
                     .await
                     .map_err(handing_err)?;

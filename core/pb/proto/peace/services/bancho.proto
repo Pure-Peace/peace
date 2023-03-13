@@ -64,7 +64,15 @@ message StatsRequest {
   repeated int32 request_users = 2;
 }
 
-message ChangeActionRequest { string session_id = 1; }
+message ChangeActionRequest {
+  string session_id = 1;
+  int32 online_status = 2;
+  string description = 3;
+  string beatmap_md5 = 4;
+  uint32 mods = 5;
+  int32 mode = 6;
+  int32 beatmap_id = 7;
+}
 
 message ReceiveUpdatesRequest {
   string session_id = 1;
