@@ -149,10 +149,12 @@ impl UserSessions {
         match query {
             UserQuery::UserId(user_id) => indexes.user_id.get(user_id),
             UserQuery::Username(username) => indexes.username.get(username),
-            UserQuery::UsernameUnicode(username_unicode) =>
-                indexes.username_unicode.get(username_unicode),
-            UserQuery::SessionId(session_id) =>
-                indexes.session_id.get(session_id),
+            UserQuery::UsernameUnicode(username_unicode) => {
+                indexes.username_unicode.get(username_unicode)
+            },
+            UserQuery::SessionId(session_id) => {
+                indexes.session_id.get(session_id)
+            },
         }
         .cloned()
     }
@@ -162,12 +164,15 @@ impl UserSessions {
         let indexes = self.read().await;
         match query {
             UserQuery::UserId(user_id) => indexes.user_id.contains_key(user_id),
-            UserQuery::Username(username) =>
-                indexes.username.contains_key(username),
-            UserQuery::UsernameUnicode(username_unicode) =>
-                indexes.username_unicode.contains_key(username_unicode),
-            UserQuery::SessionId(session_id) =>
-                indexes.session_id.contains_key(session_id),
+            UserQuery::Username(username) => {
+                indexes.username.contains_key(username)
+            },
+            UserQuery::UsernameUnicode(username_unicode) => {
+                indexes.username_unicode.contains_key(username_unicode)
+            },
+            UserQuery::SessionId(session_id) => {
+                indexes.session_id.contains_key(session_id)
+            },
         }
     }
 
@@ -219,7 +224,10 @@ impl UserSessionsService for UserSessionsServiceImpl {
 
     #[inline]
     async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
-        let session = Session::new(create_session);
+        const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
+
+        let session =
+            self.user_sessions.create(Session::new(create_session)).await;
 
         let login_notify = Arc::new(
             PacketBuilder::from_batch([
@@ -246,11 +254,21 @@ impl UserSessionsService for UserSessionsServiceImpl {
 
         session.push_packet(online_user_info.into()).await;
 
-        self.user_sessions.create(session).await
+        info!(
+            target: LOG_TARGET,
+            "Session created: {} [{}] ({})",
+            session.username.load(),
+            session.user_id,
+            session.id
+        );
+
+        session
     }
 
     #[inline]
     async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
+        const LOG_TARGET: &str = "bancho_state::user_sessions::delete_session";
+
         let session = self.user_sessions.delete(query).await?;
 
         let logout_notify =
@@ -261,6 +279,14 @@ impl UserSessionsService for UserSessionsServiceImpl {
         for session in user_sessions.values() {
             session.push_packet(logout_notify.clone()).await;
         }
+
+        info!(
+            target: LOG_TARGET,
+            "Session deleted: {} [{}] ({})",
+            session.username.load(),
+            session.user_id,
+            session.id
+        );
 
         Some(session)
     }

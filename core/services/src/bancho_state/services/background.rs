@@ -41,6 +41,10 @@ impl BanchoStateBackgroundServiceImpl {
     }
 
     pub fn user_sessions_recycle_factory(&self) -> BackgroundTaskFactory {
+        const LOG_TARGET: &str =
+            "bancho_state::background_tasks::user_sessions_recycling";
+
+        #[inline]
         async fn collect_deactive_users(
             user_sessions: &Arc<UserSessions>,
             current_timestamp: i64,
@@ -65,7 +69,7 @@ impl BanchoStateBackgroundServiceImpl {
             let task = async move {
                 loop {
                     tokio::time::sleep(SLEEP).await;
-                    info!(target: "user_sessions_recycling", "user sessions recycling task started");
+                    info!(target: LOG_TARGET, "Task started!");
                     let start = Instant::now();
 
                     let users_deactive = collect_deactive_users(
@@ -79,20 +83,26 @@ impl BanchoStateBackgroundServiceImpl {
                     }
 
                     info!(
-                        target: "user_sessions_recycling",
-                        "user sessions recycling task done in {:?} ({} sessions cleared)",
-                        start.elapsed(), users_deactive.len()
+                        target: LOG_TARGET,
+                        "Done in: {:?} ({} sessions cleared)",
+                        start.elapsed(),
+                        users_deactive.len()
                     );
                 }
             };
 
             Box::pin(async move {
-                info!(target: "user_sessions_recycling", "User sessions recycling service started!");
+                info!(
+                    target: LOG_TARGET,
+                    "Service started! (deactive={}s, sleep={:?})",
+                    DEACTIVE,
+                    SLEEP
+                );
                 tokio::select!(
                     _ = task => {},
                     _ = stop.wait_signal() => {}
                 );
-                warn!(target: "user_sessions_recycling", "User sessions recycling service stopped!");
+                warn!(target: LOG_TARGET, "Service stopped!");
             })
         }))
     }

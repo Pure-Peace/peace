@@ -9,6 +9,10 @@ use tools::{
 };
 use uuid::Uuid;
 
+pub type PacketData = Vec<u8>;
+pub type PacketDataPtr = Arc<Vec<u8>>;
+pub type PacketsQueue = Vec<PacketDataPtr>;
+
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash, Serialize, Deserialize)]
 pub enum GameMode {
@@ -192,10 +196,6 @@ impl BanchoStatus {
     }
 }
 
-pub type PacketData = Vec<u8>;
-pub type PacketDataPtr = Arc<Vec<u8>>;
-pub type PacketsQueue = Vec<PacketDataPtr>;
-
 #[derive(Debug, Default, Serialize)]
 pub struct UserModeStatSets {
     pub standard: Option<ModeStats>,
@@ -323,41 +323,39 @@ impl Session {
 
     #[inline]
     pub fn mode_stats(&self) -> Option<&ModeStats> {
+        let stats = &self.mode_stat_sets;
         match &self.bancho_status.mode.load().as_ref() {
-            GameMode::Standard => self.mode_stat_sets.standard.as_ref(),
-            GameMode::Taiko => self.mode_stat_sets.taiko.as_ref(),
-            GameMode::Fruits => self.mode_stat_sets.fruits.as_ref(),
-            GameMode::Mania => self.mode_stat_sets.mania.as_ref(),
-            GameMode::StandardRelax =>
-                self.mode_stat_sets.standard_relax.as_ref(),
-            GameMode::TaikoRelax => self.mode_stat_sets.taiko_relax.as_ref(),
-            GameMode::FruitsRelax => self.mode_stat_sets.fruits_relax.as_ref(),
-            GameMode::StandardAutopilot =>
-                self.mode_stat_sets.standard_autopilot.as_ref(),
-            GameMode::StandardScoreV2 =>
-                self.mode_stat_sets.standard_score_v2.as_ref(),
+            GameMode::Standard => stats.standard.as_ref(),
+            GameMode::Taiko => stats.taiko.as_ref(),
+            GameMode::Fruits => stats.fruits.as_ref(),
+            GameMode::Mania => stats.mania.as_ref(),
+            GameMode::StandardRelax => stats.standard_relax.as_ref(),
+            GameMode::TaikoRelax => stats.taiko_relax.as_ref(),
+            GameMode::FruitsRelax => stats.fruits_relax.as_ref(),
+            GameMode::StandardAutopilot => stats.standard_autopilot.as_ref(),
+            GameMode::StandardScoreV2 => stats.standard_score_v2.as_ref(),
         }
     }
 
     #[inline]
     pub fn user_stats_packet(&self) -> Vec<u8> {
-        let bancho_status = &self.bancho_status;
-        let mode_stats = self.mode_stats();
+        let status = &self.bancho_status;
+        let stats = self.mode_stats();
 
         bancho_packets::server::user_stats(
             self.user_id,
-            bancho_status.online_status.load().val(),
-            bancho_status.description.to_string(),
-            bancho_status.beatmap_md5.to_string(),
-            bancho_status.mods.load().bits(),
-            bancho_status.mode.load().val(),
-            bancho_status.beatmap_id.val(),
-            mode_stats.map(|s| s.ranked_score.val()).unwrap_or_default(),
-            mode_stats.map(|s| s.accuracy.val()).unwrap_or_default(),
-            mode_stats.map(|s| s.playcount.val()).unwrap_or_default(),
-            mode_stats.map(|s| s.total_score.val()).unwrap_or_default(),
-            mode_stats.map(|s| s.rank.val()).unwrap_or_default(),
-            mode_stats.map(|s| s.pp_v2.val() as i16).unwrap_or_default(),
+            status.online_status.load().val(),
+            status.description.to_string(),
+            status.beatmap_md5.to_string(),
+            status.mods.load().bits(),
+            status.mode.load().val(),
+            status.beatmap_id.val(),
+            stats.map(|s| s.ranked_score.val()).unwrap_or_default(),
+            stats.map(|s| s.accuracy.val()).unwrap_or_default(),
+            stats.map(|s| s.playcount.val()).unwrap_or_default(),
+            stats.map(|s| s.total_score.val()).unwrap_or_default(),
+            stats.map(|s| s.rank.val()).unwrap_or_default(),
+            stats.map(|s| s.pp_v2.val() as i16).unwrap_or_default(),
         )
     }
 

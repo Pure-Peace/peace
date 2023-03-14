@@ -13,7 +13,7 @@ use peace_pb::{
     bancho_state::*,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{net::IpAddr, sync::Arc};
+use std::{net::IpAddr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
 use tools::tonic_utils::RawRequest;
 
@@ -122,6 +122,8 @@ impl BanchoService for BanchoServiceImpl {
         client_ip: IpAddr,
         request: LoginRequest,
     ) -> Result<LoginSuccess, BanchoServiceError> {
+        const LOG_TARGET: &str = "bancho_service::login";
+
         match self {
             Self::Remote(svc) => svc
                 .client()
@@ -139,7 +141,12 @@ impl BanchoService for BanchoServiceImpl {
                     only_friend_pm_allowed,
                     client_hashes,
                 } = request;
-                info!("Receive login request: {username} [{client_version}] ({client_ip})");
+
+                info!(
+                    target: LOG_TARGET,
+                    "Login request: {username} [{client_version}] ({client_ip})"
+                );
+                let start = Instant::now();
 
                 let user = svc
                     .users_repository
@@ -192,7 +199,14 @@ impl BanchoService for BanchoServiceImpl {
                     .add(server::channel_info_end())
                     .add(server::notification("welcome to peace!"));
 
-                info!(target: "bancho.login", "user <{}:{}> logged in (session_id: {})", user.name_safe, user.id, session_id);
+                info!(
+                    target: LOG_TARGET,
+                    "Logged in: {} [{}] ({}), time spent: {:?}",
+                    user.name_safe,
+                    user.id,
+                    session_id,
+                    start.elapsed()
+                );
 
                 Ok(LoginSuccess {
                     session_id,

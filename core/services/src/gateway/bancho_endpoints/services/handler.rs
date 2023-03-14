@@ -49,12 +49,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<Response, LoginError> {
         if version.is_none() {
-            return Err(LoginError::EmptyClientVersion)
+            return Err(LoginError::EmptyClientVersion);
         }
 
         let request = parser::parse_osu_login_request_body(body)?;
         if request.client_version != version.unwrap().as_str() {
-            return Err(LoginError::MismatchedClientVersion)
+            return Err(LoginError::MismatchedClientVersion);
         }
 
         let LoginSuccess { session_id, user_id, mut packets } = self
@@ -70,10 +70,11 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             })
             .await
         {
-            Ok(dequeued_packets) if !dequeued_packets.data.is_empty() => {
-                packets.extend(dequeued_packets.data);
+            Ok(dequeued_packets) => {
+                if dequeued_packets.data.len() > 0 {
+                    packets.extend(dequeued_packets.data);
+                }
             },
-            Ok(_) => {},
             Err(err) => {
                 error!("Failed to dequeue bancho packets: {err}")
             },
@@ -89,35 +90,45 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         BanchoClientToken(session_id): BanchoClientToken,
         body: Vec<u8>,
     ) -> Result<Response, BanchoHttpError> {
+        const LOG_TARGET: &str = "gateway::process_packets";
+
         let mut reader = PacketReader::new(&body);
 
         while let Some(packet) = reader.next() {
-            info!(target: "bancho_packet_handling", "packet received: {packet}");
+            info!(target: LOG_TARGET, "Received: {packet}");
             let start = Instant::now();
 
             self.process_bancho_packet(&session_id, user_id, packet)
                 .await
                 .unwrap_or_else(|err| {
-                    error!(target: "bancho_packet_handling", "{err:?} (<{user_id}> [{session_id}])")
+                    error!(
+                        target: LOG_TARGET,
+                        "{err:?} (<{user_id}> [{session_id}])"
+                    )
                 });
 
-            info!(target: "bancho_packet_handling", "packet handled in {:?}", start.elapsed());
+            info!(target: LOG_TARGET, " - Processed in: {:?}", start.elapsed());
         }
 
-        let packets = self
+        let packets = match self
             .bancho_state_service
             .dequeue_bancho_packets(DequeueBanchoPacketsRequest {
-                target: Some(
-                    BanchoPacketTarget::SessionId(session_id.to_owned()).into(),
-                ),
+                target: Some(BanchoPacketTarget::UserId(user_id).into()),
             })
             .await
-            .map_err(|err| {
+        {
+            Ok(p) => p,
+            Err(BanchoStateError::SessionNotExists) => {
+                return Ok(Vec::new().into_response())
+            },
+            Err(err) => {
                 let err = BanchoHttpError::DequeuePakcetsError(err);
                 error!("{err}");
-                err
-            })?;
-        return Ok(packets.data.into_response())
+                return Err(err);
+            },
+        };
+
+        return Ok(packets.data.into_response());
     }
 
     async fn check_user_session(
@@ -129,8 +140,9 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .check_user_session_exists(query)
             .await
             .map_err(|err| match err {
-                BanchoStateError::SessionNotExists =>
-                    BanchoHttpError::SessionNotExists(err),
+                BanchoStateError::SessionNotExists => {
+                    BanchoHttpError::SessionNotExists(err)
+                },
                 _ => BanchoHttpError::BanchoStateError(err),
             })?
             .user_id)
@@ -253,8 +265,8 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                         .ok_or(BanchoHttpError::PacketPayloadNotExists)?,
                 )
                 .read::<i32>()
-                .ok_or(BanchoHttpError::InvalidParams)? ==
-                    1;
+                .ok_or(BanchoHttpError::InvalidParams)?
+                    == 1;
 
                 self.bancho_service
                     .toggle_block_non_friend_dms(

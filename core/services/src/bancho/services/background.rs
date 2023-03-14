@@ -35,6 +35,9 @@ impl BanchoBackgroundServiceImpl {
     }
 
     pub fn password_caches_recycle_factory(&self) -> BackgroundTaskFactory {
+        const LOG_TARGET: &str =
+            "bancho::background_tasks::password_caches_recycling";
+
         let password_cache_store = self.password_cache_store.to_owned();
 
         BackgroundTaskFactory::new(Arc::new(move |stop: SignalHandle| {
@@ -42,7 +45,10 @@ impl BanchoBackgroundServiceImpl {
             let task = async move {
                 loop {
                     tokio::time::sleep(SLEEP).await;
-                    info!(target: "password_caches_recycling", "password caches recycling task started");
+                    info!(
+                        target: LOG_TARGET,
+                        "Task started!"
+                    );
                     let start = Instant::now();
 
                     let current_timestamp = Utc::now().timestamp();
@@ -65,20 +71,25 @@ impl BanchoBackgroundServiceImpl {
                         password_cache_store.remove(key);
                     }
 
-                    info!(target: "password_caches_recycling",
-                        "password caches recycling task done in {:?} ({} caches cleared)",
+                    info!(target: LOG_TARGET,
+                        "Done in: {:?} ({} caches cleared)",
                         start.elapsed(), deactive_caches.len()
                     );
                 }
             };
 
             Box::pin(async move {
-                info!(target: "password_caches_recycling", "Password caches recycling service started!");
+                info!(
+                    target: LOG_TARGET,
+                    "Service started! (deactive={}s, sleep={:?})",
+                    DEACTIVE,
+                    SLEEP
+                );
                 tokio::select!(
                     _ = task => {},
                     _ = stop.wait_signal() => {}
                 );
-                warn!(target: "password_caches_recycling", "Password caches recycling service stopped!");
+                warn!(target: LOG_TARGET, "Service stopped!");
             })
         }))
     }
