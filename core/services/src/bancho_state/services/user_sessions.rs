@@ -89,7 +89,7 @@ impl UserSessions {
         };
 
         // Increment the length of the collection
-        self.len.add_eq(1);
+        self.len.add(1);
 
         // Return the session ID of the created or updated session
         session
@@ -136,7 +136,7 @@ impl UserSessions {
 
         // Decrease the length of the map if a session was removed.
         if removed.is_some() {
-            self.len.sub_eq(1);
+            self.len.sub(1);
         }
 
         removed

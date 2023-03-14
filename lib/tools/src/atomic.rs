@@ -12,11 +12,6 @@ pub trait AtomicBitOperation: AtomicValue {
     fn nand(&self, val: Self::Value) -> Self::Value;
     fn or(&self, val: Self::Value) -> Self::Value;
     fn xor(&self, val: Self::Value) -> Self::Value;
-
-    fn and_eq(&self, val: Self::Value);
-    fn nand_eq(&self, val: Self::Value);
-    fn or_eq(&self, val: Self::Value);
-    fn xor_eq(&self, val: Self::Value);
 }
 
 pub trait AtomicOperation: AtomicValue {
@@ -24,11 +19,6 @@ pub trait AtomicOperation: AtomicValue {
     fn max(&self, val: Self::Value) -> Self::Value;
     fn min(&self, val: Self::Value) -> Self::Value;
     fn sub(&self, val: Self::Value) -> Self::Value;
-
-    fn add_eq(&self, val: Self::Value);
-    fn max_eq(&self, val: Self::Value);
-    fn min_eq(&self, val: Self::Value);
-    fn sub_eq(&self, val: Self::Value);
 }
 
 pub trait AtomicValue: Sized {
@@ -251,34 +241,15 @@ macro_rules! implAtomicOperation {
                     fn sub(&self, val: Self::Value) -> Self::Value {
                         self.0.fetch_sub(val, Ordering::SeqCst)
                     }
-
-                    #[inline]
-                    fn add_eq(&self, val: Self::Value) {
-                        self.set(self.add(val));
-                    }
-
-                    #[inline]
-                    fn max_eq(&self, val: Self::Value) {
-                        self.set(self.max(val));
-                    }
-
-                    #[inline]
-                    fn min_eq(&self, val: Self::Value) {
-                        self.set(self.min(val));
-                    }
-
-                    #[inline]
-                    fn sub_eq(&self, val: Self::Value) {
-                        self.set(self.sub(val));
-                    }
-
                 }
             )*
         }
     };
 }
 
-implAtomicOperation!(i8, u8, i16, u16, i32, u32, i64, u64, isize, usize, f32, f64);
+implAtomicOperation!(
+    i8, u8, i16, u16, i32, u32, i64, u64, isize, usize, f32, f64
+);
 
 macro_rules! implAtomicBitOperation {
     ($($ty: ty$(,)*)*) => {
@@ -303,26 +274,6 @@ macro_rules! implAtomicBitOperation {
                     #[inline]
                     fn xor(&self, val: Self::Value) -> Self::Value {
                         self.0.fetch_xor(val, Ordering::SeqCst)
-                    }
-
-                    #[inline]
-                    fn and_eq(&self, val: Self::Value) {
-                        self.set(self.and(val));
-                    }
-
-                    #[inline]
-                    fn nand_eq(&self, val: Self::Value) {
-                        self.set(self.nand(val));
-                    }
-
-                    #[inline]
-                    fn or_eq(&self, val: Self::Value) {
-                        self.set(self.or(val));
-                    }
-
-                    #[inline]
-                    fn xor_eq(&self, val: Self::Value) {
-                        self.set(self.xor(val));
                     }
                 }
             )*

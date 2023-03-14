@@ -274,6 +274,16 @@ impl Session {
     }
 
     #[inline]
+    pub fn username(&self) -> String {
+        self.username.load().to_string()
+    }
+
+    #[inline]
+    pub fn username_unicode(&self) -> Option<String> {
+        self.username_unicode.load().as_deref().map(|s| s.to_string())
+    }
+
+    #[inline]
     pub fn update_active(&self) {
         self.last_active.set(Timestamp::now());
     }
