@@ -1,5 +1,6 @@
 use crate::bancho_state::{BanchoStateError, Session, UserSessions};
 use async_trait::async_trait;
+use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
 use tools::async_collections::{BackgroundTask, BackgroundTaskError};
@@ -22,7 +23,7 @@ pub trait BanchoStateBackgroundService {
 pub trait UserSessionsService {
     fn user_sessions(&self) -> &Arc<UserSessions>;
 
-    async fn create(&self, user: Session) -> Arc<Session>;
+    async fn create(&self, create_session: CreateSessionDto) -> Arc<Session>;
 
     async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>>;
 

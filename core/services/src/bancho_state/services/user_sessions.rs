@@ -2,6 +2,8 @@ use crate::bancho_state::{
     DynUserSessionsService, Session, UserSessionsService,
 };
 use async_trait::async_trait;
+use bancho_packets::PacketBuilder;
+use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
@@ -216,7 +218,34 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     #[inline]
-    async fn create(&self, session: Session) -> Arc<Session> {
+    async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
+        let session = Session::new(create_session);
+
+        let login_notify = Arc::new(
+            PacketBuilder::from_batch([
+                session.user_stats_packet(),
+                session.user_presence_packet(),
+            ])
+            .build(),
+        );
+
+        let online_user_info = {
+            let mut online_user_info = Vec::new();
+
+            let user_sessions = self.user_sessions.read().await;
+
+            for online_user in user_sessions.values() {
+                online_user_info.extend(online_user.user_stats_packet());
+                online_user_info.extend(online_user.user_presence_packet());
+
+                online_user.push_packet(login_notify.clone()).await;
+            }
+
+            online_user_info
+        };
+
+        session.push_packet(online_user_info.into()).await;
+
         self.user_sessions.create(session).await
     }
 

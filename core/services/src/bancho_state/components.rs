@@ -1,8 +1,6 @@
-use super::CreateSessionError;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
-use peace_domain::bancho_state::ConnectionInfo;
-use peace_pb::bancho_state::CreateUserSessionRequest;
+use peace_domain::bancho_state::{ConnectionInfo, CreateSessionDto};
 use std::sync::Arc;
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
@@ -241,17 +239,20 @@ pub struct Session {
 
 impl Session {
     #[inline]
-    pub fn new(
-        user_id: i32,
-        username: String,
-        username_unicode: Option<String>,
-        privileges: i32,
-        client_version: String,
-        utc_offset: u8,
-        display_city: bool,
-        only_friend_pm_allowed: bool,
-        connection_info: ConnectionInfo,
-    ) -> Self {
+    pub fn new(create_session: CreateSessionDto) -> Self {
+        let CreateSessionDto {
+            user_id,
+            username,
+            username_unicode,
+            privileges,
+            client_version,
+            utc_offset,
+            display_city,
+            only_friend_pm_allowed,
+            connection_info,
+            initial_packets,
+        } = create_session;
+
         Self {
             id: Uuid::new_v4().to_string(),
             user_id,
@@ -263,41 +264,13 @@ impl Session {
             display_city,
             only_friend_pm_allowed: only_friend_pm_allowed.into(),
             connection_info,
+            packets_queue: initial_packets
+                .map(|p| vec![p.into()].into())
+                .unwrap_or_default(),
             created_at: Utc::now(),
             last_active: Timestamp::now().into(),
             ..Default::default()
         }
-    }
-
-    #[inline]
-    pub fn from_request(
-        request: CreateUserSessionRequest,
-    ) -> Result<Self, CreateSessionError> {
-        let CreateUserSessionRequest {
-            user_id,
-            username,
-            username_unicode,
-            privileges,
-            client_version,
-            utc_offset,
-            display_city,
-            only_friend_pm_allowed,
-            connection_info,
-        } = request;
-
-        Ok(Self::new(
-            user_id,
-            username,
-            username_unicode,
-            privileges,
-            client_version,
-            utc_offset as u8,
-            display_city,
-            only_friend_pm_allowed,
-            connection_info
-                .ok_or(CreateSessionError::InvalidConnectionInfo)?
-                .into(),
-        ))
     }
 
     #[inline]
@@ -355,17 +328,14 @@ impl Session {
             GameMode::Taiko => self.mode_stat_sets.taiko.as_ref(),
             GameMode::Fruits => self.mode_stat_sets.fruits.as_ref(),
             GameMode::Mania => self.mode_stat_sets.mania.as_ref(),
-            GameMode::StandardRelax => {
-                self.mode_stat_sets.standard_relax.as_ref()
-            },
+            GameMode::StandardRelax =>
+                self.mode_stat_sets.standard_relax.as_ref(),
             GameMode::TaikoRelax => self.mode_stat_sets.taiko_relax.as_ref(),
             GameMode::FruitsRelax => self.mode_stat_sets.fruits_relax.as_ref(),
-            GameMode::StandardAutopilot => {
-                self.mode_stat_sets.standard_autopilot.as_ref()
-            },
-            GameMode::StandardScoreV2 => {
-                self.mode_stat_sets.standard_score_v2.as_ref()
-            },
+            GameMode::StandardAutopilot =>
+                self.mode_stat_sets.standard_autopilot.as_ref(),
+            GameMode::StandardScoreV2 =>
+                self.mode_stat_sets.standard_score_v2.as_ref(),
         }
     }
 

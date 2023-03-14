@@ -187,13 +187,6 @@ impl BanchoService for BanchoServiceImpl {
                     ))
                     .add(server::bancho_privileges(1))
                     .add(server::silence_end(0)) // todo
-                    .add(server::user_stats(
-                        user.id, 0, "", "", 0, 0, 0, 0, 0., 0, 0, 0,
-                        0, // todo
-                    ))
-                    .add(server::user_presence(
-                        user.id, user.name, 0, 0, 1, 0., 0., 0, // todo
-                    ))
                     .add(server::friends_list(&[])) // todo
                     .add(server::channel_info("peace", "peace", 0))
                     .add(server::channel_info_end())
@@ -203,7 +196,8 @@ impl BanchoService for BanchoServiceImpl {
 
                 Ok(LoginSuccess {
                     session_id,
-                    packet: Some(packet_builder.build()),
+                    user_id: user.id,
+                    packets: packet_builder.build(),
                 })
             },
         }

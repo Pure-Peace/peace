@@ -49,24 +49,37 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<Response, LoginError> {
         if version.is_none() {
-            return Err(LoginError::EmptyClientVersion);
+            return Err(LoginError::EmptyClientVersion)
         }
 
         let request = parser::parse_osu_login_request_body(body)?;
         if request.client_version != version.unwrap().as_str() {
-            return Err(LoginError::MismatchedClientVersion);
+            return Err(LoginError::MismatchedClientVersion)
         }
 
-        let LoginSuccess { session_id, packet } = self
+        let LoginSuccess { session_id, user_id, mut packets } = self
             .bancho_service
             .login(client_ip, request)
             .await
             .map_err(LoginError::BanchoServiceError)?;
 
-        Ok((
-            [(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL],
-            packet.unwrap_or("ok".into()),
-        )
+        match self
+            .bancho_state_service
+            .dequeue_bancho_packets(DequeueBanchoPacketsRequest {
+                target: Some(BanchoPacketTarget::UserId(user_id).into()),
+            })
+            .await
+        {
+            Ok(dequeued_packets) if !dequeued_packets.data.is_empty() => {
+                packets.extend(dequeued_packets.data);
+            },
+            Ok(_) => {},
+            Err(err) => {
+                error!("Failed to dequeue bancho packets: {err}")
+            },
+        };
+
+        Ok(([(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL], packets)
             .into_response())
     }
 
@@ -104,7 +117,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                 error!("{err}");
                 err
             })?;
-        return Ok(packets.data.into_response());
+        return Ok(packets.data.into_response())
     }
 
     async fn check_user_session(
@@ -116,9 +129,8 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .check_user_session_exists(query)
             .await
             .map_err(|err| match err {
-                BanchoStateError::SessionNotExists => {
-                    BanchoHttpError::SessionNotExists(err)
-                },
+                BanchoStateError::SessionNotExists =>
+                    BanchoHttpError::SessionNotExists(err),
                 _ => BanchoHttpError::BanchoStateError(err),
             })?
             .user_id)

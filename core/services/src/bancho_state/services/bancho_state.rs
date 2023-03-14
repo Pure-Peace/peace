@@ -1,11 +1,12 @@
 use super::BanchoStateService;
 use crate::bancho_state::{
-    BanchoStateError, DynBanchoStateBackgroundService, DynBanchoStateService,
-    DynUserSessionsService, GameMode, Mods, PresenceFilter, Session,
-    UserOnlineStatus,
+    BanchoStateError, CreateSessionError, DynBanchoStateBackgroundService,
+    DynBanchoStateService, DynUserSessionsService, GameMode, Mods,
+    PresenceFilter, Session, UserOnlineStatus,
 };
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
+use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
     bancho_state::{bancho_state_rpc_client::BanchoStateRpcClient, *},
     base::ExecSuccess,
@@ -249,10 +250,35 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
+                let CreateUserSessionRequest {
+                    user_id,
+                    username,
+                    username_unicode,
+                    privileges,
+                    client_version,
+                    utc_offset,
+                    display_city,
+                    only_friend_pm_allowed,
+                    connection_info,
+                } = request;
+
                 // Create a new user session using the provided request.
                 let session = svc
                     .user_sessions_service
-                    .create(Session::from_request(request)?)
+                    .create(CreateSessionDto {
+                        user_id,
+                        username,
+                        username_unicode,
+                        privileges,
+                        client_version,
+                        utc_offset: utc_offset as u8,
+                        display_city,
+                        only_friend_pm_allowed,
+                        connection_info: connection_info
+                            .ok_or(CreateSessionError::InvalidConnectionInfo)?
+                            .into(),
+                        initial_packets: None,
+                    })
                     .await;
 
                 // Log the session creation.
