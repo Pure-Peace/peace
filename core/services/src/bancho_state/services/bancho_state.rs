@@ -305,10 +305,12 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
                 // Delete the session using the query.
-                svc.user_sessions_service.delete(&query).await;
-
-                // Log that the session was deleted.
-                info!(target: "session.delete", "Session <{query:?}> deleted");
+                if let Some(_session) =
+                    svc.user_sessions_service.delete(&query).await
+                {
+                    // Log that the session was deleted.
+                    info!(target: "session.delete", "Session <{query:?}> deleted");
+                };
 
                 // Return a success message.
                 Ok(ExecSuccess {})

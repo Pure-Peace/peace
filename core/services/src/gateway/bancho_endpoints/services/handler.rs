@@ -155,6 +155,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             PacketId::OSU_SEND_PRIVATE_MESSAGE => {
                 todo!() // chat.send_private_message
             },
+            PacketId::OSU_USER_CHANNEL_PART => {
+                todo!() // channel
+            },
+            PacketId::OSU_USER_CHANNEL_JOIN => {
+                todo!() // channel
+            },
             // User
             PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
                 self.bancho_service
@@ -260,8 +266,6 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
                     .await
                     .map_err(handing_err)?;
             },
-            PacketId::OSU_USER_CHANNEL_PART => todo!(),
-            PacketId::OSU_USER_CHANNEL_JOIN => todo!(),
             PacketId::OSU_USER_LOGOUT => {
                 self.bancho_service
                     .user_logout(UserLogoutRequest {

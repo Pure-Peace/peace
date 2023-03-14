@@ -399,8 +399,12 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                svc.bancho_state_service
+                    .delete_user_session(UserQuery::SessionId(
+                        request.session_id,
+                    ))
+                    .await?;
 
                 Ok(HandleCompleted {})
             },
