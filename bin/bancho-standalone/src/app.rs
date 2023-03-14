@@ -78,18 +78,17 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let user_sessions = UserSessionsServiceImpl::default().into_service();
+        let user_session_service =
+            UserSessionsServiceImpl::default().into_service();
 
         let bancho_state_background_service =
-            BanchoStateBackgroundServiceImpl::new(
-                user_sessions.user_sessions().clone(),
-            )
-            .into_service();
+            BanchoStateBackgroundServiceImpl::new(user_session_service.clone())
+                .into_service();
 
         bancho_state_background_service.start_all();
 
         let bancho_state_service = BanchoStateServiceImpl::local(
-            user_sessions,
+            user_session_service,
             bancho_state_background_service,
         )
         .into_service();

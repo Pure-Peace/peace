@@ -1,8 +1,7 @@
-use crate::bancho_state::{BanchoStateError, Session, UserSessionsInner};
+use crate::bancho_state::{BanchoStateError, Session, UserSessions};
 use async_trait::async_trait;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tools::async_collections::{BackgroundTask, BackgroundTaskError};
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
@@ -21,7 +20,7 @@ pub trait BanchoStateBackgroundService {
 
 #[async_trait]
 pub trait UserSessionsService {
-    fn user_sessions(&self) -> &Arc<RwLock<UserSessionsInner>>;
+    fn user_sessions(&self) -> &Arc<UserSessions>;
 
     async fn create(&self, user: Session) -> Arc<Session>;
 
@@ -33,7 +32,7 @@ pub trait UserSessionsService {
 
     async fn clear(&self);
 
-    async fn len(&self) -> usize;
+    fn len(&self) -> usize;
 }
 
 #[async_trait]

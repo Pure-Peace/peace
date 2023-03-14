@@ -1,6 +1,6 @@
 use super::BanchoStateBackgroundService;
 use crate::bancho_state::{
-    DynBanchoStateBackgroundService, DynUserSessionsService, UserSessionsInner,
+    DynBanchoStateBackgroundService, DynUserSessionsService, UserSessions,
 };
 use async_trait::async_trait;
 use chrono::Utc;
@@ -9,7 +9,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tokio::sync::RwLock;
 use tools::{
     async_collections::{
         BackgroundTask, BackgroundTaskError, BackgroundTaskFactory,
@@ -43,7 +42,7 @@ impl BanchoStateBackgroundServiceImpl {
 
     pub fn user_sessions_recycle_factory(&self) -> BackgroundTaskFactory {
         async fn collect_deactive_users(
-            user_sessions: &Arc<RwLock<UserSessionsInner>>,
+            user_sessions: &Arc<UserSessions>,
             current_timestamp: i64,
         ) -> Vec<UserQuery> {
             let mut users_deactive = Vec::new();
