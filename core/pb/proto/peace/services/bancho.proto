@@ -44,7 +44,8 @@ message LoginRequest {
 
 message LoginSuccess {
   string session_id = 1;
-  optional bytes packet = 2;
+  int32 user_id = 2;
+  bytes packet = 3;
 }
 
 message RequestStatusUpdateRequest { string session_id = 1; }
