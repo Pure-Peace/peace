@@ -229,10 +229,20 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             PacketId::OSU_USER_FRIEND_ADD => todo!(),
             PacketId::OSU_USER_FRIEND_REMOVE => todo!(),
             PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS => {
+                let toggle = PayloadReader::new(
+                    packet
+                        .payload
+                        .ok_or(BanchoHttpError::PacketPayloadNotExists)?,
+                )
+                .read::<i32>()
+                .ok_or(BanchoHttpError::InvalidParams)? ==
+                    1;
+
                 self.bancho_service
                     .toggle_block_non_friend_dms(
                         ToggleBlockNonFriendDmsRequest {
                             session_id: session_id.to_owned(),
+                            toggle,
                         },
                     )
                     .await

@@ -79,7 +79,10 @@ message ReceiveUpdatesRequest {
   int32 presence_filter = 2;
 }
 
-message ToggleBlockNonFriendDmsRequest { string session_id = 1; }
+message ToggleBlockNonFriendDmsRequest {
+  string session_id = 1;
+  bool toggle = 2;
+}
 
 message UserLogoutRequest { string session_id = 1; }
 

@@ -387,6 +387,8 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
+                // todo chat service
+
                 Ok(HandleCompleted {})
             },
         }
@@ -422,8 +424,20 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(BanchoServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
-                println!("Got a request: {:?}", request);
+            Self::Local(svc) => {
+                let PresenceRequest { session_id, request_users } = request;
+
+                svc.bancho_state_service
+                    .batch_send_presences(BatchSendPresencesRequest {
+                        user_queries: request_users
+                            .into_iter()
+                            .map(|user_id| UserQuery::UserId(user_id).into())
+                            .collect(),
+                        to: Some(
+                            BanchoPacketTarget::SessionId(session_id).into(),
+                        ),
+                    })
+                    .await?;
 
                 Ok(HandleCompleted {})
             },
