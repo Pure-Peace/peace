@@ -3,7 +3,7 @@ use crate::bancho_state::{
 };
 use async_trait::async_trait;
 use peace_pb::bancho_state::UserQuery;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
 
 /// A struct representing a collection of user sessions.
@@ -109,15 +109,12 @@ impl UserSessionsInner {
     pub fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
         match query {
             UserQuery::UserId(user_id) => self.indexed_by_user_id.get(user_id),
-            UserQuery::Username(username) => {
-                self.indexed_by_username.get(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.get(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.get(session_id)
-            },
+            UserQuery::Username(username) =>
+                self.indexed_by_username.get(username),
+            UserQuery::UsernameUnicode(username_unicode) =>
+                self.indexed_by_username_unicode.get(username_unicode),
+            UserQuery::SessionId(session_id) =>
+                self.indexed_by_session_id.get(session_id),
         }
         .cloned()
     }
@@ -125,18 +122,14 @@ impl UserSessionsInner {
     #[inline]
     pub fn exists(&self, query: &UserQuery) -> bool {
         match query {
-            UserQuery::UserId(user_id) => {
-                self.indexed_by_user_id.contains_key(user_id)
-            },
-            UserQuery::Username(username) => {
-                self.indexed_by_username.contains_key(username)
-            },
-            UserQuery::UsernameUnicode(username_unicode) => {
-                self.indexed_by_username_unicode.contains_key(username_unicode)
-            },
-            UserQuery::SessionId(session_id) => {
-                self.indexed_by_session_id.contains_key(session_id)
-            },
+            UserQuery::UserId(user_id) =>
+                self.indexed_by_user_id.contains_key(user_id),
+            UserQuery::Username(username) =>
+                self.indexed_by_username.contains_key(username),
+            UserQuery::UsernameUnicode(username_unicode) =>
+                self.indexed_by_username_unicode.contains_key(username_unicode),
+            UserQuery::SessionId(session_id) =>
+                self.indexed_by_session_id.contains_key(session_id),
         }
     }
 
@@ -155,6 +148,14 @@ impl UserSessionsInner {
     #[inline]
     pub fn len(&self) -> usize {
         self.len
+    }
+}
+
+impl Deref for UserSessionsInner {
+    type Target = HashMap<i32, Arc<Session>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.indexed_by_user_id
     }
 }
 
@@ -180,7 +181,18 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        self.user_sessions.write().await.delete(query).await
+        let session = self.user_sessions.write().await.delete(query).await?;
+
+        let logout_notify =
+            Arc::new(bancho_packets::server::user_logout(session.user_id));
+
+        let user_sessions = self.user_sessions.read().await;
+
+        for session in user_sessions.values() {
+            session.push_packet(logout_notify.clone()).await;
+        }
+
+        Some(session)
     }
 
     async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {

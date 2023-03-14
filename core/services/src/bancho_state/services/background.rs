@@ -1,8 +1,10 @@
 use super::BanchoStateBackgroundService;
-use crate::bancho_state::{DynBanchoStateBackgroundService, UserSessionsInner};
+use crate::bancho_state::{
+    DynBanchoStateBackgroundService, DynUserSessionsService, UserSessionsInner,
+};
 use async_trait::async_trait;
-use bancho_packets::server;
 use chrono::Utc;
+use peace_pb::bancho_state::UserQuery;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -26,7 +28,7 @@ pub struct Tasks {
 
 #[derive(Clone)]
 pub struct BanchoStateBackgroundServiceImpl {
-    user_sessions_inner: Arc<RwLock<UserSessionsInner>>,
+    user_sessions_service: DynUserSessionsService,
     tasks: Tasks,
 }
 
@@ -35,79 +37,47 @@ impl BanchoStateBackgroundServiceImpl {
         Arc::new(self) as DynBanchoStateBackgroundService
     }
 
-    pub fn new(user_sessions_inner: Arc<RwLock<UserSessionsInner>>) -> Self {
-        Self { user_sessions_inner, tasks: Tasks::default() }
+    pub fn new(user_sessions_service: DynUserSessionsService) -> Self {
+        Self { user_sessions_service, tasks: Tasks::default() }
     }
 
     pub fn user_sessions_recycle_factory(&self) -> BackgroundTaskFactory {
-        let user_sessions = self.user_sessions_inner.to_owned();
+        async fn collect_deactive_users(
+            user_sessions: &Arc<RwLock<UserSessionsInner>>,
+            current_timestamp: i64,
+        ) -> Vec<UserQuery> {
+            let mut users_deactive = Vec::new();
+            let user_sessions = user_sessions.read().await;
+
+            for session in user_sessions.values() {
+                if current_timestamp - session.last_active.val() > DEACTIVE {
+                    users_deactive.push(UserQuery::UserId(session.user_id));
+                }
+            }
+
+            users_deactive
+        }
+
+        let user_sessions_service = self.user_sessions_service.to_owned();
 
         BackgroundTaskFactory::new(Arc::new(move |stop: SignalHandle| {
-            let user_sessions = user_sessions.to_owned();
+            let user_sessions_service = user_sessions_service.to_owned();
+
             let task = async move {
                 loop {
                     tokio::time::sleep(SLEEP).await;
                     info!(target: "user_sessions_recycling", "user sessions recycling task started");
                     let start = Instant::now();
 
-                    let current_timestamp = Utc::now().timestamp();
-                    let users_deactive = {
-                        let mut users_deactive = Vec::new();
+                    let users_deactive = collect_deactive_users(
+                        user_sessions_service.user_sessions(),
+                        Utc::now().timestamp(),
+                    )
+                    .await;
 
-                        let user_sessions = user_sessions.read().await;
-
-                        for session in
-                            user_sessions.indexed_by_session_id.values()
-                        {
-                            if current_timestamp - session.last_active.val()
-                                > DEACTIVE
-                            {
-                                users_deactive.push((
-                                    session.user_id,
-                                    session.username.to_string(),
-                                    session.id.to_owned(),
-                                    session
-                                        .username_unicode
-                                        .load()
-                                        .as_ref()
-                                        .map(|s| s.to_string()),
-                                ));
-                            }
-                        }
-                        users_deactive
-                    };
-
-                    let () = {
-                        let mut user_sessions = user_sessions.write().await;
-
-                        for (user_id, username, session_id, username_unicode) in
-                            users_deactive.iter()
-                        {
-                            user_sessions.delete_inner(
-                                user_id,
-                                username,
-                                session_id,
-                                username_unicode.as_deref(),
-                            );
-                        }
-                    };
-
-                    let () = {
-                        let user_sessions = user_sessions.read().await;
-
-                        for (user_id, ..) in users_deactive.iter() {
-                            let logout_notify =
-                                Arc::new(server::user_logout(*user_id));
-
-                            for session in
-                                user_sessions.indexed_by_session_id.values()
-                            {
-                                session
-                                    .push_packet(logout_notify.clone())
-                                    .await;
-                            }
-                        }
-                    };
+                    for query in users_deactive.iter() {
+                        user_sessions_service.delete(&query).await;
+                    }
 
                     info!(
                         target: "user_sessions_recycling",

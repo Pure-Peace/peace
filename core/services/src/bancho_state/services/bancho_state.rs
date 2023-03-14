@@ -115,7 +115,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let user_sessions =
                     svc.user_sessions_service.user_sessions().read().await;
 
-                for session in user_sessions.indexed_by_session_id.values() {
+                for session in user_sessions.values() {
                     session.push_packet(packet.clone()).await;
                 }
 
@@ -609,7 +609,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     let user_sessions =
                         svc.user_sessions_service.user_sessions().read().await;
 
-                    for session in user_sessions.indexed_by_session_id.values()
+                    for session in user_sessions.values()
                     {
                         if SessionFilter::session_is_target(&session, &to) {
                             continue;
