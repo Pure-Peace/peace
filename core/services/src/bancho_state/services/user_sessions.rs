@@ -45,13 +45,21 @@ impl UserSessions {
         let () = {
             let mut indexes = self.write().await;
 
-            self.delete_inner(
-                &mut indexes,
-                &session.user_id,
-                &session.username.load(),
-                &session.id,
-                session.username_unicode.load().as_deref().map(|s| s.as_str()),
-            );
+            if let Some(old_session) = self
+                .get_inner(&mut indexes, &UserQuery::UserId(session.user_id))
+            {
+                self.delete_inner(
+                    &mut indexes,
+                    &old_session.user_id,
+                    &old_session.username.load(),
+                    &old_session.id,
+                    old_session
+                        .username_unicode
+                        .load()
+                        .as_deref()
+                        .map(|s| s.as_str()),
+                );
+            }
 
             // Insert the user data into the relevant hash maps
             indexes.session_id.insert(session.id.clone(), session.clone());
