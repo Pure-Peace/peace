@@ -1,3 +1,4 @@
+use bancho_packets::{Packet, PacketId};
 use peace_pb::bancho::*;
 use peace_rpc::extensions::ClientIp;
 use peace_services::bancho::DynBanchoService;
@@ -16,6 +17,43 @@ impl BanchoRpcImpl {
 
 #[tonic::async_trait]
 impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
+    async fn batch_process_bancho_packets(
+        &self,
+        request: Request<BatchProcessBanchoPacketsRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        self.bancho_service
+            .batch_process_bancho_packets(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
+    async fn process_bancho_packet(
+        &self,
+        request: Request<ProcessBanchoPacketRequest>,
+    ) -> Result<Response<HandleCompleted>, Status> {
+        let ProcessBanchoPacketRequest {
+            session_id,
+            user_id,
+            packet_id,
+            payload,
+        } = request.into_inner();
+
+        self.bancho_service
+            .process_bancho_packet(
+                &session_id,
+                user_id,
+                Packet {
+                    id: PacketId::try_from(packet_id)
+                        .map_err(|err| Status::invalid_argument(err))?,
+                    payload: payload.as_deref(),
+                },
+            )
+            .await
+            .map_err(|err| err.into())
+            .map(|resp| Response::new(resp))
+    }
+
     async fn ping(
         &self,
         request: Request<PingRequest>,

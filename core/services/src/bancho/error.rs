@@ -34,6 +34,23 @@ pub enum ProcessBanchoPacketError {
     Anyhow(#[from] anyhow::Error),
 }
 
+impl ProcessBanchoPacketError {
+    fn tonic_code(&self) -> Code {
+        match self {
+            Self::FailedToProcessAll => Code::Internal,
+            _ => Code::Unknown,
+        }
+    }
+}
+
+impl Into<Status> for ProcessBanchoPacketError {
+    fn into(self) -> Status {
+        match self {
+            _ => Status::new(self.tonic_code(), self.to_string()),
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum BanchoServiceError {
     #[error("session not exists")]

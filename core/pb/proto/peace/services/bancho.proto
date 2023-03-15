@@ -6,6 +6,7 @@ service BanchoRPC {
   rpc BatchProcessBanchoPackets(BatchProcessBanchoPacketsRequest)
       returns (HandleCompleted);
   rpc ProcessBanchoPacket(ProcessBanchoPacketRequest) returns (HandleCompleted);
+
   rpc Login(LoginRequest) returns (LoginSuccess);
   rpc Ping(PingRequest) returns (HandleCompleted);
   rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (HandleCompleted);
