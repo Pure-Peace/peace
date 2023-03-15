@@ -1,10 +1,13 @@
 use super::{CHO_PROTOCOL, CHO_TOKEN};
-use crate::{bancho::BanchoServiceError, bancho_state::BanchoStateError};
+use crate::{
+    bancho::{BanchoServiceError, ProcessBanchoPacketError},
+    bancho_state::BanchoStateError,
+};
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use bancho_packets::{server, PacketBuilder, PacketId};
+use bancho_packets::{server, PacketBuilder};
 use std::string::FromUtf8Error;
 
 #[derive(thiserror::Error, Debug)]
@@ -39,8 +42,6 @@ pub enum BanchoHttpError {
     LoginFailed(#[from] LoginError),
     #[error(transparent)]
     SessionNotExists(BanchoStateError),
-    #[error("unhandled packet: {0:?}")]
-    UnhandledPacket(PacketId),
     #[error("errors occured while handling packet: {0}")]
     PacketHandlingError(#[source] anyhow::Error),
     #[error("errors occured while dequeueing packets: {0}")]
@@ -53,12 +54,10 @@ pub enum BanchoHttpError {
     InvalidUserAgentHeader,
     #[error("failed to parse request")]
     ParseRequestError,
-    #[error("packet payload is required")]
-    PacketPayloadNotExists,
-    #[error("invalid packet payload")]
-    InvalidPacketPayload,
-    #[error("invalid params")]
-    InvalidParams,
+    #[error("invalid bancho packet")]
+    InvalidBanchoPacket,
+    #[error("failed to process bancho packets")]
+    FailedToProcessBanchoPackets(#[from] ProcessBanchoPacketError),
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
     #[error(transparent)]
@@ -69,6 +68,8 @@ impl BanchoHttpError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::ParseRequestError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::FailedToProcessBanchoPackets(_) =>
+                StatusCode::INTERNAL_SERVER_ERROR,
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             _ => StatusCode::OK,
         }

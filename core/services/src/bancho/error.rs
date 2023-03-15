@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use bancho_packets::PacketId;
 use peace_domain::users::PasswordError;
 use peace_repositories::GetUserError;
 use tonic::{Code, Status};
@@ -13,6 +14,24 @@ pub enum LoginError {
     PasswordError(#[from] PasswordError),
     #[error(transparent)]
     UserNotExists(#[from] GetUserError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ProcessBanchoPacketError {
+    #[error("failed to process all bancho packets")]
+    FailedToProcessAll,
+    #[error("invalid packet id")]
+    InvalidPacketId,
+    #[error("packet payload not exists")]
+    PacketPayloadNotExists,
+    #[error("invalid packet payload")]
+    InvalidPacketPayload,
+    #[error("unhandled packet: {0:?}")]
+    UnhandledPacket(PacketId),
+    #[error("{}", .0.message())]
+    RpcError(#[from] Status),
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
 }
 
 #[derive(thiserror::Error, Debug)]

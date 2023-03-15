@@ -2,18 +2,22 @@ use super::{BanchoService, DynBanchoService};
 use crate::{
     bancho::{
         BanchoServiceError, DynBanchoBackgroundService, DynPasswordService,
-        LoginError,
+        LoginError, ProcessBanchoPacketError,
     },
-    bancho_state::DynBanchoStateService,
+    bancho_state::{DynBanchoStateService, PresenceFilter},
     geoip::DynGeoipService,
 };
-use bancho_packets::{server, PacketBuilder};
+use bancho_packets::{
+    server, ClientChangeAction, Packet, PacketBuilder, PacketId, PacketReader,
+    PayloadReader,
+};
+use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{net::IpAddr, sync::Arc, time::Instant};
+use std::{error::Error, net::IpAddr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
 use tools::tonic_utils::RawRequest;
 
@@ -93,6 +97,265 @@ impl BanchoServiceLocal {
 
 #[async_trait]
 impl BanchoService for BanchoServiceImpl {
+    async fn batch_process_bancho_packets(
+        &self,
+        request: BatchProcessBanchoPacketsRequest,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
+        const LOG_TARGET: &str = "gateway::process_packets";
+
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .batch_process_bancho_packets(request)
+                .await
+                .map_err(ProcessBanchoPacketError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                let BatchProcessBanchoPacketsRequest {
+                    session_id,
+                    user_id,
+                    packets,
+                } = request;
+
+                let mut reader = PacketReader::new(&packets);
+
+                let (mut processed, mut failed) = (0, 0);
+                while let Some(packet) = reader.next() {
+                    info!(target: LOG_TARGET, "Received: {packet}");
+                    let start = Instant::now();
+
+                    if let Err(err) = self
+                        .process_bancho_packet(&session_id, user_id, packet)
+                        .await
+                    {
+                        failed += 1;
+
+                        error!(
+                            target: LOG_TARGET,
+                            "{err:?} (<{user_id}> [{session_id}])"
+                        )
+                    }
+
+                    processed += 1;
+
+                    info!(
+                        target: LOG_TARGET,
+                        " - Processed in: {:?}",
+                        start.elapsed()
+                    );
+                }
+
+                if failed == processed {
+                    return Err(ProcessBanchoPacketError::FailedToProcessAll)
+                }
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
+    async fn process_bancho_packet(
+        &self,
+        session_id: &str,
+        user_id: i32,
+        packet: Packet<'_>,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .process_bancho_packet(ProcessBanchoPacketRequest {
+                    session_id: session_id.to_owned(),
+                    user_id,
+                    packet_id: packet.id as i32,
+                    payload: packet.payload.map(|p| p.to_vec()),
+                })
+                .await
+                .map_err(ProcessBanchoPacketError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(_svc) => {
+                fn handing_err(err: impl Error) -> ProcessBanchoPacketError {
+                    ProcessBanchoPacketError::Anyhow(anyhow!("{err:?}"))
+                }
+
+                match packet.id {
+                    PacketId::OSU_PING => {},
+                    // Message
+                    PacketId::OSU_SEND_PUBLIC_MESSAGE => {
+                        todo!() // chat.send_public_message
+                    },
+                    PacketId::OSU_SEND_PRIVATE_MESSAGE => {
+                        todo!() // chat.send_private_message
+                    },
+                    PacketId::OSU_USER_CHANNEL_PART => {
+                        todo!() // channel
+                    },
+                    PacketId::OSU_USER_CHANNEL_JOIN => {
+                        todo!() // channel
+                    },
+                    // User
+                    PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
+                        self.request_status_update(
+                            RequestStatusUpdateRequest {
+                                session_id: session_id.to_owned(),
+                            },
+                        )
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_PRESENCE_REQUEST_ALL => {
+                        self.presence_request_all(PresenceRequestAllRequest {
+                            session_id: session_id.to_owned(),
+                        })
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_STATS_REQUEST => {
+                        let request_users =
+                            PayloadReader::new(packet.payload.ok_or(
+                                ProcessBanchoPacketError::PacketPayloadNotExists,
+                            )?)
+                            .read::<Vec<i32>>()
+                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+
+                        self.request_stats(StatsRequest {
+                            session_id: session_id.to_owned(),
+                            request_users,
+                        })
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_CHANGE_ACTION => {
+                        let ClientChangeAction {
+                            online_status,
+                            description,
+                            beatmap_md5,
+                            mods,
+                            mode,
+                            beatmap_id,
+                        } = PayloadReader::new(packet.payload.ok_or(
+                            ProcessBanchoPacketError::PacketPayloadNotExists,
+                        )?)
+                        .read::<ClientChangeAction>()
+                        .ok_or(
+                            ProcessBanchoPacketError::InvalidPacketPayload,
+                        )?;
+
+                        self.change_action(ChangeActionRequest {
+                            session_id: session_id.to_owned(),
+                            online_status: online_status as i32,
+                            description,
+                            beatmap_md5,
+                            mods,
+                            mode: mode as i32,
+                            beatmap_id,
+                        })
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_RECEIVE_UPDATES => {
+                        let presence_filter = PresenceFilter::from_i32(
+                            PayloadReader::new(packet.payload.ok_or(
+                                ProcessBanchoPacketError::PacketPayloadNotExists,
+                            )?)
+                            .read::<i32>()
+                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?,
+                        )
+                        .unwrap_or_default();
+
+                        self.receive_updates(ReceiveUpdatesRequest {
+                            session_id: session_id.to_owned(),
+                            presence_filter: presence_filter.val(),
+                        })
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_FRIEND_ADD => todo!(),
+                    PacketId::OSU_USER_FRIEND_REMOVE => todo!(),
+                    PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS => {
+                        let toggle = PayloadReader::new(packet.payload.ok_or(
+                            ProcessBanchoPacketError::PacketPayloadNotExists,
+                        )?)
+                        .read::<i32>()
+                        .ok_or(
+                            ProcessBanchoPacketError::InvalidPacketPayload,
+                        )? == 1;
+
+                        self.toggle_block_non_friend_dms(
+                            ToggleBlockNonFriendDmsRequest {
+                                session_id: session_id.to_owned(),
+                                toggle,
+                            },
+                        )
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_LOGOUT => {
+                        self.user_logout(UserLogoutRequest {
+                            session_id: session_id.to_owned(),
+                        })
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_SET_AWAY_MESSAGE => todo!(),
+                    PacketId::OSU_USER_PRESENCE_REQUEST => {
+                        let request_users =
+                            PayloadReader::new(packet.payload.ok_or(
+                                ProcessBanchoPacketError::PacketPayloadNotExists,
+                            )?)
+                            .read::<Vec<i32>>()
+                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+
+                        self.request_presence(PresenceRequest {
+                            session_id: session_id.to_owned(),
+                            request_users,
+                        })
+                        .await
+                        .map_err(handing_err)?;
+                    },
+                    // Spectate
+                    PacketId::OSU_SPECTATE_START => todo!(),
+                    PacketId::OSU_SPECTATE_STOP => todo!(),
+                    PacketId::OSU_SPECTATE_CANT => todo!(),
+                    PacketId::OSU_SPECTATE_FRAMES => todo!(),
+                    // Multiplayer
+                    PacketId::OSU_USER_PART_LOBBY => todo!(),
+                    PacketId::OSU_USER_JOIN_LOBBY => todo!(),
+                    PacketId::OSU_USER_PART_MATCH => todo!(),
+                    PacketId::OSU_USER_MATCH_READY => todo!(),
+                    PacketId::OSU_USER_CREATE_MATCH => todo!(),
+                    PacketId::OSU_USER_JOIN_MATCH => todo!(),
+                    PacketId::OSU_MATCH_START => todo!(),
+                    PacketId::OSU_MATCH_COMPLETE => todo!(),
+                    PacketId::OSU_MATCH_LOAD_COMPLETE => todo!(),
+                    PacketId::OSU_MATCH_NO_BEATMAP => todo!(),
+                    PacketId::OSU_MATCH_NOT_READY => todo!(),
+                    PacketId::OSU_MATCH_FAILED => todo!(),
+                    PacketId::OSU_MATCH_HAS_BEATMAP => todo!(),
+                    PacketId::OSU_MATCH_SKIP_REQUEST => todo!(),
+                    PacketId::OSU_MATCH_CHANGE_TEAM => todo!(),
+                    PacketId::OSU_MATCH_CHANGE_SLOT => todo!(),
+                    PacketId::OSU_MATCH_LOCK => todo!(),
+                    PacketId::OSU_MATCH_CHANGE_SETTINGS => todo!(),
+                    PacketId::OSU_MATCH_SCORE_UPDATE => todo!(),
+                    PacketId::OSU_MATCH_CHANGE_MODS => todo!(),
+                    PacketId::OSU_MATCH_TRANSFER_HOST => todo!(),
+                    PacketId::OSU_MATCH_INVITE => todo!(),
+                    PacketId::OSU_MATCH_CHANGE_PASSWORD => todo!(),
+                    // Tournament
+                    PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST => todo!(),
+                    PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
+                    PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
+                    _ =>
+                        return Err(ProcessBanchoPacketError::UnhandledPacket(
+                            packet.id,
+                        )),
+                };
+
+                Ok(HandleCompleted {})
+            },
+        }
+    }
+
     async fn ping(
         &self,
         request: PingRequest,
@@ -139,7 +402,7 @@ impl BanchoService for BanchoServiceImpl {
                     utc_offset,
                     display_city,
                     only_friend_pm_allowed,
-                    client_hashes,
+                    ..
                 } = request;
 
                 info!(

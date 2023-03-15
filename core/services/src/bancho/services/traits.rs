@@ -1,5 +1,6 @@
 use super::PasswordCacheStore;
-use crate::bancho::BanchoServiceError;
+use crate::bancho::{BanchoServiceError, ProcessBanchoPacketError};
+use bancho_packets::Packet;
 use peace_domain::users::PasswordError;
 use peace_pb::bancho::*;
 use std::{net::IpAddr, sync::Arc};
@@ -22,6 +23,18 @@ pub trait BanchoBackgroundService {
 
 #[async_trait]
 pub trait BanchoService {
+    async fn batch_process_bancho_packets(
+        &self,
+        request: BatchProcessBanchoPacketsRequest,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+
+    async fn process_bancho_packet(
+        &self,
+        session_id: &str,
+        user_id: i32,
+        packet: Packet<'_>,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+
     async fn ping(
         &self,
         request: PingRequest,

@@ -3,6 +3,9 @@ syntax = "proto3";
 package peace.services.bancho;
 
 service BanchoRPC {
+  rpc BatchProcessBanchoPackets(BatchProcessBanchoPacketsRequest)
+      returns (HandleCompleted);
+  rpc ProcessBanchoPacket(ProcessBanchoPacketRequest) returns (HandleCompleted);
   rpc Login(LoginRequest) returns (LoginSuccess);
   rpc Ping(PingRequest) returns (HandleCompleted);
   rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (HandleCompleted);
@@ -90,4 +93,17 @@ message UserLogoutRequest { string session_id = 1; }
 message PresenceRequest {
   string session_id = 1;
   repeated int32 request_users = 2;
+}
+
+message BatchProcessBanchoPacketsRequest {
+  string session_id = 1;
+  int32 user_id = 2;
+  bytes packets = 3;
+}
+
+message ProcessBanchoPacketRequest {
+  string session_id = 1;
+  int32 user_id = 2;
+  int32 packet_id = 3;
+  optional bytes payload = 4;
 }

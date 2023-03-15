@@ -3,11 +3,14 @@ use super::traits::{
 };
 use crate::gateway::bancho_endpoints::{
     extractors::{BanchoClientToken, BanchoClientVersion},
-    BanchoHttpError,
+    BanchoHttpError, CHO_PROTOCOL, CHO_TOKEN,
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use peace_pb::bancho_state::UserQuery;
+use peace_pb::{
+    bancho::LoginSuccess,
+    bancho_state::{BanchoPacketTarget, UserQuery},
+};
 use std::{net::IpAddr, sync::Arc};
 
 pub struct BanchoRoutingServiceImpl {
@@ -37,24 +40,43 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
         ip: IpAddr,
         body: Vec<u8>,
     ) -> Result<Response, BanchoHttpError> {
-        if session_id.is_none() {
-            return self
-                .bancho_handler_service
-                .bancho_login(body, ip, version)
-                .await
-                .map_err(BanchoHttpError::LoginFailed);
+        match session_id {
+            Some(BanchoClientToken(session_id)) => {
+                let user_id = self
+                    .bancho_handler_service
+                    .check_user_session(UserQuery::SessionId(
+                        session_id.to_owned(),
+                    ))
+                    .await?;
+
+                let () = self
+                    .bancho_handler_service
+                    .process_bancho_packets(user_id, session_id, body)
+                    .await?;
+
+                Ok(self
+                    .bancho_handler_service
+                    .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
+                    .await
+                    .unwrap_or_default()
+                    .into_response())
+            },
+            None => {
+                let LoginSuccess { session_id, user_id, mut packets } = self
+                    .bancho_handler_service
+                    .bancho_login(body, ip, version)
+                    .await
+                    .map_err(BanchoHttpError::LoginFailed)?;
+
+                self.bancho_handler_service
+                    .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
+                    .await
+                    .and_then(|p| Some(packets.extend(p)));
+
+                Ok(([(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL], packets)
+                    .into_response())
+            },
         }
-
-        let session_id = session_id.unwrap();
-
-        let user_id = self
-            .bancho_handler_service
-            .check_user_session(UserQuery::SessionId(session_id.to_owned()))
-            .await?;
-
-        self.bancho_handler_service
-            .bancho_post_responder(user_id, session_id, body)
-            .await
     }
 
     async fn get_screenshot(&self) -> Response {

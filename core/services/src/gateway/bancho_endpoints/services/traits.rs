@@ -4,8 +4,10 @@ use crate::gateway::bancho_endpoints::{
 };
 use async_trait::async_trait;
 use axum::response::Response;
-use bancho_packets::Packet;
-use peace_pb::bancho_state::UserQuery;
+use peace_pb::{
+    bancho::LoginSuccess,
+    bancho_state::{BanchoPacketTarget, UserQuery},
+};
 use std::{net::IpAddr, sync::Arc};
 
 pub type DynBanchoRoutingService = Arc<dyn BanchoRoutingService + Send + Sync>;
@@ -105,24 +107,22 @@ pub trait BanchoHandlerService {
         body: Vec<u8>,
         client_ip: IpAddr,
         version: Option<BanchoClientVersion>,
-    ) -> Result<Response, LoginError>;
+    ) -> Result<LoginSuccess, LoginError>;
 
-    async fn bancho_post_responder(
+    async fn process_bancho_packets(
         &self,
         user_id: i32,
-        session_id: BanchoClientToken,
+        session_id: String,
         body: Vec<u8>,
-    ) -> Result<Response, BanchoHttpError>;
+    ) -> Result<(), BanchoHttpError>;
+
+    async fn pull_bancho_packets(
+        &self,
+        target: BanchoPacketTarget,
+    ) -> Option<Vec<u8>>;
 
     async fn check_user_session(
         &self,
         query: UserQuery,
     ) -> Result<i32, BanchoHttpError>;
-
-    async fn process_bancho_packet(
-        &self,
-        session_id: &str,
-        _user_id: i32,
-        packet: Packet<'_>,
-    ) -> Result<(), BanchoHttpError>;
 }
