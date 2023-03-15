@@ -18,7 +18,7 @@ impl LogsRpc for LogsRpcService {
             .into_inner()
             .level
             .into_level_filter()
-            .map_err(|err| Status::invalid_argument(err))?;
+            .map_err(Status::invalid_argument)?;
 
         crate::set_level(level)
             .map_err(|err| Status::internal(err.to_string()))?;

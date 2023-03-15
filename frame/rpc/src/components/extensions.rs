@@ -14,9 +14,9 @@ impl ClientIp {
     }
 }
 
-impl Into<IpAddr> for ClientIp {
-    fn into(self) -> IpAddr {
-        self.0
+impl From<ClientIp> for IpAddr {
+    fn from(val: ClientIp) -> Self {
+        val.0
     }
 }
 

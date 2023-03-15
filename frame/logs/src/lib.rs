@@ -43,7 +43,7 @@ pub struct ReloadHandles<
 /// let _ = peace_logs::tracing();
 ///
 pub fn env_filter(set_env: Option<&str>) -> EnvFilter {
-    const ALWAYS: &'static str = ",rustls::conn=off";
+    const ALWAYS: &str = ",rustls::conn=off";
     static ENV: OnceCell<Arc<Mutex<String>>> = OnceCell::new();
     let s = ENV.get_or_init(|| {
         Arc::new(Mutex::new(set_env.unwrap_or("").to_string()))

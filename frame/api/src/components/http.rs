@@ -54,7 +54,7 @@ pub async fn serve(app_cfg: impl Application) {
 
 pub fn server_handle() -> Handle {
     static HANDLE: OnceCell<Handle> = OnceCell::new();
-    HANDLE.get_or_init(|| Handle::new()).clone()
+    HANDLE.get_or_init(Handle::new).clone()
 }
 
 pub async fn launch_http_server(

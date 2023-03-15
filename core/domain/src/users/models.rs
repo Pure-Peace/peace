@@ -43,10 +43,10 @@ impl Email {
     }
 }
 
-impl Into<String> for Email {
+impl From<Email> for String {
     #[inline]
-    fn into(self) -> String {
-        self.0
+    fn from(val: Email) -> Self {
+        val.0
     }
 }
 
@@ -102,20 +102,20 @@ impl Checker for Unicode {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UsernameSafe(String);
 
-impl<T> Into<Username<T>> for UsernameSafe
+impl<T> From<UsernameSafe> for Username<T>
 where
     T: Checker,
 {
     #[inline]
-    fn into(self) -> Username<T> {
-        Username::new(self.0)
+    fn from(val: UsernameSafe) -> Self {
+        Username::new(val.0)
     }
 }
 
-impl Into<String> for UsernameSafe {
+impl From<UsernameSafe> for String {
     #[inline]
-    fn into(self) -> String {
-        self.0
+    fn from(val: UsernameSafe) -> Self {
+        val.0
     }
 }
 
@@ -169,17 +169,17 @@ where
     }
 }
 
-impl<T> Into<String> for Username<T> {
+impl<T> From<Username<T>> for String {
     #[inline]
-    fn into(self) -> String {
-        self.0
+    fn from(val: Username<T>) -> Self {
+        val.0
     }
 }
 
-impl<T> Into<UsernameSafe> for Username<T> {
+impl<T> From<Username<T>> for UsernameSafe {
     #[inline]
-    fn into(self) -> UsernameSafe {
-        UsernameSafe(self.0.to_ascii_lowercase().replace(' ', "_"))
+    fn from(val: Username<T>) -> Self {
+        UsernameSafe(val.0.to_ascii_lowercase().replace(' ', "_"))
     }
 }
 
@@ -269,9 +269,9 @@ impl Password {
     }
 }
 
-impl Into<String> for Password {
-    fn into(self) -> String {
-        self.0
+impl From<Password> for String {
+    fn from(val: Password) -> Self {
+        val.0
     }
 }
 

@@ -45,16 +45,16 @@ impl From<RpcConnectionInfo> for ConnectionInfo {
     }
 }
 
-impl Into<RpcConnectionInfo> for ConnectionInfo {
-    fn into(self) -> RpcConnectionInfo {
+impl From<ConnectionInfo> for RpcConnectionInfo {
+    fn from(val: ConnectionInfo) -> Self {
         RpcConnectionInfo {
-            ip: self.ip,
+            ip: val.ip,
             geoip_data: Some(RpcGeoipData {
-                location: Some(self.location.into()),
-                continent: Some(self.continent.into()),
-                country: Some(self.country.into()),
-                region: Some(self.region.into()),
-                city: Some(self.city.into()),
+                location: Some(val.location.into()),
+                continent: Some(val.continent.into()),
+                country: Some(val.country.into()),
+                region: Some(val.region.into()),
+                city: Some(val.city.into()),
             }),
         }
     }

@@ -81,7 +81,7 @@ where
     where
         D: serde::Deserializer<'de>,
     {
-        T::deserialize(deserializer).and_then(|t| Ok(Atomic::new(t)))
+        T::deserialize(deserializer).map(|t| Atomic::new(t))
     }
 }
 
@@ -93,21 +93,21 @@ where
     where
         D: serde::Deserializer<'de>,
     {
-        T::deserialize(deserializer).and_then(|t| Ok(AtomicOption::new(t)))
+        T::deserialize(deserializer).map(|t| AtomicOption::new(t))
     }
 }
 
-impl Into<Atomic<String>> for String {
+impl From<String> for Atomic<String> {
     #[inline]
-    fn into(self) -> Atomic<String> {
-        Atomic::new(self)
+    fn from(val: String) -> Self {
+        Atomic::new(val)
     }
 }
 
-impl Into<AtomicOption<String>> for Option<String> {
+impl From<Option<String>> for AtomicOption<String> {
     #[inline]
-    fn into(self) -> AtomicOption<String> {
-        AtomicOption::from_option(self)
+    fn from(val: Option<String>) -> Self {
+        AtomicOption::from_option(val)
     }
 }
 

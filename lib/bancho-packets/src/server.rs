@@ -323,7 +323,7 @@ pub fn user_presence(
             username,
             utc_offset + 24,
             country_code,
-            (bancho_priv | 0) as u8,
+            bancho_priv as u8,
             longitude,
             latitude,
             rank

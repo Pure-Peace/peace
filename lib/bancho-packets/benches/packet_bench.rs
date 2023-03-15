@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 fn packets_write_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("packets_write");
     group.bench_function("match_join_failed packet", |b| {
-        b.iter(|| server::match_join_fail())
+        b.iter(server::match_join_fail)
     });
     group.bench_function("match_join_failed packet - 2", |b| {
         b.iter(|| PacketBuilder::new().add(server::match_join_fail()).build())
@@ -96,8 +96,8 @@ fn packets_read_benchmark(c: &mut Criterion) {
 
     group.bench_function("big packets read", |b| {
         b.iter(|| {
-            let mut reader = PacketReader::new(packet);
-            while let Some(packet) = reader.next() {
+            let reader = PacketReader::new(packet);
+            for packet in reader {
                 let _a = packet.id;
                 let _b = packet.payload;
             }

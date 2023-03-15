@@ -395,7 +395,7 @@ impl<'a> PayloadReader<'a> {
     #[inline]
     pub(crate) fn next_with_length(&mut self, length: usize) -> Option<&[u8]> {
         self.index += length;
-        Some(self.payload.get(self.index - length..self.index)?)
+        self.payload.get(self.index - length..self.index)
     }
 
     #[inline]
@@ -407,7 +407,7 @@ impl<'a> PayloadReader<'a> {
 
     #[inline]
     pub(crate) fn read_uleb128(&mut self) -> Option<u32> {
-        let (val, length) = uleb128_to_u32(&self.payload.get(self.index..)?)?;
+        let (val, length) = uleb128_to_u32(self.payload.get(self.index..)?)?;
         self.index += length;
         Some(val)
     }
@@ -488,7 +488,7 @@ impl<'a> PacketReader<'a> {
     #[inline]
     /// Parse [`PacketHeader`] from bytes.
     pub fn parse_header(header: &[u8]) -> Option<PacketHeader> {
-        let packet_id = *header.get(0)?;
+        let packet_id = *header.first()?;
         Some(PacketHeader {
             id: PacketId::from_u8(packet_id)
                 .unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
@@ -875,13 +875,13 @@ impl BanchoPacketWrite for MatchUpdate {
     #[inline]
     fn write_buf(mut self, buf: &mut Vec<u8>) {
         let raw_password = std::mem::take(&mut self.password)
-            .and_then(|password| {
+            .map(|password| {
                 if self.send_password {
                     let mut raw = Vec::with_capacity(password.packet_len());
                     password.write_buf(&mut raw);
-                    Some(raw)
+                    raw
                 } else {
-                    Some(EMPTY_STRING_PACKET.to_vec())
+                    EMPTY_STRING_PACKET.to_vec()
                 }
             })
             .unwrap_or(b"\x00".to_vec());
@@ -913,7 +913,7 @@ impl BanchoPacketWrite for MatchUpdate {
 impl BanchoPacketWrite for MatchData {
     #[inline]
     fn write_buf(self, buf: &mut Vec<u8>) {
-        MatchUpdate { data: self.to_owned(), send_password: true }
+        MatchUpdate { data: self, send_password: true }
             .write_buf(buf);
     }
 }
@@ -932,7 +932,7 @@ pub trait BanchoPacketLength {
 impl BanchoPacketLength for &str {
     #[inline]
     fn packet_len(&self) -> usize {
-        if self.len() > 0 {
+        if !self.is_empty() {
             self.as_bytes().len() + 6
         } else {
             1
@@ -943,7 +943,7 @@ impl BanchoPacketLength for &str {
 impl BanchoPacketLength for String {
     #[inline]
     fn packet_len(&self) -> usize {
-        if self.len() > 0 {
+        if !self.is_empty() {
             self.as_bytes().len() + 6
         } else {
             1

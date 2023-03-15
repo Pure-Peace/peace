@@ -61,7 +61,7 @@ mod packets_reading {
 
     #[test]
     fn test_read_mutiple_packet_and_payloads() {
-        let mut reader = PacketReader::new(&[
+        let reader = PacketReader::new(&[
             4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 19, 0, 0, 0, 11, 17, 72, 101, 108,
             108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 240, 159, 146, 150,
             4, 0, 0, 0, 0, 0, 0, 24, 0, 0, 18, 0, 0, 0, 11, 16, 229, 147, 136,
@@ -70,7 +70,7 @@ mod packets_reading {
             187, 229, 143, 150, 229, 174, 140, 228, 186, 134, 239, 188, 129,
             239, 188, 129, 226, 156, 168,
         ]);
-        while let Some(packet) = reader.next() {
+        for packet in reader {
             print!("{:?}: ", packet.id);
             match packet.payload {
                 None => println!("Non-payload"),
@@ -162,8 +162,8 @@ mod packets_reading {
             101, 80, 101, 97, 99, 101, 32, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
             0, 0,
         ];
-        let mut reader = PacketReader::new(packet);
-        while let Some(packet) = reader.next() {
+        let reader = PacketReader::new(packet);
+        for packet in reader {
             println!("{:?}: {:?}", packet.id, packet.payload.unwrap_or(&[]));
         }
     }
@@ -263,7 +263,7 @@ mod packets_writing {
     #[test]
     fn test_write_i32_list() {
         assert_eq!(
-            server::user_presence_bundle(&vec![1001, 1002, 1003]),
+            server::user_presence_bundle(&[1001, 1002, 1003]),
             vec![
                 96, 0, 0, 14, 0, 0, 0, 3, 0, 233, 3, 0, 0, 234, 3, 0, 0, 235,
                 3, 0, 0
@@ -273,7 +273,7 @@ mod packets_writing {
 
     #[test]
     fn test_write_u32_i32() {
-        let int_u32 = (536870912 as u32).as_packet();
+        let int_u32 = 536870912_u32.as_packet();
         let int_i32 = (536870912).as_packet();
 
         println!("{:?} {:?}", int_u32, int_i32);

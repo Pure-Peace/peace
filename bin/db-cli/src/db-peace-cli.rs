@@ -89,7 +89,6 @@ async fn main() {
                     .map(|s| UsernameUnicode::from_str(s.as_str()).unwrap()),
                 password: Password::hash_password(
                     md5_password
-                        .and_then(|p| Some(p))
                         .or_else(|| {
                             Some(format!(
                                 "{:x}",
@@ -136,7 +135,6 @@ async fn main() {
                 }),
                 Password::hash_password(
                     md5_password
-                        .and_then(|p| Some(p))
                         .or_else(|| {
                             Some(format!(
                                 "{:x}",

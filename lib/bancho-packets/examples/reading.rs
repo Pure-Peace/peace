@@ -12,10 +12,10 @@ fn main() {
     ];
 
     // Create reader
-    let mut reader = PacketReader::new(data);
+    let reader = PacketReader::new(data);
 
     // Read packets
-    while let Some(packet) = reader.next() {
+    for packet in reader {
         print!("{:?}: ", packet.id);
         match packet.payload {
             Some(payload) => {

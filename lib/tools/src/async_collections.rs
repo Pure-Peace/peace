@@ -86,7 +86,7 @@ impl SignalHandle {
 /// This function is only available on Unix platforms.
 pub async fn shutdown_signal<F>(shutdown: F)
 where
-    F: Fn(&str) -> (),
+    F: Fn(&str),
 {
     // Install the Ctrl+C signal handler
     let ctrl_c = async {
@@ -215,7 +215,8 @@ impl BackgroundTask {
         let handle = Some(Arc::new(tokio::spawn(async move {
             if manual_stop {
                 // If manual stop is enabled, await the future until completion
-                Some(fut.await)
+                fut.await;
+                Some(())
             } else {
                 // If manual stop is disabled, wait for either the future to
                 // complete or a signal to stop the service to be received
@@ -246,7 +247,10 @@ impl BackgroundTask {
         // Trigger the signal handle, if it exists
         self.signal
             .as_ref()
-            .and_then(|s| Some(s.trigger()))
+            .map(|s| {
+                s.trigger();
+                
+            })
             .ok_or(BackgroundTaskError::SignalNotExists)?;
         Ok(())
     }

@@ -65,7 +65,7 @@ pub fn derive_singleton_config(input: TokenStream) -> TokenStream {
 pub fn peace_config(_args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    return quote! {
+    quote! {
         #[derive(
             clap::Parser,
             clap_serde_derive::ClapSerde,
@@ -77,5 +77,5 @@ pub fn peace_config(_args: TokenStream, input: TokenStream) -> TokenStream {
         )]
         #input
     }
-    .into();
+    .into()
 }

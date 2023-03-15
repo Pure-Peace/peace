@@ -23,7 +23,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .broadcast_bancho_packets(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn enqueue_bancho_packets(
@@ -34,7 +34,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .enqueue_bancho_packets(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn batch_enqueue_bancho_packets(
@@ -45,7 +45,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .batch_enqueue_bancho_packets(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn dequeue_bancho_packets(
@@ -56,7 +56,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .dequeue_bancho_packets(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn batch_dequeue_bancho_packets(
@@ -67,7 +67,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .batch_dequeue_bancho_packets(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn create_user_session(
@@ -78,7 +78,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .create_user_session(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn delete_user_session(
@@ -89,7 +89,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .delete_user_session(request.into_inner().into())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn check_user_session_exists(
@@ -100,7 +100,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .check_user_session_exists(request.into_inner().into())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn get_user_session(
@@ -111,7 +111,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .get_user_session(request.into_inner().into())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn get_user_session_with_fields(
@@ -122,7 +122,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .get_user_session_with_fields(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn get_all_sessions(
@@ -133,7 +133,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .get_all_sessions()
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn send_user_stats_packet(
@@ -144,7 +144,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .send_user_stats_packet(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn send_all_presences(
@@ -155,7 +155,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .send_all_presences(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn batch_send_user_stats_packet(
@@ -166,7 +166,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .batch_send_user_stats_packet(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn update_presence_filter(
@@ -177,7 +177,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .update_presence_filter(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn update_user_bancho_status(
@@ -188,7 +188,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .update_user_bancho_status(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn batch_send_presences(
@@ -199,6 +199,6 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .batch_send_presences(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 }

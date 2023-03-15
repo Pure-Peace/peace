@@ -25,7 +25,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .batch_process_bancho_packets(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn process_bancho_packet(
@@ -45,13 +45,13 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
                 user_id,
                 Packet {
                     id: PacketId::try_from(packet_id)
-                        .map_err(|err| Status::invalid_argument(err))?,
+                        .map_err(Status::invalid_argument)?,
                     payload: payload.as_deref(),
                 },
             )
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn ping(
@@ -62,7 +62,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .ping(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn login(
@@ -74,7 +74,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .login(client_ip.into(), request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn request_status_update(
@@ -85,7 +85,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .request_status_update(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn presence_request_all(
@@ -96,7 +96,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .presence_request_all(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn request_stats(
@@ -107,7 +107,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .request_stats(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn change_action(
@@ -118,7 +118,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .change_action(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn receive_updates(
@@ -129,7 +129,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .receive_updates(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn toggle_block_non_friend_dms(
@@ -140,7 +140,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .toggle_block_non_friend_dms(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn user_logout(
@@ -151,7 +151,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .user_logout(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn request_presence(
@@ -162,7 +162,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .request_presence(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn spectate_stop(
@@ -173,7 +173,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .spectate_stop(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn spectate_cant(
@@ -184,7 +184,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .spectate_cant(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn lobby_part(
@@ -195,7 +195,7 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .lobby_part(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 
     async fn lobby_join(
@@ -206,6 +206,6 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
             .lobby_join(request.into_inner())
             .await
             .map_err(|err| err.into())
-            .map(|resp| Response::new(resp))
+            .map(Response::new)
     }
 }

@@ -25,14 +25,14 @@ impl From<RpcGeoipData> for GeoipData {
     }
 }
 
-impl Into<RpcGeoipData> for GeoipData {
-    fn into(self) -> RpcGeoipData {
+impl From<GeoipData> for RpcGeoipData {
+    fn from(val: GeoipData) -> Self {
         RpcGeoipData {
-            location: Some(self.location.into()),
-            continent: Some(self.continent.into()),
-            country: Some(self.country.into()),
-            region: Some(self.region.into()),
-            city: Some(self.city.into()),
+            location: Some(val.location.into()),
+            continent: Some(val.continent.into()),
+            country: Some(val.country.into()),
+            region: Some(val.region.into()),
+            city: Some(val.city.into()),
         }
     }
 }
@@ -54,12 +54,12 @@ impl From<RpcLocation> for Location {
     }
 }
 
-impl Into<RpcLocation> for Location {
-    fn into(self) -> RpcLocation {
+impl From<Location> for RpcLocation {
+    fn from(val: Location) -> Self {
         RpcLocation {
-            latitude: self.latitude.into(),
-            longitude: self.longitude.into(),
-            timezone: self.timezone.into(),
+            latitude: val.latitude.into(),
+            longitude: val.longitude.into(),
+            timezone: val.timezone.into(),
         }
     }
 }
@@ -81,12 +81,12 @@ impl From<RpcContinent> for Continent {
     }
 }
 
-impl Into<RpcContinent> for Continent {
-    fn into(self) -> RpcContinent {
+impl From<Continent> for RpcContinent {
+    fn from(val: Continent) -> Self {
         RpcContinent {
-            geoname_id: self.geoname_id.into(),
-            code: self.code.into(),
-            name: self.name.into(),
+            geoname_id: val.geoname_id.into(),
+            code: val.code.into(),
+            name: val.name.into(),
         }
     }
 }
@@ -108,12 +108,12 @@ impl From<RpcCountry> for Country {
     }
 }
 
-impl Into<RpcCountry> for Country {
-    fn into(self) -> RpcCountry {
+impl From<Country> for RpcCountry {
+    fn from(val: Country) -> Self {
         RpcCountry {
-            geoname_id: self.geoname_id.into(),
-            code: self.code.into(),
-            name: self.name.into(),
+            geoname_id: val.geoname_id.into(),
+            code: val.code.into(),
+            name: val.name.into(),
         }
     }
 }
@@ -135,12 +135,12 @@ impl From<RpcRegion> for Region {
     }
 }
 
-impl Into<RpcRegion> for Region {
-    fn into(self) -> RpcRegion {
+impl From<Region> for RpcRegion {
+    fn from(val: Region) -> Self {
         RpcRegion {
-            geoname_id: self.geoname_id.into(),
-            code: self.code.into(),
-            name: self.name.into(),
+            geoname_id: val.geoname_id.into(),
+            code: val.code.into(),
+            name: val.name.into(),
         }
     }
 }
@@ -160,8 +160,8 @@ impl From<RpcCity> for City {
     }
 }
 
-impl Into<RpcCity> for City {
-    fn into(self) -> RpcCity {
-        RpcCity { geoname_id: self.geoname_id.into(), name: self.name.into() }
+impl From<City> for RpcCity {
+    fn from(val: City) -> Self {
+        RpcCity { geoname_id: val.geoname_id.into(), name: val.name.into() }
     }
 }

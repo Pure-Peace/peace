@@ -315,6 +315,7 @@ impl Session {
         &self,
         queue_lock: Option<&mut MutexGuard<'_, PacketsQueue>>,
     ) -> Option<PacketDataPtr> {
+        #[inline(always)]
         fn dequeue(
             queue: &mut MutexGuard<'_, PacketsQueue>,
         ) -> Option<PacketDataPtr> {

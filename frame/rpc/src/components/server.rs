@@ -259,7 +259,7 @@ pub fn server_handle() -> SignalHandle {
     static HANDLE: OnceCell<SignalHandle> = OnceCell::new();
 
     // Return the SignalHandle, initializing it if necessary
-    HANDLE.get_or_init(|| SignalHandle::new()).clone()
+    HANDLE.get_or_init(SignalHandle::new).clone()
 }
 
 /// Shuts down the server with the given message.
