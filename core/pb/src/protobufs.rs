@@ -177,6 +177,12 @@ pub mod chat {
     proto!("peace.services.chat");
 
     pub const CHAT_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.chat.descriptor");
+
+    #[derive(Debug, Clone)]
+    pub enum ChannelQuery {
+        ChannelId(u32),
+        ChannelName(String),
+    }
 }
 
 pub mod geoip {
