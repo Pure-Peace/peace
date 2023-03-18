@@ -318,6 +318,8 @@ pub mod macros {
         pub use tonic::transport::{
             Certificate, Channel, ClientTlsConfig, Endpoint,
         };
+        #[cfg(unix)]
+        pub use tower::service_fn;
     }
 
     /// Add a `get` method to the given struct.
@@ -494,20 +496,20 @@ pub mod macros {
                         }
 
                         #[cfg(unix)]
-                        if let Some(uds) = self.uds().to_owned() {
-                            $crate::macros::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), uds);
+                        if let Some(uds) = self.uds().cloned() {
+                            $crate::macros::____private::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), uds.to_string_lossy());
                             let service_factory =
-                                tower::service_fn(|_| tokio::net::UnixStream::connect(uds));
+                                $crate::macros::____private::service_fn(move |_| tokio::net::UnixStream::connect(uds.to_owned()));
                             let endpoint =
                                 $crate::macros::____private::Endpoint::try_from("http://[::]:50051")?;
 
                             let channel = if self.lazy_connect() {
                                 endpoint.connect_with_connector_lazy(service_factory)
                             } else {
-                                $crate::macros::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                                $crate::macros::____private::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
                                 endpoint.connect_with_connector(service_factory).await?
                             };
-                            return Self::RpcClient::new(channel);
+                            return Ok(Self::RpcClient::new(channel));
                         }
 
                         $crate::macros::____private::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), self.uri());

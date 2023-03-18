@@ -72,13 +72,11 @@ pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
 
     // Check if the Unix Domain Socket option is enabled.
     #[cfg(unix)]
-    if let Some(path) = cfg.rpc_uds {
+    if let Some(path) = &cfg.rpc_uds {
         // Create the parent directory of the UDS if it doesn't exist.
-        tokio::fs::create_dir_all(
-            std::path::Path::new(&path).parent().unwrap(),
-        )
-        .await
-        .unwrap();
+        tokio::fs::create_dir_all(std::path::Path::new(path).parent().unwrap())
+            .await
+            .unwrap();
 
         // Bind the UDS listener to the specified path.
         let uds = tokio::net::UnixListener::bind(path).unwrap();
@@ -118,8 +116,8 @@ pub fn addr(cfg: &RpcFrameConfig) -> String {
     #[cfg(unix)]
     // If the server is using Unix Domain Sockets, return the path as the
     // address
-    if let Some(path) = cfg.uds {
-        return format!("{}", path)
+    if let Some(path) = &cfg.rpc_uds {
+        return format!("{}", path.to_string_lossy());
     }
 
     // If the server is not using Unix Domain Sockets, return the address and
