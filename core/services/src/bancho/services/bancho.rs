@@ -452,20 +452,20 @@ impl BanchoService for BanchoServiceImpl {
                     .await?;
 
                 let packet_builder = PacketBuilder::new()
-                    .add(server::protocol_version(19))
-                    .add(server::login_reply(
+                    .add(server::ProtocolVersion::new(19))
+                    .add(server::LoginReply::new(
                         bancho_packets::LoginResult::Success(user.id),
                     ))
-                    .add(server::bancho_privileges(1))
-                    .add(server::silence_end(0)) // todo
-                    .add(server::friends_list(&[])) // todo
-                    .add(server::channel_info(
+                    .add(server::BanchoPrivileges::new(1))
+                    .add(server::SilenceEnd::new(0)) // todo
+                    .add(server::FriendsList::new(&[])) // todo
+                    .add(server::ChannelInfo::new(
                         "peace".into(),
                         "peace".into(),
                         0,
                     ))
-                    .add(server::channel_info_end())
-                    .add(server::notification("welcome to peace!".into()));
+                    .add(server::ChannelInfoEnd::new())
+                    .add(server::Notification::new("welcome to peace!".into()));
 
                 info!(
                     target: LOG_TARGET,

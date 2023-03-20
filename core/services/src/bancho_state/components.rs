@@ -1,3 +1,4 @@
+use bancho_packets::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::{ConnectionInfo, CreateSessionDto};
@@ -353,7 +354,7 @@ impl Session {
         let status = &self.bancho_status;
         let stats = self.mode_stats();
 
-        bancho_packets::server::user_stats(
+        UserStats::pack(
             self.user_id,
             status.online_status.load().val(),
             status.description.to_string().into(),
@@ -372,7 +373,7 @@ impl Session {
 
     #[inline]
     pub fn user_presence_packet(&self) -> Vec<u8> {
-        bancho_packets::server::user_presence(
+        UserPresence::pack(
             self.user_id,
             self.username.to_string().into(),
             self.utc_offset,

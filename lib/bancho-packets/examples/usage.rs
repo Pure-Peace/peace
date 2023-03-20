@@ -4,21 +4,21 @@ use bancho_packets::*;
 
 fn main() {
     // Single packet
-    let login_reply_from_server = server::login_reply(LoginResult::Failed(
+    let login_reply_from_server = LoginReply::pack(LoginResult::Failed(
         LoginFailedResaon::InvalidCredentials,
     ));
-    let serverside_notification = server::notification("hello".into());
+    let serverside_notification = Notification::pack("hello".into());
 
     // Multiple packets with Builder
     let packets = PacketBuilder::new()
-        .add(server::login_reply(LoginResult::Success(1000)))
-        .add(server::protocol_version(19))
-        .add(server::notification("Welcome to osu!".into()))
-        .add(server::main_menu_icon(
+        .add(LoginReply::pack(LoginResult::Success(1000)))
+        .add(ProtocolVersion::pack(19))
+        .add(Notification::pack("Welcome to osu!".into()))
+        .add(MainMenuIcon::pack(
             "https://image.png".into(),
             "https://url.link".into(),
         ))
-        .add(server::silence_end(0))
-        .add(server::channel_info_end())
+        .add(SilenceEnd::pack(0))
+        .add(ChannelInfoEnd::pack())
         .build();
 }

@@ -2,7 +2,7 @@ use crate::bancho_state::{
     DynUserSessionsService, Session, UserSessionsService,
 };
 use async_trait::async_trait;
-use bancho_packets::PacketBuilder;
+use bancho_packets::{PacketBuilder, UserLogout};
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -282,8 +282,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
 
         let session = self.user_sessions.delete(query).await?;
 
-        let logout_notify =
-            Arc::new(bancho_packets::server::user_logout(session.user_id));
+        let logout_notify = Arc::new(UserLogout::pack(session.user_id));
 
         let user_sessions = self.user_sessions.read().await;
 

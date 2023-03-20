@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(unused_parens)]
+#![allow(unused_mut)]
 
 #[cfg(test)]
 mod tests;
@@ -9,6 +10,9 @@ mod tests;
 pub mod client;
 /// Predefined server related bancho packets.
 pub mod server;
+
+pub use client::*;
+pub use server::*;
 
 #[cfg(feature = "derive")]
 pub use bancho_packets_derive::*;
@@ -20,6 +24,14 @@ use std::{
     convert::TryInto,
     ops::{Deref, DerefMut},
 };
+
+pub type CowStr<'a> = Cow<'a, str>;
+
+pub trait BanchoPacket {
+    const ID: PacketId;
+
+    fn into_packet_data(self) -> Vec<u8>;
+}
 
 /// Packet header length
 ///
@@ -1011,6 +1023,16 @@ impl BanchoPacketLength for LoginResult {
     }
 }
 
+impl<T> BanchoPacketLength for Option<T>
+where
+    T: BanchoPacketLength,
+{
+    #[inline]
+    fn packet_len(&self) -> usize {
+        self.as_ref().map(|t| t.packet_len()).unwrap_or(0)
+    }
+}
+
 #[inline]
 /// Convert [`u32`] to `uleb128`
 pub fn u32_to_uleb128(mut unsigned: u32) -> ([u8; 5], usize) {
@@ -1062,27 +1084,6 @@ pub fn new_empty_packet(packet_id: PacketId) -> Vec<u8> {
     vec![packet_id as u8, 0, 0, 0, 0, 0, 0]
 }
 
-#[inline(always)]
-/// Pack message packet data
-pub fn pack_message(
-    sender: Cow<str>,
-    content: Cow<str>,
-    target: Cow<str>,
-    sender_id: i32,
-) -> Vec<u8> {
-    data!(sender, content, target, sender_id)
-}
-
-#[inline(always)]
-/// Pack channel info packet data
-pub fn pack_channel_info(
-    name: Cow<str>,
-    title: Cow<str>,
-    player_count: i16,
-) -> Vec<u8> {
-    data!(name, title, player_count)
-}
-
 /// Provide some convenient declarative macros to help build bancho packets.
 pub mod macros {
     #[macro_export]
@@ -1110,7 +1111,7 @@ pub mod macros {
                 let mut estimate_capacity = 0;
                 $(estimate_capacity += $item.packet_len();)*
 
-                let mut buf = Vec::with_capacity(estimate_capacity);
+                let mut buf = Vec::<u8>::with_capacity(estimate_capacity);
                 $($item.write_buf(&mut buf);)*
                 buf
             }
@@ -1120,7 +1121,7 @@ pub mod macros {
                 let mut estimate_capacity = 0;
                 $(estimate_capacity += $item.packet_len();)*
 
-                let mut buf = Vec::with_capacity($capacity + estimate_capacity);
+                let mut buf = Vec::<u8>::with_capacity($capacity + estimate_capacity);
                 $($item.write_buf(&mut buf);)*
                 buf
             }
@@ -1162,7 +1163,12 @@ pub mod macros {
     macro_rules! packet {
         ($packet_id:expr $(,$data:expr)*) => {
             {
-                let mut packet = $crate::new_empty_packet($packet_id);
+                let mut estimate_capacity = 0;
+                $(estimate_capacity += $data.packet_len();)*
+
+                let mut packet = Vec::<u8>::with_capacity(estimate_capacity);
+                packet.extend(&[$packet_id as u8, 0, 0, 0, 0, 0, 0]);
+
                 $($data.write_buf(&mut packet);)*
 
                 let packet_length_bytes =
@@ -1177,6 +1183,127 @@ pub mod macros {
 
                 packet
             }
+        }
+    }
+
+    #[macro_export]
+    /// Impl bancho packet
+    ///
+    /// Example
+    /// ```rust
+    /// use crate::{
+    ///     packet_struct, BanchoPacketLength,
+    ///     BanchoPacketWrite,
+    /// };
+    ///
+    /// packet_struct!(
+    ///     PacketId::OSU_USER_CHANGE_ACTION,
+    ///     /// #0: OSU_USER_CHANGE_ACTION
+    ///     UserChangeAction<'a> {
+    ///         online_status: u8,
+    ///         description: Cow<'a, str>,
+    ///         beatmap_md5: Cow<'a, str>,
+    ///         mods: u32,
+    ///         mode: u8,
+    ///         beatmap_id: i32,
+    ///     }
+    /// );
+    /// ```
+    macro_rules! packet_struct {
+        (
+            $packet_id: expr,
+            $(#[$struct_meta:meta])*
+            $struct_name:ident $(< $($lifetimes:lifetime),* >)? {
+                $(
+                    $(#[$field_meta:meta])*
+                    $field_name:ident: $field_type:ty$(,)*
+                )*
+            },
+            fn $fn:ident ($self:ident) -> $ret:ty $body:block
+        ) => {
+            $(#[$struct_meta])*
+            #[derive(Debug, Clone)]
+            pub struct $struct_name $(< $($lifetimes),* >)? {
+                $(
+                    $(#[$field_meta])*
+                    pub $field_name: $field_type,
+                )*
+            }
+
+            impl $(< $($lifetimes),* >)? $crate::BanchoPacketLength for $struct_name $(< $($lifetimes),* >)? {
+                #[inline]
+                fn packet_len(&self) -> usize {
+                    let mut _len = 0;
+                    $(_len += self.$field_name.packet_len();)*
+                    _len
+                }
+            }
+
+            impl$(< $($lifetimes),* >)? $struct_name$(< $($lifetimes),* >)? {
+                #[inline]
+                pub fn new(
+                    $($field_name: $field_type,)*
+                ) -> Self {
+                    Self { $($field_name,)* }
+                }
+
+                #[inline]
+                pub fn pack(
+                    $($field_name: $field_type,)*
+                ) -> Vec<u8> {
+                    $crate::BanchoPacket::into_packet_data(Self { $($field_name,)* })
+                }
+            }
+
+            impl$(< $($lifetimes),* >)? $crate::BanchoPacket for $struct_name$(< $($lifetimes),* >)? {
+                const ID: $crate::PacketId = $packet_id;
+
+                #[inline]
+                fn $fn ($self) -> $ret $body
+            }
+
+            impl$(< $($lifetimes),* >)? IntoIterator for $struct_name$(< $($lifetimes),* >)? {
+                type Item = u8;
+
+                type IntoIter = std::vec::IntoIter<u8>;
+
+                fn into_iter(self) -> Self::IntoIter {
+                    $crate::BanchoPacket::into_packet_data(self).into_iter()
+                }
+            }
+
+            impl$(< $($lifetimes),* >)? From<$struct_name$(< $($lifetimes),* >)?> for Vec<u8> {
+                fn from(packet: $struct_name$(< $($lifetimes),* >)?) -> Vec<u8> {
+                    $crate::BanchoPacket::into_packet_data(packet)
+                }
+            }
+        };
+        (
+            $packet_id: expr,
+            $(#[$struct_meta:meta])*
+            $struct_name:ident $(< $($lifetimes:lifetime),* >)? {
+                $(
+                    $(#[$field_meta:meta])*
+                    $field_name:ident: $field_type:ty$(,)*
+                )*
+            }
+        ) => {
+            packet_struct!(
+                $packet_id,
+                $(#[$struct_meta])*
+                $struct_name $(< $($lifetimes),* >)? {
+                    $(
+                        $(#[$field_meta])*
+                        $field_name: $field_type,
+                    )*
+                },
+                fn into_packet_data(self) -> Vec<u8> {
+                    $crate::packet!(
+                        Self::ID
+                        $(,self.$field_name)*
+                    )
+                }
+            );
         }
     }
 }

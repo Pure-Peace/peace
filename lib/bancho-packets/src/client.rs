@@ -1,387 +1,358 @@
-use std::borrow::Cow;
+use crate::*;
 
-use crate::{
-    data, pack_message, packet, BanchoPacketLength, BanchoPacketWrite, PacketId,
-};
+packet_struct!(
+    PacketId::OSU_USER_CHANGE_ACTION,
+    /// #0: OSU_USER_CHANGE_ACTION
+    UserChangeAction<'a> {
+        online_status: u8,
+        description: CowStr<'a>,
+        beatmap_md5: CowStr<'a>,
+        mods: u32,
+        mode: u8,
+        beatmap_id: i32,
+    }
+);
 
-#[inline]
-/// #0: OSU_USER_CHANGE_ACTION
-pub fn user_change_action(
-    online_status: u8,
-    description: Cow<str>,
-    beatmap_md5: Cow<str>,
-    mods: u32,
-    mode: u8,
-    beatmap_id: i32,
-) -> Vec<u8> {
-    packet!(
-        PacketId::OSU_USER_CHANGE_ACTION,
-        data!(online_status, description, beatmap_md5, mods, mode, beatmap_id)
-    )
-}
+packet_struct!(
+    PacketId::OSU_SEND_PUBLIC_MESSAGE,
+    /// #1: OSU_SEND_PUBLIC_MESSAGE
+    SendPublicMessage<'a> {
+        sender: CowStr<'a>,
+        content: CowStr<'a>,
+        target: CowStr<'a>,
+        sender_id: i32,
+    }
+);
 
-#[inline]
-/// #1: OSU_SEND_PUBLIC_MESSAGE
-pub fn send_public_message(
-    sender: Cow<str>,
-    content: Cow<str>,
-    target: Cow<str>,
-    sender_id: i32,
-) -> Vec<u8> {
-    packet!(
-        PacketId::OSU_SEND_PUBLIC_MESSAGE,
-        pack_message(sender, content, target, sender_id)
-    )
-}
+packet_struct!(
+    PacketId::OSU_USER_LOGOUT,
+    /// #2: OSU_USER_LOGOUT
+    UserLogout { user_id: i32 }
+);
 
-#[inline]
-/// #2: OSU_USER_LOGOUT
-pub fn user_logout(user_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_LOGOUT, user_id)
-}
+packet_struct!(
+    PacketId::OSU_USER_REQUEST_STATUS_UPDATE,
+    /// #3: OSU_USER_REQUEST_STATUS_UPDATE
+    UserRequestStatusUpdate {}
+);
 
-#[inline]
-/// #3: OSU_USER_REQUEST_STATUS_UPDATE
-pub fn user_request_status_update() -> Vec<u8> {
-    packet!(PacketId::OSU_USER_REQUEST_STATUS_UPDATE)
-}
+packet_struct!(
+    PacketId::OSU_PING,
+    /// #4: OSU_PING
+    Ping {}
+);
 
-#[inline]
-/// #4: OSU_PING
-pub fn ping() -> Vec<u8> {
-    packet!(PacketId::OSU_PING)
-}
+packet_struct!(
+    PacketId::OSU_SPECTATE_START,
+    /// #16: OSU_SPECTATE_START
+    SpectateStart { target_id: i32 }
+);
 
-#[inline]
-/// #16: OSU_SPECTATE_START
-pub fn spectate_start(target_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_SPECTATE_START, target_id)
-}
+packet_struct!(
+    PacketId::OSU_SPECTATE_STOP,
+    /// #17: OSU_SPECTATE_STOP
+    SpectateStop {}
+);
 
-#[inline]
-/// #17: OSU_SPECTATE_STOP
-pub fn spectate_stop() -> Vec<u8> {
-    packet!(PacketId::OSU_SPECTATE_STOP)
-}
+packet_struct!(
+    PacketId::OSU_SPECTATE_FRAMES,
+    /// #18: OSU_SPECTATE_FRAMES
+    SpceateFrames { data: Vec<u8> }
+);
 
-#[inline]
-/// #18: OSU_SPECTATE_FRAMES
-pub fn spceate_frames(data: Vec<u8>) -> Vec<u8> {
-    packet!(PacketId::OSU_SPECTATE_FRAMES, data)
-}
+packet_struct!(
+    PacketId::OSU_ERROR_REPORT,
+    /// #20: OSU_ERROR_REPORT
+    ErrorReport { data: Vec<u8> }
+);
 
-#[inline]
-/// #20: OSU_ERROR_REPORT
-pub fn error_report(data: Vec<u8>) -> Vec<u8> {
-    packet!(PacketId::OSU_ERROR_REPORT, data)
-}
+packet_struct!(
+    PacketId::OSU_SPECTATE_CANT,
+    /// #21: OSU_SPECTATE_CANT
+    SpectateCant {}
+);
 
-#[inline]
-/// #21: OSU_SPECTATE_CANT
-pub fn spectate_cant() -> Vec<u8> {
-    packet!(PacketId::OSU_SPECTATE_CANT)
-}
+packet_struct!(
+    PacketId::OSU_SEND_PRIVATE_MESSAGE,
+    /// #25: OSU_SEND_PRIVATE_MESSAGE
+    SendPrivateMessage<'a> {
+        sender: CowStr<'a>,
+        content: CowStr<'a>,
+        target: CowStr<'a>,
+        sender_id: i32,
+    }
+);
 
-#[inline]
-/// #25: OSU_SEND_PRIVATE_MESSAGE
-pub fn send_private_message(
-    sender: Cow<str>,
-    content: Cow<str>,
-    target: Cow<str>,
-    sender_id: i32,
-) -> Vec<u8> {
-    packet!(
-        PacketId::OSU_SEND_PRIVATE_MESSAGE,
-        pack_message(sender, content, target, sender_id)
-    )
-}
+packet_struct!(
+    PacketId::OSU_USER_PART_LOBBY,
+    /// #29: OSU_USER_PART_LOBBY
+    UserPartLobby {}
+);
 
-#[inline]
-/// #29: OSU_USER_PART_LOBBY
-pub fn user_part_lobby() -> Vec<u8> {
-    packet!(PacketId::OSU_USER_PART_LOBBY)
-}
+packet_struct!(
+    PacketId::OSU_USER_JOIN_LOBBY,
+    /// #30: OSU_USER_JOIN_LOBBY
+    UserJoinLobby {}
+);
 
-#[inline]
-/// #30: OSU_USER_JOIN_LOBBY
-pub fn user_join_lobby() -> Vec<u8> {
-    packet!(PacketId::OSU_USER_JOIN_LOBBY)
-}
+packet_struct!(
+    PacketId::OSU_USER_CREATE_MATCH,
+    /// #31: OSU_USER_CREATE_MATCH
+    UserCreateMatch<'a> {
+        id: i16,
+        in_progress: i8,
+        powerplay: i8,
+        mods: i32,
+        name: CowStr<'a>,
+        passwd: CowStr<'a>,
+        map_name: CowStr<'a>,
+        map_id: i32,
+        map_md5: CowStr<'a>,
+        slot_statuses: Vec<i8>,
+        slot_teams: Vec<i8>,
+    }
+);
 
-#[inline]
-/// #31: OSU_USER_CREATE_MATCH
-pub fn user_create_match(
-    id: i16,
-    in_progress: i8,
-    powerplay: i8,
-    mods: i32,
-    name: Cow<str>,
-    passwd: Cow<str>,
-    map_name: Cow<str>,
-    map_id: i32,
-    map_md5: Cow<str>,
-    slot_statuses: Vec<i8>,
-    slot_teams: Vec<i8>,
-) -> Vec<u8> {
-    packet!(
-        PacketId::OSU_USER_CREATE_MATCH,
-        data!(
-            id,
-            in_progress,
-            powerplay,
-            mods,
-            name,
-            passwd,
-            map_name,
-            map_id,
-            map_md5,
-            slot_statuses,
-            slot_teams
-        )
-    )
-}
+packet_struct!(
+    PacketId::OSU_USER_JOIN_MATCH,
+    /// #32: OSU_USER_JOIN_MATCH
+    UserJoinMatch<'a> {
+        match_id: i32,
+        match_password: CowStr<'a>
+    }
+);
 
-#[inline]
-/// #32: OSU_USER_JOIN_MATCH
-pub fn user_join_match(match_id: i32, match_password: Cow<str>) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_JOIN_MATCH, data!(match_id, match_password))
-}
+packet_struct!(
+    PacketId::OSU_USER_PART_MATCH,
+    /// #33: OSU_USER_PART_MATCH
+    UserPartMatch {}
+);
 
-#[inline]
-/// #33: OSU_USER_PART_MATCH
-pub fn user_part_match() -> Vec<u8> {
-    packet!(PacketId::OSU_USER_PART_MATCH)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_CHANGE_SLOT,
+    /// #38: OSU_MATCH_CHANGE_SLOT
+    MatchChangeSlot { slot_id: i32 }
+);
 
-#[inline]
-/// #38: OSU_MATCH_CHANGE_SLOT
-pub fn match_change_slot(slot_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_LOCK, slot_id)
-}
+packet_struct!(
+    PacketId::OSU_USER_MATCH_READY,
+    /// #39: OSU_USER_MATCH_READY
+    UserMatchReady {}
+);
 
-#[inline]
-/// #39: OSU_USER_MATCH_READY
-pub fn user_match_ready() -> Vec<u8> {
-    packet!(PacketId::OSU_USER_MATCH_READY)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_LOCK,
+    /// #40: OSU_MATCH_LOCK
+    MatchLock { slot_id: i32 }
+);
 
-#[inline]
-/// #40: OSU_MATCH_LOCK
-pub fn match_lock(slot_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_LOCK, slot_id)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_CHANGE_SETTINGS,
+    /// #41: OSU_MATCH_CHANGE_SETTINGS
+    MatchChangeSettings<'a> {
+        id: i16,
+        in_progress: i8,
+        powerplay: i8,
+        mods: i32,
+        name: CowStr<'a>,
+        passwd: CowStr<'a>,
+        map_name: CowStr<'a>,
+        map_id: i32,
+        map_md5: CowStr<'a>,
+        slot_statuses: Vec<i8>,
+        slot_teams: Vec<i8>,
+    }
+);
 
-#[inline]
-/// #41: OSU_MATCH_CHANGE_SETTINGS
-pub fn match_change_settings(
-    id: i16,
-    in_progress: i8,
-    powerplay: i8,
-    mods: i32,
-    name: Cow<str>,
-    passwd: Cow<str>,
-    map_name: Cow<str>,
-    map_id: i32,
-    map_md5: Cow<str>,
-    slot_statuses: Vec<i8>,
-    slot_teams: Vec<i8>,
-) -> Vec<u8> {
-    packet!(
-        PacketId::OSU_MATCH_CHANGE_SETTINGS,
-        data!(
-            id,
-            in_progress,
-            powerplay,
-            mods,
-            name,
-            passwd,
-            map_name,
-            map_id,
-            map_md5,
-            slot_statuses,
-            slot_teams
-        )
-    )
-}
+packet_struct!(
+    PacketId::OSU_MATCH_START,
+    /// #44: OSU_MATCH_START
+    MatchStart {}
+);
 
-#[inline]
-/// #44: OSU_MATCH_START
-pub fn match_start() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_START)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_SCORE_UPDATE,
+    /// #47: OSU_MATCH_SCORE_UPDATE
+    MatchScoreUpdate {
+        play_data: Vec<u8>
+    }
+);
 
-#[inline]
-/// #47: OSU_MATCH_SCORE_UPDATE
-pub fn match_score_update(play_data: Vec<u8>) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_SCORE_UPDATE, play_data)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_COMPLETE,
+    /// #49: OSU_MATCH_COMPLETE
+    MatchComplete {}
+);
 
-#[inline]
-/// #49: OSU_MATCH_COMPLETE
-pub fn match_complete() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_COMPLETE)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_CHANGE_MODS,
+    /// #51: OSU_MATCH_CHANGE_MODS
+    MatchChangeMods { mods: i32 }
+);
 
-#[inline]
-/// #51: OSU_MATCH_CHANGE_MODS
-pub fn match_change_mods(mods: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_CHANGE_MODS, mods)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_LOAD_COMPLETE,
+    /// #52: OSU_MATCH_LOAD_COMPLETE
+    MatchLoadComplete {}
+);
 
-#[inline]
-/// #52: OSU_MATCH_LOAD_COMPLETE
-pub fn match_load_complete() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_LOAD_COMPLETE)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_NO_BEATMAP,
+    /// #54: OSU_MATCH_NO_BEATMAP
+    MatchNoBeatmap {}
+);
 
-#[inline]
-/// #54: OSU_MATCH_NO_BEATMAP
-pub fn match_no_beatmap() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_NO_BEATMAP)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_NOT_READY,
+    /// #55: OSU_MATCH_NOT_READY
+    MatchNotReady {}
+);
 
-#[inline]
-/// #55: OSU_MATCH_NOT_READY
-pub fn match_not_ready() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_NOT_READY)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_FAILED,
+    /// #56: OSU_MATCH_FAILED
+    MatchFailed {}
+);
 
-#[inline]
-/// #56: OSU_MATCH_FAILED
-pub fn match_failed() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_FAILED)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_HAS_BEATMAP,
+    /// #59: OSU_MATCH_HAS_BEATMAP
+    MatchHasBeatmap {}
+);
 
-#[inline]
-/// #59: OSU_MATCH_HAS_BEATMAP
-pub fn match_has_beatmap() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_HAS_BEATMAP)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_SKIP_REQUEST,
+    /// #60: OSU_MATCH_SKIP_REQUEST
+    MatchSkipRequest {}
+);
 
-#[inline]
-/// #60: OSU_MATCH_SKIP_REQUEST
-pub fn match_skip_request() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_SKIP_REQUEST)
-}
+packet_struct!(
+    PacketId::OSU_USER_CHANNEL_JOIN,
+    /// #63: OSU_USER_CHANNEL_JOIN
+    UserChannelJoin<'a> {
+        channel_name: CowStr<'a>
+    }
+);
 
-#[inline]
-/// #63: OSU_USER_CHANNEL_JOIN
-pub fn user_channel_join(channel_name: Cow<str>) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_CHANNEL_JOIN, channel_name)
-}
+packet_struct!(
+    PacketId::OSU_BEATMAP_INFO_REQUEST,
+    /// #68: OSU_BEATMAP_INFO_REQUEST
+    BeatmapInfoRequest<'a> {
+        beatmap_ids: &'a [i32]
+    }
+);
 
-#[inline]
-/// #68: OSU_BEATMAP_INFO_REQUEST
-pub fn beatmap_info_request(beatmap_ids: Vec<i32>) -> Vec<u8> {
-    packet!(PacketId::OSU_BEATMAP_INFO_REQUEST, beatmap_ids)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_TRANSFER_HOST,
+    /// #70: OSU_MATCH_TRANSFER_HOST
+    MatchTransferHost { slot_id: i32 }
+);
 
-#[inline]
-/// #70: OSU_MATCH_TRANSFER_HOST
-pub fn match_transfer_host(slot_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_TRANSFER_HOST, slot_id)
-}
+packet_struct!(
+    PacketId::OSU_USER_FRIEND_ADD,
+    /// #73: OSU_USER_FRIEND_ADD
+    UserFriendAdd { target_id: i32 }
+);
 
-#[inline]
-/// #73: OSU_USER_FRIEND_ADD
-pub fn user_friend_add(target_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_FRIEND_ADD, target_id)
-}
+packet_struct!(
+    PacketId::OSU_USER_FRIEND_REMOVE,
+    /// #74: OSU_USER_FRIEND_REMOVE
+    UserFriendRemove { target_id: i32 }
+);
 
-#[inline]
-/// #74: OSU_USER_FRIEND_REMOVE
-pub fn user_friend_remove(target_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_FRIEND_REMOVE, target_id)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_CHANGE_TEAM,
+    /// #77: OSU_MATCH_CHANGE_TEAM
+    MatchChangeTeam {}
+);
 
-#[inline]
-/// #77: OSU_MATCH_CHANGE_TEAM
-pub fn match_change_team() -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_CHANGE_TEAM)
-}
+packet_struct!(
+    PacketId::OSU_USER_CHANNEL_PART,
+    /// #78: OSU_USER_CHANNEL_PART
+    UserChannelPart<'a> {
+        channel_name: CowStr<'a>
+    }
+);
 
-#[inline]
-/// #78: OSU_USER_CHANNEL_PART
-pub fn user_channel_part(channel_name: Cow<str>) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_CHANGE_TEAM, channel_name)
-}
+packet_struct!(
+    PacketId::OSU_USER_RECEIVE_UPDATES,
+    /// #79: OSU_USER_RECEIVE_UPDATES
+    UserReceiveUpdates { filter_val: i32 }
+);
 
-#[inline]
-/// #79: OSU_USER_RECEIVE_UPDATES
-pub fn user_receive_updates(filter_val: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_RECEIVE_UPDATES, filter_val)
-}
+packet_struct!(
+    PacketId::OSU_USER_SET_AWAY_MESSAGE,
+    /// #82: OSU_USER_SET_AWAY_MESSAGE
+    UserSetAwayMessage<'a> {
+        sender: CowStr<'a>,
+        content: CowStr<'a>,
+        target: CowStr<'a>,
+        sender_id: i32,
+    }
+);
 
-#[inline]
-/// #82: OSU_USER_SET_AWAY_MESSAGE
-pub fn user_set_away_message(
-    sender: Cow<str>,
-    content: Cow<str>,
-    target: Cow<str>,
-    sender_id: i32,
-) -> Vec<u8> {
-    packet!(
-        PacketId::OSU_USER_SET_AWAY_MESSAGE,
-        pack_message(sender, content, target, sender_id)
-    )
-}
+packet_struct!(
+    PacketId::OSU_IRC_ONLY,
+    /// #84: OSU_IRC_ONLY
+    IrcOnly {}
+);
 
-#[inline]
-/// #84: OSU_IRC_ONLY
-pub fn irc_only() -> Vec<u8> {
-    packet!(PacketId::OSU_IRC_ONLY)
-}
+packet_struct!(
+    PacketId::OSU_USER_STATS_REQUEST,
+    /// #85: OSU_USER_STATS_REQUEST
+    UserStatsRequest<'a> {
+        user_ids: &'a [i32]
+    }
+);
 
-#[inline]
-/// #85: OSU_USER_STATS_REQUEST
-pub fn user_stats_request(user_ids: Vec<i32>) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_STATS_REQUEST, user_ids)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_INVITE,
+    /// #87: OSU_MATCH_INVITE
+    MatchInvite { user_id: i32 }
+);
 
-#[inline]
-/// #87: OSU_MATCH_INVITE
-pub fn match_invite(user_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_INVITE, user_id)
-}
+packet_struct!(
+    PacketId::OSU_MATCH_CHANGE_PASSWORD,
+    /// #90: OSU_MATCH_CHANGE_PASSWORD
+    MatchChangePassword<'a> {
+        password: CowStr<'a>
+    }
+);
 
-#[inline]
-/// #90: OSU_MATCH_CHANGE_PASSWORD
-pub fn match_change_password(password: Cow<str>) -> Vec<u8> {
-    packet!(PacketId::OSU_MATCH_CHANGE_PASSWORD, password)
-}
+packet_struct!(
+    PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST,
+    /// #93: OSU_TOURNAMENT_MATCH_INFO_REQUEST
+    TournamentMatchInfoRequest { match_id: i32 }
+);
 
-#[inline]
-/// #93: OSU_TOURNAMENT_MATCH_INFO_REQUEST
-pub fn tournament_match_info_request(match_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST, match_id)
-}
+packet_struct!(
+    PacketId::OSU_USER_PRESENCE_REQUEST,
+    /// #97: OSU_USER_PRESENCE_REQUEST
+    UserPresenceRequest<'a> {
+        user_ids: &'a [i32]
+    }
+);
 
-#[inline]
-/// #97: OSU_USER_PRESENCE_REQUEST
-pub fn user_presence_request(user_ids: Vec<i32>) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_PRESENCE_REQUEST, user_ids)
-}
+packet_struct!(
+    PacketId::OSU_USER_PRESENCE_REQUEST_ALL,
+    /// #98: OSU_USER_PRESENCE_REQUEST_ALL
+    UserPresenceRequestAll { ingame_time: i32 }
+);
 
-#[inline]
-/// #98: OSU_USER_PRESENCE_REQUEST_ALL
-pub fn user_presence_request_all(ingame_time: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_PRESENCE_REQUEST_ALL, ingame_time)
-}
+packet_struct!(
+    PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS,
+    /// #99: OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS
+    UserToggleBlockNonFriendDms { value: i32 }
+);
 
-#[inline]
-/// #99: OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS
-pub fn user_toggle_block_non_friend_dms(value: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS, value)
-}
+packet_struct!(
+    PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL,
+    /// #108: OSU_TOURNAMENT_JOIN_MATCH_CHANNEL
+    TournamentJoinMatchChannel { match_id: i32 }
+);
 
-#[inline]
-/// #108: OSU_TOURNAMENT_JOIN_MATCH_CHANNEL
-pub fn tournament_join_match_channel(match_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL, match_id)
-}
-
-#[inline]
-/// #109: OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL
-pub fn tournament_leave_match_channel(match_id: i32) -> Vec<u8> {
-    packet!(PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL, match_id)
-}
+packet_struct!(
+    PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL,
+    /// #109: OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL
+    TournamentLeaveMatchChannel { match_id: i32 }
+);

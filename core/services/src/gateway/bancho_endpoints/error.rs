@@ -90,19 +90,19 @@ impl IntoResponse for BanchoHttpError {
                 (
                     [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
                     PacketBuilder::new()
-                        .add(server::login_reply(
+                        .add(server::LoginReply::new(
                             bancho_packets::LoginResult::Failed(
                                 bancho_packets::LoginFailedResaon::InvalidCredentials,
                             ),
                         ))
-                        .add(server::notification(self.to_string().into()))
+                        .add(server::Notification::new(self.to_string().into()))
                         .build()
                 )
                     .into_response()
             },
 
             Self::SessionNotExists(_) => {
-                PacketBuilder::new().add(server::bancho_restart(0)).build().into_response()
+                PacketBuilder::new().add(server::BanchoRestart::new(0)).build().into_response()
             },
 
             _ => (self.status_code(), self.to_string()).into_response(),
