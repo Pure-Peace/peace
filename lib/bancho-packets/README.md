@@ -27,7 +27,7 @@ see more: [examples](examples), [src/tests.rs](src/tests.rs)
 **Reading packets**
 
 ```rust
-use bancho_packets::{PacketReader, PayloadReader};
+use bancho_packets::*;
 
 // Packets from osu! bancho
 let data = &[
@@ -40,16 +40,16 @@ let data = &[
 ];
 
 // Create reader
-let mut reader = PacketReader::new(data);
+let reader = PacketReader::new(data);
 
 // Read packets
-while let Some(packet) = reader.next() {
-    print!("packet id: {:?}: ", packet.id);
+for packet in reader {
+    print!("{:?}: ", packet.id);
     match packet.payload {
         Some(payload) => {
             // Read payload
             let mut payload_reader = PayloadReader::new(payload);
-            println!("payload: {:?}", payload_reader.read::<String>());
+            println!("{:?}", payload_reader.read::<String>());
         },
         None => println!("Non-payload"),
     }
@@ -72,19 +72,22 @@ while let Some(packet) = reader.next() {
 use bancho_packets::*;
 
 // Single packet
-let login_reply_from_server = server::login_reply(LoginResult::Failed(
+let login_reply_from_server = LoginReply::pack(LoginResult::Failed(
     LoginFailedResaon::InvalidCredentials,
 ));
-let serverside_notification = server::notification("hello");
+let serverside_notification = Notification::pack("hello".into());
 
 // Multiple packets with Builder
 let packets = PacketBuilder::new()
-    .add(server::login_reply(LoginResult::Success(1000)))
-    .add(server::protocol_version(19))
-    .add(server::notification("Welcome to osu!"))
-    .add(server::main_menu_icon("https://image.png", "https://url.link"))
-    .add(server::silence_end(0))
-    .add(server::channel_info_end())
+    .add(LoginReply::pack(LoginResult::Success(1000)))
+    .add(ProtocolVersion::pack(19))
+    .add(Notification::pack("Welcome to osu!".into()))
+    .add(MainMenuIcon::pack(
+        "https://image.png".into(),
+        "https://url.link".into(),
+    ))
+    .add(SilenceEnd::pack(0))
+    .add(ChannelInfoEnd::pack())
     .build();
 
 ```
@@ -98,7 +101,7 @@ use bancho_packets::*;
 let number_data: i32 = 1;
 let packet = packet!(PacketId::BANCHO_MATCH_PLAYER_SKIPPED, number_data)
 
-// Complex
+// Complex (old)
 pub fn user_stats(
     user_id: i32,
     action: u8,
@@ -133,6 +136,54 @@ pub fn user_stats(
         )
     )
 }
+
+
+// Complex (new)
+packet_struct!(
+    PacketId::BANCHO_SPECTATOR_JOINED,
+    /// #13: BANCHO_SPECTATOR_JOINED
+    SpectatorJoined { user_id: i32 }
+);
+
+// Complex (new)
+packet_struct!(
+    PacketId::BANCHO_USER_STATS,
+    /// #11: BANCHO_USER_STATS
+    UserStats<'a> {
+        user_id: i32,
+        online_status: u8,
+        description: CowStr<'a>,
+        beatmap_md5: CowStr<'a>,
+        mods: u32,
+        mode: u8,
+        beatmap_id: i32,
+        ranked_score: i64,
+        accuracy: f32,
+        playcount: i32,
+        total_score: i64,
+        rank: i32,
+        pp: i16,
+    },
+    fn into_packet_data(self) -> Vec<u8> {
+        packet!(
+            Self::ID,
+            self.user_id,
+            self.online_status,
+            self.description,
+            self.beatmap_md5,
+            self.mods,
+            self.mode,
+            self.beatmap_id,
+            self.ranked_score,
+            self.accuracy / 100f32,
+            self.playcount,
+            self.total_score,
+            self.rank,
+            self.pp
+        )
+    }
+);
+
 
 ```
 

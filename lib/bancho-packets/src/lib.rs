@@ -532,18 +532,18 @@ impl<'a> Iterator for PacketReader<'a> {
 ///
 /// ### Usages:
 /// ```
-/// use bancho_packets::{server, PacketBuilder, LoginResult};
+/// use bancho_packets::*;
 ///
 /// let packet = PacketBuilder::new()
-///     .add(server::login_reply(LoginResult::Success(1009)))
-///     .add(server::protocol_version(19))
-///     .add(server::notification("Welcome to osu!"))
-///     .add(server::main_menu_icon(
-///         "https://image.png",
-///         "https://url.link",
+///     .add(LoginReply::pack(LoginResult::Success(1009)))
+///     .add(ProtocolVersion::pack(19))
+///     .add(Notification::pack("Welcome to osu!".into()))
+///     .add(MainMenuIcon::pack(
+///         "https://image.png".into(),
+///         "https://url.link".into(),
 ///     ))
-///     .add(server::silence_end(0))
-///     .add(server::channel_info_end())
+///     .add(SilenceEnd::pack(0))
+///     .add(ChannelInfoEnd::pack())
 ///     .build();
 /// ```
 ///
@@ -1191,18 +1191,15 @@ pub mod macros {
     ///
     /// Example
     /// ```rust
-    /// use crate::{
-    ///     packet_struct, BanchoPacketLength,
-    ///     BanchoPacketWrite,
-    /// };
+    /// use bancho_packets::*;
     ///
     /// packet_struct!(
     ///     PacketId::OSU_USER_CHANGE_ACTION,
     ///     /// #0: OSU_USER_CHANGE_ACTION
     ///     UserChangeAction<'a> {
     ///         online_status: u8,
-    ///         description: Cow<'a, str>,
-    ///         beatmap_md5: Cow<'a, str>,
+    ///         description: CowStr<'a>,
+    ///         beatmap_md5: CowStr<'a>,
     ///         mods: u32,
     ///         mode: u8,
     ///         beatmap_id: i32,
