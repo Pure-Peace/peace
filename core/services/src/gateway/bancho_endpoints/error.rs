@@ -68,8 +68,9 @@ impl BanchoHttpError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::ParseRequestError => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::FailedToProcessBanchoPackets(_) =>
-                StatusCode::INTERNAL_SERVER_ERROR,
+            Self::FailedToProcessBanchoPackets(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            },
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             _ => StatusCode::OK,
         }
@@ -94,7 +95,7 @@ impl IntoResponse for BanchoHttpError {
                                 bancho_packets::LoginFailedResaon::InvalidCredentials,
                             ),
                         ))
-                        .add(server::notification(self.to_string()))
+                        .add(server::notification(self.to_string().into()))
                         .build()
                 )
                     .into_response()

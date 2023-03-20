@@ -459,9 +459,13 @@ impl BanchoService for BanchoServiceImpl {
                     .add(server::bancho_privileges(1))
                     .add(server::silence_end(0)) // todo
                     .add(server::friends_list(&[])) // todo
-                    .add(server::channel_info("peace", "peace", 0))
+                    .add(server::channel_info(
+                        "peace".into(),
+                        "peace".into(),
+                        0,
+                    ))
                     .add(server::channel_info_end())
-                    .add(server::notification("welcome to peace!"));
+                    .add(server::notification("welcome to peace!".into()));
 
                 info!(
                     target: LOG_TARGET,

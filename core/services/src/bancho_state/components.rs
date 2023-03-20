@@ -356,8 +356,8 @@ impl Session {
         bancho_packets::server::user_stats(
             self.user_id,
             status.online_status.load().val(),
-            status.description.to_string(),
-            status.beatmap_md5.to_string(),
+            status.description.to_string().into(),
+            status.beatmap_md5.to_string().into(),
             status.mods.load().bits(),
             status.mode.load().val(),
             status.beatmap_id.val(),
@@ -374,7 +374,7 @@ impl Session {
     pub fn user_presence_packet(&self) -> Vec<u8> {
         bancho_packets::server::user_presence(
             self.user_id,
-            self.username.to_string(),
+            self.username.to_string().into(),
             self.utc_offset,
             0, // todo
             1, // todo

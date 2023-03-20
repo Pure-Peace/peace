@@ -197,7 +197,7 @@ mod packets_writing {
     #[test]
     fn test_login_notfication() {
         assert_eq!(
-            server::notification("hello"),
+            server::notification("hello".into()),
             vec![24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111]
         )
     }
@@ -205,7 +205,12 @@ mod packets_writing {
     #[test]
     fn test_send_message() {
         assert_eq!(
-            server::send_message("PurePeace", "hello", "osu", 1001),
+            server::send_message(
+                "PurePeace".into(),
+                "hello".into(),
+                "osu".into(),
+                1001
+            ),
             vec![
                 7, 0, 0, 27, 0, 0, 0, 11, 9, 80, 117, 114, 101, 80, 101, 97,
                 99, 101, 11, 5, 104, 101, 108, 108, 111, 11, 3, 111, 115, 117,
@@ -217,7 +222,7 @@ mod packets_writing {
     #[test]
     fn test_change_username() {
         assert_eq!(
-            server::change_username("PurePeace", "peppy"),
+            server::change_username("PurePeace".into(), "peppy".into()),
             vec![
                 9, 0, 0, 20, 0, 0, 0, 11, 18, 80, 117, 114, 101, 80, 101, 97,
                 99, 101, 62, 62, 62, 62, 112, 101, 112, 112, 121
@@ -228,7 +233,7 @@ mod packets_writing {
     #[test]
     fn test_rtx() {
         assert_eq!(
-            server::rtx("Peace"),
+            server::rtx("Peace".into()),
             vec![105, 0, 0, 7, 0, 0, 0, 11, 5, 80, 101, 97, 99, 101]
         )
     }
@@ -239,10 +244,10 @@ mod packets_writing {
         let resp = resp
             .add(server::login_reply(LoginResult::Success(1009)))
             .add(server::protocol_version(19))
-            .add(server::notification("Welcome to osu!"))
+            .add(server::notification("Welcome to osu!".into()))
             .add(server::main_menu_icon(
-                "https://image.png",
-                "https://url.link",
+                "https://image.png".into(),
+                "https://url.link".into(),
             ))
             .add(server::silence_end(0))
             .add(server::channel_info_end());
@@ -281,8 +286,16 @@ mod packets_writing {
 
     #[test]
     fn test_user_presence() {
-        let data =
-            server::user_presence(5, "PurePeace", 8, 48, 1, 1.0, 1.0, 666);
+        let data = server::user_presence(
+            5,
+            "PurePeace".into(),
+            8,
+            48,
+            1,
+            1.0,
+            1.0,
+            666,
+        );
         println!("{}", data.len());
         assert_eq!(
             data,
@@ -299,8 +312,8 @@ mod packets_writing {
         let data = server::user_stats(
             5,
             1,
-            "idle",
-            "asdqwezxcasdqwezxcasdqwezxcasdqw",
+            "idle".into(),
+            "asdqwezxcasdqwezxcasdqwezxcasdqw".into(),
             0,
             0,
             1,
@@ -328,7 +341,8 @@ mod packets_writing {
     #[test]
     fn test_client_packets() {
         let (t1, t2, t3, t4, t5, t6) = (1, "test", "test", 2, 3, 4);
-        let data = client::user_change_action(t1, t2, t3, t4, t5, t6);
+        let data =
+            client::user_change_action(t1, t2.into(), t3.into(), t4, t5, t6);
 
         let mut reader = PacketReader::new(&data);
         let packet = reader.next().unwrap();

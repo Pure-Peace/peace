@@ -16,6 +16,7 @@ pub use bancho_packets_derive::*;
 use enum_primitive_derive::Primitive;
 use num_traits::FromPrimitive;
 use std::{
+    borrow::Cow,
     convert::TryInto,
     ops::{Deref, DerefMut},
 };
@@ -297,22 +298,6 @@ pub struct ClientChangeAction {
     pub mode: u8,
     pub beatmap_id: i32,
 }
-
-/// Generic type for [`str`] and [`String`]
-pub trait Str:
-    BanchoPacketWrite
-    + BanchoPacketLength
-    + std::fmt::Display
-    + std::fmt::Debug
-    + AsRef<str>
-    + Into<String>
-    + Deref<Target = str>
-{
-}
-
-impl Str for &str {}
-
-impl Str for String {}
 
 #[derive(Debug, Clone)]
 /// [`PayloadReader`] helps to read Bacho packet data.
@@ -752,6 +737,16 @@ pub trait BanchoPacketWrite {
     }
 }
 
+impl BanchoPacketWrite for Cow<'_, str> {
+    #[inline]
+    fn write_buf(self, buf: &mut Vec<u8>) {
+        match self {
+            Cow::Borrowed(s) => s.write_buf(buf),
+            Cow::Owned(s) => s.write_buf(buf),
+        }
+    }
+}
+
 impl BanchoPacketWrite for &str {
     #[inline]
     fn write_buf(self, buf: &mut Vec<u8>) {
@@ -948,6 +943,17 @@ pub trait BanchoPacketLength {
         0
     }
 }
+
+impl BanchoPacketLength for Cow<'_, str> {
+    #[inline]
+    fn packet_len(&self) -> usize {
+        match self {
+            Cow::Borrowed(s) => s.packet_len(),
+            Cow::Owned(s) => s.packet_len(),
+        }
+    }
+}
+
 impl BanchoPacketLength for &str {
     #[inline]
     fn packet_len(&self) -> usize {
@@ -1059,9 +1065,9 @@ pub fn new_empty_packet(packet_id: PacketId) -> Vec<u8> {
 #[inline(always)]
 /// Pack message packet data
 pub fn pack_message(
-    sender: impl Str,
-    content: impl Str,
-    target: impl Str,
+    sender: Cow<str>,
+    content: Cow<str>,
+    target: Cow<str>,
     sender_id: i32,
 ) -> Vec<u8> {
     data!(sender, content, target, sender_id)
@@ -1070,8 +1076,8 @@ pub fn pack_message(
 #[inline(always)]
 /// Pack channel info packet data
 pub fn pack_channel_info(
-    name: impl Str,
-    title: impl Str,
+    name: Cow<str>,
+    title: Cow<str>,
     player_count: i16,
 ) -> Vec<u8> {
     data!(name, title, player_count)

@@ -1,7 +1,9 @@
+use std::borrow::Cow;
+
 use crate::{
     data, pack_channel_info, pack_message, packet, BanchoPacketLength,
     BanchoPacketWrite, LoginResult, MatchData, MatchUpdate, PacketId,
-    ScoreFrame, Str,
+    ScoreFrame,
 };
 
 #[inline]
@@ -13,9 +15,9 @@ pub fn login_reply(login_result: LoginResult) -> Vec<u8> {
 #[inline]
 /// #7: BANCHO_SEND_MESSAGE
 pub fn send_message(
-    sender: impl Str,
-    content: impl Str,
-    target: impl Str,
+    sender: Cow<str>,
+    content: Cow<str>,
+    target: Cow<str>,
     sender_id: i32,
 ) -> Vec<u8> {
     packet!(
@@ -33,8 +35,8 @@ pub fn pong() -> Vec<u8> {
 #[inline]
 /// #9: BANCHO_HANDLE_IRC_CHANGE_USERNAME
 pub fn change_username(
-    username_old: impl Str,
-    username_new: impl Str,
+    username_old: Cow<str>,
+    username_new: Cow<str>,
 ) -> Vec<u8> {
     packet!(
         PacketId::BANCHO_HANDLE_IRC_CHANGE_USERNAME,
@@ -47,8 +49,8 @@ pub fn change_username(
 pub fn user_stats(
     user_id: i32,
     online_status: u8,
-    description: impl Str,
-    beatmap_md5: impl Str,
+    description: Cow<str>,
+    beatmap_md5: Cow<str>,
     mods: u32,
     mode: u8,
     beatmap_id: i32,
@@ -123,7 +125,7 @@ pub fn get_attention() -> Vec<u8> {
 
 #[inline]
 /// #24: BANCHO_NOTIFICATION
-pub fn notification(msg: impl Str) -> Vec<u8> {
+pub fn notification(msg: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_NOTIFICATION, msg)
 }
 
@@ -222,15 +224,15 @@ pub fn match_skip() -> Vec<u8> {
 
 #[inline]
 /// #64: BANCHO_CHANNEL_JOIN_SUCCESS
-pub fn channel_join(channel_name: impl Str) -> Vec<u8> {
+pub fn channel_join(channel_name: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_CHANNEL_JOIN_SUCCESS, channel_name)
 }
 
 #[inline]
 /// #65: BANCHO_CHANNEL_INFO
 pub fn channel_info(
-    name: impl Str,
-    title: impl Str,
+    name: Cow<str>,
+    title: Cow<str>,
     player_count: i16,
 ) -> Vec<u8> {
     packet!(
@@ -241,15 +243,15 @@ pub fn channel_info(
 
 #[inline]
 /// #66: BANCHO_CHANNEL_KICK
-pub fn channel_kick(channel_name: impl Str) -> Vec<u8> {
+pub fn channel_kick(channel_name: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_CHANNEL_KICK, channel_name)
 }
 
 #[inline]
 /// #67: BANCHO_CHANNEL_AUTO_JOIN
 pub fn channel_auto_join(
-    name: impl Str,
-    title: impl Str,
+    name: Cow<str>,
+    title: Cow<str>,
     player_count: i16,
 ) -> Vec<u8> {
     packet!(
@@ -285,7 +287,7 @@ pub fn protocol_version(version: i32) -> Vec<u8> {
 
 #[inline]
 /// #76: BANCHO_MAIN_MENU_ICON
-pub fn main_menu_icon(image_url: impl Str, link_url: impl Str) -> Vec<u8> {
+pub fn main_menu_icon(image_url: Cow<str>, link_url: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_MAIN_MENU_ICON, format!("{image_url}|{link_url}"))
 }
 
@@ -308,7 +310,7 @@ pub fn match_player_skipped(slot_id: i32) -> Vec<u8> {
 /// including player stats and presence
 pub fn user_presence(
     user_id: i32,
-    username: impl Str,
+    username: Cow<str>,
     utc_offset: u8,
     country_code: u8,
     bancho_priv: i32,
@@ -362,7 +364,7 @@ pub fn channel_info_end() -> Vec<u8> {
 
 #[inline]
 /// #91: BANCHO_MATCH_CHANGE_PASSWORD
-pub fn match_change_password(password: impl Str) -> Vec<u8> {
+pub fn match_change_password(password: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_MATCH_CHANGE_PASSWORD, password)
 }
 
@@ -394,13 +396,13 @@ pub fn user_presence_bundle(player_ids: &[i32]) -> Vec<u8> {
 
 #[inline]
 /// #100: BANCHO_USER_DM_BLOCKED
-pub fn user_dm_blocked(target: impl Str) -> Vec<u8> {
+pub fn user_dm_blocked(target: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_USER_DM_BLOCKED, data!("", "", target, 0i32))
 }
 
 #[inline]
 /// #101: BANCHO_TARGET_IS_SILENCED
-pub fn target_silenced(target: impl Str) -> Vec<u8> {
+pub fn target_silenced(target: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_TARGET_IS_SILENCED, data!("", "", target, 0i32))
 }
 
@@ -425,7 +427,7 @@ pub fn account_restricted() -> Vec<u8> {
 #[inline]
 /// #105: BANCHO_RTX
 /// deprecated
-pub fn rtx(msg: impl Str) -> Vec<u8> {
+pub fn rtx(msg: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_RTX, msg)
 }
 
@@ -437,6 +439,6 @@ pub fn match_abort() -> Vec<u8> {
 
 #[inline]
 /// #107: BANCHO_SWITCH_TOURNAMENT_SERVER
-pub fn switch_tournament_server(ip: impl Str) -> Vec<u8> {
+pub fn switch_tournament_server(ip: Cow<str>) -> Vec<u8> {
     packet!(PacketId::BANCHO_SWITCH_TOURNAMENT_SERVER, ip)
 }

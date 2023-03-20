@@ -12,7 +12,7 @@ fn packets_write_benchmark(c: &mut Criterion) {
         b.iter(|| PacketBuilder::new().add(server::match_join_fail()).build())
     });
     group.bench_function("notification packet", |b| {
-        b.iter(|| server::notification("hello"))
+        b.iter(|| server::notification("hello".into()))
     });
     group.bench_function("login_reply packet", |b| {
         b.iter(|| {
@@ -22,17 +22,17 @@ fn packets_write_benchmark(c: &mut Criterion) {
         })
     });
     group.bench_function("send massage packet", |b| {
-        b.iter(|| server::send_message("username", "May you have enough happiness to make you sweet,enough trials to make you strong,enough sorrow to keep you human,enough hope to make you happy? Always put yourself in others’shoes.If you feel that it hurts you,it probably hurts the other person, too. The happiest of people don’t necessarily have the best of everything;they just make the most of everything that comes along their way.Happiness lies for those who cry,those who hurt, those who have searched,and those who have tried,for only they can appreciate the importance of people. Please send this message to those people who mean something to you,to those who have touched your life in one way or another,to those who make you smile when you really need it,to those that make you see the brighter side of things when you are really down,to those who you want to let them know that you appreciate their friendship.And if you don’t, don’t worry,nothing bad will happen to you,you will just miss out on the opportunity to brighten someone’s day with this message.", "osu", 1001))
+        b.iter(|| server::send_message("username".into(), "May you have enough happiness to make you sweet,enough trials to make you strong,enough sorrow to keep you human,enough hope to make you happy? Always put yourself in others’shoes.If you feel that it hurts you,it probably hurts the other person, too. The happiest of people don’t necessarily have the best of everything;they just make the most of everything that comes along their way.Happiness lies for those who cry,those who hurt, those who have searched,and those who have tried,for only they can appreciate the importance of people. Please send this message to those people who mean something to you,to those who have touched your life in one way or another,to those who make you smile when you really need it,to those that make you see the brighter side of things when you are really down,to those who you want to let them know that you appreciate their friendship.And if you don’t, don’t worry,nothing bad will happen to you,you will just miss out on the opportunity to brighten someone’s day with this message.".into(), "osu".into(), 1001))
     });
     group.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             PacketBuilder::new()
                 .add(server::login_reply(LoginResult::Success(1009)))
                 .add(server::protocol_version(19))
-                .add(server::notification("Welcome to osu!"))
+                .add(server::notification("Welcome to osu!".into()))
                 .add(server::main_menu_icon(
-                    "https://image.png",
-                    "https://url.link",
+                    "https://image.png".into(),
+                    "https://url.link".into(),
                 ))
                 .add(server::silence_end(0))
                 .add(server::channel_info_end())

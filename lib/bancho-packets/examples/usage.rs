@@ -7,14 +7,17 @@ fn main() {
     let login_reply_from_server = server::login_reply(LoginResult::Failed(
         LoginFailedResaon::InvalidCredentials,
     ));
-    let serverside_notification = server::notification("hello");
+    let serverside_notification = server::notification("hello".into());
 
     // Multiple packets with Builder
     let packets = PacketBuilder::new()
         .add(server::login_reply(LoginResult::Success(1000)))
         .add(server::protocol_version(19))
-        .add(server::notification("Welcome to osu!"))
-        .add(server::main_menu_icon("https://image.png", "https://url.link"))
+        .add(server::notification("Welcome to osu!".into()))
+        .add(server::main_menu_icon(
+            "https://image.png".into(),
+            "https://url.link".into(),
+        ))
         .add(server::silence_end(0))
         .add(server::channel_info_end())
         .build();
