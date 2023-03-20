@@ -189,7 +189,7 @@ impl BanchoStatus {
     ) {
         self.online_status.set(online_status.into());
         self.description.set(description.into());
-        self.beatmap_id.set(beatmap_id.into());
+        self.beatmap_id.set(beatmap_id);
         self.beatmap_md5.set(beatmap_md5.into());
         self.mods.set(mods.into());
         self.mode.set(mode.into());
@@ -327,7 +327,7 @@ impl Session {
         }
 
         match queue_lock {
-            Some(mut queue) => dequeue(&mut queue),
+            Some(queue) => dequeue(queue),
             None => dequeue(&mut self.packets_queue.lock().await),
         }
     }

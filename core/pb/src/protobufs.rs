@@ -1,3 +1,7 @@
+#![allow(warnings)]
+#![allow(clippy)]
+#![allow(unknown_lints)]
+
 macro_rules! proto {
     ($package: tt) => {
         include!(concat!("../generated/", $package, ".rs"));
@@ -19,13 +23,15 @@ pub mod base {
 pub mod logs {
     proto!("peace.frame.logs");
 
-    pub const LOGS_DESCRIPTOR_SET: &[u8] = descriptor!("peace.frame.logs.descriptor");
+    pub const LOGS_DESCRIPTOR_SET: &[u8] =
+        descriptor!("peace.frame.logs.descriptor");
 }
 
 pub mod bancho {
     proto!("peace.services.bancho");
 
-    pub const BANCHO_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.bancho.descriptor");
+    pub const BANCHO_DESCRIPTOR_SET: &[u8] =
+        descriptor!("peace.services.bancho.descriptor");
 }
 
 pub mod bancho_state {
@@ -60,14 +66,18 @@ pub mod bancho_state {
     impl From<RawUserQuery> for UserQuery {
         fn from(raw: RawUserQuery) -> UserQuery {
             match raw.query_type() {
-                QueryType::SessionId =>
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
-                QueryType::UserId =>
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
-                QueryType::Username =>
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
-                QueryType::UsernameUnicode =>
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
+                QueryType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                QueryType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                QueryType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
             }
         }
     }
@@ -111,16 +121,21 @@ pub mod bancho_state {
     impl From<RawBanchoPacketTarget> for BanchoPacketTarget {
         fn from(raw: RawBanchoPacketTarget) -> BanchoPacketTarget {
             match raw.target_type() {
-                TargetType::SessionId =>
-                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::UserId =>
-                    Self::UserId(raw.int_val.expect(CONVERT_PANIC)),
-                TargetType::Username =>
-                    Self::Username(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::UsernameUnicode =>
-                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC)),
-                TargetType::Channel =>
-                    Self::Channel(raw.string_val.expect(CONVERT_PANIC)),
+                TargetType::SessionId => {
+                    Self::SessionId(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::Channel => {
+                    Self::Channel(raw.string_val.expect(CONVERT_PANIC))
+                },
             }
         }
     }
@@ -133,8 +148,9 @@ pub mod bancho_state {
                 Self::SessionId(session_id) => UserQuery::SessionId(session_id),
                 Self::UserId(user_id) => UserQuery::UserId(user_id),
                 Self::Username(username) => UserQuery::Username(username),
-                Self::UsernameUnicode(username_unicode) =>
-                    UserQuery::UsernameUnicode(username_unicode),
+                Self::UsernameUnicode(username_unicode) => {
+                    UserQuery::UsernameUnicode(username_unicode)
+                },
                 Self::Channel(_) => return Err(()),
             })
         }
@@ -176,7 +192,8 @@ pub mod bancho_state {
 pub mod chat {
     proto!("peace.services.chat");
 
-    pub const CHAT_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.chat.descriptor");
+    pub const CHAT_DESCRIPTOR_SET: &[u8] =
+        descriptor!("peace.services.chat.descriptor");
 
     #[derive(Debug, Clone)]
     pub enum ChannelQuery {
@@ -188,5 +205,6 @@ pub mod chat {
 pub mod geoip {
     proto!("peace.services.geoip");
 
-    pub const GEOIP_DESCRIPTOR_SET: &[u8] = descriptor!("peace.services.geoip.descriptor");
+    pub const GEOIP_DESCRIPTOR_SET: &[u8] =
+        descriptor!("peace.services.geoip.descriptor");
 }

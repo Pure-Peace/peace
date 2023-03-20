@@ -117,10 +117,10 @@ impl BanchoService for BanchoServiceImpl {
                     packets,
                 } = request;
 
-                let mut reader = PacketReader::new(&packets);
+                let reader = PacketReader::new(&packets);
 
                 let (mut processed, mut failed) = (0, 0);
-                while let Some(packet) = reader.next() {
+                for packet in reader {
                     info!(target: LOG_TARGET, "Received: {packet}");
                     let start = Instant::now();
 
@@ -146,7 +146,7 @@ impl BanchoService for BanchoServiceImpl {
                 }
 
                 if failed == processed {
-                    return Err(ProcessBanchoPacketError::FailedToProcessAll)
+                    return Err(ProcessBanchoPacketError::FailedToProcessAll);
                 }
 
                 Ok(HandleCompleted {})
@@ -345,10 +345,11 @@ impl BanchoService for BanchoServiceImpl {
                     PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST => todo!(),
                     PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
                     PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
-                    _ =>
+                    _ => {
                         return Err(ProcessBanchoPacketError::UnhandledPacket(
                             packet.id,
-                        )),
+                        ))
+                    },
                 };
 
                 Ok(HandleCompleted {})
@@ -428,7 +429,7 @@ impl BanchoService for BanchoServiceImpl {
 
                 let geoip_data = svc
                     .geoip_service
-                    .lookup_with_ip_address(client_ip.clone())
+                    .lookup_with_ip_address(client_ip)
                     .await
                     .ok();
 

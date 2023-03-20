@@ -10,9 +10,9 @@ use derive_deref::Deref;
 use hyper::header::USER_AGENT;
 use peace_pb::bancho::LoginRequest;
 
-pub const OSU_USER_AGENT: HeaderName = HeaderName::from_static("osu!");
-pub const OSU_VERSION: HeaderName = HeaderName::from_static("osu-version");
-pub const OSU_TOKEN: HeaderName = HeaderName::from_static("osu-token");
+pub static OSU_USER_AGENT: HeaderName = HeaderName::from_static("osu!");
+pub static OSU_VERSION: HeaderName = HeaderName::from_static("osu-version");
+pub static OSU_TOKEN: HeaderName = HeaderName::from_static("osu-token");
 
 #[derive(Debug)]
 pub struct OsuClientLoginBody(pub LoginRequest);
@@ -62,9 +62,8 @@ where
     ) -> Result<Self, Self::Rejection> {
         parts
             .headers
-            .get(OSU_VERSION)
-            .and_then(|hv| hv.to_str().ok())
-            .and_then(|s| Some(s.to_owned()))
+            .get(&OSU_VERSION)
+            .and_then(|hv| hv.to_str().ok()).map(|s| s.to_owned())
             .map(Self)
             .ok_or(BanchoHttpError::InvalidOsuVersionHeader)
     }
@@ -98,9 +97,8 @@ where
     ) -> Result<Self, Self::Rejection> {
         parts
             .headers
-            .get(OSU_TOKEN)
-            .and_then(|hv| hv.to_str().ok())
-            .and_then(|s| Some(s.to_owned()))
+            .get(&OSU_TOKEN)
+            .and_then(|hv| hv.to_str().ok()).map(|s| s.to_owned())
             .map(Self)
             .ok_or(BanchoHttpError::InvalidOsuTokenHeader)
     }

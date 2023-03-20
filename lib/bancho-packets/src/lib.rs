@@ -554,6 +554,26 @@ pub struct PacketBuilder {
     buffer: Vec<u8>,
 }
 
+impl Default for PacketBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Deref for PacketBuilder {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.buffer
+    }
+}
+
+impl DerefMut for PacketBuilder {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.buffer
+    }
+}
+
 impl PacketBuilder {
     #[inline]
     /// Create an empty [`PacketBuilder`].
@@ -722,7 +742,7 @@ pub trait BanchoPacketWrite {
 
     #[inline]
     /// Convert [`self`] into a bancho packet [`Vec<u8>`].
-    fn as_packet(self) -> Vec<u8>
+    fn into_packet(self) -> Vec<u8>
     where
         Self: Sized,
     {
@@ -913,8 +933,7 @@ impl BanchoPacketWrite for MatchUpdate {
 impl BanchoPacketWrite for MatchData {
     #[inline]
     fn write_buf(self, buf: &mut Vec<u8>) {
-        MatchUpdate { data: self, send_password: true }
-            .write_buf(buf);
+        MatchUpdate { data: self, send_password: true }.write_buf(buf);
     }
 }
 

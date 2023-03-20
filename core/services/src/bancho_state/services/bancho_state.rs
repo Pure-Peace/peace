@@ -542,7 +542,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
-                if request.user_queries.len() == 0 {
+                if request.user_queries.is_empty() {
                     return Ok(ExecSuccess {});
                 }
                 let to =
@@ -576,7 +576,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                             None => continue,
                         };
 
-                        if SessionFilter::session_is_target(&session, &to) {
+                        if SessionFilter::session_is_target(session, &to) {
                             continue;
                         };
 
@@ -620,7 +620,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         svc.user_sessions_service.user_sessions().read().await;
 
                     for session in user_sessions.values() {
-                        if SessionFilter::session_is_target(&session, &to) {
+                        if SessionFilter::session_is_target(session, &to) {
                             continue;
                         };
 
@@ -654,7 +654,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             BanchoStateServiceImpl::Local(svc) => {
-                if request.user_queries.len() == 0 {
+                if request.user_queries.is_empty() {
                     return Ok(ExecSuccess {});
                 }
                 let to = Into::<BanchoPacketTarget>::into(
@@ -689,7 +689,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                             None => continue,
                         };
 
-                        if SessionFilter::session_is_target(&session, &to) {
+                        if SessionFilter::session_is_target(session, &to) {
                             continue;
                         };
 

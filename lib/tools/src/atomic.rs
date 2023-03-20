@@ -177,16 +177,16 @@ macro_rules! implAtomicValue {
                     }
                 }
 
-                impl Into<[<Atomic $ty:camel>]> for [<$ty:camel>] {
-                    fn into(self) -> [<Atomic $ty:camel>] {
-                        self.0
+                impl From<[<$ty:camel>]> for [<Atomic $ty:camel>] {
+                    fn from(val: [<$ty:camel>]) -> Self {
+                        val.0
                     }
                 }
 
-                impl Into<[<$ty:camel>]> for [<$ty:snake>] {
+                impl From<[<$ty:snake>]> for [<$ty:camel>] {
                     #[inline]
-                    fn into(self) -> [<$ty:camel>] {
-                        [<$ty:camel>]::new(self)
+                    fn from(val: [<$ty:snake>]) -> Self {
+                        [<$ty:camel>]::new(val)
                     }
                 }
             )*

@@ -79,7 +79,7 @@ impl BanchoStateBackgroundServiceImpl {
                     .await;
 
                     for query in users_deactive.iter() {
-                        user_sessions_service.delete(&query).await;
+                        user_sessions_service.delete(query).await;
                     }
 
                     info!(

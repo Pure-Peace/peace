@@ -34,24 +34,18 @@ impl BanchoStateError {
     }
 
     fn status_code(&self) -> StatusCode {
-        match self {
-            _ => StatusCode::OK,
-        }
+        StatusCode::OK
     }
 }
 
 impl IntoResponse for BanchoStateError {
     fn into_response(self) -> Response {
-        match self {
-            _ => (self.status_code(), self.to_string()).into_response(),
-        }
+        (self.status_code(), self.to_string()).into_response()
     }
 }
 
-impl Into<Status> for BanchoStateError {
-    fn into(self) -> Status {
-        match self {
-            _ => Status::new(self.tonic_code(), self.to_string()),
-        }
+impl From<BanchoStateError> for Status {
+    fn from(err: BanchoStateError) -> Self {
+        Status::new(err.tonic_code(), err.to_string())
     }
 }

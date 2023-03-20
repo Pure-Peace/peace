@@ -273,8 +273,8 @@ mod packets_writing {
 
     #[test]
     fn test_write_u32_i32() {
-        let int_u32 = 536870912_u32.as_packet();
-        let int_i32 = (536870912).as_packet();
+        let int_u32 = 536870912_u32.into_packet();
+        let int_i32 = (536870912).into_packet();
 
         println!("{:?} {:?}", int_u32, int_i32);
     }

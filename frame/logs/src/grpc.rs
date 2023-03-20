@@ -1,4 +1,4 @@
-use crate::IntoLevelFilter;
+use crate::ToLevelFilter;
 use peace_pb::{
     base::{BoolValue, EmptyRequest, ExecSuccess, StringValue},
     logs::{logs_rpc_server::LogsRpc, SetLevelRequest},
@@ -17,7 +17,7 @@ impl LogsRpc for LogsRpcService {
         let level = request
             .into_inner()
             .level
-            .into_level_filter()
+            .to_level_filter()
             .map_err(Status::invalid_argument)?;
 
         crate::set_level(level)

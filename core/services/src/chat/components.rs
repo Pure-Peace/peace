@@ -39,11 +39,11 @@ impl Channels {
     pub async fn create(&self, channel: Channel) -> Arc<Channel> {
         let channel = Arc::new(channel);
 
-        let () = {
+        {
             let mut indexes = self.write().await;
 
             if let Some(old_channel) = self
-                .get_inner(&mut indexes, &ChannelQuery::ChannelId(channel.id))
+                .get_inner(&indexes, &ChannelQuery::ChannelId(channel.id))
             {
                 self.delete_inner(
                     &mut indexes,
@@ -52,7 +52,7 @@ impl Channels {
                 );
             }
 
-            indexes.channel_id.insert(channel.id.clone(), channel.clone());
+            indexes.channel_id.insert(channel.id, channel.clone());
             indexes
                 .channel_name
                 .insert(channel.name.to_string(), channel.clone());
@@ -81,14 +81,12 @@ impl Channels {
     ) -> Option<Arc<Channel>> {
         let mut removed = None;
 
-        indexes
+        if let Some(s) = indexes
             .channel_id
-            .remove(channel_id)
-            .and_then(|s| Some(removed = Some(s)));
-        indexes
+            .remove(channel_id) { removed = Some(s); }
+        if let Some(s) = indexes
             .channel_name
-            .remove(channel_name)
-            .and_then(|s| Some(removed = Some(s)));
+            .remove(channel_name) { removed = Some(s); }
 
         if removed.is_some() {
             self.len.sub(1);

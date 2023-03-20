@@ -126,13 +126,13 @@ pub fn toggle_debug_mode(enabled: bool) -> Result<(), reload::Error> {
     })
 }
 
-pub trait IntoLevelFilter {
-    fn into_level_filter(&self) -> Result<LevelFilter, &str>;
+pub trait ToLevelFilter {
+    fn to_level_filter(&self) -> Result<LevelFilter, &str>;
 }
 
-impl IntoLevelFilter for i32 {
+impl ToLevelFilter for i32 {
     /// Convert [`i32`] to [`LevelFilter`]
-    fn into_level_filter(&self) -> Result<LevelFilter, &str> {
+    fn to_level_filter(&self) -> Result<LevelFilter, &str> {
         match *self {
             0 => Ok(LevelFilter::Off),
             1 => Ok(LevelFilter::Error),
@@ -177,6 +177,7 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
+#[cfg(feature = "cli")]
 #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
 pub struct LoggingConfigArgs {
     /// Logging level.

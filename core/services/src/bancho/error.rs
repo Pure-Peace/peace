@@ -43,11 +43,9 @@ impl ProcessBanchoPacketError {
     }
 }
 
-impl Into<Status> for ProcessBanchoPacketError {
-    fn into(self) -> Status {
-        match self {
-            _ => Status::new(self.tonic_code(), self.to_string()),
-        }
+impl From<ProcessBanchoPacketError> for Status {
+    fn from(err: ProcessBanchoPacketError) -> Self {
+        Status::new(err.tonic_code(), err.to_string())
     }
 }
 
@@ -75,24 +73,18 @@ impl BanchoServiceError {
     }
 
     fn status_code(&self) -> StatusCode {
-        match self {
-            _ => StatusCode::OK,
-        }
+        StatusCode::OK
     }
 }
 
 impl IntoResponse for BanchoServiceError {
     fn into_response(self) -> Response {
-        match self {
-            _ => (self.status_code(), self.to_string()).into_response(),
-        }
+        (self.status_code(), self.to_string()).into_response()
     }
 }
 
-impl Into<Status> for BanchoServiceError {
-    fn into(self) -> Status {
-        match self {
-            _ => Status::new(self.tonic_code(), self.to_string()),
-        }
+impl From<BanchoServiceError> for Status {
+    fn from(err: BanchoServiceError) -> Self {
+        Status::new(err.tonic_code(), err.to_string())
     }
 }

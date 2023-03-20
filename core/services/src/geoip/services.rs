@@ -106,7 +106,7 @@ impl GeoipServiceLocal {
 
     pub fn load_db(geo_db_path: &str) -> Result<Arc<Reader<Mmap>>, GeoipError> {
         Reader::open_mmap(geo_db_path)
-            .map(|db| Arc::new(db))
+            .map(Arc::new)
             .map_err(GeoipError::FailedToLoadDatabase)
     }
 }
@@ -156,8 +156,7 @@ impl GeoipService for GeoipServiceImpl {
                         name: co
                             .names
                             .as_ref()
-                            .and_then(|names| names.get(LANGUAGE))
-                            .and_then(|s| Some(s.to_string()))
+                            .and_then(|names| names.get(LANGUAGE)).map(|s| s.to_string())
                             .unwrap_or_default(),
                     })
                     .unwrap_or_default();
@@ -174,8 +173,7 @@ impl GeoipService for GeoipServiceImpl {
                         name: c
                             .names
                             .as_ref()
-                            .and_then(|names| names.get(LANGUAGE))
-                            .and_then(|s| Some(s.to_string()))
+                            .and_then(|names| names.get(LANGUAGE)).map(|s| s.to_string())
                             .unwrap_or_default(),
                     })
                     .unwrap_or_default();
@@ -194,8 +192,7 @@ impl GeoipService for GeoipServiceImpl {
                         name: r
                             .names
                             .as_ref()
-                            .and_then(|names| names.get(LANGUAGE))
-                            .and_then(|s| Some(s.to_string()))
+                            .and_then(|names| names.get(LANGUAGE)).map(|s| s.to_string())
                             .unwrap_or_default(),
                     })
                     .unwrap_or_default();
@@ -208,8 +205,7 @@ impl GeoipService for GeoipServiceImpl {
                         name: c
                             .names
                             .as_ref()
-                            .and_then(|names| names.get(LANGUAGE))
-                            .and_then(|s| Some(s.to_string()))
+                            .and_then(|names| names.get(LANGUAGE)).map(|s| s.to_string())
                             .unwrap_or_default(),
                     })
                     .unwrap_or_default();

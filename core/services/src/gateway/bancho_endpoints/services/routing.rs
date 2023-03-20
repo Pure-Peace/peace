@@ -68,10 +68,9 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
                     .await
                     .map_err(BanchoHttpError::LoginFailed)?;
 
-                self.bancho_handler_service
+                if let Some(p) = self.bancho_handler_service
                     .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
-                    .await
-                    .and_then(|p| Some(packets.extend(p)));
+                    .await { packets.extend(p); }
 
                 Ok(([(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL], packets)
                     .into_response())

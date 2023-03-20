@@ -42,11 +42,11 @@ impl UserSessions {
     pub async fn create(&self, session: Session) -> Arc<Session> {
         let session = Arc::new(session);
 
-        let () = {
+        {
             let mut indexes = self.write().await;
 
-            if let Some(old_session) = self
-                .get_inner(&mut indexes, &UserQuery::UserId(session.user_id))
+            if let Some(old_session) =
+                self.get_inner(&indexes, &UserQuery::UserId(session.user_id))
             {
                 self.delete_inner(
                     &mut indexes,
@@ -72,12 +72,10 @@ impl UserSessions {
                 .username_unicode
                 .load()
                 .as_ref()
-                .and_then(|s| {
+                .map(|s| {
                     indexes
                         .username_unicode
                         .insert(s.to_string(), session.clone());
-
-                    Some(())
                 })
                 .or_else(|| {
                     indexes
@@ -121,18 +119,23 @@ impl UserSessions {
     ) -> Option<Arc<Session>> {
         let mut removed = None;
 
-        indexes.user_id.remove(user_id).and_then(|s| Some(removed = Some(s)));
-        indexes.username.remove(username).and_then(|s| Some(removed = Some(s)));
+        if let Some(s) = indexes.user_id.remove(user_id) {
+            removed = Some(s);
+        }
+        if let Some(s) = indexes.username.remove(username) {
+            removed = Some(s);
+        }
 
-        indexes
-            .session_id
-            .remove(session_id)
-            .and_then(|s| Some(removed = Some(s)));
+        if let Some(s) = indexes.session_id.remove(session_id) {
+            removed = Some(s);
+        }
 
-        username_unicode
+        if let Some(s) = username_unicode
             .and_then(|s| indexes.username_unicode.remove(s))
             .or_else(|| indexes.username_unicode.remove(username))
-            .and_then(|s| Some(removed = Some(s)));
+        {
+            removed = Some(s);
+        }
 
         // Decrease the length of the map if a session was removed.
         if removed.is_some() {

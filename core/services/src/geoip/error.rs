@@ -19,30 +19,22 @@ pub enum GeoipError {
 
 impl GeoipError {
     fn tonic_code(&self) -> Code {
-        match self {
-            _ => Code::Internal,
-        }
+        Code::Internal
     }
 
     fn status_code(&self) -> StatusCode {
-        match self {
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 }
 
 impl IntoResponse for GeoipError {
     fn into_response(self) -> Response {
-        match self {
-            _ => (self.status_code(), self.to_string()).into_response(),
-        }
+        (self.status_code(), self.to_string()).into_response()
     }
 }
 
-impl Into<Status> for GeoipError {
-    fn into(self) -> Status {
-        match self {
-            _ => Status::new(self.tonic_code(), self.to_string()),
-        }
+impl From<GeoipError> for Status {
+    fn from(err: GeoipError) -> Self {
+        Status::new(err.tonic_code(), err.to_string())
     }
 }

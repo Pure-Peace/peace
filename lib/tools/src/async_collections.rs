@@ -129,31 +129,24 @@ pub enum BackgroundTaskError {
     FailedToTriggerSignal,
 }
 
+pub type BackgroundTaskFactoryFunction = Arc<
+    dyn Fn(SignalHandle) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
+>;
+
 pub struct BackgroundTaskFactory {
-    boxed_function: Arc<
-        dyn Fn(
-            SignalHandle,
-        ) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
-    >,
+    function_ptr: BackgroundTaskFactoryFunction,
 }
 
 impl BackgroundTaskFactory {
-    pub fn new(
-        boxed_function: Arc<
-            dyn Fn(
-                SignalHandle,
-            )
-                -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
-        >,
-    ) -> Self {
-        Self { boxed_function }
+    pub fn new(function_ptr: BackgroundTaskFactoryFunction) -> Self {
+        Self { function_ptr }
     }
 
     pub fn new_future(
         &self,
         signal: SignalHandle,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>> {
-        (self.boxed_function)(signal)
+        (self.function_ptr)(signal)
     }
 }
 
@@ -249,7 +242,6 @@ impl BackgroundTask {
             .as_ref()
             .map(|s| {
                 s.trigger();
-                
             })
             .ok_or(BackgroundTaskError::SignalNotExists)?;
         Ok(())
