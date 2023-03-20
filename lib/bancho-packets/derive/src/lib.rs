@@ -99,7 +99,7 @@ pub fn derive_write_packet(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         impl BanchoPacketWrite for #name {
             #[inline]
-            fn write_buf(self, buf: &mut Vec<u8>) {
+            fn write_into_buf(self, buf: &mut Vec<u8>) {
                 buf.extend(data!(
                     #(self.#field_names,)*
                 ));

@@ -735,7 +735,7 @@ impl_read_number_array!(i8, u8, i16, u16, i32, u32, i64, u64);
 /// [`BanchoPacketWrite`] is a trait used to convert rust internal data types to bancho packets ([`Vec<u8>`]).
 pub trait BanchoPacketWrite {
     /// Convert [`self`] into a bancho packet and write it into `buf` [`Vec<u8>`].
-    fn write_buf(self, buf: &mut Vec<u8>);
+    fn write_into_buf(self, buf: &mut Vec<u8>);
 
     #[inline]
     /// Convert [`self`] into a bancho packet [`Vec<u8>`].
@@ -744,24 +744,24 @@ pub trait BanchoPacketWrite {
         Self: Sized,
     {
         let mut buf = Vec::new();
-        self.write_buf(&mut buf);
+        self.write_into_buf(&mut buf);
         buf
     }
 }
 
 impl BanchoPacketWrite for Cow<'_, str> {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         match self {
-            Cow::Borrowed(s) => s.write_buf(buf),
-            Cow::Owned(s) => s.write_buf(buf),
+            Cow::Borrowed(s) => s.write_into_buf(buf),
+            Cow::Owned(s) => s.write_into_buf(buf),
         }
     }
 }
 
 impl BanchoPacketWrite for &str {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         let byte_length = self.len();
         if byte_length > 0 {
             // string length (uleb128)
@@ -784,7 +784,7 @@ impl BanchoPacketWrite for &str {
 
 impl BanchoPacketWrite for String {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         let byte_length = self.len();
         if byte_length > 0 {
             // string length (uleb128)
@@ -807,28 +807,28 @@ impl BanchoPacketWrite for String {
 
 impl BanchoPacketWrite for u8 {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         buf.push(self);
     }
 }
 
 impl BanchoPacketWrite for &[u8] {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         buf.extend(self);
     }
 }
 
 impl BanchoPacketWrite for Vec<u8> {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         buf.extend(self);
     }
 }
 
 impl BanchoPacketWrite for bool {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         buf.push(if self { 1 } else { 0 });
     }
 }
@@ -838,7 +838,7 @@ macro_rules! impl_write_number {
         $(
             impl BanchoPacketWrite for $t {
                 #[inline]
-                fn write_buf(self, buf: &mut Vec<u8>) {
+                fn write_into_buf(self, buf: &mut Vec<u8>) {
                     buf.extend(self.to_le_bytes())
                 }
             }
@@ -865,7 +865,7 @@ macro_rules! impl_write_number_array {
     )+};
     (@bancho_packet_write_inner $t:ty) => {
         #[inline]
-        fn write_buf(self, buf: &mut Vec<u8>) {
+        fn write_into_buf(self, buf: &mut Vec<u8>) {
             let estimate_len = self.packet_len();
             if buf.capacity() < estimate_len {
                 buf.reserve(estimate_len);
@@ -889,23 +889,49 @@ impl_write_number_array!(i8, u16, i16, i32, u32, i64, u64, f32, f64);
 
 impl BanchoPacketWrite for LoginResult {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
         match self {
             LoginResult::Success(user_id) => user_id,
             LoginResult::Failed(reason) => reason as i32,
         }
-        .write_buf(buf)
+        .write_into_buf(buf)
     }
 }
 
 impl BanchoPacketWrite for MatchUpdate {
     #[inline]
-    fn write_buf(mut self, buf: &mut Vec<u8>) {
-        let raw_password = std::mem::take(&mut self.password)
+    fn write_into_buf(mut self, buf: &mut Vec<u8>) {
+        let MatchUpdate {
+            data:
+                MatchData {
+                    match_id,
+                    in_progress,
+                    match_type,
+                    play_mods,
+                    match_name,
+                    password,
+                    beatmap_name,
+                    beatmap_id,
+                    beatmap_md5,
+                    slot_status,
+                    slot_teams,
+                    slot_players,
+                    host_player_id,
+                    match_game_mode,
+                    win_condition,
+                    team_type,
+                    freemods,
+                    player_mods,
+                    match_seed,
+                },
+            send_password,
+        } = self;
+
+        let raw_password = password
             .map(|password| {
-                if self.send_password {
+                if send_password {
                     let mut raw = Vec::with_capacity(password.packet_len());
-                    password.write_buf(&mut raw);
+                    password.write_into_buf(&mut raw);
                     raw
                 } else {
                     EMPTY_STRING_PACKET.to_vec()
@@ -914,33 +940,33 @@ impl BanchoPacketWrite for MatchUpdate {
             .unwrap_or(b"\x00".to_vec());
 
         buf.extend(data!(
-            self.match_id as u16,
-            self.in_progress,
-            self.match_type,
-            self.play_mods,
-            std::mem::take(&mut self.match_name),
+            match_id as u16,
+            in_progress,
+            match_type,
+            play_mods,
+            match_name,
             raw_password,
-            std::mem::take(&mut self.beatmap_name),
-            self.beatmap_id,
-            std::mem::take(&mut self.beatmap_md5),
-            std::mem::take(&mut self.slot_status),
-            std::mem::take(&mut self.slot_teams),
-            std::mem::take(&mut self.slot_players),
-            self.host_player_id,
-            self.match_game_mode,
-            self.win_condition,
-            self.team_type,
-            self.freemods,
-            std::mem::take(&mut self.player_mods),
-            self.match_seed
+            beatmap_name,
+            beatmap_id,
+            beatmap_md5,
+            slot_status,
+            slot_teams,
+            slot_players,
+            host_player_id,
+            match_game_mode,
+            win_condition,
+            team_type,
+            freemods,
+            player_mods,
+            match_seed
         ));
     }
 }
 
 impl BanchoPacketWrite for MatchData {
     #[inline]
-    fn write_buf(self, buf: &mut Vec<u8>) {
-        MatchUpdate { data: self, send_password: true }.write_buf(buf);
+    fn write_into_buf(self, buf: &mut Vec<u8>) {
+        MatchUpdate { data: self, send_password: true }.write_into_buf(buf);
     }
 }
 
@@ -1112,7 +1138,7 @@ pub mod macros {
                 $(estimate_capacity += $item.packet_len();)*
 
                 let mut buf = Vec::<u8>::with_capacity(estimate_capacity);
-                $($item.write_buf(&mut buf);)*
+                $($item.write_into_buf(&mut buf);)*
                 buf
             }
         };
@@ -1122,7 +1148,7 @@ pub mod macros {
                 $(estimate_capacity += $item.packet_len();)*
 
                 let mut buf = Vec::<u8>::with_capacity($capacity + estimate_capacity);
-                $($item.write_buf(&mut buf);)*
+                $($item.write_into_buf(&mut buf);)*
                 buf
             }
         }
@@ -1169,7 +1195,7 @@ pub mod macros {
                 let mut packet = Vec::<u8>::with_capacity(estimate_capacity);
                 packet.extend(&[$packet_id as u8, 0, 0, 0, 0, 0, 0]);
 
-                $($data.write_buf(&mut packet);)*
+                $($data.write_into_buf(&mut packet);)*
 
                 let packet_length_bytes =
                     ((packet.len() - $crate::BANCHO_PACKET_HEADER_LENGTH) as i32)

@@ -108,8 +108,8 @@ packet_struct!(
         map_name: CowStr<'a>,
         map_id: i32,
         map_md5: CowStr<'a>,
-        slot_statuses: Vec<i8>,
-        slot_teams: Vec<i8>,
+        slot_statuses: &'a [i8],
+        slot_teams: &'a [i8],
     }
 );
 
@@ -159,8 +159,8 @@ packet_struct!(
         map_name: CowStr<'a>,
         map_id: i32,
         map_md5: CowStr<'a>,
-        slot_statuses: Vec<i8>,
-        slot_teams: Vec<i8>,
+        slot_statuses: &'a [i8],
+        slot_teams: &'a [i8],
     }
 );
 
