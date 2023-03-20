@@ -1,6 +1,6 @@
 [package]
 name = "bancho-packets-derive"
-version = "0.1.0"
+version = "0.2.0"
 description = "Derive macro for bancho-packets BanchoPacket trait"
 documentation = "https://docs.rs/bancho-packets"
 keywords = ["osu", "bancho"]
@@ -22,4 +22,4 @@ proc-macro2 = { workspace = true }
 
 
 [dev-dependencies]
-bancho-packets = { version = "4" }
+bancho-packets = { version = "5" }
