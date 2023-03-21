@@ -4,51 +4,57 @@ use peace_pb::bancho::{ClientHashes, LoginRequest};
 pub fn parse_osu_login_request_body(
     body: Vec<u8>,
 ) -> Result<LoginRequest, ParseLoginDataError> {
+    #[inline]
+    fn shift<T>(vec: &mut Vec<T>) -> T {
+        vec.remove(0)
+    }
+
     let body = String::from_utf8(body)
         .map_err(ParseLoginDataError::InvalidRequestBody)?;
 
     let mut lines = tools::split_string(&body, '\n');
 
     if lines.len() < 3 {
-        return Err(ParseLoginDataError::InvalidLoginData);
+        return Err(ParseLoginDataError::InvalidLoginData)
     }
 
-    let username = std::mem::take(&mut lines[0]);
-    let password = std::mem::take(&mut lines[1]);
+    let username = shift(&mut lines);
+    let password = shift(&mut lines);
 
     if username.is_empty() || password.len() != 32 {
-        return Err(ParseLoginDataError::InvalidUserInfo);
+        return Err(ParseLoginDataError::InvalidUserInfo)
     }
 
-    let mut client_info = tools::split_string(&lines[2], '|');
+    let mut client_info = tools::split_string(&shift(&mut lines), '|');
 
     if client_info.len() < 5 {
-        return Err(ParseLoginDataError::InvalidClientInfo);
+        return Err(ParseLoginDataError::InvalidClientInfo)
     }
 
-    let client_version = std::mem::take(&mut client_info[0]);
+    let client_version = shift(&mut client_info);
 
     // Parse utc offset
-    let utc_offset = client_info[1].parse::<i32>().unwrap_or(0);
+    let utc_offset = shift(&mut client_info).parse::<i32>().unwrap_or(0);
 
     // Display city in bancho or not
-    let display_city = client_info[2].as_str() == "1";
+    let display_city = shift(&mut client_info) == "1";
 
     // Client hashes
-    let mut client_hashes = tools::split_string(&client_info[3], ':');
+    let mut client_hashes =
+        tools::split_string(&shift(&mut client_info), ':');
 
     if client_hashes.len() < 5 {
-        return Err(ParseLoginDataError::InvalidClientHashes);
+        return Err(ParseLoginDataError::InvalidClientHashes)
     }
 
     // Only allow friend's pm
-    let only_friend_pm_allowed = client_info[4].as_str() == "1";
+    let only_friend_pm_allowed = shift(&mut client_info) == "1";
 
-    let path_hash = std::mem::take(&mut client_hashes[0]);
-    let adapters = std::mem::take(&mut client_hashes[1]);
-    let adapters_hash = std::mem::take(&mut client_hashes[2]);
-    let uninstall_id = std::mem::take(&mut client_hashes[3]);
-    let disk_id = std::mem::take(&mut client_hashes[4]);
+    let path_hash = shift(&mut client_hashes);
+    let adapters = shift(&mut client_hashes);
+    let adapters_hash = shift(&mut client_hashes);
+    let uninstall_id = shift(&mut client_hashes);
+    let disk_id = shift(&mut client_hashes);
 
     Ok(LoginRequest {
         username,
