@@ -23,6 +23,12 @@ pub trait BanchoBackgroundService {
 
 #[async_trait]
 pub trait BanchoService {
+    async fn login(
+        &self,
+        client_ip: IpAddr,
+        request: LoginRequest,
+    ) -> Result<LoginSuccess, BanchoServiceError>;
+
     async fn batch_process_bancho_packets(
         &self,
         request: BatchProcessBanchoPacketsRequest,
@@ -39,12 +45,6 @@ pub trait BanchoService {
         &self,
         request: PingRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
-
-    async fn login(
-        &self,
-        client_ip: IpAddr,
-        request: LoginRequest,
-    ) -> Result<LoginSuccess, BanchoServiceError>;
 
     async fn request_status_update(
         &self,

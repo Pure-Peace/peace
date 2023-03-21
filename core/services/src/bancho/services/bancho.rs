@@ -97,11 +97,125 @@ impl BanchoServiceLocal {
 
 #[async_trait]
 impl BanchoService for BanchoServiceImpl {
+    async fn login(
+        &self,
+        client_ip: IpAddr,
+        request: LoginRequest,
+    ) -> Result<LoginSuccess, BanchoServiceError> {
+        const LOG_TARGET: &str = "bancho_service::login";
+
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .login(RawRequest::add_client_ip(request, client_ip))
+                .await
+                .map_err(BanchoServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(svc) => {
+                let LoginRequest {
+                    username,
+                    password,
+                    client_version,
+                    utc_offset,
+                    display_city,
+                    only_friend_pm_allowed,
+                    ..
+                } = request;
+
+                info!(
+                    target: LOG_TARGET,
+                    "Login request: {username} [{client_version}] ({client_ip})"
+                );
+                let start = Instant::now();
+
+                let user = svc
+                    .users_repository
+                    .get_user_by_username(
+                        Some(username.as_str()),
+                        Some(username.as_str()),
+                    )
+                    .await
+                    .map_err(LoginError::UserNotExists)?;
+
+                let () = svc
+                    .password_service
+                    .verify_password(user.password.as_str(), password.as_str())
+                    .await
+                    .map_err(LoginError::PasswordError)?;
+
+                let geoip_data = svc
+                    .geoip_service
+                    .lookup_with_ip_address(client_ip)
+                    .await
+                    .ok();
+
+                let CreateUserSessionResponse { session_id } = svc
+                    .bancho_state_service
+                    .create_user_session(CreateUserSessionRequest {
+                        user_id: user.id,
+                        username: user.name.to_owned(),
+                        username_unicode: user.name_unicode,
+                        privileges: 1,
+                        client_version,
+                        utc_offset,
+                        display_city,
+                        only_friend_pm_allowed,
+                        connection_info: Some(ConnectionInfo {
+                            ip: client_ip.to_string(),
+                            geoip_data: geoip_data.map(|g| g.into()),
+                        }),
+                    })
+                    .await?;
+
+                let packet_builder = PacketBuilder::new()
+                    .add(server::ProtocolVersion::new(19))
+                    .add(server::LoginReply::new(
+                        bancho_packets::LoginResult::Success(user.id),
+                    ))
+                    .add(server::BanchoPrivileges::new(1))
+                    .add(server::SilenceEnd::new(0)) // todo
+                    .add(server::FriendsList::new(&[])) // todo
+                    .add(server::ChannelInfo::new(
+                        "peace".into(),
+                        "peace".into(),
+                        1,
+                    ))
+                    .add(server::ChannelInfo::new(
+                        "fwqer".into(),
+                        "r".into(),
+                        1,
+                    ))
+                    .add(server::ChannelInfo::new(
+                        "asd".into(),
+                        "qwe".into(),
+                        0,
+                    ))
+                    .add(server::ChannelInfoEnd::new())
+                    .add(server::Notification::new("welcome to peace!".into()));
+
+                info!(
+                    target: LOG_TARGET,
+                    "Logged in: {} [{}] ({}), time spent: {:?}",
+                    user.name_safe,
+                    user.id,
+                    session_id,
+                    start.elapsed()
+                );
+
+                Ok(LoginSuccess {
+                    session_id,
+                    user_id: user.id,
+                    packets: packet_builder.build(),
+                })
+            },
+        }
+    }
+
     async fn batch_process_bancho_packets(
         &self,
         request: BatchProcessBanchoPacketsRequest,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        const LOG_TARGET: &str = "gateway::process_packets";
+        const LOG_TARGET: &str = "bancho::process_packets";
 
         match self {
             Self::Remote(svc) => svc
@@ -146,7 +260,7 @@ impl BanchoService for BanchoServiceImpl {
                 }
 
                 if failed == processed {
-                    return Err(ProcessBanchoPacketError::FailedToProcessAll);
+                    return Err(ProcessBanchoPacketError::FailedToProcessAll)
                 }
 
                 Ok(HandleCompleted {})
@@ -345,11 +459,10 @@ impl BanchoService for BanchoServiceImpl {
                     PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST => todo!(),
                     PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
                     PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
-                    _ => {
+                    _ =>
                         return Err(ProcessBanchoPacketError::UnhandledPacket(
                             packet.id,
-                        ))
-                    },
+                        )),
                 };
 
                 Ok(HandleCompleted {})
@@ -377,110 +490,6 @@ impl BanchoService for BanchoServiceImpl {
                     .await;
 
                 Ok(HandleCompleted {})
-            },
-        }
-    }
-
-    async fn login(
-        &self,
-        client_ip: IpAddr,
-        request: LoginRequest,
-    ) -> Result<LoginSuccess, BanchoServiceError> {
-        const LOG_TARGET: &str = "bancho_service::login";
-
-        match self {
-            Self::Remote(svc) => svc
-                .client()
-                .login(RawRequest::add_client_ip(request, client_ip))
-                .await
-                .map_err(BanchoServiceError::RpcError)
-                .map(|resp| resp.into_inner()),
-            Self::Local(svc) => {
-                let LoginRequest {
-                    username,
-                    password,
-                    client_version,
-                    utc_offset,
-                    display_city,
-                    only_friend_pm_allowed,
-                    ..
-                } = request;
-
-                info!(
-                    target: LOG_TARGET,
-                    "Login request: {username} [{client_version}] ({client_ip})"
-                );
-                let start = Instant::now();
-
-                let user = svc
-                    .users_repository
-                    .get_user_by_username(
-                        Some(username.as_str()),
-                        Some(username.as_str()),
-                    )
-                    .await
-                    .map_err(LoginError::UserNotExists)?;
-
-                let () = svc
-                    .password_service
-                    .verify_password(user.password.as_str(), password.as_str())
-                    .await
-                    .map_err(LoginError::PasswordError)?;
-
-                let geoip_data = svc
-                    .geoip_service
-                    .lookup_with_ip_address(client_ip)
-                    .await
-                    .ok();
-
-                let CreateUserSessionResponse { session_id } = svc
-                    .bancho_state_service
-                    .create_user_session(CreateUserSessionRequest {
-                        user_id: user.id,
-                        username: user.name.to_owned(),
-                        username_unicode: user.name_unicode,
-                        privileges: 1,
-                        client_version,
-                        utc_offset,
-                        display_city,
-                        only_friend_pm_allowed,
-                        connection_info: Some(ConnectionInfo {
-                            ip: client_ip.to_string(),
-                            geoip_data: geoip_data.map(|g| g.into()),
-                        }),
-                    })
-                    .await?;
-
-                let packet_builder = PacketBuilder::new()
-                    .add(server::ProtocolVersion::new(19))
-                    .add(server::LoginReply::new(
-                        bancho_packets::LoginResult::Success(user.id),
-                    ))
-                    .add(server::BanchoPrivileges::new(1))
-                    .add(server::SilenceEnd::new(0)) // todo
-                    .add(server::FriendsList::new(&[])) // todo
-                    .add(server::ChannelInfo::new(
-                        "peace".into(),
-                        "peace".into(),
-                        0,
-                    ))
-                    .add(server::ChannelInfoEnd::new())
-                    .add(server::Notification::new("welcome to peace!".into()));
-
-                info!(
-                    target: LOG_TARGET,
-                    "Logged in: {} [{}] ({}), time spent: {:?}",
-                    user.name_safe,
-                    user.id,
-                    session_id,
-                    start.elapsed()
-                );
-
-                Ok(LoginSuccess {
-                    session_id,
-                    user_id: user.id,
-                    packets: packet_builder.build(),
-                })
             },
         }
     }
