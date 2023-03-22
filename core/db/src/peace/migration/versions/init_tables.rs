@@ -109,14 +109,16 @@ pub enum RankingType {
 pub enum ChannelType {
     #[iden = "channel_type"]
     Enum = -1,
-    #[iden = "personal"]
-    Personal = 0,
+    #[iden = "private"]
+    Private = 0,
+    #[iden = "public"]
+    Public = 1,
     #[iden = "group"]
-    Group = 1,
+    Group = 2,
     #[iden = "multiplayer"]
-    Multiplayer = 2,
+    Multiplayer = 3,
     #[iden = "spectaor"]
-    Spectaor = 3,
+    Spectaor = 4,
 }
 
 #[derive(Iden)]
@@ -365,7 +367,8 @@ impl MigrationTrait for Migration {
             extension::postgres::Type::create()
                 .as_enum(ChannelType::Enum)
                 .values([
-                    ChannelType::Personal,
+                    ChannelType::Private,
+                    ChannelType::Public,
                     ChannelType::Group,
                     ChannelType::Multiplayer,
                     ChannelType::Spectaor,
@@ -2490,7 +2493,8 @@ pub mod channels {
                     .enumeration(
                         ChannelType::Enum,
                         [
-                            ChannelType::Personal,
+                            ChannelType::Private,
+                            ChannelType::Public,
                             ChannelType::Group,
                             ChannelType::Multiplayer,
                             ChannelType::Spectaor,

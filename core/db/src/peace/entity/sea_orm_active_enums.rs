@@ -25,8 +25,10 @@ pub enum ChannelType {
     Group,
     #[sea_orm(string_value = "multiplayer")]
     Multiplayer,
-    #[sea_orm(string_value = "personal")]
-    Personal,
+    #[sea_orm(string_value = "private")]
+    Private,
+    #[sea_orm(string_value = "public")]
+    Public,
     #[sea_orm(string_value = "spectaor")]
     Spectaor,
 }
