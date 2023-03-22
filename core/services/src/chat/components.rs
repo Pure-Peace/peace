@@ -2,14 +2,14 @@ use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use tools::atomic::{Atomic, AtomicOption};
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Primitive)]
 pub enum ChannelType {
     #[default]
-    Private,
-    Public,
-    Group,
-    Multiplayer,
-    Spectaor,
+    Private = 0,
+    Public = 1,
+    Group = 2,
+    Multiplayer = 3,
+    Spectaor = 4,
 }
 
 #[derive(Debug, Default)]

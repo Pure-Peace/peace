@@ -16,6 +16,7 @@ use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
+    chat::GetPublicChannelsResponse,
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{error::Error, net::IpAddr, sync::Arc, time::Instant};
@@ -174,7 +175,7 @@ impl BanchoService for BanchoServiceImpl {
                     })
                     .await?;
 
-                let packet_builder = PacketBuilder::new()
+                let mut packet_builder = PacketBuilder::new()
                     .add(server::ProtocolVersion::new(19))
                     .add(server::LoginReply::new(
                         bancho_packets::LoginResult::Success(user.id),
@@ -182,23 +183,27 @@ impl BanchoService for BanchoServiceImpl {
                     .add(server::BanchoPrivileges::new(1))
                     .add(server::SilenceEnd::new(0)) // todo
                     .add(server::FriendsList::new(&[])) // todo
-                    .add(server::ChannelInfo::new(
-                        "peace".into(),
-                        "peace".into(),
-                        1,
-                    ))
-                    .add(server::ChannelInfo::new(
-                        "fwqer".into(),
-                        "r".into(),
-                        1,
-                    ))
-                    .add(server::ChannelInfo::new(
-                        "asd".into(),
-                        "qwe".into(),
-                        0,
-                    ))
-                    .add(server::ChannelInfoEnd::new())
                     .add(server::Notification::new("welcome to peace!".into()));
+
+                match svc.chat_service.get_public_channels().await {
+                    Ok(GetPublicChannelsResponse { channels }) => {
+                        for channel in channels {
+                            packet_builder.add_ref(server::ChannelInfo::pack(
+                                channel.name.into(),
+                                channel
+                                    .description
+                                    .map(|s| s.into())
+                                    .unwrap_or_default(),
+                                channel.length as i16,
+                            ));
+                        }
+                        packet_builder.add_ref(server::ChannelInfoEnd::new());
+                    },
+                    Err(err) => {
+                        error!("failed to fetch channel info, err: {:?}", err);
+                        packet_builder.add_ref(server::ChannelInfoEnd::new());
+                    },
+                };
 
                 info!(
                     target: LOG_TARGET,

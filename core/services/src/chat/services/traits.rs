@@ -1,5 +1,5 @@
 use crate::chat::*;
-use peace_pb::chat::ChannelQuery;
+use peace_pb::chat::{ChannelQuery, GetPublicChannelsResponse};
 use std::sync::Arc;
 use tonic::async_trait;
 
@@ -7,7 +7,11 @@ pub type DynChatService = Arc<dyn ChatService + Send + Sync>;
 pub type DynChannelService = Arc<dyn ChannelService + Send + Sync>;
 
 #[async_trait]
-pub trait ChatService {}
+pub trait ChatService {
+    async fn get_public_channels(
+        &self,
+    ) -> Result<GetPublicChannelsResponse, ChatServiceError>;
+}
 
 #[async_trait]
 pub trait ChannelService {

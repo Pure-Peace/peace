@@ -9,7 +9,7 @@ service ChatRPC {
 
 message GetPublicChannelsRequest {}
 
-message GetPublicChannelsResponse { repeated Channel channels = 1; }
+message GetPublicChannelsResponse { repeated ChannelInfo channels = 1; }
 
 enum ChannelType {
   Private = 0;
@@ -19,10 +19,13 @@ enum ChannelType {
   Spectaor = 4;
 }
 
-message Channel {
+message Users { repeated int32 users = 1; }
+
+message ChannelInfo {
   uint32 id = 1;
   string name = 2;
   ChannelType channel_type = 3;
-  string description = 4;
-  repeated int32 users = 5;
+  optional string description = 4;
+  uint32 length = 5;
+  optional Users users = 6;
 }
