@@ -39,29 +39,35 @@ impl Channels {
     #[inline]
     pub async fn create(&self, channel: Channel) -> Arc<Channel> {
         let channel = Arc::new(channel);
-
-        {
-            let mut indexes = self.write().await;
-
-            if let Some(old_channel) =
-                self.get_inner(&indexes, &ChannelQuery::ChannelId(channel.id))
-            {
-                self.delete_inner(
-                    &mut indexes,
-                    &old_channel.id,
-                    &old_channel.name.load(),
-                );
-            }
-
-            indexes.channel_id.insert(channel.id, channel.clone());
-            indexes
-                .channel_name
-                .insert(channel.name.to_string(), channel.clone());
-        };
-
-        self.len.add(1);
+        let mut indexes = self.write().await;
+        self.create_inner(&mut indexes, channel.clone());
 
         channel
+    }
+
+    #[inline]
+    pub fn create_inner(
+        &self,
+        indexes: &mut ChannelIndexes,
+        channel: Arc<Channel>,
+    ) {
+        if let Some(old_channel) =
+            self.get_inner(&indexes, &ChannelQuery::ChannelId(channel.id))
+        {
+            self.delete_inner(
+                indexes,
+                &old_channel.id,
+                &old_channel.name.load(),
+            );
+        }
+
+        indexes.channel_id.insert(channel.id, channel.clone());
+        indexes.channel_name.insert(channel.name.to_string(), channel.clone());
+        if channel.channel_type == ChannelType::Public {
+            indexes.channel_public.insert(channel.id, channel.clone());
+        }
+
+        self.len.add(1);
     }
 
     #[inline]
@@ -177,7 +183,36 @@ impl ChannelService for ChannelServiceImpl {
         &self.channels
     }
 
-    async fn initialize_public_channels(&self) {}
+    async fn initialize_public_channels(&self) {
+        const LOG_TARGET: &str = "chat::channel::initialize_public_channels";
+
+        // todo: load public channels from database
+        let public_channels = vec![
+            Channel::new(
+                0,
+                "osu".to_string().into(),
+                ChannelType::Public,
+                Some("default channel".to_string()).into(),
+                Vec::new(),
+            ),
+            Channel::new(
+                1,
+                "peace".to_string().into(),
+                ChannelType::Public,
+                Some("peace channel".to_string()).into(),
+                Vec::new(),
+            ),
+        ];
+
+        {
+            let mut indexes = self.channels.write().await;
+            for channel in public_channels {
+                self.channels.create_inner(&mut indexes, channel.into());
+            }
+        };
+
+        info!(target: LOG_TARGET, "Public channels successfully initialized.",);
+    }
 
     #[inline]
     async fn create(

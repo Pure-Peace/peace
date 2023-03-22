@@ -5,6 +5,7 @@ use crate::{
         LoginError, ProcessBanchoPacketError,
     },
     bancho_state::{DynBanchoStateService, PresenceFilter},
+    chat::DynChatService,
     geoip::DynGeoipService,
 };
 use bancho_packets::{
@@ -42,6 +43,7 @@ impl BanchoServiceImpl {
         password_service: DynPasswordService,
         bancho_background_service: DynBanchoBackgroundService,
         geoip_service: DynGeoipService,
+        chat_service: DynChatService,
     ) -> Self {
         Self::Local(BanchoServiceLocal::new(
             users_repository,
@@ -49,6 +51,7 @@ impl BanchoServiceImpl {
             password_service,
             bancho_background_service,
             geoip_service,
+            chat_service,
         ))
     }
 }
@@ -75,6 +78,8 @@ pub struct BanchoServiceLocal {
     bancho_background_service: DynBanchoBackgroundService,
     #[allow(dead_code)]
     geoip_service: DynGeoipService,
+    #[allow(dead_code)]
+    chat_service: DynChatService,
 }
 
 impl BanchoServiceLocal {
@@ -84,6 +89,7 @@ impl BanchoServiceLocal {
         password_service: DynPasswordService,
         bancho_background_service: DynBanchoBackgroundService,
         geoip_service: DynGeoipService,
+        chat_service: DynChatService,
     ) -> Self {
         Self {
             users_repository,
@@ -91,6 +97,7 @@ impl BanchoServiceLocal {
             password_service,
             bancho_background_service,
             geoip_service,
+            chat_service,
         }
     }
 }
@@ -260,7 +267,7 @@ impl BanchoService for BanchoServiceImpl {
                 }
 
                 if failed == processed {
-                    return Err(ProcessBanchoPacketError::FailedToProcessAll)
+                    return Err(ProcessBanchoPacketError::FailedToProcessAll);
                 }
 
                 Ok(HandleCompleted {})
@@ -459,10 +466,11 @@ impl BanchoService for BanchoServiceImpl {
                     PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST => todo!(),
                     PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
                     PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
-                    _ =>
+                    _ => {
                         return Err(ProcessBanchoPacketError::UnhandledPacket(
                             packet.id,
-                        )),
+                        ))
+                    },
                 };
 
                 Ok(HandleCompleted {})

@@ -12,6 +12,7 @@ use peace_services::{
         BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
         UserSessionsServiceImpl,
     },
+    chat::{ChannelServiceImpl, ChatServiceImpl},
     gateway::bancho_endpoints::{
         routes::{BanchoDebugRouter, BanchoRouter},
         BanchoDebugEndpointsDocs, BanchoEndpointsDocs,
@@ -94,7 +95,7 @@ impl Application for App {
         .into_service();
 
         let users_repository =
-            UsersRepositoryImpl::new(peace_db_conn).into_service();
+            UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
         let password_service = PasswordServiceImpl::default().into_service();
 
@@ -105,6 +106,17 @@ impl Application for App {
             Some(&self.cfg.geoip),
         )
         .await
+        .into_service();
+
+        let channel_service =
+            ChannelServiceImpl::new(peace_db_conn).into_service();
+
+        channel_service.initialize_public_channels().await;
+
+        let chat_service = ChatServiceImpl::local(
+            channel_service,
+            bancho_state_service.clone(),
+        )
         .into_service();
 
         let bancho_background_service =
@@ -119,6 +131,7 @@ impl Application for App {
             password_service,
             bancho_background_service,
             geoip_service,
+            chat_service,
         )
         .into_service();
 

@@ -1,4 +1,5 @@
 use super::{ChatService, DynChatService};
+use crate::{bancho_state::DynBanchoStateService, chat::DynChannelService};
 use async_trait::async_trait;
 use peace_pb::chat::chat_rpc_client::ChatRpcClient;
 use std::sync::Arc;
@@ -19,8 +20,14 @@ impl ChatServiceImpl {
         Self::Remote(ChatServiceRemote(client))
     }
 
-    pub fn local() -> Self {
-        Self::Local(ChatServiceLocal::new())
+    pub fn local(
+        channel_service: DynChannelService,
+        bancho_state_service: DynBanchoStateService,
+    ) -> Self {
+        Self::Local(ChatServiceLocal::new(
+            channel_service,
+            bancho_state_service,
+        ))
     }
 }
 
@@ -28,7 +35,12 @@ impl ChatServiceImpl {
 pub struct ChatServiceRemote(ChatRpcClient<Channel>);
 
 #[derive(Clone)]
-pub struct ChatServiceLocal {}
+pub struct ChatServiceLocal {
+    #[allow(dead_code)]
+    channel_service: DynChannelService,
+    #[allow(dead_code)]
+    bancho_state_service: DynBanchoStateService,
+}
 
 impl ChatServiceRemote {
     pub fn client(&self) -> ChatRpcClient<Channel> {
@@ -37,8 +49,11 @@ impl ChatServiceRemote {
 }
 
 impl ChatServiceLocal {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(
+        channel_service: DynChannelService,
+        bancho_state_service: DynBanchoStateService,
+    ) -> Self {
+        Self { channel_service, bancho_state_service }
     }
 }
 

@@ -3,7 +3,7 @@ use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::{
     bancho::{bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET},
-    bancho_state, geoip,
+    bancho_state, chat, geoip,
 };
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
@@ -14,6 +14,7 @@ use peace_services::{
         BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
     },
     bancho_state::BanchoStateServiceImpl,
+    chat::ChatServiceImpl,
     geoip::GeoipServiceImpl,
 };
 use std::{path::PathBuf, sync::Arc};
@@ -33,6 +34,12 @@ define_rpc_client_config!(
     default_uri: "http://127.0.0.1:12346"
 );
 
+define_rpc_client_config!(
+    service_name: chat,
+    config_name: ChatRpcConfig,
+    default_uri: "http://127.0.0.1:12347"
+);
+
 #[peace_config]
 #[command(name = "bancho", author, version, about, propagate_version = true)]
 pub struct BanchoConfig {
@@ -47,6 +54,9 @@ pub struct BanchoConfig {
 
     #[command(flatten)]
     pub geoip: GeoipRpcConfig,
+
+    #[command(flatten)]
+    pub chat: ChatRpcConfig,
 
     #[arg(long, short = 'P')]
     pub geo_db_path: Option<PathBuf>,
@@ -87,14 +97,11 @@ impl Application for App {
                 panic!("{}", err)
             });
 
-        let users_repository =
-            UsersRepositoryImpl::new(peace_db_conn).into_service();
-
-        let bancho_state_service =
-            BanchoStateServiceImpl::remote(bancho_state_rpc_client)
-                .into_service();
-
-        let password_service = PasswordServiceImpl::default().into_service();
+        let chat_rpc_client =
+            self.cfg.chat.connect_client().await.unwrap_or_else(|err| {
+                error!("Unable to connect to the chat gRPC service, please make sure the service is started.");
+                panic!("{}", err)
+            });
 
         let geoip_service = GeoipServiceImpl::local_or_remote(
             self.cfg.geo_db_path.as_ref().map(|path| {
@@ -104,6 +111,18 @@ impl Application for App {
         )
         .await
         .into_service();
+
+        let users_repository =
+            UsersRepositoryImpl::new(peace_db_conn).into_service();
+
+        let bancho_state_service =
+            BanchoStateServiceImpl::remote(bancho_state_rpc_client)
+                .into_service();
+
+        let chat_service =
+            ChatServiceImpl::remote(chat_rpc_client).into_service();
+
+        let password_service = PasswordServiceImpl::default().into_service();
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_service.cache().clone())
@@ -117,6 +136,7 @@ impl Application for App {
             password_service,
             bancho_background_service,
             geoip_service,
+            chat_service,
         )
         .into_service();
 
