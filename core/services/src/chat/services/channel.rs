@@ -1,0 +1,251 @@
+use crate::chat::{Channel, ChannelService, ChannelType, DynChannelService};
+use async_trait::async_trait;
+use peace_db::DatabaseConnection;
+use peace_pb::chat::ChannelQuery;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
+use tokio::sync::RwLock;
+use tools::atomic::{AtomicOperation, AtomicValue, Usize};
+
+#[derive(Debug, Default, Clone)]
+pub struct ChannelIndexes {
+    pub channel_id: HashMap<u32, Arc<Channel>>,
+    pub channel_name: HashMap<String, Arc<Channel>>,
+    pub channel_public: HashMap<u32, Arc<Channel>>,
+}
+
+impl Deref for ChannelIndexes {
+    type Target = HashMap<u32, Arc<Channel>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.channel_id
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Channels {
+    pub indexes: RwLock<ChannelIndexes>,
+    pub len: Usize,
+}
+
+impl Deref for Channels {
+    type Target = RwLock<ChannelIndexes>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.indexes
+    }
+}
+
+impl Channels {
+    #[inline]
+    pub async fn create(&self, channel: Channel) -> Arc<Channel> {
+        let channel = Arc::new(channel);
+
+        {
+            let mut indexes = self.write().await;
+
+            if let Some(old_channel) =
+                self.get_inner(&indexes, &ChannelQuery::ChannelId(channel.id))
+            {
+                self.delete_inner(
+                    &mut indexes,
+                    &old_channel.id,
+                    &old_channel.name.load(),
+                );
+            }
+
+            indexes.channel_id.insert(channel.id, channel.clone());
+            indexes
+                .channel_name
+                .insert(channel.name.to_string(), channel.clone());
+        };
+
+        self.len.add(1);
+
+        channel
+    }
+
+    #[inline]
+    pub async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+        let mut indexes = self.write().await;
+
+        let channel = self.get_inner(&indexes, query)?;
+
+        self.delete_inner(&mut indexes, &channel.id, &channel.name.load())
+    }
+
+    #[inline]
+    pub fn delete_inner(
+        &self,
+        indexes: &mut ChannelIndexes,
+        channel_id: &u32,
+        channel_name: &str,
+    ) -> Option<Arc<Channel>> {
+        let mut removed = None;
+
+        if let Some(s) = indexes.channel_id.remove(channel_id) {
+            removed = Some(s);
+        }
+        if let Some(s) = indexes.channel_name.remove(channel_name) {
+            removed = Some(s);
+        }
+        if let Some(s) = indexes.channel_public.remove(channel_id) {
+            removed = Some(s);
+        }
+
+        if removed.is_some() {
+            self.len.sub(1);
+        }
+
+        removed
+    }
+
+    #[inline]
+    pub async fn get(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+        let indexes = self.read().await;
+        self.get_inner(&indexes, query)
+    }
+
+    #[inline]
+    pub fn get_inner(
+        &self,
+        indexes: &ChannelIndexes,
+        query: &ChannelQuery,
+    ) -> Option<Arc<Channel>> {
+        match query {
+            ChannelQuery::ChannelId(channel_id) => {
+                indexes.channel_id.get(channel_id)
+            },
+            ChannelQuery::ChannelName(channel_name) => {
+                indexes.channel_name.get(channel_name)
+            },
+        }
+        .cloned()
+    }
+
+    #[inline]
+    pub async fn exists(&self, query: &ChannelQuery) -> bool {
+        let indexes = self.read().await;
+        match query {
+            ChannelQuery::ChannelId(channel_id) => {
+                indexes.channel_id.contains_key(channel_id)
+            },
+            ChannelQuery::ChannelName(channel_name) => {
+                indexes.channel_name.contains_key(channel_name)
+            },
+        }
+    }
+
+    #[inline]
+    pub async fn clear(&self) {
+        let mut indexes = self.write().await;
+        indexes.channel_id.clear();
+        indexes.channel_name.clear();
+        indexes.channel_public.clear();
+
+        self.len.set(0);
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len.val()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChannelServiceImpl {
+    channels: Arc<Channels>,
+    #[allow(dead_code)]
+    peace_db_conn: DatabaseConnection,
+}
+
+impl ChannelServiceImpl {
+    #[inline]
+    pub fn into_service(self) -> DynChannelService {
+        Arc::new(self) as DynChannelService
+    }
+
+    #[inline]
+    pub fn new(peace_db_conn: DatabaseConnection) -> Self {
+        Self { peace_db_conn, ..Default::default() }
+    }
+}
+
+#[async_trait]
+impl ChannelService for ChannelServiceImpl {
+    #[inline]
+    fn channels(&self) -> &Arc<Channels> {
+        &self.channels
+    }
+
+    async fn initialize_public_channels(&self) {}
+
+    #[inline]
+    async fn create(
+        &self,
+        id: u32,
+        name: String,
+        channel_type: ChannelType,
+        description: Option<String>,
+        users: Vec<i32>,
+    ) -> Arc<Channel> {
+        const LOG_TARGET: &str = "chat::channel::create_channel";
+
+        let channel = self
+            .channels
+            .create(Channel::new(
+                id,
+                name.into(),
+                channel_type,
+                description.into(),
+                users,
+            ))
+            .await;
+
+        info!(
+            target: LOG_TARGET,
+            "Channel created: {} [{}] ({:?})",
+            channel.name.load(),
+            channel.id,
+            channel.channel_type
+        );
+
+        channel
+    }
+
+    #[inline]
+    async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+        const LOG_TARGET: &str = "chat::channel::delete_session";
+
+        let channel = self.channels.delete(query).await?;
+
+        info!(
+            target: LOG_TARGET,
+            "Channel deleted: {} [{}] ({:?})",
+            channel.name.load(),
+            channel.id,
+            channel.channel_type
+        );
+
+        Some(channel)
+    }
+
+    #[inline]
+    async fn get(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+        self.channels.get(query).await
+    }
+
+    #[inline]
+    async fn exists(&self, query: &ChannelQuery) -> bool {
+        self.channels.exists(query).await
+    }
+
+    #[inline]
+    async fn clear(&self) {
+        self.channels.clear().await
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.channels.len()
+    }
+}
