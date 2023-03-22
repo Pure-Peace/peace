@@ -150,7 +150,7 @@ macro_rules! implAtomicValue {
                 pub struct [<$ty:camel>]([<Atomic $ty:camel>]);
 
                 impl [<$ty:camel>] {
-                    pub fn new(val: [<$ty:snake>]) -> Self {
+                    pub const fn new(val: [<$ty:snake>]) -> Self {
                         Self([<Atomic $ty:camel>]::new(val))
                     }
                 }
