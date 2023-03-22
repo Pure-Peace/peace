@@ -2,4 +2,27 @@ syntax = "proto3";
 
 package peace.services.chat;
 
-service ChatRPC {}
+service ChatRPC {
+  rpc GetPublicChannels(GetPublicChannelsRequest)
+      returns (GetPublicChannelsResponse);
+}
+
+message GetPublicChannelsRequest {}
+
+message GetPublicChannelsResponse { repeated Channel channels = 1; }
+
+enum ChannelType {
+  Private = 0;
+  Public = 1;
+  Group = 2;
+  Multiplayer = 3;
+  Spectaor = 4;
+}
+
+message Channel {
+  uint32 id = 1;
+  string name = 2;
+  ChannelType channel_type = 3;
+  string description = 4;
+  repeated int32 users = 5;
+}
