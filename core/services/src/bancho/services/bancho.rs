@@ -313,10 +313,16 @@ impl BanchoService for BanchoServiceImpl {
                         todo!() // chat.send_private_message
                     },
                     PacketId::OSU_USER_CHANNEL_PART => {
-                        todo!() // channel
+                        let channel_name = PayloadReader::new(packet.payload.ok_or(
+                            ProcessBanchoPacketError::PacketPayloadNotExists,
+                        )?).read::<String>().ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+                        warn!("OSU_USER_CHANNEL_PART: {channel_name}");
                     },
                     PacketId::OSU_USER_CHANNEL_JOIN => {
-                        todo!() // channel
+                        let channel_name = PayloadReader::new(packet.payload.ok_or(
+                            ProcessBanchoPacketError::PacketPayloadNotExists,
+                        )?).read::<String>().ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+                        warn!("OSU_USER_CHANNEL_JOIN: {channel_name}");
                     },
                     // User
                     PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
