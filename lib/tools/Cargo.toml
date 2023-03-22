@@ -11,9 +11,10 @@ authors.workspace = true
 [features]
 default = []
 
-all = ["async_collections", "tonic_utils"]
+all = ["async_collections", "tonic_utils", "cache"]
 async_collections = ["tokio"]
 tonic_utils = ["tonic"]
+cache = ["async-trait", "chrono"]
 
 
 [dependencies]
@@ -28,3 +29,7 @@ tokio = { workspace = true, optional = true }
 
 # tonic
 tonic = { workspace = true, optional = true }
+
+# cache
+async-trait = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
