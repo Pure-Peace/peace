@@ -9,7 +9,10 @@ use crate::{
 use async_trait::async_trait;
 use derive_deref::Deref;
 use peace_pb::{
-    bancho_state::{BanchoPacketTarget, EnqueueBanchoPacketsRequest},
+    bancho_state::{
+        BanchoPacketTarget, BroadcastBanchoPacketsRequest,
+        EnqueueBanchoPacketsRequest,
+    },
     chat::{
         chat_rpc_client::ChatRpcClient, ChannelInfo, ChannelSessionCount,
         DeleteFromChannelRequest, GetPublicChannelsRequest,
@@ -162,9 +165,22 @@ impl ChatService for ChatServiceImpl {
                                 BanchoPacketTarget::UserId(user_id).into(),
                             ),
                             packets: bancho_packets::server::ChannelJoin::pack(
-                                name.into(),
+                                name.as_str().into(),
                             ),
                         })
+                        .await?;
+
+                    svc.bancho_state_service
+                        .broadcast_bancho_packets(
+                            BroadcastBanchoPacketsRequest {
+                                packets:
+                                    bancho_packets::server::ChannelInfo::pack(
+                                        name.into(),
+                                        "todo".into(),
+                                        session_count as i16,
+                                    ),
+                            },
+                        )
                         .await?;
                 }
 
@@ -216,9 +232,22 @@ impl ChatService for ChatServiceImpl {
                                 BanchoPacketTarget::UserId(user_id).into(),
                             ),
                             packets: bancho_packets::server::ChannelKick::pack(
-                                name.into(),
+                                name.as_str().into(),
                             ),
                         })
+                        .await?;
+
+                    svc.bancho_state_service
+                        .broadcast_bancho_packets(
+                            BroadcastBanchoPacketsRequest {
+                                packets:
+                                    bancho_packets::server::ChannelInfo::pack(
+                                        name.into(),
+                                        "todo".into(),
+                                        session_count as i16,
+                                    ),
+                            },
+                        )
                         .await?;
                 }
 
