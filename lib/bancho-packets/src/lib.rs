@@ -81,12 +81,19 @@ pub enum LoginResult {
     Failed(LoginFailedResaon),
 }
 
+impl Default for LoginResult {
+    fn default() -> Self {
+        Self::Failed(Default::default())
+    }
+}
+
 #[rustfmt::skip]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 #[repr(i32)]
 /// The bancho client will handle these failure reasons when the user login fails.
 pub enum LoginFailedResaon {
+    #[default]
     InvalidCredentials        = -1,
     OutdatedClient            = -2,
     UserBanned                = -3,
@@ -221,7 +228,7 @@ impl std::fmt::Display for PacketId {
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, ReadPacket)]
+#[derive(Debug, Clone, ReadPacket, Default)]
 /// [`BanchoMessage`] is the message structure of the bancho client.
 pub struct BanchoMessage {
     pub sender: String,
@@ -231,7 +238,7 @@ pub struct BanchoMessage {
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PacketLength)]
+#[derive(Debug, Clone, PacketLength, Default)]
 /// [`MatchData`] is the data of bancho client multiplayer game room.
 pub struct MatchData {
     pub match_id: i32,
@@ -257,7 +264,7 @@ pub struct MatchData {
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, PacketLength)]
+#[derive(Debug, Clone, PacketLength, Default)]
 pub struct MatchUpdate {
     pub data: MatchData,
     pub send_password: bool,
@@ -280,7 +287,7 @@ impl DerefMut for MatchUpdate {
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, ReadPacket, WritePacket, PacketLength)]
+#[derive(Debug, Clone, ReadPacket, WritePacket, PacketLength, Default)]
 /// The [`ScoreFrame`] uploaded by the bancho client during multiplayer games.
 pub struct ScoreFrame {
     pub timestamp: i32,
@@ -301,7 +308,7 @@ pub struct ScoreFrame {
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, ReadPacket, WritePacket, PacketLength)]
+#[derive(Debug, Clone, ReadPacket, WritePacket, PacketLength, Default)]
 pub struct ClientChangeAction {
     pub online_status: u8,
     pub description: String,
@@ -1245,7 +1252,7 @@ pub mod macros {
             fn $fn:ident ($self:ident) -> $ret:ty $body:block
         ) => {
             $(#[$struct_meta])*
-            #[derive(Debug, Clone)]
+            #[derive(Debug, Clone, Default)]
             pub struct $struct_name $(< $($lifetimes),* >)? {
                 $(
                     $(#[$field_meta])*
