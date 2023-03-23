@@ -22,15 +22,11 @@ fn handing_err(err: impl Error) -> ProcessBanchoPacketError {
 fn read_channel_name(
     payload: Option<&[u8]>,
 ) -> Result<String, ProcessBanchoPacketError> {
-    let mut channel_name = PayloadReader::new(
+    let channel_name = PayloadReader::new(
         payload.ok_or(ProcessBanchoPacketError::PacketPayloadNotExists)?,
     )
     .read::<String>()
     .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-
-    if channel_name.starts_with('#') {
-        channel_name.remove(0);
-    }
 
     Ok(channel_name)
 }

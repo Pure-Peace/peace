@@ -193,14 +193,14 @@ impl ChannelService for ChannelServiceImpl {
         let public_channels = vec![
             Channel::new(
                 0,
-                "osu".to_string().into(),
+                "#osu".to_string().into(),
                 ChannelType::Public,
                 Some("default channel".to_string()).into(),
                 None,
             ),
             Channel::new(
                 1,
-                "peace".to_string().into(),
+                "#peace".to_string().into(),
                 ChannelType::Public,
                 Some("peace channel".to_string()).into(),
                 None,

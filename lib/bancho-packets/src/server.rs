@@ -234,21 +234,6 @@ packet_struct!(
         name: CowStr<'a>,
         title: CowStr<'a>,
         player_count: i16,
-    },
-    fn into_packet_data(self) -> Vec<u8> {
-        // Valid bancho channel name should be starts with '#'
-        let name = if self.name.starts_with('#') {
-            self.name
-        } else {
-            // Add prefix
-            format!("#{}", self.name).into()
-        };
-        packet!(
-            Self::ID,
-            name,
-            self.title,
-            self.player_count
-        )
     }
 );
 

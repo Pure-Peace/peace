@@ -215,7 +215,7 @@ impl ChatService for ChatServiceImpl {
                             target: Some(
                                 BanchoPacketTarget::UserId(user_id).into(),
                             ),
-                            packets: bancho_packets::server::ChannelJoin::pack(
+                            packets: bancho_packets::server::ChannelKick::pack(
                                 name.into(),
                             ),
                         })
