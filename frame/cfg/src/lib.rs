@@ -483,6 +483,14 @@ pub mod macros {
 
                     #[inline]
                     async fn connect_client(&self) -> Result<Self::RpcClient, $crate::macros::____private::Error> {
+                        fn display_endpoint(s: impl std::fmt::Display) {
+                            $crate::macros::____private::peace_logs::info!(concat!("[Config] ", stringify!($service_name), " gRPC service endpoint: {}"), s);
+                        }
+
+                        fn display_connecting() {
+                            $crate::macros::____private::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                        }
+
                         async fn connect_endpoint(
                             endpoint: $crate::macros::____private::Endpoint,
                             lazy_connect: bool,
@@ -490,14 +498,14 @@ pub mod macros {
                             Ok(if lazy_connect {
                                 endpoint.connect_lazy()
                             } else {
-                                $crate::macros::____private::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                                display_connecting();
                                 endpoint.connect().await?
                             })
                         }
 
                         #[cfg(unix)]
                         if let Some(uds) = self.uds().cloned() {
-                            $crate::macros::____private::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), uds.to_string_lossy());
+                            display_endpoint(uds.to_string_lossy());
                             let service_factory =
                                 $crate::macros::____private::service_fn(move |_| tokio::net::UnixStream::connect(uds.to_owned()));
                             let endpoint =
@@ -506,13 +514,13 @@ pub mod macros {
                             let channel = if self.lazy_connect() {
                                 endpoint.connect_with_connector_lazy(service_factory)
                             } else {
-                                $crate::macros::____private::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
+                                display_connecting();
                                 endpoint.connect_with_connector(service_factory).await?
                             };
                             return Ok(Self::RpcClient::new(channel));
                         }
 
-                        $crate::macros::____private::peace_logs::info!(concat!(stringify!($service_name), " gRPC service: {}"), self.uri());
+                        display_endpoint(self.uri());
                         if self.tls() {
                             let pem =
                                 tokio::fs::read(self.ssl_cert().as_ref().unwrap())
