@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use derive_deref::Deref;
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
@@ -26,6 +27,7 @@ pub enum SessionPlatform {
     Web = 2,
 }
 
+#[derive(Deref)]
 pub struct SessionPlatforms(pub Vec<SessionPlatform>);
 
 impl SessionPlatforms {
@@ -92,6 +94,13 @@ impl ChannelSession {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ChannelMetadata {
+    pub id: u64,
+    pub name: String,
+    pub session_count: usize,
+}
+
 #[derive(Debug, Default)]
 pub struct Channel {
     pub id: u64,
@@ -126,11 +135,9 @@ impl Channel {
             description,
             channel_sessions: channel_sessions
                 .map(|channel_sessions| {
-                    HashMap::from_iter(channel_sessions.iter().map(
-                        |user_id| {
-                            (*user_id, ChannelSession::new_offline(*user_id))
-                        },
-                    ))
+                    HashMap::from_iter(channel_sessions.iter().map(|user_id| {
+                        (*user_id, ChannelSession::new_offline(*user_id))
+                    }))
                     .into()
                 })
                 .unwrap_or_default(),

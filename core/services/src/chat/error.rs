@@ -1,3 +1,4 @@
+use crate::bancho_state::BanchoStateError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -12,6 +13,8 @@ pub enum ChatServiceError {
     ChannelNotExists,
     #[error("invalid params")]
     InvalidParams,
+    #[error("bancho state error: {0}")]
+    BanchoStateError(#[from] BanchoStateError),
     #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }

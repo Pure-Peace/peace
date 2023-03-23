@@ -1,14 +1,21 @@
 use super::{ChatService, DynChatService};
 use crate::{
     bancho_state::DynBanchoStateService,
-    chat::{ChatServiceError, DynChannelService, SessionPlatforms},
+    chat::{
+        ChannelMetadata, ChatServiceError, DynChannelService, SessionPlatform,
+        SessionPlatforms,
+    },
 };
 use async_trait::async_trait;
 use derive_deref::Deref;
-use peace_pb::chat::{
-    chat_rpc_client::ChatRpcClient, ChannelInfo, ChannelSessionCount,
-    DeleteFromChannelRequest, GetPublicChannelsRequest,
-    GetPublicChannelsResponse, JoinIntoChannelRequest, LeaveFromChannelRequest,
+use peace_pb::{
+    bancho_state::{BanchoPacketTarget, EnqueueBanchoPacketsRequest},
+    chat::{
+        chat_rpc_client::ChatRpcClient, ChannelInfo, ChannelSessionCount,
+        DeleteFromChannelRequest, GetPublicChannelsRequest,
+        GetPublicChannelsResponse, JoinIntoChannelRequest,
+        LeaveFromChannelRequest,
+    },
 };
 use std::sync::Arc;
 use tonic::transport::Channel;
@@ -134,22 +141,34 @@ impl ChatService for ChatServiceImpl {
                     platforms,
                 } = request;
 
+                let channel_query = channel_query
+                    .ok_or(ChatServiceError::InvalidArgument)?
+                    .into();
                 let platforms = SessionPlatforms::from(platforms);
 
-                let session_count = svc
-                    .channel_service
-                    .join_user(
-                        &channel_query
-                            .ok_or(ChatServiceError::InvalidArgument)?
-                            .into(),
-                        user_id,
-                        platforms.into_inner(),
-                    )
-                    .await
-                    .ok_or(ChatServiceError::ChannelNotExists)?
-                    as u32;
+                let contains_bancho =
+                    platforms.contains(&SessionPlatform::Bancho);
 
-                Ok(ChannelSessionCount { session_count })
+                let ChannelMetadata { name, session_count, .. } = svc
+                    .channel_service
+                    .join_user(&channel_query, user_id, platforms.into_inner())
+                    .await
+                    .ok_or(ChatServiceError::ChannelNotExists)?;
+
+                if contains_bancho {
+                    svc.bancho_state_service
+                        .enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
+                            target: Some(
+                                BanchoPacketTarget::UserId(user_id).into(),
+                            ),
+                            packets: bancho_packets::server::ChannelJoin::pack(
+                                name.into(),
+                            ),
+                        })
+                        .await?;
+                }
+
+                Ok(ChannelSessionCount { session_count: session_count as u32 })
             },
         }
     }
@@ -172,22 +191,38 @@ impl ChatService for ChatServiceImpl {
                     platforms,
                 } = request;
 
+                let channel_query = channel_query
+                    .ok_or(ChatServiceError::InvalidArgument)?
+                    .into();
                 let platforms = SessionPlatforms::from(platforms);
 
-                let session_count = svc
+                let contains_bancho =
+                    platforms.contains(&SessionPlatform::Bancho);
+
+                let ChannelMetadata { name, session_count, .. } = svc
                     .channel_service
                     .leave_user(
-                        &channel_query
-                            .ok_or(ChatServiceError::InvalidArgument)?
-                            .into(),
+                        &channel_query,
                         &user_id,
                         &platforms.into_inner(),
                     )
                     .await
-                    .ok_or(ChatServiceError::ChannelNotExists)?
-                    as u32;
+                    .ok_or(ChatServiceError::ChannelNotExists)?;
 
-                Ok(ChannelSessionCount { session_count })
+                if contains_bancho {
+                    svc.bancho_state_service
+                        .enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
+                            target: Some(
+                                BanchoPacketTarget::UserId(user_id).into(),
+                            ),
+                            packets: bancho_packets::server::ChannelJoin::pack(
+                                name.into(),
+                            ),
+                        })
+                        .await?;
+                }
+
+                Ok(ChannelSessionCount { session_count: session_count as u32 })
             },
         }
     }
@@ -207,19 +242,17 @@ impl ChatService for ChatServiceImpl {
                 let DeleteFromChannelRequest { channel_query, user_id } =
                     request;
 
-                let session_count = svc
-                    .channel_service
-                    .delete_user(
-                        &channel_query
-                            .ok_or(ChatServiceError::InvalidArgument)?
-                            .into(),
-                        &user_id,
-                    )
-                    .await
-                    .ok_or(ChatServiceError::ChannelNotExists)?
-                    as u32;
+                let channel_query = channel_query
+                    .ok_or(ChatServiceError::InvalidArgument)?
+                    .into();
 
-                Ok(ChannelSessionCount { session_count })
+                let ChannelMetadata { session_count, .. } = svc
+                    .channel_service
+                    .delete_user(&channel_query, &user_id)
+                    .await
+                    .ok_or(ChatServiceError::ChannelNotExists)?;
+
+                Ok(ChannelSessionCount { session_count: session_count as u32 })
             },
         }
     }

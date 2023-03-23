@@ -1,5 +1,6 @@
 use crate::chat::{
-    Channel, ChannelService, ChannelType, DynChannelService, SessionPlatform,
+    Channel, ChannelMetadata, ChannelService, ChannelType, DynChannelService,
+    SessionPlatform,
 };
 use async_trait::async_trait;
 use peace_db::DatabaseConnection;
@@ -255,8 +256,15 @@ impl ChannelService for ChannelServiceImpl {
         query: &ChannelQuery,
         user_id: i32,
         platforms: Vec<SessionPlatform>,
-    ) -> Option<usize> {
-        Some(self.channels.get(query).await?.join(user_id, platforms).await)
+    ) -> Option<ChannelMetadata> {
+        let channel = self.channels.get(query).await?;
+        let session_count = channel.join(user_id, platforms).await;
+
+        Some(ChannelMetadata {
+            id: channel.id,
+            name: channel.name.to_string(),
+            session_count,
+        })
     }
 
     #[inline]
@@ -265,8 +273,15 @@ impl ChannelService for ChannelServiceImpl {
         query: &ChannelQuery,
         user_id: &i32,
         platforms: &[SessionPlatform],
-    ) -> Option<usize> {
-        Some(self.channels.get(query).await?.leave(user_id, platforms).await)
+    ) -> Option<ChannelMetadata> {
+        let channel = self.channels.get(query).await?;
+        let session_count = channel.leave(user_id, platforms).await;
+
+        Some(ChannelMetadata {
+            id: channel.id,
+            name: channel.name.to_string(),
+            session_count,
+        })
     }
 
     #[inline]
@@ -274,8 +289,15 @@ impl ChannelService for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-    ) -> Option<usize> {
-        Some(self.channels.get(query).await?.delete(user_id).await)
+    ) -> Option<ChannelMetadata> {
+        let channel = self.channels.get(query).await?;
+        let session_count = channel.delete(user_id).await;
+
+        Some(ChannelMetadata {
+            id: channel.id,
+            name: channel.name.to_string(),
+            session_count,
+        })
     }
 
     #[inline]

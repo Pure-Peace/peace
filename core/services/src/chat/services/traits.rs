@@ -51,20 +51,20 @@ pub trait ChannelService {
         query: &ChannelQuery,
         user_id: i32,
         platforms: Vec<SessionPlatform>,
-    ) -> Option<usize>;
+    ) -> Option<ChannelMetadata>;
 
     async fn leave_user(
         &self,
         query: &ChannelQuery,
         user_id: &i32,
         platforms: &[SessionPlatform],
-    ) -> Option<usize>;
+    ) -> Option<ChannelMetadata>;
 
     async fn delete_user(
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-    ) -> Option<usize>;
+    ) -> Option<ChannelMetadata>;
 
     async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>>;
 
