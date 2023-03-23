@@ -264,7 +264,7 @@ impl ChannelService for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-        platforms: Vec<SessionPlatform>,
+        platforms: &[SessionPlatform],
     ) -> Option<usize> {
         Some(self.channels.get(query).await?.leave(user_id, platforms).await)
     }

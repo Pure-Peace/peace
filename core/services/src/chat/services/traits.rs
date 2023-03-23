@@ -1,7 +1,7 @@
 use crate::chat::*;
 use peace_pb::chat::{
-    ChannelQuery, ChannelSessionCount, GetPublicChannelsResponse,
-    JoinIntoChannelRequest, LeaveFromChannelRequest,
+    ChannelQuery, ChannelSessionCount, DeleteFromChannelRequest,
+    GetPublicChannelsResponse, JoinIntoChannelRequest, LeaveFromChannelRequest,
 };
 use std::sync::Arc;
 use tonic::async_trait;
@@ -23,6 +23,11 @@ pub trait ChatService {
     async fn leave_from_channel(
         &self,
         request: LeaveFromChannelRequest,
+    ) -> Result<ChannelSessionCount, ChatServiceError>;
+
+    async fn delete_from_channel(
+        &self,
+        request: DeleteFromChannelRequest,
     ) -> Result<ChannelSessionCount, ChatServiceError>;
 }
 
@@ -52,7 +57,7 @@ pub trait ChannelService {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-        platforms: Vec<SessionPlatform>,
+        platforms: &[SessionPlatform],
     ) -> Option<usize>;
 
     async fn delete_user(

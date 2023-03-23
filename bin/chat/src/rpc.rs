@@ -1,4 +1,4 @@
-use peace_pb::{base::ExecSuccess, chat::*};
+use peace_pb::chat::*;
 use peace_services::chat::DynChatService;
 use tonic::{Request, Response, Status};
 
@@ -30,9 +30,31 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
     async fn join_into_channel(
         &self,
         request: Request<JoinIntoChannelRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
+    ) -> Result<Response<ChannelSessionCount>, Status> {
         self.chat_service
             .join_into_channel(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
+
+    async fn leave_from_channel(
+        &self,
+        request: Request<LeaveFromChannelRequest>,
+    ) -> Result<Response<ChannelSessionCount>, Status> {
+        self.chat_service
+            .leave_from_channel(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
+
+    async fn delete_from_channel(
+        &self,
+        request: Request<DeleteFromChannelRequest>,
+    ) -> Result<Response<ChannelSessionCount>, Status> {
+        self.chat_service
+            .delete_from_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)

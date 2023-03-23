@@ -1,14 +1,14 @@
 use super::{ChatService, DynChatService};
 use crate::{
     bancho_state::DynBanchoStateService,
-    chat::{ChatServiceError, DynChannelService, SessionPlatform},
+    chat::{ChatServiceError, DynChannelService, SessionPlatforms},
 };
 use async_trait::async_trait;
 use derive_deref::Deref;
 use peace_pb::chat::{
     chat_rpc_client::ChatRpcClient, ChannelInfo, ChannelSessionCount,
-    GetPublicChannelsRequest, GetPublicChannelsResponse,
-    JoinIntoChannelRequest, LeaveFromChannelRequest,
+    DeleteFromChannelRequest, GetPublicChannelsRequest,
+    GetPublicChannelsResponse, JoinIntoChannelRequest, LeaveFromChannelRequest,
 };
 use std::sync::Arc;
 use tonic::transport::Channel;
@@ -134,17 +134,7 @@ impl ChatService for ChatServiceImpl {
                     platforms,
                 } = request;
 
-                let platforms = platforms
-                    .into_iter()
-                    .map(|p| SessionPlatform::try_from(p))
-                    .filter(|result| {
-                        if result.is_err() {
-                            warn!("Unsupported SessionPlatform: {:?}", result)
-                        }
-                        true
-                    })
-                    .map(|p| p.unwrap())
-                    .collect();
+                let platforms = SessionPlatforms::from(platforms);
 
                 let session_count = svc
                     .channel_service
@@ -153,7 +143,7 @@ impl ChatService for ChatServiceImpl {
                             .ok_or(ChatServiceError::InvalidArgument)?
                             .into(),
                         user_id,
-                        platforms,
+                        platforms.into_inner(),
                     )
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?
@@ -182,7 +172,7 @@ impl ChatService for ChatServiceImpl {
                     platforms,
                 } = request;
 
-                let platforms =
+                let platforms = SessionPlatforms::from(platforms);
 
                 let session_count = svc
                     .channel_service
@@ -191,7 +181,39 @@ impl ChatService for ChatServiceImpl {
                             .ok_or(ChatServiceError::InvalidArgument)?
                             .into(),
                         &user_id,
-                        platforms,
+                        &platforms.into_inner(),
+                    )
+                    .await
+                    .ok_or(ChatServiceError::ChannelNotExists)?
+                    as u32;
+
+                Ok(ChannelSessionCount { session_count })
+            },
+        }
+    }
+
+    async fn delete_from_channel(
+        &self,
+        request: DeleteFromChannelRequest,
+    ) -> Result<ChannelSessionCount, ChatServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .delete_from_channel(request)
+                .await
+                .map_err(ChatServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(svc) => {
+                let DeleteFromChannelRequest { channel_query, user_id } =
+                    request;
+
+                let session_count = svc
+                    .channel_service
+                    .delete_user(
+                        &channel_query
+                            .ok_or(ChatServiceError::InvalidArgument)?
+                            .into(),
+                        &user_id,
                     )
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?

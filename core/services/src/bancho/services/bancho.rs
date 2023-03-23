@@ -16,7 +16,10 @@ use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
-    chat::GetPublicChannelsResponse,
+    chat::{
+        ChannelQuery, GetPublicChannelsResponse, JoinIntoChannelRequest,
+        LeaveFromChannelRequest, SessionPlatform,
+    },
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{error::Error, net::IpAddr, sync::Arc, time::Instant};
@@ -307,7 +310,8 @@ impl BanchoService for BanchoServiceImpl {
                 .await
                 .map_err(ProcessBanchoPacketError::RpcError)
                 .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => {
+            Self::Local(svc) => {
+                #[inline]
                 fn handing_err(err: impl Error) -> ProcessBanchoPacketError {
                     ProcessBanchoPacketError::Anyhow(anyhow!("{err:?}"))
                 }
@@ -316,22 +320,60 @@ impl BanchoService for BanchoServiceImpl {
                     PacketId::OSU_PING => {},
                     // Message
                     PacketId::OSU_SEND_PUBLIC_MESSAGE => {
-                        todo!() // chat.send_public_message
+                        // chat.send_public_message
                     },
                     PacketId::OSU_SEND_PRIVATE_MESSAGE => {
-                        todo!() // chat.send_private_message
-                    },
-                    PacketId::OSU_USER_CHANNEL_PART => {
-                        let channel_name = PayloadReader::new(packet.payload.ok_or(
-                            ProcessBanchoPacketError::PacketPayloadNotExists,
-                        )?).read::<String>().ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-                        warn!("OSU_USER_CHANNEL_PART: {channel_name}");
+                        // chat.send_private_message
                     },
                     PacketId::OSU_USER_CHANNEL_JOIN => {
-                        let channel_name = PayloadReader::new(packet.payload.ok_or(
-                            ProcessBanchoPacketError::PacketPayloadNotExists,
-                        )?).read::<String>().ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-                        warn!("OSU_USER_CHANNEL_JOIN: {channel_name}");
+                        let mut channel_name =
+                            PayloadReader::new(packet.payload.ok_or(
+                                ProcessBanchoPacketError::PacketPayloadNotExists,
+                            )?)
+                            .read::<String>()
+                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+
+                        if channel_name.starts_with('#') {
+                            channel_name.remove(0);
+                        }
+
+                        svc.chat_service
+                            .join_into_channel(JoinIntoChannelRequest {
+                                channel_query: Some(
+                                    ChannelQuery::ChannelName(channel_name)
+                                        .into(),
+                                ),
+                                user_id,
+                                platforms: [SessionPlatform::Bancho as i32]
+                                    .into(),
+                            })
+                            .await
+                            .map_err(handing_err)?;
+                    },
+                    PacketId::OSU_USER_CHANNEL_PART => {
+                        let mut channel_name =
+                            PayloadReader::new(packet.payload.ok_or(
+                                ProcessBanchoPacketError::PacketPayloadNotExists,
+                            )?)
+                            .read::<String>()
+                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+
+                        if channel_name.starts_with('#') {
+                            channel_name.remove(0);
+                        }
+
+                        svc.chat_service
+                            .leave_from_channel(LeaveFromChannelRequest {
+                                channel_query: Some(
+                                    ChannelQuery::ChannelName(channel_name)
+                                        .into(),
+                                ),
+                                user_id,
+                                platforms: [SessionPlatform::Bancho as i32]
+                                    .into(),
+                            })
+                            .await
+                            .map_err(handing_err)?;
                     },
                     // User
                     PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {

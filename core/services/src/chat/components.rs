@@ -28,6 +28,13 @@ pub enum SessionPlatform {
 
 pub struct SessionPlatforms(pub Vec<SessionPlatform>);
 
+impl SessionPlatforms {
+    #[inline]
+    pub fn into_inner(self) -> Vec<SessionPlatform> {
+        self.0
+    }
+}
+
 impl From<Vec<i32>> for SessionPlatforms {
     fn from(platforms: Vec<i32>) -> Self {
         Self(
@@ -70,15 +77,12 @@ impl ChannelSession {
     }
 
     #[inline]
-    pub fn is_offline(&self, user_id: &i32) -> bool {
+    pub fn is_offline(&self) -> bool {
         self.online_platforms.load().is_empty()
     }
 
     #[inline]
-    pub fn online_platforms(
-        &self,
-        user_id: &i32,
-    ) -> Option<Vec<SessionPlatform>> {
+    pub fn online_platforms(&self) -> Option<Vec<SessionPlatform>> {
         let online_platforms = self.online_platforms.load();
         if online_platforms.is_empty() {
             return None;
@@ -138,7 +142,7 @@ impl Channel {
     pub async fn join(
         &self,
         user_id: i32,
-        platforms: impl IntoIterator<Item = SessionPlatform>,
+        platforms: Vec<SessionPlatform>,
     ) -> usize {
         let mut lock = self.write().await;
         Self::join_inner(&mut lock, user_id, platforms)
@@ -148,10 +152,15 @@ impl Channel {
     pub fn join_inner(
         channel_sessions: &mut ChannelUserMap,
         user_id: i32,
-        platforms: impl IntoIterator<Item = SessionPlatform>,
+        platforms: Vec<SessionPlatform>,
     ) -> usize {
         if let Some(session) = channel_sessions.get(&user_id) {
-            /* session.online_platforms.load().extend(platforms); */
+            if !platforms.is_empty() {
+                let mut old = session.online_platforms.load().as_ref().clone();
+                old.extend(platforms);
+
+                session.online_platforms.store(old.into());
+            }
         } else {
             channel_sessions
                 .insert(user_id, ChannelSession::new(user_id, platforms));
@@ -162,8 +171,8 @@ impl Channel {
 
     #[inline]
     pub async fn delete(&self, user_id: &i32) -> usize {
-        let mut lock = self.write().await;
-        Self::delete_inner(&mut lock, user_id)
+        let mut channel_sessions = self.write().await;
+        Self::delete_inner(&mut channel_sessions, user_id)
     }
 
     #[inline]
@@ -179,21 +188,31 @@ impl Channel {
     pub async fn leave(
         &self,
         user_id: &i32,
-        platforms: impl IntoIterator<Item = SessionPlatform>,
+        platforms: &[SessionPlatform],
     ) -> usize {
-        let lock = self.read().await;
-        Self::leave_inner(&lock, user_id, platforms)
+        let channel_sessions = self.read().await;
+        Self::leave_inner(&channel_sessions, user_id, platforms)
     }
 
     #[inline]
     pub fn leave_inner(
         channel_sessions: &ChannelUserMap,
         user_id: &i32,
-        platforms: impl IntoIterator<Item = SessionPlatform>,
+        platforms: &[SessionPlatform],
     ) -> usize {
         if let Some(session) = channel_sessions.get(user_id) {
-            let online_platforms = session.online_platforms.load();
+            if platforms.is_empty() {
+                session.online_platforms.store(Default::default());
+            } else {
+                let mut old = session.online_platforms.load().as_ref().clone();
+                for p in platforms {
+                    old.remove(&p);
+                }
+
+                session.online_platforms.store(old.into());
+            }
         }
+
         channel_sessions.len()
     }
 
