@@ -42,7 +42,7 @@ impl<T> CachedAtomic<T> {
 
     #[inline]
     pub fn update_time(&self) {
-        self.last_update.set(Utc::now().timestamp().into());
+        self.last_update.set(Utc::now().timestamp());
     }
 
     #[inline]

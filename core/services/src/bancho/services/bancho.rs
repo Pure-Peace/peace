@@ -185,24 +185,31 @@ impl BanchoService for BanchoServiceImpl {
                     .add(server::FriendsList::new(&[])) // todo
                     .add(server::Notification::new("welcome to peace!".into()));
 
-                match svc.chat_service.get_public_channels().await {
-                    Ok(GetPublicChannelsResponse { channels }) => {
-                        for channel in channels {
-                            packet_builder.add_ref(server::ChannelInfo::pack(
-                                channel.name.into(),
-                                channel
-                                    .description
-                                    .map(|s| s.into())
-                                    .unwrap_or_default(),
-                                channel.length as i16,
-                            ));
-                        }
-                        packet_builder.add_ref(server::ChannelInfoEnd::new());
-                    },
-                    Err(err) => {
-                        error!("failed to fetch channel info, err: {:?}", err);
-                        packet_builder.add_ref(server::ChannelInfoEnd::new());
-                    },
+                let () = {
+                    match svc.chat_service.get_public_channels().await {
+                        Ok(GetPublicChannelsResponse { channels }) => {
+                            for channel in channels {
+                                packet_builder.extend(
+                                    server::ChannelInfo::pack(
+                                        channel.name.into(),
+                                        channel
+                                            .description
+                                            .map(|s| s.into())
+                                            .unwrap_or_default(),
+                                        channel.length as i16,
+                                    ),
+                                );
+                            }
+                        },
+                        Err(err) => {
+                            error!(
+                                target: LOG_TARGET,
+                                "Failed to fetch channel info, err: {:?}", err
+                            );
+                        },
+                    };
+
+                    packet_builder.extend(server::ChannelInfoEnd::new());
                 };
 
                 info!(

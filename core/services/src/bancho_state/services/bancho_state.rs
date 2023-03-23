@@ -517,7 +517,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
                     target: Some(to),
-                    packets: session.user_stats_packet().into(),
+                    packets: session.user_stats_packet(),
                 })
                 .await?;
 
@@ -791,7 +791,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // todo update stats from database
 
                 self.broadcast_bancho_packets(BroadcastBanchoPacketsRequest {
-                    packets: session.user_stats_packet().into(),
+                    packets: session.user_stats_packet(),
                 })
                 .await?;
 

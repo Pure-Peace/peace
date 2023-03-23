@@ -52,7 +52,7 @@ impl Channels {
         channel: Arc<Channel>,
     ) {
         if let Some(old_channel) =
-            self.get_inner(&indexes, &ChannelQuery::ChannelId(channel.id))
+            self.get_inner(indexes, &ChannelQuery::ChannelId(channel.id))
         {
             self.delete_inner(
                 indexes,

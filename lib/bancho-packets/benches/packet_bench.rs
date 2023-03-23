@@ -4,7 +4,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 fn packets_write_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("packets_write");
     group.bench_function("match_join_failed packet", |b| {
-        b.iter(|| MatchJoinFail::pack())
+        b.iter(MatchJoinFail::pack)
     });
     group.bench_function("match_join_failed packet - 2", |b| {
         b.iter(|| PacketBuilder::new().add(MatchJoinFail::pack()).build())
