@@ -1,13 +1,14 @@
 use super::{ChatService, DynChatService};
 use crate::{
     bancho_state::DynBanchoStateService,
-    chat::{ChatServiceError, DynChannelService},
+    chat::{ChatServiceError, DynChannelService, SessionPlatform},
 };
 use async_trait::async_trait;
 use derive_deref::Deref;
 use peace_pb::chat::{
-    chat_rpc_client::ChatRpcClient, ChannelInfo, GetPublicChannelsRequest,
-    GetPublicChannelsResponse,
+    chat_rpc_client::ChatRpcClient, ChannelInfo, ChannelSessionCount,
+    GetPublicChannelsRequest, GetPublicChannelsResponse,
+    JoinIntoChannelRequest, LeaveFromChannelRequest,
 };
 use std::sync::Arc;
 use tonic::transport::Channel;
@@ -103,7 +104,7 @@ impl ChatService for ChatServiceImpl {
                                 .load()
                                 .as_ref()
                                 .map(|s| s.to_string()),
-                            length: channel.users.read().await.len() as u32,
+                            length: channel.read().await.len() as u32,
                             users: None,
                         }
                     }),
@@ -111,6 +112,92 @@ impl ChatService for ChatServiceImpl {
                 .await;
 
                 Ok(GetPublicChannelsResponse { channels })
+            },
+        }
+    }
+
+    async fn join_into_channel(
+        &self,
+        request: JoinIntoChannelRequest,
+    ) -> Result<ChannelSessionCount, ChatServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .join_into_channel(request)
+                .await
+                .map_err(ChatServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(svc) => {
+                let JoinIntoChannelRequest {
+                    channel_query,
+                    user_id,
+                    platforms,
+                } = request;
+
+                let platforms = platforms
+                    .into_iter()
+                    .map(|p| SessionPlatform::try_from(p))
+                    .filter(|result| {
+                        if result.is_err() {
+                            warn!("Unsupported SessionPlatform: {:?}", result)
+                        }
+                        true
+                    })
+                    .map(|p| p.unwrap())
+                    .collect();
+
+                let session_count = svc
+                    .channel_service
+                    .join_user(
+                        &channel_query
+                            .ok_or(ChatServiceError::InvalidArgument)?
+                            .into(),
+                        user_id,
+                        platforms,
+                    )
+                    .await
+                    .ok_or(ChatServiceError::ChannelNotExists)?
+                    as u32;
+
+                Ok(ChannelSessionCount { session_count })
+            },
+        }
+    }
+
+    async fn leave_from_channel(
+        &self,
+        request: LeaveFromChannelRequest,
+    ) -> Result<ChannelSessionCount, ChatServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .leave_from_channel(request)
+                .await
+                .map_err(ChatServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(svc) => {
+                let LeaveFromChannelRequest {
+                    channel_query,
+                    user_id,
+                    platforms,
+                } = request;
+
+                let platforms =
+
+                let session_count = svc
+                    .channel_service
+                    .leave_user(
+                        &channel_query
+                            .ok_or(ChatServiceError::InvalidArgument)?
+                            .into(),
+                        &user_id,
+                        platforms,
+                    )
+                    .await
+                    .ok_or(ChatServiceError::ChannelNotExists)?
+                    as u32;
+
+                Ok(ChannelSessionCount { session_count })
             },
         }
     }

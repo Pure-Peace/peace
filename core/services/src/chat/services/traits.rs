@@ -1,5 +1,8 @@
 use crate::chat::*;
-use peace_pb::chat::{ChannelQuery, GetPublicChannelsResponse};
+use peace_pb::chat::{
+    ChannelQuery, ChannelSessionCount, GetPublicChannelsResponse,
+    JoinIntoChannelRequest, LeaveFromChannelRequest,
+};
 use std::sync::Arc;
 use tonic::async_trait;
 
@@ -11,6 +14,16 @@ pub trait ChatService {
     async fn get_public_channels(
         &self,
     ) -> Result<GetPublicChannelsResponse, ChatServiceError>;
+
+    async fn join_into_channel(
+        &self,
+        request: JoinIntoChannelRequest,
+    ) -> Result<ChannelSessionCount, ChatServiceError>;
+
+    async fn leave_from_channel(
+        &self,
+        request: LeaveFromChannelRequest,
+    ) -> Result<ChannelSessionCount, ChatServiceError>;
 }
 
 #[async_trait]
@@ -21,12 +34,32 @@ pub trait ChannelService {
 
     async fn create(
         &self,
-        id: u32,
+        id: u64,
         name: String,
         channel_type: ChannelType,
         description: Option<String>,
         users: Vec<i32>,
     ) -> Arc<Channel>;
+
+    async fn join_user(
+        &self,
+        query: &ChannelQuery,
+        user_id: i32,
+        platforms: Vec<SessionPlatform>,
+    ) -> Option<usize>;
+
+    async fn leave_user(
+        &self,
+        query: &ChannelQuery,
+        user_id: &i32,
+        platforms: Vec<SessionPlatform>,
+    ) -> Option<usize>;
+
+    async fn delete_user(
+        &self,
+        query: &ChannelQuery,
+        user_id: &i32,
+    ) -> Option<usize>;
 
     async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>>;
 

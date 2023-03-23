@@ -1,10 +1,27 @@
 syntax = "proto3";
 
+import "peace/base.proto";
+
 package peace.services.chat;
 
 service ChatRPC {
   rpc GetPublicChannels(GetPublicChannelsRequest)
       returns (GetPublicChannelsResponse);
+  rpc JoinIntoChannel(JoinIntoChannelRequest) returns (ChannelSessionCount);
+  rpc LeaveFromChannel(LeaveFromChannelRequest) returns (ChannelSessionCount);
+  rpc DeleteFromChannel(DeleteFromChannelRequest) returns (ChannelSessionCount);
+}
+
+message RawChannelQuery {
+  enum QueryType {
+    // Deserialize into `ChannelId(u32)`
+    ChannelId = 0;
+    // Deserialize into `ChannelName(string)`
+    ChannelName = 1;
+  }
+  QueryType query_type = 1;
+  optional uint64 int_val = 2;
+  optional string string_val = 3;
 }
 
 message GetPublicChannelsRequest {}
@@ -19,13 +36,38 @@ enum ChannelType {
   Spectaor = 4;
 }
 
+enum SessionPlatform {
+  Bancho = 0;
+  Lazer = 1;
+  Web = 2;
+}
+
 message Users { repeated int32 users = 1; }
 
 message ChannelInfo {
-  uint32 id = 1;
+  uint64 id = 1;
   string name = 2;
   ChannelType channel_type = 3;
   optional string description = 4;
   uint32 length = 5;
   optional Users users = 6;
 }
+
+message JoinIntoChannelRequest {
+  RawChannelQuery channel_query = 1;
+  int32 user_id = 2;
+  repeated SessionPlatform platforms = 3;
+}
+
+message LeaveFromChannelRequest {
+  RawChannelQuery channel_query = 1;
+  int32 user_id = 2;
+  repeated SessionPlatform platforms = 3;
+}
+
+message DeleteFromChannelRequest {
+  RawChannelQuery channel_query = 1;
+  int32 user_id = 2;
+}
+
+message ChannelSessionCount { uint32 session_count = 1; }

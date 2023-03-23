@@ -212,6 +212,8 @@ impl BanchoService for BanchoServiceImpl {
                     packet_builder.extend(server::ChannelInfoEnd::new());
                 };
 
+                /* packet_builder.extend(server::join) */
+
                 info!(
                     target: LOG_TARGET,
                     "Logged in: {} [{}] ({}), time spent: {:?}",

@@ -1,4 +1,6 @@
-use crate::chat::{Channel, ChannelService, ChannelType, DynChannelService};
+use crate::chat::{
+    Channel, ChannelService, ChannelType, DynChannelService, SessionPlatform,
+};
 use async_trait::async_trait;
 use peace_db::DatabaseConnection;
 use peace_pb::chat::ChannelQuery;
@@ -8,13 +10,13 @@ use tools::atomic::{AtomicOperation, AtomicValue, Usize};
 
 #[derive(Debug, Default, Clone)]
 pub struct ChannelIndexes {
-    pub channel_id: HashMap<u32, Arc<Channel>>,
+    pub channel_id: HashMap<u64, Arc<Channel>>,
     pub channel_name: HashMap<String, Arc<Channel>>,
-    pub channel_public: HashMap<u32, Arc<Channel>>,
+    pub channel_public: HashMap<u64, Arc<Channel>>,
 }
 
 impl Deref for ChannelIndexes {
-    type Target = HashMap<u32, Arc<Channel>>;
+    type Target = HashMap<u64, Arc<Channel>>;
 
     fn deref(&self) -> &Self::Target {
         &self.channel_id
@@ -83,7 +85,7 @@ impl Channels {
     pub fn delete_inner(
         &self,
         indexes: &mut ChannelIndexes,
-        channel_id: &u32,
+        channel_id: &u64,
         channel_name: &str,
     ) -> Option<Arc<Channel>> {
         let mut removed = None;
@@ -193,14 +195,14 @@ impl ChannelService for ChannelServiceImpl {
                 "osu".to_string().into(),
                 ChannelType::Public,
                 Some("default channel".to_string()).into(),
-                Vec::new(),
+                None,
             ),
             Channel::new(
                 1,
                 "peace".to_string().into(),
                 ChannelType::Public,
                 Some("peace channel".to_string()).into(),
-                Vec::new(),
+                None,
             ),
         ];
 
@@ -217,7 +219,7 @@ impl ChannelService for ChannelServiceImpl {
     #[inline]
     async fn create(
         &self,
-        id: u32,
+        id: u64,
         name: String,
         channel_type: ChannelType,
         description: Option<String>,
@@ -232,7 +234,7 @@ impl ChannelService for ChannelServiceImpl {
                 name.into(),
                 channel_type,
                 description.into(),
-                users,
+                Some(&users),
             ))
             .await;
 
@@ -248,8 +250,37 @@ impl ChannelService for ChannelServiceImpl {
     }
 
     #[inline]
+    async fn join_user(
+        &self,
+        query: &ChannelQuery,
+        user_id: i32,
+        platforms: Vec<SessionPlatform>,
+    ) -> Option<usize> {
+        Some(self.channels.get(query).await?.join(user_id, platforms).await)
+    }
+
+    #[inline]
+    async fn leave_user(
+        &self,
+        query: &ChannelQuery,
+        user_id: &i32,
+        platforms: Vec<SessionPlatform>,
+    ) -> Option<usize> {
+        Some(self.channels.get(query).await?.leave(user_id, platforms).await)
+    }
+
+    #[inline]
+    async fn delete_user(
+        &self,
+        query: &ChannelQuery,
+        user_id: &i32,
+    ) -> Option<usize> {
+        Some(self.channels.get(query).await?.delete(user_id).await)
+    }
+
+    #[inline]
     async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
-        const LOG_TARGET: &str = "chat::channel::delete_session";
+        const LOG_TARGET: &str = "chat::channel::delete_channel";
 
         let channel = self.channels.delete(query).await?;
 

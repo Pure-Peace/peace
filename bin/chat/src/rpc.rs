@@ -1,4 +1,4 @@
-use peace_pb::chat::*;
+use peace_pb::{base::ExecSuccess, chat::*};
 use peace_services::chat::DynChatService;
 use tonic::{Request, Response, Status};
 
@@ -22,6 +22,17 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
     ) -> Result<Response<GetPublicChannelsResponse>, Status> {
         self.chat_service
             .get_public_channels()
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
+
+    async fn join_into_channel(
+        &self,
+        request: Request<JoinIntoChannelRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.chat_service
+            .join_into_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
