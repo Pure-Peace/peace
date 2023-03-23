@@ -40,7 +40,7 @@ impl From<Vec<i32>> for SessionPlatforms {
         Self(
             platforms
                 .into_iter()
-                .map(|p| SessionPlatform::try_from(p))
+                .map(SessionPlatform::try_from)
                 .filter(|result| {
                     if result.is_err() {
                         warn!("Unsupported SessionPlatform: {:?}", result)
@@ -126,7 +126,7 @@ impl Channel {
             description,
             channel_sessions: channel_sessions
                 .map(|channel_sessions| {
-                    HashMap::from_iter(channel_sessions.into_iter().map(
+                    HashMap::from_iter(channel_sessions.iter().map(
                         |user_id| {
                             (*user_id, ChannelSession::new_offline(*user_id))
                         },
@@ -206,7 +206,7 @@ impl Channel {
             } else {
                 let mut old = session.online_platforms.load().as_ref().clone();
                 for p in platforms {
-                    old.remove(&p);
+                    old.remove(p);
                 }
 
                 session.online_platforms.store(old.into());

@@ -1,28 +1,21 @@
-use super::{BanchoService, DynBanchoService};
 use crate::{
     bancho::{
-        BanchoServiceError, DynBanchoBackgroundService, DynPasswordService,
+        packet_processor, BanchoService, BanchoServiceError,
+        DynBanchoBackgroundService, DynBanchoService, DynPasswordService,
         LoginError, ProcessBanchoPacketError,
     },
-    bancho_state::{DynBanchoStateService, PresenceFilter},
+    bancho_state::DynBanchoStateService,
     chat::DynChatService,
     geoip::DynGeoipService,
 };
-use bancho_packets::{
-    server, ClientChangeAction, Packet, PacketBuilder, PacketId, PacketReader,
-    PayloadReader,
-};
-use num_traits::FromPrimitive;
+use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
-    chat::{
-        ChannelQuery, GetPublicChannelsResponse, JoinIntoChannelRequest,
-        LeaveFromChannelRequest, SessionPlatform,
-    },
+    chat::GetPublicChannelsResponse,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{error::Error, net::IpAddr, sync::Arc, time::Instant};
+use std::{net::IpAddr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
 use tools::tonic_utils::RawRequest;
 
@@ -75,15 +68,15 @@ impl BanchoServiceRemote {
 
 #[derive(Clone)]
 pub struct BanchoServiceLocal {
-    users_repository: DynUsersRepository,
-    bancho_state_service: DynBanchoStateService,
-    password_service: DynPasswordService,
+    pub users_repository: DynUsersRepository,
+    pub bancho_state_service: DynBanchoStateService,
+    pub password_service: DynPasswordService,
     #[allow(dead_code)]
-    bancho_background_service: DynBanchoBackgroundService,
+    pub bancho_background_service: DynBanchoBackgroundService,
     #[allow(dead_code)]
-    geoip_service: DynGeoipService,
+    pub geoip_service: DynGeoipService,
     #[allow(dead_code)]
-    chat_service: DynChatService,
+    pub chat_service: DynChatService,
 }
 
 impl BanchoServiceLocal {
@@ -104,6 +97,14 @@ impl BanchoServiceLocal {
             chat_service,
         }
     }
+}
+
+pub struct PacketContext<'a> {
+    pub session_id: &'a str,
+    pub user_id: i32,
+    pub packet: Packet<'a>,
+    pub svc_local: &'a BanchoServiceLocal,
+    pub svc_impl: &'a BanchoServiceImpl,
 }
 
 #[async_trait]
@@ -311,12 +312,15 @@ impl BanchoService for BanchoServiceImpl {
                 .map_err(ProcessBanchoPacketError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                #[inline]
-                fn handing_err(err: impl Error) -> ProcessBanchoPacketError {
-                    ProcessBanchoPacketError::Anyhow(anyhow!("{err:?}"))
-                }
+                let ctx = PacketContext {
+                    session_id,
+                    user_id,
+                    packet,
+                    svc_local: svc,
+                    svc_impl: self,
+                };
 
-                match packet.id {
+                match ctx.packet.id {
                     PacketId::OSU_PING => {},
                     // Message
                     PacketId::OSU_SEND_PUBLIC_MESSAGE => {
@@ -326,174 +330,40 @@ impl BanchoService for BanchoServiceImpl {
                         // chat.send_private_message
                     },
                     PacketId::OSU_USER_CHANNEL_JOIN => {
-                        let mut channel_name =
-                            PayloadReader::new(packet.payload.ok_or(
-                                ProcessBanchoPacketError::PacketPayloadNotExists,
-                            )?)
-                            .read::<String>()
-                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-
-                        if channel_name.starts_with('#') {
-                            channel_name.remove(0);
-                        }
-
-                        svc.chat_service
-                            .join_into_channel(JoinIntoChannelRequest {
-                                channel_query: Some(
-                                    ChannelQuery::ChannelName(channel_name)
-                                        .into(),
-                                ),
-                                user_id,
-                                platforms: [SessionPlatform::Bancho as i32]
-                                    .into(),
-                            })
-                            .await
-                            .map_err(handing_err)?;
+                        packet_processor::user_channel_join(ctx).await?
                     },
                     PacketId::OSU_USER_CHANNEL_PART => {
-                        let mut channel_name =
-                            PayloadReader::new(packet.payload.ok_or(
-                                ProcessBanchoPacketError::PacketPayloadNotExists,
-                            )?)
-                            .read::<String>()
-                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-
-                        if channel_name.starts_with('#') {
-                            channel_name.remove(0);
-                        }
-
-                        svc.chat_service
-                            .leave_from_channel(LeaveFromChannelRequest {
-                                channel_query: Some(
-                                    ChannelQuery::ChannelName(channel_name)
-                                        .into(),
-                                ),
-                                user_id,
-                                platforms: [SessionPlatform::Bancho as i32]
-                                    .into(),
-                            })
-                            .await
-                            .map_err(handing_err)?;
+                        packet_processor::user_channel_part(ctx).await?
                     },
                     // User
                     PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
-                        self.request_status_update(
-                            RequestStatusUpdateRequest {
-                                session_id: session_id.to_owned(),
-                            },
-                        )
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_request_status_update(ctx)
+                            .await?
                     },
                     PacketId::OSU_USER_PRESENCE_REQUEST_ALL => {
-                        self.presence_request_all(PresenceRequestAllRequest {
-                            session_id: session_id.to_owned(),
-                        })
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_presence_request_all(ctx).await?
                     },
                     PacketId::OSU_USER_STATS_REQUEST => {
-                        let request_users =
-                            PayloadReader::new(packet.payload.ok_or(
-                                ProcessBanchoPacketError::PacketPayloadNotExists,
-                            )?)
-                            .read::<Vec<i32>>()
-                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-
-                        self.request_stats(StatsRequest {
-                            session_id: session_id.to_owned(),
-                            request_users,
-                        })
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_stats_request(ctx).await?
                     },
                     PacketId::OSU_USER_CHANGE_ACTION => {
-                        let ClientChangeAction {
-                            online_status,
-                            description,
-                            beatmap_md5,
-                            mods,
-                            mode,
-                            beatmap_id,
-                        } = PayloadReader::new(packet.payload.ok_or(
-                            ProcessBanchoPacketError::PacketPayloadNotExists,
-                        )?)
-                        .read::<ClientChangeAction>()
-                        .ok_or(
-                            ProcessBanchoPacketError::InvalidPacketPayload,
-                        )?;
-
-                        self.change_action(ChangeActionRequest {
-                            session_id: session_id.to_owned(),
-                            online_status: online_status as i32,
-                            description,
-                            beatmap_md5,
-                            mods,
-                            mode: mode as i32,
-                            beatmap_id,
-                        })
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_change_action(ctx).await?
                     },
                     PacketId::OSU_USER_RECEIVE_UPDATES => {
-                        let presence_filter = PresenceFilter::from_i32(
-                            PayloadReader::new(packet.payload.ok_or(
-                                ProcessBanchoPacketError::PacketPayloadNotExists,
-                            )?)
-                            .read::<i32>()
-                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?,
-                        )
-                        .unwrap_or_default();
-
-                        self.receive_updates(ReceiveUpdatesRequest {
-                            session_id: session_id.to_owned(),
-                            presence_filter: presence_filter.val(),
-                        })
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_receive_updates(ctx).await?
                     },
                     PacketId::OSU_USER_FRIEND_ADD => todo!(),
                     PacketId::OSU_USER_FRIEND_REMOVE => todo!(),
                     PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS => {
-                        let toggle = PayloadReader::new(packet.payload.ok_or(
-                            ProcessBanchoPacketError::PacketPayloadNotExists,
-                        )?)
-                        .read::<i32>()
-                        .ok_or(
-                            ProcessBanchoPacketError::InvalidPacketPayload,
-                        )? == 1;
-
-                        self.toggle_block_non_friend_dms(
-                            ToggleBlockNonFriendDmsRequest {
-                                session_id: session_id.to_owned(),
-                                toggle,
-                            },
-                        )
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_toggle_block_non_friend_dms(ctx)
+                            .await?
                     },
                     PacketId::OSU_USER_LOGOUT => {
-                        self.user_logout(UserLogoutRequest {
-                            session_id: session_id.to_owned(),
-                        })
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_logout(ctx).await?
                     },
                     PacketId::OSU_USER_SET_AWAY_MESSAGE => todo!(),
                     PacketId::OSU_USER_PRESENCE_REQUEST => {
-                        let request_users =
-                            PayloadReader::new(packet.payload.ok_or(
-                                ProcessBanchoPacketError::PacketPayloadNotExists,
-                            )?)
-                            .read::<Vec<i32>>()
-                            .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
-
-                        self.request_presence(PresenceRequest {
-                            session_id: session_id.to_owned(),
-                            request_users,
-                        })
-                        .await
-                        .map_err(handing_err)?;
+                        packet_processor::user_presence_request(ctx).await?
                     },
                     // Spectate
                     PacketId::OSU_SPECTATE_START => todo!(),
@@ -530,7 +400,7 @@ impl BanchoService for BanchoServiceImpl {
                     PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
                     _ => {
                         return Err(ProcessBanchoPacketError::UnhandledPacket(
-                            packet.id,
+                            ctx.packet.id,
                         ))
                     },
                 };
