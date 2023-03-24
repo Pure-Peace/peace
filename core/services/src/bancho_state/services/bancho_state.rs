@@ -1,10 +1,11 @@
-use super::BanchoStateService;
+use super::{BanchoStateService, UserSessions};
 use crate::bancho_state::{
     BanchoStateError, CreateSessionError, DynBanchoStateBackgroundService,
     DynBanchoStateService, DynUserSessionsService, GameMode, Mods,
     PresenceFilter, Session, UserOnlineStatus,
 };
 use async_trait::async_trait;
+use bancho_packets::PacketBuilder;
 use num_traits::FromPrimitive;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
@@ -225,21 +226,6 @@ impl BanchoStateService for BanchoStateServiceImpl {
         }
     }
 
-    async fn batch_dequeue_bancho_packets(
-        &self,
-        request: BatchDequeueBanchoPacketsRequest,
-    ) -> Result<ExecSuccess, BanchoStateError> {
-        match self {
-            Self::Remote(svc) => svc
-                .client()
-                .batch_dequeue_bancho_packets(request)
-                .await
-                .map_err(BanchoStateError::RpcError)
-                .map(|resp| resp.into_inner()),
-            Self::Local(_svc) => unimplemented!(),
-        }
-    }
-
     async fn create_user_session(
         &self,
         request: CreateUserSessionRequest,
@@ -434,6 +420,79 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 // Return the response
                 Ok(res)
+            },
+        }
+    }
+
+    async fn channel_update_notify(
+        &self,
+        request: ChannelUpdateNotifyRequest,
+    ) -> Result<ChannelUpdateNotifyResponse, BanchoStateError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .channel_update_notify(request)
+                .await
+                .map_err(BanchoStateError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(svc) => {
+                let ChannelUpdateNotifyRequest { notify_targets, channel_info } =
+                    request;
+
+                let channel_info =
+                    channel_info.ok_or(BanchoStateError::InvalidArgument)?;
+
+                let packets = Arc::new(
+                    PacketBuilder::new()
+                        .add(bancho_packets::ChannelInfo::pack(
+                            channel_info.name.as_str().into(),
+                            channel_info
+                                .description
+                                .map(|s| s.into())
+                                .unwrap_or_default(),
+                            channel_info
+                                .counter
+                                .ok_or(BanchoStateError::InvalidArgument)?
+                                .bancho as i16,
+                        ))
+                        .build(),
+                );
+
+                let fails = {
+                    let mut fails = Vec::<RawUserQuery>::new();
+                    let indexes =
+                        svc.user_sessions_service.user_sessions().read().await;
+
+                    match notify_targets {
+                        Some(notify_targets) => {
+                            let notify_targets = notify_targets
+                                .value
+                                .into_iter()
+                                .map(|t| t.into())
+                                .collect::<Vec<UserQuery>>();
+
+                            for user_query in notify_targets {
+                                if let Some(session) = UserSessions::get_inner(
+                                    &indexes,
+                                    &user_query,
+                                ) {
+                                    session.push_packet(packets.clone()).await;
+                                } else {
+                                    fails.push(user_query.into())
+                                }
+                            }
+                        },
+                        None => {
+                            for session in indexes.values() {
+                                session.push_packet(packets.clone()).await;
+                            }
+                        },
+                    }
+
+                    fails
+                };
+
+                Ok(ChannelUpdateNotifyResponse { fails })
             },
         }
     }
@@ -726,7 +785,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 let presence_filter =
                     PresenceFilter::from_i32(request.presence_filter)
-                        .ok_or(BanchoStateError::InvalidParams)?;
+                        .ok_or(BanchoStateError::InvalidArgument)?;
 
                 // Get session based on the provided query
                 let session = svc

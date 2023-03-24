@@ -83,6 +83,11 @@ pub trait BanchoStateService {
         raw_query: RawUserQueryWithFields,
     ) -> Result<GetUserSessionResponse, BanchoStateError>;
 
+    async fn channel_update_notify(
+        &self,
+        request: ChannelUpdateNotifyRequest,
+    ) -> Result<ChannelUpdateNotifyResponse, BanchoStateError>;
+
     async fn get_all_sessions(
         &self,
     ) -> Result<GetAllSessionsResponse, BanchoStateError>;

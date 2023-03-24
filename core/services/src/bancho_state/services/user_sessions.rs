@@ -9,7 +9,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
 use tools::atomic::{AtomicOperation, AtomicValue, Usize};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct SessionIndexes {
     /// A hash map that maps session IDs to user data
     pub session_id: HashMap<String, Arc<Session>>,
@@ -46,7 +46,7 @@ impl UserSessions {
             let mut indexes = self.write().await;
 
             if let Some(old_session) =
-                self.get_inner(&indexes, &UserQuery::UserId(session.user_id))
+                Self::get_inner(&indexes, &UserQuery::UserId(session.user_id))
             {
                 self.delete_inner(
                     &mut indexes,
@@ -97,7 +97,7 @@ impl UserSessions {
     pub async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
         let mut indexes = self.write().await;
 
-        let session = self.get_inner(&indexes, query)?;
+        let session = Self::get_inner(&indexes, query)?;
 
         self.delete_inner(
             &mut indexes,
@@ -148,12 +148,11 @@ impl UserSessions {
     #[inline]
     pub async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
         let indexes = self.read().await;
-        self.get_inner(&indexes, query)
+        Self::get_inner(&indexes, query)
     }
 
     #[inline]
     pub fn get_inner(
-        &self,
         indexes: &SessionIndexes,
         query: &UserQuery,
     ) -> Option<Arc<Session>> {
