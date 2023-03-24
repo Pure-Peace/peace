@@ -58,11 +58,6 @@ pub trait BanchoStateService {
         request: DequeueBanchoPacketsRequest,
     ) -> Result<BanchoPackets, BanchoStateError>;
 
-    async fn batch_dequeue_bancho_packets(
-        &self,
-        request: BatchDequeueBanchoPacketsRequest,
-    ) -> Result<ExecSuccess, BanchoStateError>;
-
     async fn create_user_session(
         &self,
         request: CreateUserSessionRequest,

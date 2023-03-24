@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "peace/base.proto";
 import "peace/services/geoip.proto";
+import "peace/services/chat.proto";
 
 package peace.services.bancho_state;
 
@@ -15,8 +16,6 @@ service BanchoStateRPC {
       returns (peace.base.ExecSuccess);
 
   rpc DequeueBanchoPackets(DequeueBanchoPacketsRequest) returns (BanchoPackets);
-  rpc BatchDequeueBanchoPackets(BatchDequeueBanchoPacketsRequest)
-      returns (peace.base.ExecSuccess);
 
   rpc CreateUserSession(CreateUserSessionRequest)
       returns (CreateUserSessionResponse);
@@ -31,6 +30,8 @@ service BanchoStateRPC {
   // session not exists will return error(404)
   rpc GetUserSessionWithFields(RawUserQueryWithFields)
       returns (GetUserSessionResponse);
+  rpc ChannelUpdateNotify(ChannelUpdateNotifyRequest)
+      returns (ChannelUpdateNotifyResponse);
 
   // For debug
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
@@ -100,10 +101,6 @@ message BatchEnqueueBanchoPacketsRequest {
 }
 
 message DequeueBanchoPacketsRequest { RawBanchoPacketTarget target = 1; }
-
-message BatchDequeueBanchoPacketsRequest {
-  repeated DequeueBanchoPacketsRequest requests = 1;
-}
 
 message BanchoPackets { bytes data = 1; }
 
@@ -178,3 +175,12 @@ message UpdateUserBanchoStatusRequest {
   int32 mode = 6;
   int32 beatmap_id = 7;
 }
+
+message UserQueries { repeated RawUserQuery value = 1; }
+
+message ChannelUpdateNotifyRequest {
+  optional UserQueries notify_targets = 1;
+  peace.services.chat.ChannelInfo channel_info = 2;
+}
+
+message ChannelUpdateNotifyResponse { repeated RawUserQuery fails = 1; }

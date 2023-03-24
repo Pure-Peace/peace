@@ -59,17 +59,6 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .map(Response::new)
     }
 
-    async fn batch_dequeue_bancho_packets(
-        &self,
-        request: Request<BatchDequeueBanchoPacketsRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.bancho_state_service
-            .batch_dequeue_bancho_packets(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
-    }
-
     async fn create_user_session(
         &self,
         request: Request<CreateUserSessionRequest>,
@@ -120,6 +109,17 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         self.bancho_state_service
             .get_user_session_with_fields(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
+
+    async fn channel_update_notify(
+        &self,
+        request: Request<ChannelUpdateNotifyRequest>,
+    ) -> Result<Response<ChannelUpdateNotifyResponse>, Status> {
+        self.bancho_state_service
+            .channel_update_notify(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
