@@ -11,8 +11,6 @@ pub enum ChatServiceError {
     InvalidArgument,
     #[error("channel not exists")]
     ChannelNotExists,
-    #[error("invalid params")]
-    InvalidParams,
     #[error("bancho state error: {0}")]
     BanchoStateError(#[from] BanchoStateError),
     #[error("{}", .0.message())]

@@ -18,8 +18,6 @@ pub enum BanchoStateError {
     SessionNotExists,
     #[error(transparent)]
     CreateSessionError(#[from] CreateSessionError),
-    #[error("invalid params")]
-    InvalidParams,
     #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }
