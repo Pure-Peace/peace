@@ -24,7 +24,7 @@ service BanchoRPC {
   rpc LobbyJoin(LobbyJoinRequest) returns (HandleCompleted);
 }
 
-message HandleCompleted {}
+message HandleCompleted { optional bytes packets = 1; }
 
 message PingRequest { string session_id = 1; }
 

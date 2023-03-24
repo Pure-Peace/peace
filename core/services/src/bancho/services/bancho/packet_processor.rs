@@ -1,17 +1,20 @@
-use std::error::Error;
-
 use super::PacketContext;
 use crate::{
     bancho::{BanchoService, ProcessBanchoPacketError},
     bancho_state::PresenceFilter,
-    chat::SessionPlatform,
+    chat::Platform,
 };
 use bancho_packets::{ClientChangeAction, PayloadReader};
 use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::*,
-    chat::{ChannelQuery, JoinIntoChannelRequest, LeaveFromChannelRequest},
+    bancho_state::ChannelUpdateNotifyRequest,
+    chat::{
+        ChannelQuery, JoinIntoChannelRequest, LeaveFromChannelRequest,
+        SessionPlatforms,
+    },
 };
+use std::error::Error;
 
 #[inline]
 fn handing_err(err: impl Error) -> ProcessBanchoPacketError {
@@ -33,45 +36,75 @@ fn read_channel_name(
 
 #[inline]
 pub async fn user_channel_join<'a>(
-    PacketContext { session_id: _, user_id, packet, svc_local, svc_impl: _ }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { user_id, packet, svc_local, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let channel_name = read_channel_name(packet.payload)?;
 
-    svc_local
+    let channel_info = svc_local
         .chat_service
         .join_into_channel(JoinIntoChannelRequest {
             channel_query: Some(ChannelQuery::ChannelName(channel_name).into()),
             user_id,
-            platforms: [SessionPlatform::Bancho as i32].into(),
+            platforms: Some(SessionPlatforms {
+                value: [Platform::Bancho as i32].into(),
+            }),
         })
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    svc_local
+        .bancho_state_service
+        .channel_update_notify(ChannelUpdateNotifyRequest {
+            notify_targets: None,
+            channel_info: Some(channel_info.to_owned()),
+        })
+        .await
+        .unwrap();
+
+    Ok(HandleCompleted {
+        packets: Some(bancho_packets::ChannelJoin::pack(
+            channel_info.name.into(),
+        )),
+    })
 }
 
 #[inline]
 pub async fn user_channel_part<'a>(
-    PacketContext { session_id: _, user_id, packet, svc_local, svc_impl: _ }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { user_id, packet, svc_local, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let channel_name = read_channel_name(packet.payload)?;
 
-    svc_local
+    let channel_info = svc_local
         .chat_service
         .leave_from_channel(LeaveFromChannelRequest {
             channel_query: Some(ChannelQuery::ChannelName(channel_name).into()),
             user_id,
-            platforms: [SessionPlatform::Bancho as i32].into(),
+            platforms: Some(SessionPlatforms {
+                value: [Platform::Bancho as i32].into(),
+            }),
         })
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    svc_local
+        .bancho_state_service
+        .channel_update_notify(ChannelUpdateNotifyRequest {
+            notify_targets: None,
+            channel_info: Some(channel_info.to_owned()),
+        })
+        .await
+        .unwrap();
+
+    Ok(HandleCompleted {
+        packets: Some(bancho_packets::ChannelKick::pack(
+            channel_info.name.into(),
+        )),
+    })
 }
 
 pub async fn user_request_status_update<'a>(
-    PacketContext { session_id, user_id: _, packet: _, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     svc_impl
         .request_status_update(RequestStatusUpdateRequest {
             session_id: session_id.to_owned(),
@@ -79,12 +112,12 @@ pub async fn user_request_status_update<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_presence_request_all<'a>(
-    PacketContext { session_id, user_id: _, packet: _, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     svc_impl
         .presence_request_all(PresenceRequestAllRequest {
             session_id: session_id.to_owned(),
@@ -92,12 +125,12 @@ pub async fn user_presence_request_all<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_stats_request<'a>(
-    PacketContext { session_id, user_id: _, packet, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let request_users = PayloadReader::new(
         packet
             .payload
@@ -114,12 +147,12 @@ pub async fn user_stats_request<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_change_action<'a>(
-    PacketContext { session_id, user_id: _, packet, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let ClientChangeAction {
         online_status,
         description,
@@ -148,12 +181,12 @@ pub async fn user_change_action<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_receive_updates<'a>(
-    PacketContext { session_id, user_id: _, packet, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let presence_filter = PresenceFilter::from_i32(
         PayloadReader::new(
             packet
@@ -173,12 +206,12 @@ pub async fn user_receive_updates<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_toggle_block_non_friend_dms<'a>(
-    PacketContext { session_id, user_id: _, packet, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let toggle = PayloadReader::new(
         packet
             .payload
@@ -196,23 +229,23 @@ pub async fn user_toggle_block_non_friend_dms<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_logout<'a>(
-    PacketContext { session_id, user_id: _, packet: _, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     svc_impl
         .user_logout(UserLogoutRequest { session_id: session_id.to_owned() })
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }
 
 pub async fn user_presence_request<'a>(
-    PacketContext { session_id, user_id: _, packet, svc_local: _, svc_impl }: PacketContext<'a>,
-) -> Result<(), ProcessBanchoPacketError> {
+    PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
     let request_users = PayloadReader::new(
         packet
             .payload
@@ -229,5 +262,5 @@ pub async fn user_presence_request<'a>(
         .await
         .map_err(handing_err)?;
 
-    Ok(())
+    Ok(HandleCompleted::default())
 }

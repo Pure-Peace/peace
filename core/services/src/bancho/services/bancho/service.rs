@@ -190,8 +190,11 @@ impl BanchoService for BanchoServiceImpl {
                     .add(server::Notification::new("welcome to peace!".into()));
 
                 let () = {
-                    match svc.chat_service.get_public_channels().await {
-                        Ok(GetPublicChannelsResponse { channels }) => {
+                    let _ = svc
+                        .chat_service
+                        .get_public_channels()
+                        .await
+                        .map(|GetPublicChannelsResponse { channels }| {
                             for channel in channels {
                                 packet_builder.extend(
                                     server::ChannelInfo::pack(
@@ -200,23 +203,24 @@ impl BanchoService for BanchoServiceImpl {
                                             .description
                                             .map(|s| s.into())
                                             .unwrap_or_default(),
-                                        channel.length as i16,
+                                        channel
+                                            .counter
+                                            .map(|c| c.bancho as i16)
+                                            .unwrap_or_default(),
                                     ),
                                 );
                             }
-                        },
-                        Err(err) => {
+                        })
+                        .map_err(|err| {
                             error!(
                                 target: LOG_TARGET,
                                 "Failed to fetch channel info, err: {:?}", err
                             );
-                        },
-                    };
+                            err
+                        });
 
                     packet_builder.extend(server::ChannelInfoEnd::new());
                 };
-
-                /* packet_builder.extend(server::join) */
 
                 info!(
                     target: LOG_TARGET,
@@ -288,7 +292,7 @@ impl BanchoService for BanchoServiceImpl {
                     return Err(ProcessBanchoPacketError::FailedToProcessAll);
                 }
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -320,14 +324,16 @@ impl BanchoService for BanchoServiceImpl {
                     svc_impl: self,
                 };
 
-                match ctx.packet.id {
-                    PacketId::OSU_PING => {},
+                Ok(match ctx.packet.id {
+                    PacketId::OSU_PING => HandleCompleted::default(),
                     // Message
                     PacketId::OSU_SEND_PUBLIC_MESSAGE => {
                         // chat.send_public_message
+                        HandleCompleted::default()
                     },
                     PacketId::OSU_SEND_PRIVATE_MESSAGE => {
                         // chat.send_private_message
+                        HandleCompleted::default()
                     },
                     PacketId::OSU_USER_CHANNEL_JOIN => {
                         packet_processor::user_channel_join(ctx).await?
@@ -403,9 +409,7 @@ impl BanchoService for BanchoServiceImpl {
                             ctx.packet.id,
                         ))
                     },
-                };
-
-                Ok(HandleCompleted {})
+                })
             },
         }
     }
@@ -429,7 +433,7 @@ impl BanchoService for BanchoServiceImpl {
                     ))
                     .await;
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -460,7 +464,7 @@ impl BanchoService for BanchoServiceImpl {
                     })
                     .await?;
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -488,7 +492,7 @@ impl BanchoService for BanchoServiceImpl {
                     })
                     .await?;
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -523,7 +527,7 @@ impl BanchoService for BanchoServiceImpl {
                         },
                     )
                     .await?;
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -564,7 +568,7 @@ impl BanchoService for BanchoServiceImpl {
                         beatmap_id,
                     })
                     .await?;
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -593,7 +597,7 @@ impl BanchoService for BanchoServiceImpl {
                     })
                     .await?;
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -614,7 +618,7 @@ impl BanchoService for BanchoServiceImpl {
 
                 // todo chat service
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -637,7 +641,7 @@ impl BanchoService for BanchoServiceImpl {
                     ))
                     .await?;
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -668,7 +672,7 @@ impl BanchoService for BanchoServiceImpl {
                     })
                     .await?;
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -687,7 +691,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -706,7 +710,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -725,7 +729,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
@@ -744,7 +748,7 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(_svc) => {
                 println!("Got a request: {:?}", request);
 
-                Ok(HandleCompleted {})
+                Ok(HandleCompleted::default())
             },
         }
     }
