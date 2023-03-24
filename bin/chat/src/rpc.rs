@@ -30,7 +30,7 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
     async fn join_into_channel(
         &self,
         request: Request<JoinIntoChannelRequest>,
-    ) -> Result<Response<ChannelSessionCount>, Status> {
+    ) -> Result<Response<ChannelInfo>, Status> {
         self.chat_service
             .join_into_channel(request.into_inner())
             .await
@@ -41,7 +41,7 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
     async fn leave_from_channel(
         &self,
         request: Request<LeaveFromChannelRequest>,
-    ) -> Result<Response<ChannelSessionCount>, Status> {
+    ) -> Result<Response<ChannelInfo>, Status> {
         self.chat_service
             .leave_from_channel(request.into_inner())
             .await
@@ -52,7 +52,7 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
     async fn delete_from_channel(
         &self,
         request: Request<DeleteFromChannelRequest>,
-    ) -> Result<Response<ChannelSessionCount>, Status> {
+    ) -> Result<Response<ChannelInfo>, Status> {
         self.chat_service
             .delete_from_channel(request.into_inner())
             .await

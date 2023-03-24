@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
 use derive_deref::Deref;
+use peace_pb::chat::{ChannelInfo, ChannelSessionsCounter};
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
+    sync::Arc,
 };
 use tokio::sync::RwLock;
-use tools::atomic::{Atomic, AtomicOption};
-
-pub type ChannelUserMap = HashMap<i32, ChannelSession>;
+use tools::atomic::{Atomic, AtomicOperation, AtomicOption, AtomicValue, U64};
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Primitive)]
 pub enum ChannelType {
@@ -20,127 +20,368 @@ pub enum ChannelType {
 }
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Primitive, Hash)]
-pub enum SessionPlatform {
+pub enum Platform {
     #[default]
     Bancho = 0,
     Lazer = 1,
     Web = 2,
 }
 
-#[derive(Deref)]
-pub struct SessionPlatforms(pub Vec<SessionPlatform>);
+pub struct PlatformsLoader;
 
-impl SessionPlatforms {
+impl PlatformsLoader {
     #[inline]
-    pub fn into_inner(self) -> Vec<SessionPlatform> {
-        self.0
+    pub fn load_from_vec(platforms: Vec<i32>) -> Vec<Platform> {
+        platforms
+            .into_iter()
+            .map(Platform::try_from)
+            .filter(|result| {
+                if result.is_err() {
+                    warn!("Unsupported Platform: {:?}", result)
+                }
+                true
+            })
+            .map(|p| p.unwrap())
+            .collect()
     }
 }
 
-impl From<Vec<i32>> for SessionPlatforms {
-    fn from(platforms: Vec<i32>) -> Self {
-        Self(
-            platforms
-                .into_iter()
-                .map(SessionPlatform::try_from)
-                .filter(|result| {
-                    if result.is_err() {
-                        warn!("Unsupported SessionPlatform: {:?}", result)
-                    }
-                    true
-                })
-                .map(|p| p.unwrap())
-                .collect(),
-        )
+#[derive(Debug, Default, Clone)]
+pub struct OnlinePlatforms(Arc<Atomic<HashSet<Platform>>>);
+
+impl Deref for OnlinePlatforms {
+    type Target = Arc<Atomic<HashSet<Platform>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-#[derive(Debug, Default)]
-pub struct ChannelSession {
-    pub user_id: i32,
-    pub online_platforms: Atomic<HashSet<SessionPlatform>>,
-}
-
-impl ChannelSession {
+impl OnlinePlatforms {
     #[inline]
-    pub fn new(
-        user_id: i32,
-        online_platforms: impl IntoIterator<Item = SessionPlatform>,
-    ) -> Self {
-        Self {
-            user_id,
-            online_platforms: Atomic::new(HashSet::from_iter(online_platforms)),
-        }
+    pub fn from_iter(platforms: impl IntoIterator<Item = Platform>) -> Self {
+        Self(Atomic::new(HashSet::from_iter(platforms)).into())
     }
 
     #[inline]
-    pub fn new_offline(user_id: i32) -> Self {
-        Self { user_id, ..Default::default() }
+    pub fn is_empty(&self) -> bool {
+        self.0.load().is_empty()
     }
 
     #[inline]
-    pub fn is_offline(&self) -> bool {
-        self.online_platforms.load().is_empty()
-    }
-
-    #[inline]
-    pub fn online_platforms(&self) -> Option<Vec<SessionPlatform>> {
-        let online_platforms = self.online_platforms.load();
-        if online_platforms.is_empty() {
+    pub fn val(&self) -> Option<Vec<Platform>> {
+        let platforms = self.0.load();
+        if platforms.is_empty() {
             return None;
         }
 
-        Some(online_platforms.iter().map(|p| p.to_owned()).collect())
+        Some(platforms.iter().map(|p| p.to_owned()).collect())
+    }
+
+    #[inline]
+    pub fn add(&self, platforms: &[Platform]) {
+        let mut pre_val = self.clone_inner();
+        pre_val.extend(platforms.iter());
+
+        self.0.set(pre_val.into())
+    }
+
+    #[inline]
+    pub fn remove(&self, platforms: &[Platform]) {
+        let mut pre_val = self.clone_inner();
+        for platform in platforms {
+            pre_val.remove(platform);
+        }
+
+        self.0.set(pre_val.into())
+    }
+
+    #[inline]
+    pub fn clone_inner(&self) -> HashSet<Platform> {
+        self.0.load().as_ref().clone()
     }
 }
 
+#[derive(Debug, Clone, Copy, Deref)]
+pub struct BanchoChannelSession(i32);
+
+#[derive(Debug, Clone, Copy, Deref)]
+pub struct LazerChannelSession(i32);
+
+#[derive(Debug, Clone, Copy, Deref)]
+pub struct WebChannelSession(i32);
+
 #[derive(Debug, Clone)]
-pub struct ChannelMetadata {
-    pub id: u64,
-    pub name: String,
-    pub session_count: usize,
+pub struct UnspecifiedChannelSession {
+    pub user_id: i32,
+    pub online_platforms: OnlinePlatforms,
+}
+
+impl UnspecifiedChannelSession {
+    #[inline]
+    pub fn new(user_id: i32) -> Self {
+        Self { user_id, online_platforms: OnlinePlatforms::default() }
+    }
 }
 
 #[derive(Debug, Default)]
-pub struct Channel {
+pub struct SessionCounter {
+    pub unspecified: U64,
+    pub platform_bancho: U64,
+    pub platform_lazer: U64,
+    pub platform_web: U64,
+}
+
+impl SessionCounter {
+    #[inline]
+    pub fn get_counter(&self, platform: Option<&Platform>) -> &'_ U64 {
+        if let Some(platform) = platform {
+            match platform {
+                &Platform::Bancho => &self.platform_bancho,
+                &Platform::Lazer => &self.platform_lazer,
+                &Platform::Web => &self.platform_web,
+            }
+        } else {
+            &self.unspecified
+        }
+    }
+
+    #[inline]
+    pub fn get_conter_value(&self, platform: Option<&Platform>) -> u64 {
+        self.get_counter(platform).val()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ChannelSessionIndexes {
+    pub unspecified: HashMap<i32, Arc<UnspecifiedChannelSession>>,
+    pub bancho: HashMap<i32, Arc<BanchoChannelSession>>,
+    pub lazer: HashMap<i32, Arc<LazerChannelSession>>,
+    pub web: HashMap<i32, Arc<WebChannelSession>>,
+}
+
+#[derive(Debug, Default)]
+pub struct ChannelSessions {
+    pub indexes: RwLock<ChannelSessionIndexes>,
+    pub counter: SessionCounter,
+}
+
+impl ChannelSessions {
+    #[inline]
+    pub fn new(users: Vec<i32>) -> Self {
+        let counter = SessionCounter::default();
+        counter.unspecified.add(users.len() as u64);
+
+        let indexes = ChannelSessionIndexes {
+            unspecified: users
+                .into_iter()
+                .map(|user_id| {
+                    (user_id, UnspecifiedChannelSession::new(user_id).into())
+                })
+                .collect(),
+            ..Default::default()
+        }
+        .into();
+
+        Self { indexes, counter }
+    }
+
+    #[inline]
+    pub async fn join(
+        &self,
+        user_id: i32,
+        new_platforms: Option<Vec<Platform>>,
+    ) {
+        match new_platforms {
+            Some(platforms) => {
+                let mut indexes = self.indexes.write().await;
+
+                match indexes.unspecified.get(&user_id) {
+                    Some(unspecified_session) => {
+                        unspecified_session.online_platforms.add(&platforms);
+                    },
+                    None => {
+                        let unspecified_session =
+                            UnspecifiedChannelSession::new(user_id);
+                        unspecified_session.online_platforms.add(&platforms);
+
+                        indexes
+                            .unspecified
+                            .insert(user_id, unspecified_session.into());
+                    },
+                };
+
+                for platform in platforms {
+                    match platform {
+                        Platform::Bancho => {
+                            if !indexes.bancho.contains_key(&user_id) {
+                                indexes.bancho.insert(
+                                    user_id,
+                                    BanchoChannelSession(user_id).into(),
+                                );
+                                self.counter.platform_bancho.add(1);
+                            }
+                        },
+                        Platform::Lazer => {
+                            if !indexes.lazer.contains_key(&user_id) {
+                                indexes.lazer.insert(
+                                    user_id,
+                                    LazerChannelSession(user_id).into(),
+                                );
+                                self.counter.platform_lazer.add(1);
+                            }
+                        },
+                        Platform::Web => {
+                            if !indexes.web.contains_key(&user_id) {
+                                indexes.web.insert(
+                                    user_id,
+                                    WebChannelSession(user_id).into(),
+                                );
+                                self.counter.platform_web.add(1);
+                            }
+                        },
+                    }
+                }
+            },
+            None => {
+                let mut indexes = self.indexes.write().await;
+                if !indexes.unspecified.contains_key(&user_id) {
+                    indexes.unspecified.insert(
+                        user_id,
+                        UnspecifiedChannelSession::new(user_id).into(),
+                    );
+                    self.counter.unspecified.add(1);
+                }
+            },
+        }
+    }
+
+    #[inline]
+    pub async fn delete(&self, user_id: &i32) {
+        let mut indexes = self.indexes.write().await;
+
+        indexes
+            .unspecified
+            .remove(&user_id)
+            .map(|_| self.counter.unspecified.sub(1));
+        indexes
+            .bancho
+            .remove(&user_id)
+            .map(|_| self.counter.platform_bancho.sub(1));
+        indexes
+            .lazer
+            .remove(&user_id)
+            .map(|_| self.counter.platform_lazer.sub(1));
+        indexes.web.remove(&user_id).map(|_| self.counter.platform_web.sub(1));
+    }
+
+    #[inline]
+    pub async fn leave(
+        &self,
+        user_id: &i32,
+        leave_platforms: Option<&[Platform]>,
+    ) {
+        match leave_platforms {
+            Some(platforms) => {
+                let mut indexes = self.indexes.write().await;
+
+                match indexes.unspecified.get(&user_id) {
+                    Some(unspecified_session) => {
+                        unspecified_session.online_platforms.remove(&platforms);
+                    },
+                    None => return,
+                };
+
+                for platform in platforms {
+                    match platform {
+                        Platform::Bancho => indexes
+                            .bancho
+                            .remove(user_id)
+                            .map(|_| self.counter.platform_bancho.sub(1)),
+                        Platform::Lazer => indexes
+                            .lazer
+                            .remove(user_id)
+                            .map(|_| self.counter.platform_lazer.sub(1)),
+                        Platform::Web => indexes
+                            .web
+                            .remove(user_id)
+                            .map(|_| self.counter.platform_web.sub(1)),
+                    };
+                }
+            },
+            None => {
+                let mut indexes = self.indexes.write().await;
+
+                indexes.unspecified.get(user_id).map(|session| {
+                    session.online_platforms.set(Default::default())
+                });
+                indexes
+                    .bancho
+                    .remove(user_id)
+                    .map(|_| self.counter.platform_bancho.sub(1));
+                indexes
+                    .lazer
+                    .remove(user_id)
+                    .map(|_| self.counter.platform_lazer.sub(1));
+                indexes
+                    .web
+                    .remove(user_id)
+                    .map(|_| self.counter.platform_web.sub(1));
+            },
+        }
+    }
+
+    #[inline]
+    pub async fn exists(
+        &self,
+        user_id: &i32,
+        platforms: Option<&Platform>,
+    ) -> bool {
+        let indexes = self.indexes.read().await;
+
+        match platforms {
+            Some(platforms) => match platforms {
+                Platform::Bancho => indexes.bancho.contains_key(user_id),
+                Platform::Lazer => indexes.lazer.contains_key(user_id),
+                Platform::Web => indexes.web.contains_key(user_id),
+            },
+            None => indexes.unspecified.contains_key(user_id),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ChannelMetadata {
     pub id: u64,
     pub name: Atomic<String>,
     pub channel_type: ChannelType,
     pub description: AtomicOption<String>,
-    pub channel_sessions: RwLock<ChannelUserMap>,
+}
+
+#[derive(Debug, Default)]
+pub struct Channel {
+    pub metadata: ChannelMetadata,
+    pub sessions: ChannelSessions,
     pub created_at: DateTime<Utc>,
 }
 
 impl Deref for Channel {
-    type Target = RwLock<ChannelUserMap>;
+    type Target = ChannelMetadata;
 
     fn deref(&self) -> &Self::Target {
-        &self.channel_sessions
+        &self.metadata
     }
 }
 
 impl Channel {
     #[inline]
     pub fn new(
-        id: u64,
-        name: Atomic<String>,
-        channel_type: ChannelType,
-        description: AtomicOption<String>,
-        channel_sessions: Option<&[i32]>,
+        metadata: ChannelMetadata,
+        sessions: Option<ChannelSessions>,
     ) -> Self {
         Self {
-            id,
-            name,
-            channel_type,
-            description,
-            channel_sessions: channel_sessions
-                .map(|channel_sessions| {
-                    HashMap::from_iter(channel_sessions.iter().map(|user_id| {
-                        (*user_id, ChannelSession::new_offline(*user_id))
-                    }))
-                    .into()
-                })
-                .unwrap_or_default(),
+            metadata,
+            sessions: sessions.unwrap_or_default().into(),
             created_at: Utc::now(),
         }
     }
@@ -149,91 +390,53 @@ impl Channel {
     pub async fn join(
         &self,
         user_id: i32,
-        platforms: Vec<SessionPlatform>,
-    ) -> usize {
-        let mut lock = self.write().await;
-        Self::join_inner(&mut lock, user_id, platforms)
+        new_platforms: Option<Vec<Platform>>,
+    ) {
+        self.sessions.join(user_id, new_platforms).await;
     }
 
     #[inline]
-    pub fn join_inner(
-        channel_sessions: &mut ChannelUserMap,
-        user_id: i32,
-        platforms: Vec<SessionPlatform>,
-    ) -> usize {
-        if let Some(session) = channel_sessions.get(&user_id) {
-            if !platforms.is_empty() {
-                let mut old = session.online_platforms.load().as_ref().clone();
-                old.extend(platforms);
-
-                session.online_platforms.store(old.into());
-            }
-        } else {
-            channel_sessions
-                .insert(user_id, ChannelSession::new(user_id, platforms));
-        }
-
-        channel_sessions.len()
-    }
-
-    #[inline]
-    pub async fn delete(&self, user_id: &i32) -> usize {
-        let mut channel_sessions = self.write().await;
-        Self::delete_inner(&mut channel_sessions, user_id)
-    }
-
-    #[inline]
-    pub fn delete_inner(
-        channel_sessions: &mut ChannelUserMap,
-        user_id: &i32,
-    ) -> usize {
-        channel_sessions.remove(user_id);
-        channel_sessions.len()
+    pub async fn delete(&self, user_id: &i32) {
+        self.sessions.delete(user_id).await;
     }
 
     #[inline]
     pub async fn leave(
         &self,
         user_id: &i32,
-        platforms: &[SessionPlatform],
-    ) -> usize {
-        let channel_sessions = self.read().await;
-        Self::leave_inner(&channel_sessions, user_id, platforms)
+        leave_platforms: Option<&[Platform]>,
+    ) {
+        self.sessions.leave(user_id, leave_platforms).await;
     }
 
     #[inline]
-    pub fn leave_inner(
-        channel_sessions: &ChannelUserMap,
-        user_id: &i32,
-        platforms: &[SessionPlatform],
-    ) -> usize {
-        if let Some(session) = channel_sessions.get(user_id) {
-            if platforms.is_empty() {
-                session.online_platforms.store(Default::default());
-            } else {
-                let mut old = session.online_platforms.load().as_ref().clone();
-                for p in platforms {
-                    old.remove(p);
-                }
+    pub async fn exists(&self, user_id: &i32, platforms: Option<&Platform>) {
+        self.sessions.exists(user_id, platforms).await;
+    }
 
-                session.online_platforms.store(old.into());
-            }
+    #[inline]
+    pub fn session_count(&self, platform: Option<&Platform>) -> u64 {
+        self.sessions.counter.get_conter_value(platform)
+    }
+
+    #[inline]
+    pub fn rpc_channel_info(&self) -> ChannelInfo {
+        ChannelInfo {
+            id: self.id,
+            name: self.name.to_string(),
+            channel_type: self.channel_type as i32,
+            description: self
+                .description
+                .load()
+                .as_ref()
+                .map(|s| s.to_string()),
+            counter: Some(ChannelSessionsCounter {
+                unspecified: self.session_count(None),
+                bancho: self.session_count(Some(&Platform::Bancho)),
+                lazer: self.session_count(Some(&Platform::Lazer)),
+                web: self.session_count(Some(&Platform::Web)),
+            }),
+            users: None,
         }
-
-        channel_sessions.len()
-    }
-
-    #[inline]
-    pub async fn exists(&self, user_id: &i32) -> bool {
-        let lock = self.read().await;
-        Self::exists_inner(&lock, user_id)
-    }
-
-    #[inline]
-    pub fn exists_inner(
-        channel_sessions: &ChannelUserMap,
-        user_id: &i32,
-    ) -> bool {
-        channel_sessions.contains_key(user_id)
     }
 }

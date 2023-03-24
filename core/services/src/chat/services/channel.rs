@@ -1,6 +1,6 @@
 use crate::chat::{
-    Channel, ChannelMetadata, ChannelService, ChannelType, DynChannelService,
-    SessionPlatform,
+    Channel, ChannelMetadata, ChannelService, ChannelSessions, ChannelType,
+    DynChannelService, Platform,
 };
 use async_trait::async_trait;
 use peace_db::DatabaseConnection;
@@ -192,17 +192,21 @@ impl ChannelService for ChannelServiceImpl {
         // todo: load public channels from database
         let public_channels = vec![
             Channel::new(
-                0,
-                "#osu".to_string().into(),
-                ChannelType::Public,
-                Some("default channel".to_string()).into(),
+                ChannelMetadata {
+                    id: 0,
+                    name: "#osu".to_string().into(),
+                    channel_type: ChannelType::Public,
+                    description: Some("default channel".to_string()).into(),
+                },
                 None,
             ),
             Channel::new(
-                1,
-                "#peace".to_string().into(),
-                ChannelType::Public,
-                Some("peace channel".to_string()).into(),
+                ChannelMetadata {
+                    id: 1,
+                    name: "#peace".to_string().into(),
+                    channel_type: ChannelType::Public,
+                    description: Some("peace channel".to_string()).into(),
+                },
                 None,
             ),
         ];
@@ -220,23 +224,14 @@ impl ChannelService for ChannelServiceImpl {
     #[inline]
     async fn create(
         &self,
-        id: u64,
-        name: String,
-        channel_type: ChannelType,
-        description: Option<String>,
+        metadata: ChannelMetadata,
         users: Vec<i32>,
     ) -> Arc<Channel> {
         const LOG_TARGET: &str = "chat::channel::create_channel";
 
         let channel = self
             .channels
-            .create(Channel::new(
-                id,
-                name.into(),
-                channel_type,
-                description.into(),
-                Some(&users),
-            ))
+            .create(Channel::new(metadata, Some(ChannelSessions::new(users))))
             .await;
 
         info!(
@@ -255,16 +250,12 @@ impl ChannelService for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: i32,
-        platforms: Vec<SessionPlatform>,
-    ) -> Option<ChannelMetadata> {
+        platforms: Option<Vec<Platform>>,
+    ) -> Option<Arc<Channel>> {
         let channel = self.channels.get(query).await?;
-        let session_count = channel.join(user_id, platforms).await;
+        channel.join(user_id, platforms).await;
 
-        Some(ChannelMetadata {
-            id: channel.id,
-            name: channel.name.to_string(),
-            session_count,
-        })
+        Some(channel)
     }
 
     #[inline]
@@ -272,16 +263,12 @@ impl ChannelService for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-        platforms: &[SessionPlatform],
-    ) -> Option<ChannelMetadata> {
+        platforms: Option<&[Platform]>,
+    ) -> Option<Arc<Channel>> {
         let channel = self.channels.get(query).await?;
-        let session_count = channel.leave(user_id, platforms).await;
+        channel.leave(user_id, platforms).await;
 
-        Some(ChannelMetadata {
-            id: channel.id,
-            name: channel.name.to_string(),
-            session_count,
-        })
+        Some(channel)
     }
 
     #[inline]
@@ -289,15 +276,11 @@ impl ChannelService for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-    ) -> Option<ChannelMetadata> {
+    ) -> Option<Arc<Channel>> {
         let channel = self.channels.get(query).await?;
-        let session_count = channel.delete(user_id).await;
+        channel.delete(user_id).await;
 
-        Some(ChannelMetadata {
-            id: channel.id,
-            name: channel.name.to_string(),
-            session_count,
-        })
+        Some(channel)
     }
 
     #[inline]

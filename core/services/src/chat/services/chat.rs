@@ -1,25 +1,8 @@
 use super::{ChatService, DynChatService};
-use crate::{
-    bancho_state::DynBanchoStateService,
-    chat::{
-        ChannelMetadata, ChatServiceError, DynChannelService, SessionPlatform,
-        SessionPlatforms,
-    },
-};
+use crate::{bancho_state::DynBanchoStateService, chat::*};
 use async_trait::async_trait;
 use derive_deref::Deref;
-use peace_pb::{
-    bancho_state::{
-        BanchoPacketTarget, BroadcastBanchoPacketsRequest,
-        EnqueueBanchoPacketsRequest,
-    },
-    chat::{
-        chat_rpc_client::ChatRpcClient, ChannelInfo, ChannelSessionCount,
-        DeleteFromChannelRequest, GetPublicChannelsRequest,
-        GetPublicChannelsResponse, JoinIntoChannelRequest,
-        LeaveFromChannelRequest,
-    },
-};
+use peace_pb::chat::{chat_rpc_client::ChatRpcClient, *};
 use std::sync::Arc;
 use tonic::transport::Channel;
 use tools::{
@@ -103,25 +86,13 @@ impl ChatService for ChatServiceImpl {
                 let indexes =
                     svc.channel_service.channels().indexes.read().await;
 
-                let channels = futures::future::join_all(
-                    indexes.channel_public.values().map(|channel| async {
-                        ChannelInfo {
-                            id: channel.id,
-                            name: channel.name.to_string(),
-                            channel_type: channel.channel_type as i32,
-                            description: channel
-                                .description
-                                .load()
-                                .as_ref()
-                                .map(|s| s.to_string()),
-                            length: channel.read().await.len() as u32,
-                            users: None,
-                        }
-                    }),
-                )
-                .await;
-
-                Ok(GetPublicChannelsResponse { channels })
+                Ok(GetPublicChannelsResponse {
+                    channels: indexes
+                        .channel_public
+                        .values()
+                        .map(|channel| channel.rpc_channel_info())
+                        .collect(),
+                })
             },
         }
     }
@@ -129,7 +100,7 @@ impl ChatService for ChatServiceImpl {
     async fn join_into_channel(
         &self,
         request: JoinIntoChannelRequest,
-    ) -> Result<ChannelSessionCount, ChatServiceError> {
+    ) -> Result<ChannelInfo, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
@@ -147,44 +118,16 @@ impl ChatService for ChatServiceImpl {
                 let channel_query = channel_query
                     .ok_or(ChatServiceError::InvalidArgument)?
                     .into();
-                let platforms = SessionPlatforms::from(platforms);
+                let platforms =
+                    platforms.map(|p| PlatformsLoader::load_from_vec(p.value));
 
-                let contains_bancho =
-                    platforms.contains(&SessionPlatform::Bancho);
-
-                let ChannelMetadata { name, session_count, .. } = svc
+                let channel = svc
                     .channel_service
-                    .join_user(&channel_query, user_id, platforms.into_inner())
+                    .join_user(&channel_query, user_id, platforms)
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
-                if contains_bancho {
-                    svc.bancho_state_service
-                        .enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-                            target: Some(
-                                BanchoPacketTarget::UserId(user_id).into(),
-                            ),
-                            packets: bancho_packets::server::ChannelJoin::pack(
-                                name.as_str().into(),
-                            ),
-                        })
-                        .await?;
-
-                    svc.bancho_state_service
-                        .broadcast_bancho_packets(
-                            BroadcastBanchoPacketsRequest {
-                                packets:
-                                    bancho_packets::server::ChannelInfo::pack(
-                                        name.into(),
-                                        "todo".into(),
-                                        session_count as i16,
-                                    ),
-                            },
-                        )
-                        .await?;
-                }
-
-                Ok(ChannelSessionCount { session_count: session_count as u32 })
+                Ok(channel.rpc_channel_info())
             },
         }
     }
@@ -192,7 +135,7 @@ impl ChatService for ChatServiceImpl {
     async fn leave_from_channel(
         &self,
         request: LeaveFromChannelRequest,
-    ) -> Result<ChannelSessionCount, ChatServiceError> {
+    ) -> Result<ChannelInfo, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
@@ -210,48 +153,16 @@ impl ChatService for ChatServiceImpl {
                 let channel_query = channel_query
                     .ok_or(ChatServiceError::InvalidArgument)?
                     .into();
-                let platforms = SessionPlatforms::from(platforms);
+                let platforms =
+                    platforms.map(|p| PlatformsLoader::load_from_vec(p.value));
 
-                let contains_bancho =
-                    platforms.contains(&SessionPlatform::Bancho);
-
-                let ChannelMetadata { name, session_count, .. } = svc
+                let channel = svc
                     .channel_service
-                    .leave_user(
-                        &channel_query,
-                        &user_id,
-                        &platforms.into_inner(),
-                    )
+                    .leave_user(&channel_query, &user_id, platforms.as_deref())
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
-                if contains_bancho {
-                    svc.bancho_state_service
-                        .enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-                            target: Some(
-                                BanchoPacketTarget::UserId(user_id).into(),
-                            ),
-                            packets: bancho_packets::server::ChannelKick::pack(
-                                name.as_str().into(),
-                            ),
-                        })
-                        .await?;
-
-                    svc.bancho_state_service
-                        .broadcast_bancho_packets(
-                            BroadcastBanchoPacketsRequest {
-                                packets:
-                                    bancho_packets::server::ChannelInfo::pack(
-                                        name.into(),
-                                        "todo".into(),
-                                        session_count as i16,
-                                    ),
-                            },
-                        )
-                        .await?;
-                }
-
-                Ok(ChannelSessionCount { session_count: session_count as u32 })
+                Ok(channel.rpc_channel_info())
             },
         }
     }
@@ -259,7 +170,7 @@ impl ChatService for ChatServiceImpl {
     async fn delete_from_channel(
         &self,
         request: DeleteFromChannelRequest,
-    ) -> Result<ChannelSessionCount, ChatServiceError> {
+    ) -> Result<ChannelInfo, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
@@ -275,13 +186,13 @@ impl ChatService for ChatServiceImpl {
                     .ok_or(ChatServiceError::InvalidArgument)?
                     .into();
 
-                let ChannelMetadata { session_count, .. } = svc
+                let channel = svc
                     .channel_service
                     .delete_user(&channel_query, &user_id)
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
-                Ok(ChannelSessionCount { session_count: session_count as u32 })
+                Ok(channel.rpc_channel_info())
             },
         }
     }

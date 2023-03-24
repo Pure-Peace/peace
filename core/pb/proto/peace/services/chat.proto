@@ -7,9 +7,9 @@ package peace.services.chat;
 service ChatRPC {
   rpc GetPublicChannels(GetPublicChannelsRequest)
       returns (GetPublicChannelsResponse);
-  rpc JoinIntoChannel(JoinIntoChannelRequest) returns (ChannelSessionCount);
-  rpc LeaveFromChannel(LeaveFromChannelRequest) returns (ChannelSessionCount);
-  rpc DeleteFromChannel(DeleteFromChannelRequest) returns (ChannelSessionCount);
+  rpc JoinIntoChannel(JoinIntoChannelRequest) returns (ChannelInfo);
+  rpc LeaveFromChannel(LeaveFromChannelRequest) returns (ChannelInfo);
+  rpc DeleteFromChannel(DeleteFromChannelRequest) returns (ChannelInfo);
 }
 
 message RawChannelQuery {
@@ -44,25 +44,34 @@ enum SessionPlatform {
 
 message Users { repeated int32 users = 1; }
 
+message ChannelSessionsCounter {
+  uint64 unspecified = 1;
+  uint64 bancho = 2;
+  uint64 lazer = 3;
+  uint64 web = 4;
+}
+
+message SessionPlatforms { repeated SessionPlatform value = 1; }
+
 message ChannelInfo {
   uint64 id = 1;
   string name = 2;
   ChannelType channel_type = 3;
   optional string description = 4;
-  uint32 length = 5;
+  ChannelSessionsCounter counter = 5;
   optional Users users = 6;
 }
 
 message JoinIntoChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
-  repeated SessionPlatform platforms = 3;
+  optional SessionPlatforms platforms = 3;
 }
 
 message LeaveFromChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
-  repeated SessionPlatform platforms = 3;
+  optional SessionPlatforms platforms = 3;
 }
 
 message DeleteFromChannelRequest {
