@@ -44,12 +44,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<LoginSuccess, LoginError> {
         if version.is_none() {
-            return Err(LoginError::EmptyClientVersion)
+            return Err(LoginError::EmptyClientVersion);
         }
 
         let request = parser::parse_osu_login_request_body(body)?;
         if request.client_version != version.unwrap().as_str() {
-            return Err(LoginError::MismatchedClientVersion)
+            return Err(LoginError::MismatchedClientVersion);
         }
 
         Ok(self
@@ -64,12 +64,13 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         user_id: i32,
         session_id: String,
         body: Vec<u8>,
-    ) -> Result<(), BanchoHttpError> {
+    ) -> Result<Option<Vec<u8>>, BanchoHttpError> {
         if PacketReader::new(&body).next().is_none() {
-            return Err(BanchoHttpError::InvalidBanchoPacket)
+            return Err(BanchoHttpError::InvalidBanchoPacket);
         }
 
-        self.bancho_service
+        let HandleCompleted { packets } = self
+            .bancho_service
             .batch_process_bancho_packets(BatchProcessBanchoPacketsRequest {
                 session_id,
                 user_id,
@@ -77,7 +78,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             })
             .await?;
 
-        return Ok(())
+        return Ok(packets);
     }
 
     async fn pull_bancho_packets(
@@ -102,8 +103,9 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .check_user_session_exists(query)
             .await
             .map_err(|err| match err {
-                BanchoStateError::SessionNotExists =>
-                    BanchoHttpError::SessionNotExists(err),
+                BanchoStateError::SessionNotExists => {
+                    BanchoHttpError::SessionNotExists(err)
+                },
                 _ => BanchoHttpError::BanchoStateError(err),
             })?
             .user_id)

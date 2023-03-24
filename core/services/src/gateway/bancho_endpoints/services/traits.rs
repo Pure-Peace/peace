@@ -114,7 +114,7 @@ pub trait BanchoHandlerService {
         user_id: i32,
         session_id: String,
         body: Vec<u8>,
-    ) -> Result<(), BanchoHttpError>;
+    ) -> Result<Option<Vec<u8>>, BanchoHttpError>;
 
     async fn pull_bancho_packets(
         &self,

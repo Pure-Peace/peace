@@ -261,22 +261,36 @@ impl BanchoService for BanchoServiceImpl {
                 } = request;
 
                 let reader = PacketReader::new(&packets);
-
                 let (mut processed, mut failed) = (0, 0);
+
+                let mut extra_packets = None::<PacketBuilder>;
+
                 for packet in reader {
                     info!(target: LOG_TARGET, "Received: {packet}");
                     let start = Instant::now();
 
-                    if let Err(err) = self
+                    match self
                         .process_bancho_packet(&session_id, user_id, packet)
                         .await
                     {
-                        failed += 1;
+                        Ok(HandleCompleted { packets: Some(packets) }) => {
+                            match extra_packets {
+                                Some(ref mut p) => p.extend(packets),
+                                None => {
+                                    extra_packets =
+                                        Some(PacketBuilder::from(packets))
+                                },
+                            }
+                        },
+                        Err(err) => {
+                            failed += 1;
 
-                        error!(
-                            target: LOG_TARGET,
-                            "{err:?} (<{user_id}> [{session_id}])"
-                        )
+                            error!(
+                                target: LOG_TARGET,
+                                "{err:?} (<{user_id}> [{session_id}])"
+                            )
+                        },
+                        _ => {},
                     }
 
                     processed += 1;
@@ -292,7 +306,9 @@ impl BanchoService for BanchoServiceImpl {
                     return Err(ProcessBanchoPacketError::FailedToProcessAll);
                 }
 
-                Ok(HandleCompleted::default())
+                Ok(HandleCompleted {
+                    packets: extra_packets.map(|p| p.build()),
+                })
             },
         }
     }

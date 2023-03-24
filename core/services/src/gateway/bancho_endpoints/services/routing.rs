@@ -7,6 +7,7 @@ use crate::gateway::bancho_endpoints::{
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
+use bancho_packets::PacketBuilder;
 use peace_pb::{
     bancho::LoginSuccess,
     bancho_state::{BanchoPacketTarget, UserQuery},
@@ -49,15 +50,30 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
                     ))
                     .await?;
 
-                let () = self
-                    .bancho_handler_service
-                    .process_bancho_packets(user_id, session_id, body)
-                    .await?;
+                let mut builder = None::<PacketBuilder>;
 
-                Ok(self
-                    .bancho_handler_service
+                self.bancho_handler_service
+                    .process_bancho_packets(user_id, session_id, body)
+                    .await?
+                    .map(|extra_packets| match builder {
+                        Some(ref mut builder) => builder.extend(extra_packets),
+                        None => {
+                            builder = Some(PacketBuilder::from(extra_packets))
+                        },
+                    });
+
+                self.bancho_handler_service
                     .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
                     .await
+                    .map(|extra_packets| match builder {
+                        Some(ref mut builder) => builder.extend(extra_packets),
+                        None => {
+                            builder = Some(PacketBuilder::from(extra_packets))
+                        },
+                    });
+
+                Ok(builder
+                    .map(|b| b.build())
                     .unwrap_or_default()
                     .into_response())
             },
@@ -68,9 +84,13 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
                     .await
                     .map_err(BanchoHttpError::LoginFailed)?;
 
-                if let Some(p) = self.bancho_handler_service
+                if let Some(p) = self
+                    .bancho_handler_service
                     .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
-                    .await { packets.extend(p); }
+                    .await
+                {
+                    packets.extend(p);
+                }
 
                 Ok(([(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL], packets)
                     .into_response())
