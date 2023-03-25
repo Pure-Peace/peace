@@ -10,6 +10,23 @@ service ChatRPC {
   rpc JoinIntoChannel(JoinIntoChannelRequest) returns (ChannelInfo);
   rpc LeaveFromChannel(LeaveFromChannelRequest) returns (ChannelInfo);
   rpc DeleteFromChannel(DeleteFromChannelRequest) returns (ChannelInfo);
+
+  rpc SendMessageTo(SendMessageRequest) returns (SendMessageResponse);
+}
+
+message RawChatMessageTarget {
+  enum TargetType {
+    // Deserialize into `ChannelId(u32)`
+    ChannelId = 0;
+    // Deserialize into `ChannelName(string)`
+    ChannelName = 1;
+    UserId = 2;
+    Username = 3;
+    UsernameUnicode = 4;
+  }
+  TargetType target_type = 1;
+  optional uint64 int_val = 2;
+  optional string string_val = 3;
 }
 
 message RawChannelQuery {
@@ -36,7 +53,7 @@ enum ChannelType {
   Spectaor = 4;
 }
 
-enum SessionPlatform {
+enum ChatPlatform {
   Bancho = 0;
   Lazer = 1;
   Web = 2;
@@ -51,7 +68,7 @@ message ChannelSessionsCounter {
   uint64 web = 4;
 }
 
-message SessionPlatforms { repeated SessionPlatform value = 1; }
+message ChatPlatforms { repeated ChatPlatform value = 1; }
 
 message ChannelInfo {
   uint64 id = 1;
@@ -65,13 +82,13 @@ message ChannelInfo {
 message JoinIntoChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
-  optional SessionPlatforms platforms = 3;
+  optional ChatPlatforms platforms = 3;
 }
 
 message LeaveFromChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
-  optional SessionPlatforms platforms = 3;
+  optional ChatPlatforms platforms = 3;
 }
 
 message DeleteFromChannelRequest {
@@ -80,3 +97,12 @@ message DeleteFromChannelRequest {
 }
 
 message ChannelSessionCount { uint32 session_count = 1; }
+
+message SendMessageRequest {
+  int32 sender_id = 1;
+  string message = 2;
+  RawChatMessageTarget target = 3;
+  ChatPlatform platform = 4;
+}
+
+message SendMessageResponse { uint64 message_id = 1; }

@@ -4,14 +4,14 @@ use crate::{
     bancho_state::PresenceFilter,
     chat::Platform,
 };
-use bancho_packets::{ClientChangeAction, PayloadReader};
+use bancho_packets::{BanchoMessage, ClientChangeAction, PayloadReader};
 use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::*,
     bancho_state::ChannelUpdateNotifyRequest,
     chat::{
-        ChannelQuery, JoinIntoChannelRequest, LeaveFromChannelRequest,
-        SessionPlatforms,
+        ChannelQuery, ChatMessageTarget, ChatPlatform, ChatPlatforms,
+        JoinIntoChannelRequest, LeaveFromChannelRequest, SendMessageRequest,
     },
 };
 use std::error::Error;
@@ -35,6 +35,76 @@ fn read_channel_name(
 }
 
 #[inline]
+fn read_chat_message(
+    payload: Option<&[u8]>,
+) -> Result<BanchoMessage, ProcessBanchoPacketError> {
+    let message = PayloadReader::new(
+        payload.ok_or(ProcessBanchoPacketError::PacketPayloadNotExists)?,
+    )
+    .read::<BanchoMessage>()
+    .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
+
+    Ok(message)
+}
+
+#[inline]
+pub async fn send_public_message<'a>(
+    PacketContext { user_id, packet, svc_local, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
+    #[allow(unused_mut)]
+    let mut chat_message = read_chat_message(packet.payload)?;
+
+    match chat_message.target.as_str() {
+        "#spectator" => {
+            // TODO: spectator chat
+            todo!("spectator chat")
+        },
+        "#multiplayer" => {
+            // TODO: multiplayer chat
+            todo!("multiplayer chat")
+        },
+        _ => {},
+    };
+
+    svc_local
+        .chat_service
+        .send_message_to(SendMessageRequest {
+            sender_id: user_id,
+            message: chat_message.content,
+            target: Some(
+                ChatMessageTarget::ChannelName(chat_message.target).into(),
+            ),
+            platform: ChatPlatform::Bancho as i32,
+        })
+        .await
+        .map_err(handing_err)?;
+
+    Ok(HandleCompleted::default())
+}
+
+#[inline]
+pub async fn send_private_message<'a>(
+    PacketContext { user_id, packet, svc_local, .. }: PacketContext<'a>,
+) -> Result<HandleCompleted, ProcessBanchoPacketError> {
+    let chat_message = read_chat_message(packet.payload)?;
+
+    svc_local
+        .chat_service
+        .send_message_to(SendMessageRequest {
+            sender_id: user_id,
+            message: chat_message.content,
+            target: Some(
+                ChatMessageTarget::Username(chat_message.target).into(),
+            ),
+            platform: ChatPlatform::Bancho as i32,
+        })
+        .await
+        .map_err(handing_err)?;
+
+    Ok(HandleCompleted::default())
+}
+
+#[inline]
 pub async fn user_channel_join<'a>(
     PacketContext { user_id, packet, svc_local, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -45,7 +115,7 @@ pub async fn user_channel_join<'a>(
         .join_into_channel(JoinIntoChannelRequest {
             channel_query: Some(ChannelQuery::ChannelName(channel_name).into()),
             user_id,
-            platforms: Some(SessionPlatforms {
+            platforms: Some(ChatPlatforms {
                 value: [Platform::Bancho as i32].into(),
             }),
         })
@@ -79,7 +149,7 @@ pub async fn user_channel_part<'a>(
         .leave_from_channel(LeaveFromChannelRequest {
             channel_query: Some(ChannelQuery::ChannelName(channel_name).into()),
             user_id,
-            platforms: Some(SessionPlatforms {
+            platforms: Some(ChatPlatforms {
                 value: [Platform::Bancho as i32].into(),
             }),
         })

@@ -59,4 +59,15 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
             .map_err(|err| err.into())
             .map(Response::new)
     }
+
+    async fn send_message_to(
+        &self,
+        request: Request<SendMessageRequest>,
+    ) -> Result<Response<SendMessageResponse>, Status> {
+        self.chat_service
+            .send_message_to(request.into_inner())
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
 }

@@ -26,6 +26,11 @@ pub trait ChatService {
         &self,
         request: DeleteFromChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError>;
+
+    async fn send_message_to(
+        &self,
+        request: SendMessageRequest,
+    ) -> Result<SendMessageResponse, ChatServiceError>;
 }
 
 #[async_trait]

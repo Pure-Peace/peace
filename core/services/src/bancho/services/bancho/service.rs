@@ -344,12 +344,10 @@ impl BanchoService for BanchoServiceImpl {
                     PacketId::OSU_PING => HandleCompleted::default(),
                     // Message
                     PacketId::OSU_SEND_PUBLIC_MESSAGE => {
-                        // chat.send_public_message
-                        HandleCompleted::default()
+                        packet_processor::send_public_message(ctx).await?
                     },
                     PacketId::OSU_SEND_PRIVATE_MESSAGE => {
-                        // chat.send_private_message
-                        HandleCompleted::default()
+                        packet_processor::send_private_message(ctx).await?
                     },
                     PacketId::OSU_USER_CHANNEL_JOIN => {
                         packet_processor::user_channel_join(ctx).await?

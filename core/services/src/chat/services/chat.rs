@@ -2,7 +2,15 @@ use super::{ChatService, DynChatService};
 use crate::{bancho_state::DynBanchoStateService, chat::*};
 use async_trait::async_trait;
 use derive_deref::Deref;
-use peace_pb::chat::{chat_rpc_client::ChatRpcClient, *};
+use num_traits::FromPrimitive;
+use peace_pb::{
+    bancho_state::{
+        BanchoPacketTarget, BatchEnqueueBanchoPacketsRequest,
+        EnqueueBanchoPacketsRequest, RawUserQueryWithFields, UserQuery,
+        UserSessionFields,
+    },
+    chat::{chat_rpc_client::ChatRpcClient, *},
+};
 use std::sync::Arc;
 use tonic::transport::Channel;
 use tools::{
@@ -193,6 +201,117 @@ impl ChatService for ChatServiceImpl {
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
                 Ok(channel.rpc_channel_info())
+            },
+        }
+    }
+
+    async fn send_message_to(
+        &self,
+        request: SendMessageRequest,
+    ) -> Result<SendMessageResponse, ChatServiceError> {
+        match self {
+            Self::Remote(svc) => svc
+                .client()
+                .send_message_to(request)
+                .await
+                .map_err(ChatServiceError::RpcError)
+                .map(|resp| resp.into_inner()),
+            Self::Local(svc) => {
+                let SendMessageRequest { sender_id, message, target, platform } =
+                    request;
+
+                let platform = Platform::from_u16(platform as u16)
+                    .ok_or(ChatServiceError::InvalidArgument)?;
+                let target = Into::<ChatMessageTarget>::into(
+                    target.ok_or(ChatServiceError::InvalidArgument)?,
+                );
+
+                match platform {
+                    Platform::Bancho => match target {
+                        ChatMessageTarget::ChannelId(_) => todo!(),
+                        ChatMessageTarget::ChannelName(target_channel_name) => {
+                            let channel = svc
+                                .channel_service
+                                .get(&ChannelQuery::ChannelName(
+                                    target_channel_name.to_owned(),
+                                ))
+                                .await
+                                .unwrap();
+
+                            let requests = channel
+                                .sessions
+                                .indexes
+                                .read()
+                                .await
+                                .bancho
+                                .keys()
+                                .filter(|s| *s != &sender_id)
+                                .map(|s| EnqueueBanchoPacketsRequest {
+                                    target: Some(
+                                        BanchoPacketTarget::UserId(*s).into(),
+                                    ),
+                                    packets: bancho_packets::SendMessage::pack(
+                                        "test1".into(),
+                                        message.as_str().into(),
+                                        target_channel_name.as_str().into(),
+                                        sender_id,
+                                    ),
+                                })
+                                .collect();
+
+                            svc.bancho_state_service
+                                .batch_enqueue_bancho_packets(
+                                    BatchEnqueueBanchoPacketsRequest {
+                                        requests,
+                                    },
+                                )
+                                .await
+                                .unwrap();
+                        },
+                        ChatMessageTarget::UserId(_) => todo!(),
+                        ChatMessageTarget::Username(target_username) => {
+                            let sender = svc
+                                .bancho_state_service
+                                .get_user_session_with_fields(
+                                    RawUserQueryWithFields {
+                                        user_query: Some(
+                                            UserQuery::UserId(sender_id).into(),
+                                        ),
+                                        fields: UserSessionFields::Username
+                                            .bits(),
+                                    },
+                                )
+                                .await
+                                .unwrap();
+
+                            svc.bancho_state_service
+                                .enqueue_bancho_packets(
+                                    EnqueueBanchoPacketsRequest {
+                                        target: Some(
+                                            BanchoPacketTarget::Username(
+                                                target_username.to_owned(),
+                                            )
+                                            .into(),
+                                        ),
+                                        packets:
+                                            bancho_packets::SendMessage::pack(
+                                                sender.username.unwrap().into(),
+                                                message.into(),
+                                                target_username.into(),
+                                                sender_id,
+                                            ),
+                                    },
+                                )
+                                .await
+                                .unwrap();
+                        },
+                        ChatMessageTarget::UsernameUnicode(_) => todo!(),
+                    },
+                    Platform::Lazer => todo!(),
+                    Platform::Web => todo!(),
+                };
+
+                Ok(SendMessageResponse { message_id: 0 })
             },
         }
     }

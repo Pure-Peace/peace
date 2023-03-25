@@ -56,7 +56,7 @@ pub mod bancho_state {
         UsernameUnicode,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub enum UserQuery {
         SessionId(String),
         UserId(i32),
@@ -110,7 +110,7 @@ pub mod bancho_state {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub enum BanchoPacketTarget {
         UserId(i32),
         Username(String),
@@ -196,10 +196,12 @@ pub mod chat {
     pub const CHAT_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace.services.chat.descriptor");
 
-    use self::raw_channel_query::QueryType;
+    use self::{
+        raw_channel_query::QueryType, raw_chat_message_target::TargetType,
+    };
     use crate::protobufs::CONVERT_PANIC;
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub enum ChannelQuery {
         ChannelId(u64),
         ChannelName(String),
@@ -230,6 +232,69 @@ pub mod chat {
                     query_type: QueryType::ChannelName as i32,
                     int_val: None,
                     string_val: Some(channel_name),
+                },
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub enum ChatMessageTarget {
+        ChannelId(u64),
+        ChannelName(String),
+        UserId(i32),
+        Username(String),
+        UsernameUnicode(String),
+    }
+
+    impl From<RawChatMessageTarget> for ChatMessageTarget {
+        fn from(raw: RawChatMessageTarget) -> Self {
+            match raw.target_type() {
+                TargetType::ChannelId => {
+                    Self::ChannelId(raw.int_val.expect(CONVERT_PANIC))
+                },
+                TargetType::ChannelName => {
+                    Self::ChannelName(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UserId => {
+                    Self::UserId(raw.int_val.expect(CONVERT_PANIC) as i32)
+                },
+                TargetType::Username => {
+                    Self::Username(raw.string_val.expect(CONVERT_PANIC))
+                },
+                TargetType::UsernameUnicode => {
+                    Self::UsernameUnicode(raw.string_val.expect(CONVERT_PANIC))
+                },
+            }
+        }
+    }
+
+    impl From<ChatMessageTarget> for RawChatMessageTarget {
+        fn from(target: ChatMessageTarget) -> Self {
+            match target {
+                ChatMessageTarget::ChannelId(channel_id) => Self {
+                    target_type: TargetType::ChannelId as i32,
+                    int_val: Some(channel_id),
+                    string_val: None,
+                },
+                ChatMessageTarget::ChannelName(channel_name) => Self {
+                    target_type: TargetType::ChannelName as i32,
+                    int_val: None,
+                    string_val: Some(channel_name),
+                },
+                ChatMessageTarget::UserId(user_id) => Self {
+                    target_type: TargetType::UserId as i32,
+                    int_val: Some(user_id as u64),
+                    string_val: None,
+                },
+                ChatMessageTarget::Username(username) => Self {
+                    target_type: TargetType::Username as i32,
+                    int_val: None,
+                    string_val: Some(username),
+                },
+                ChatMessageTarget::UsernameUnicode(username_unicode) => Self {
+                    target_type: TargetType::UsernameUnicode as i32,
+                    int_val: None,
+                    string_val: Some(username_unicode),
                 },
             }
         }
