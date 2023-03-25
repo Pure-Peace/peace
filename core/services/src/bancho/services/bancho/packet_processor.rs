@@ -102,6 +102,7 @@ pub async fn user_channel_part<'a>(
     })
 }
 
+#[inline]
 pub async fn user_request_status_update<'a>(
     PacketContext { session_id, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -115,6 +116,7 @@ pub async fn user_request_status_update<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_presence_request_all<'a>(
     PacketContext { session_id, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -128,6 +130,7 @@ pub async fn user_presence_request_all<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_stats_request<'a>(
     PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -150,6 +153,7 @@ pub async fn user_stats_request<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_change_action<'a>(
     PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -184,6 +188,7 @@ pub async fn user_change_action<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_receive_updates<'a>(
     PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -209,6 +214,7 @@ pub async fn user_receive_updates<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_toggle_block_non_friend_dms<'a>(
     PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -232,6 +238,7 @@ pub async fn user_toggle_block_non_friend_dms<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_logout<'a>(
     PacketContext { session_id, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
@@ -243,6 +250,7 @@ pub async fn user_logout<'a>(
     Ok(HandleCompleted::default())
 }
 
+#[inline]
 pub async fn user_presence_request<'a>(
     PacketContext { session_id, packet, svc_impl, .. }: PacketContext<'a>,
 ) -> Result<HandleCompleted, ProcessBanchoPacketError> {

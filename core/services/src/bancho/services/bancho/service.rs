@@ -263,7 +263,7 @@ impl BanchoService for BanchoServiceImpl {
                 let reader = PacketReader::new(&packets);
                 let (mut processed, mut failed) = (0, 0);
 
-                let mut extra_packets = None::<PacketBuilder>;
+                let mut builder = None::<PacketBuilder>;
 
                 for packet in reader {
                     info!(target: LOG_TARGET, "Received: {packet}");
@@ -274,11 +274,12 @@ impl BanchoService for BanchoServiceImpl {
                         .await
                     {
                         Ok(HandleCompleted { packets: Some(packets) }) => {
-                            match extra_packets {
-                                Some(ref mut p) => p.extend(packets),
+                            match builder {
+                                Some(ref mut builder) => {
+                                    builder.extend(packets)
+                                },
                                 None => {
-                                    extra_packets =
-                                        Some(PacketBuilder::from(packets))
+                                    builder = Some(PacketBuilder::from(packets))
                                 },
                             }
                         },
@@ -306,13 +307,12 @@ impl BanchoService for BanchoServiceImpl {
                     return Err(ProcessBanchoPacketError::FailedToProcessAll);
                 }
 
-                Ok(HandleCompleted {
-                    packets: extra_packets.map(|p| p.build()),
-                })
+                Ok(HandleCompleted { packets: builder.map(|b| b.build()) })
             },
         }
     }
 
+    #[inline]
     async fn process_bancho_packet(
         &self,
         session_id: &str,

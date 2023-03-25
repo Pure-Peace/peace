@@ -37,6 +37,7 @@ impl BanchoHandlerServiceImpl {
 
 #[async_trait]
 impl BanchoHandlerService for BanchoHandlerServiceImpl {
+    #[inline]
     async fn bancho_login(
         &self,
         body: Vec<u8>,
@@ -59,6 +60,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .map_err(LoginError::BanchoServiceError)?)
     }
 
+    #[inline]
     async fn process_bancho_packets(
         &self,
         user_id: i32,
@@ -81,6 +83,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         return Ok(packets);
     }
 
+    #[inline]
     async fn pull_bancho_packets(
         &self,
         target: BanchoPacketTarget,
@@ -94,6 +97,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             .ok()
     }
 
+    #[inline]
     async fn check_user_session(
         &self,
         query: UserQuery,

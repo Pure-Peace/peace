@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use derive_deref::Deref;
 use peace_pb::chat::{ChannelInfo, ChannelSessionsCounter};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap, HashSet},
     ops::Deref,
     sync::Arc,
 };
@@ -214,29 +214,25 @@ impl ChannelSessions {
                 for platform in platforms {
                     match platform {
                         Platform::Bancho => {
-                            if !indexes.bancho.contains_key(&user_id) {
-                                indexes.bancho.insert(
-                                    user_id,
-                                    BanchoChannelSession(user_id).into(),
-                                );
+                            if let Entry::Vacant(e) =
+                                indexes.bancho.entry(user_id)
+                            {
+                                e.insert(BanchoChannelSession(user_id).into());
                                 self.counter.platform_bancho.add(1);
                             }
                         },
                         Platform::Lazer => {
-                            if !indexes.lazer.contains_key(&user_id) {
-                                indexes.lazer.insert(
-                                    user_id,
-                                    LazerChannelSession(user_id).into(),
-                                );
+                            if let Entry::Vacant(e) =
+                                indexes.lazer.entry(user_id)
+                            {
+                                e.insert(LazerChannelSession(user_id).into());
                                 self.counter.platform_lazer.add(1);
                             }
                         },
                         Platform::Web => {
-                            if !indexes.web.contains_key(&user_id) {
-                                indexes.web.insert(
-                                    user_id,
-                                    WebChannelSession(user_id).into(),
-                                );
+                            if let Entry::Vacant(e) = indexes.web.entry(user_id)
+                            {
+                                e.insert(WebChannelSession(user_id).into());
                                 self.counter.platform_web.add(1);
                             }
                         },
@@ -245,11 +241,8 @@ impl ChannelSessions {
             },
             None => {
                 let mut indexes = self.indexes.write().await;
-                if !indexes.unspecified.contains_key(&user_id) {
-                    indexes.unspecified.insert(
-                        user_id,
-                        UnspecifiedChannelSession::new(user_id).into(),
-                    );
+                if let Entry::Vacant(e) = indexes.unspecified.entry(user_id) {
+                    e.insert(UnspecifiedChannelSession::new(user_id).into());
                     self.counter.unspecified.add(1);
                 }
             },
@@ -262,17 +255,17 @@ impl ChannelSessions {
 
         indexes
             .unspecified
-            .remove(&user_id)
+            .remove(user_id)
             .map(|_| self.counter.unspecified.sub(1));
         indexes
             .bancho
-            .remove(&user_id)
+            .remove(user_id)
             .map(|_| self.counter.platform_bancho.sub(1));
         indexes
             .lazer
-            .remove(&user_id)
+            .remove(user_id)
             .map(|_| self.counter.platform_lazer.sub(1));
-        indexes.web.remove(&user_id).map(|_| self.counter.platform_web.sub(1));
+        indexes.web.remove(user_id).map(|_| self.counter.platform_web.sub(1));
     }
 
     #[inline]
@@ -285,9 +278,9 @@ impl ChannelSessions {
             Some(platforms) => {
                 let mut indexes = self.indexes.write().await;
 
-                match indexes.unspecified.get(&user_id) {
+                match indexes.unspecified.get(user_id) {
                     Some(unspecified_session) => {
-                        unspecified_session.online_platforms.remove(&platforms);
+                        unspecified_session.online_platforms.remove(platforms);
                     },
                     None => return,
                 };
@@ -312,9 +305,9 @@ impl ChannelSessions {
             None => {
                 let mut indexes = self.indexes.write().await;
 
-                indexes.unspecified.get(user_id).map(|session| {
+                if let Some(session) = indexes.unspecified.get(user_id) {
                     session.online_platforms.set(Default::default())
-                });
+                }
                 indexes
                     .bancho
                     .remove(user_id)
@@ -381,7 +374,7 @@ impl Channel {
     ) -> Self {
         Self {
             metadata,
-            sessions: sessions.unwrap_or_default().into(),
+            sessions: sessions.unwrap_or_default(),
             created_at: Utc::now(),
         }
     }
