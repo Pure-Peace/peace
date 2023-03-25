@@ -59,7 +59,7 @@ pub async fn user_channel_join<'a>(
             channel_info: Some(channel_info.to_owned()),
         })
         .await
-        .unwrap();
+        .map_err(handing_err)?;
 
     Ok(HandleCompleted {
         packets: Some(bancho_packets::ChannelJoin::pack(
@@ -93,7 +93,7 @@ pub async fn user_channel_part<'a>(
             channel_info: Some(channel_info.to_owned()),
         })
         .await
-        .unwrap();
+        .map_err(handing_err)?;
 
     Ok(HandleCompleted {
         packets: Some(bancho_packets::ChannelKick::pack(
