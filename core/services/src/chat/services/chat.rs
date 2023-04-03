@@ -255,7 +255,7 @@ impl ChatService for ChatServiceImpl {
                                 .batch_enqueue_bancho_packets(
                                     BatchEnqueueBanchoPacketsRequest {
                                         targets,
-                                        packets: vec![
+                                        packets:
                                             bancho_packets::SendMessage::pack(
                                                 "test1".into(),
                                                 message.as_str().into(),
@@ -264,7 +264,6 @@ impl ChatService for ChatServiceImpl {
                                                     .into(),
                                                 sender_id,
                                             ),
-                                        ],
                                     },
                                 )
                                 .await
@@ -344,14 +343,15 @@ impl CachedValue for PublicChannelInfo {
     #[inline]
     async fn fetch(&self, context: &Self::Context) -> Self::Output {
         Ok(match context.public_channel_info.get() {
-            Some(cached_value) =>
+            Some(cached_value) => {
                 if !cached_value.expired {
                     cached_value.cache.to_vec()
                 } else {
                     self.fetch_new(context)
                         .await
                         .unwrap_or(cached_value.cache.to_vec())
-                },
+                }
+            },
             None => self.fetch_new(context).await?,
         })
     }

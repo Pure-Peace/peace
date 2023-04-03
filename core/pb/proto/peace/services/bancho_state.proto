@@ -98,7 +98,7 @@ message EnqueueBanchoPacketsRequest {
 
 message BatchEnqueueBanchoPacketsRequest {
   repeated RawBanchoPacketTarget targets = 1;
-  repeated bytes packets = 2;
+  bytes packets = 2;
 }
 
 message DequeueBanchoPacketsRequest { RawBanchoPacketTarget target = 1; }
