@@ -6,8 +6,8 @@ use num_traits::FromPrimitive;
 use peace_pb::{
     bancho_state::{
         BanchoPacketTarget, BatchEnqueueBanchoPacketsRequest,
-        EnqueueBanchoPacketsRequest, RawUserQueryWithFields, UserQuery,
-        UserSessionFields,
+        EnqueueBanchoPacketsRequest, RawBanchoPacketTarget,
+        RawUserQueryWithFields, UserQuery, UserSessionFields,
     },
     chat::{chat_rpc_client::ChatRpcClient, *},
 };
@@ -238,31 +238,33 @@ impl ChatService for ChatServiceImpl {
                                 .await
                                 .unwrap();
 
-                            let requests = channel
+                            let targets = channel
                                 .sessions
                                 .indexes
                                 .read()
                                 .await
                                 .bancho
                                 .keys()
-                                .filter(|s| *s != &sender_id)
-                                .map(|s| EnqueueBanchoPacketsRequest {
-                                    target: Some(
-                                        BanchoPacketTarget::UserId(*s).into(),
-                                    ),
-                                    packets: bancho_packets::SendMessage::pack(
-                                        "test1".into(),
-                                        message.as_str().into(),
-                                        target_channel_name.as_str().into(),
-                                        sender_id,
-                                    ),
+                                .filter(|user_id| *user_id != &sender_id)
+                                .map(|user_id| {
+                                    BanchoPacketTarget::UserId(*user_id).into()
                                 })
-                                .collect();
+                                .collect::<Vec<RawBanchoPacketTarget>>();
 
                             svc.bancho_state_service
                                 .batch_enqueue_bancho_packets(
                                     BatchEnqueueBanchoPacketsRequest {
-                                        requests,
+                                        targets,
+                                        packets: vec![
+                                            bancho_packets::SendMessage::pack(
+                                                "test1".into(),
+                                                message.as_str().into(),
+                                                target_channel_name
+                                                    .as_str()
+                                                    .into(),
+                                                sender_id,
+                                            ),
+                                        ],
                                     },
                                 )
                                 .await
@@ -342,15 +344,14 @@ impl CachedValue for PublicChannelInfo {
     #[inline]
     async fn fetch(&self, context: &Self::Context) -> Self::Output {
         Ok(match context.public_channel_info.get() {
-            Some(cached_value) => {
+            Some(cached_value) =>
                 if !cached_value.expired {
                     cached_value.cache.to_vec()
                 } else {
                     self.fetch_new(context)
                         .await
                         .unwrap_or(cached_value.cache.to_vec())
-                }
-            },
+                },
             None => self.fetch_new(context).await?,
         })
     }
