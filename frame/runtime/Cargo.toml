@@ -28,5 +28,5 @@ clap-serde-derive = { workspace = true }
 once_cell = { workspace = true }
 
 # local crates
-peace_logs = { workspace = true, features = ["cli"] }
+peace_logs = { workspace = true }
 peace_cfg = { workspace = true }
