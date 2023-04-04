@@ -7,6 +7,11 @@ repository.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[features]
+default = []
+
+bancho-mock-test = []
+
 
 [dependencies]
 tokio = { workspace = true, features = ["parking_lot"] }

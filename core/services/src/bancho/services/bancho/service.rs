@@ -9,8 +9,6 @@ use crate::{
     geoip::DynGeoipService,
 };
 use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
-use chrono::Utc;
-use peace_domain::users::{UsernameAscii, UsernameUnicode};
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
@@ -19,10 +17,7 @@ use peace_pb::{
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
-use tools::{
-    atomic::{AtomicOperation, U64},
-    tonic_utils::RawRequest,
-};
+use tools::tonic_utils::RawRequest;
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
@@ -146,55 +141,62 @@ impl BanchoService for BanchoServiceImpl {
                 let start = Instant::now();
 
                 // MOCK -------------------
-                static MOCK_COUNT: U64 = U64::new(1000);
-                const EXCLUDE_USERS: [&str; 2] = ["test1", "test"];
-                let user = if EXCLUDE_USERS
-                    .binary_search(&username.as_str())
-                    .is_ok()
-                {
-                    let user = svc
-                        .users_repository
-                        .get_user_by_username(
-                            Some(username.as_str()),
-                            Some(username.as_str()),
-                        )
-                        .await
-                        .map_err(LoginError::UserNotExists)?;
+                #[cfg(feature = "bancho-mock-test")]
+                let user = {
+                    use chrono::Utc;
+                    use peace_domain::users::{UsernameAscii, UsernameUnicode};
+                    use tools::atomic::{AtomicOperation, U64};
 
-                    let () = svc
-                        .password_service
-                        .verify_password(
-                            user.password.as_str(),
-                            password.as_str(),
-                        )
-                        .await
-                        .map_err(LoginError::PasswordError)?;
+                    static MOCK_COUNT: U64 = U64::new(10000);
+                    const EXCLUDE_USERS: [&str; 2] = ["test1", "test"];
+                    if EXCLUDE_USERS.binary_search(&username.as_str()).is_ok() {
+                        let user = svc
+                            .users_repository
+                            .get_user_by_username(
+                                Some(username.as_str()),
+                                Some(username.as_str()),
+                            )
+                            .await
+                            .map_err(LoginError::UserNotExists)?;
 
-                    user
-                } else {
-                    peace_db::peace::entity::users::Model {
-                        id: MOCK_COUNT.add(1) as i32,
-                        name: username.to_owned(),
-                        name_safe: UsernameAscii::from_str(username.as_str())
+                        let () = svc
+                            .password_service
+                            .verify_password(
+                                user.password.as_str(),
+                                password.as_str(),
+                            )
+                            .await
+                            .map_err(LoginError::PasswordError)?;
+
+                        user
+                    } else {
+                        peace_db::peace::entity::users::Model {
+                            id: MOCK_COUNT.add(1) as i32,
+                            name: username.to_owned(),
+                            name_safe: UsernameAscii::from_str(
+                                username.as_str(),
+                            )
                             .unwrap()
                             .safe_name()
                             .to_string(),
-                        name_unicode: Some(username.to_owned()),
-                        name_unicode_safe: Some(
-                            UsernameUnicode::from_str(username.as_str())
-                                .unwrap()
-                                .safe_name()
-                                .to_string(),
-                        ),
-                        password: "".into(),
-                        email: "".into(),
-                        country: Some("".into()),
-                        created_at: Utc::now().into(),
-                        updated_at: Utc::now().into(),
+                            name_unicode: Some(username.to_owned()),
+                            name_unicode_safe: Some(
+                                UsernameUnicode::from_str(username.as_str())
+                                    .unwrap()
+                                    .safe_name()
+                                    .to_string(),
+                            ),
+                            password: "".into(),
+                            email: "".into(),
+                            country: Some("".into()),
+                            created_at: Utc::now().into(),
+                            updated_at: Utc::now().into(),
+                        }
                     }
                 };
 
-                /* let user = svc
+                #[cfg(not(feature = "bancho-mock-test"))]
+                let user = svc
                     .users_repository
                     .get_user_by_username(
                         Some(username.as_str()),
@@ -203,11 +205,12 @@ impl BanchoService for BanchoServiceImpl {
                     .await
                     .map_err(LoginError::UserNotExists)?;
 
+                #[cfg(not(feature = "bancho-mock-test"))]
                 let () = svc
                     .password_service
                     .verify_password(user.password.as_str(), password.as_str())
                     .await
-                    .map_err(LoginError::PasswordError)?; */
+                    .map_err(LoginError::PasswordError)?;
 
                 let geoip_data = svc
                     .geoip_service
