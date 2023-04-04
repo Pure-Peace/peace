@@ -12,9 +12,6 @@ pub async fn run(cfg: std::sync::Arc<GatewayConfig>) {
     // Create a new instance of the `App.
     let app = App::new(cfg);
 
-    // Initialize the logger with the frame configuration of the `App`.
-    peace_logs::init(&app.cfg.frame_cfg);
-
     // Start serving the HTTP(s) server with the `App` instance.
     peace_api::http::serve(app).await;
 }
@@ -22,5 +19,9 @@ pub async fn run(cfg: std::sync::Arc<GatewayConfig>) {
 /// The main entry point of the application.
 pub fn main() {
     let cfg = GatewayConfig::get();
-    peace_runtime::runtime(&cfg.runtime_cfg).unwrap().block_on(run(cfg));
+    // Initialize the logger.
+    peace_logs::init(&cfg.frame_cfg);
+
+    // Initialize runtime and run app.
+    peace_runtime::runtime(&cfg.runtime_cfg).unwrap().block_on(run(cfg))
 }

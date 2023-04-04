@@ -17,9 +17,6 @@ pub async fn run(
     // Create a new instance of the `App.
     let app = App::new(cfg);
 
-    // Initialize the logger with the frame configuration of the `App`.
-    peace_logs::init(&app.cfg.frame_cfg);
-
     // Start serving the RPC server with the `App` instance.
     peace_rpc::server::serve(app).await;
 
@@ -29,5 +26,9 @@ pub async fn run(
 /// The main entry point of the application.
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = ChatServiceConfig::get();
+    // Initialize the logger.
+    peace_logs::init(&cfg.frame_cfg);
+
+    // Initialize runtime and run app.
     peace_runtime::runtime(&cfg.runtime_cfg).unwrap().block_on(run(cfg))
 }
