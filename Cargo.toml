@@ -18,6 +18,7 @@ members = [
     "frame/rpc",
     "frame/cfg",
     "frame/cfg/derive",
+    "frame/runtime",
     "lib/tools",
     "lib/tools/derive",
     "lib/bancho-packets",
@@ -118,6 +119,7 @@ peace_api = { path = "./frame/api" }
 peace_logs = { path = "./frame/logs" }
 peace_rpc = { path = "./frame/rpc" }
 peace_cfg = { path = "./frame/cfg" }
+peace_runtime = { path = "./frame/runtime" }
 
 # core
 peace_pb = { path = "./core/pb" }
