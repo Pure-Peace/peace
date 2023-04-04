@@ -30,7 +30,7 @@ where
 
     /// Save the current parameters as a configuration file.
     #[arg(long, default_value = "false")]
-    pub save_as_config: bool,
+    pub save_cfg: bool,
 
     /// Command to execute.
     #[command(subcommand)]
@@ -261,9 +261,9 @@ where
             process::exit(0)
         }
 
-        // If the save_as_config option is specified, write the current
+        // If the save_cfg option is specified, write the current
         // configuration to the configuration file.
-        if cfg.save_as_config {
+        if cfg.save_cfg {
             write_config(
                 &f.unwrap_or(ConfigFile::new(Box::new(
                     DEFAULT_CONFIG_PATH.into(),
