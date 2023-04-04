@@ -4,6 +4,7 @@ use peace_api::{ApiFrameConfig, Application};
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::geoip;
 use peace_repositories::users::UsersRepositoryImpl;
+use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::{
         BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
@@ -38,6 +39,9 @@ define_rpc_client_config!(
     propagate_version = true
 )]
 pub struct BanchoStandaloneConfig {
+    #[command(flatten)]
+    pub runtime_cfg: RuntimeConfig,
+
     #[command(flatten)]
     pub frame_cfg: ApiFrameConfig,
 

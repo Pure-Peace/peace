@@ -2,6 +2,7 @@ use crate::GeoipRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_pb::geoip::{geoip_rpc_server::GeoipRpcServer, GEOIP_DESCRIPTOR_SET};
 use peace_rpc::{Application, RpcFrameConfig};
+use peace_runtime::cfg::RuntimeConfig;
 use peace_services::geoip::{GeoipServiceImpl, GeoipServiceLocal};
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
@@ -12,6 +13,9 @@ use tonic::{
 #[peace_config]
 #[command(name = "geoip", author, version, about, propagate_version = true)]
 pub struct GeoipConfig {
+    #[command(flatten)]
+    pub runtime_cfg: RuntimeConfig,
+
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
 

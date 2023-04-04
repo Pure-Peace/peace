@@ -1,11 +1,11 @@
-use clap::Parser;
 use clap_serde_derive::ClapSerde;
 use peace_cfg::TlsConfig;
+use peace_cfg::{impl_config, peace_config, SingletonConfig};
 use peace_logs::LoggingConfigArgs;
 use std::{default::Default, net::SocketAddr, ops::Deref};
 
 /// Basic configuration items for `peace-api` framework.
-#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+#[peace_config]
 pub struct ApiFrameConfig {
     /// Logging configurations.
     #[clap(flatten)]
@@ -25,7 +25,7 @@ impl Deref for ApiFrameConfig {
 
 impl_logging_config!(ApiFrameConfig);
 
-#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+#[peace_config]
 pub struct ApiServiceConfig {
     /// The address and port the `http` server listens on.
     #[default("127.0.0.1:8000".parse().unwrap())]

@@ -19,7 +19,7 @@ path = "src/main.rs"
 
 [dependencies]
 axum = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true }
 utoipa = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 clap = { workspace = true, features = ["derive"] }
@@ -28,6 +28,7 @@ clap-serde-derive = { workspace = true }
 
 peace_logs = { workspace = true, features = ["cli"] }
 peace_api = { workspace = true, features = ["tls"] }
+peace_runtime = { workspace = true }
 
 peace_pb = { workspace = true }
 peace_db = { workspace = true }

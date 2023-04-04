@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 tonic = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
@@ -27,7 +27,7 @@ peace_rpc = { workspace = true, features = [
     "admin_endpoints",
     "reflection",
 ] }
-
+peace_runtime = { workspace = true }
 
 peace_pb = { workspace = true }
 peace_db = { workspace = true }

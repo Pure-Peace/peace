@@ -9,6 +9,7 @@ use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
     interceptor::client_ip, Application, RpcClientConfig, RpcFrameConfig,
 };
+use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::{
         BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
@@ -43,6 +44,9 @@ define_rpc_client_config!(
 #[peace_config]
 #[command(name = "bancho", author, version, about, propagate_version = true)]
 pub struct BanchoConfig {
+    #[command(flatten)]
+    pub runtime_cfg: RuntimeConfig,
+
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
 

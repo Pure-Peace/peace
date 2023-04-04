@@ -6,6 +6,7 @@ use peace_pb::{
     chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET},
 };
 use peace_rpc::{Application, RpcClientConfig, RpcFrameConfig};
+use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho_state::BanchoStateServiceImpl,
     chat::{ChannelServiceImpl, ChatServiceImpl},
@@ -24,6 +25,9 @@ define_rpc_client_config!(
 #[peace_config]
 #[command(name = "chat", author, version, about, propagate_version = true)]
 pub struct ChatServiceConfig {
+    #[command(flatten)]
+    pub runtime_cfg: RuntimeConfig,
+
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
 

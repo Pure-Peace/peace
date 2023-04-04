@@ -9,14 +9,19 @@ pub mod app;
 
 pub use app::*;
 
-#[tokio::main(flavor = "multi_thread")]
-pub async fn main() {
+pub async fn run(cfg: std::sync::Arc<BanchoStandaloneConfig>) {
     // Create a new instance of the `App.
-    let app = App::new(BanchoStandaloneConfig::get());
+    let app = App::new(cfg);
 
     // Initialize the logger with the frame configuration of the `App`.
     peace_logs::init(&app.cfg.frame_cfg);
 
     // Start serving the HTTP(s) server with the `App` instance.
     peace_api::http::serve(app).await;
+}
+
+/// The main entry point of the application.
+pub fn main() {
+    let cfg = BanchoStandaloneConfig::get();
+    peace_runtime::runtime(&cfg.runtime_cfg).unwrap().block_on(run(cfg));
 }

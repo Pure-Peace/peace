@@ -1,11 +1,11 @@
-use clap::Parser;
 use clap_serde_derive::ClapSerde;
 use peace_cfg::TlsConfig;
+use peace_cfg::{impl_config, peace_config, SingletonConfig};
 use peace_logs::LoggingConfigArgs;
 use std::{default::Default, net::SocketAddr, ops::Deref, path::PathBuf};
 
 /// Basic configuration items for `peace-rpc` framework.
-#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+#[peace_config]
 pub struct RpcFrameConfig {
     /// Logging configurations.
     #[clap(flatten)]
@@ -25,7 +25,7 @@ impl Deref for RpcFrameConfig {
 
 impl_logging_config!(RpcFrameConfig);
 
-#[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
+#[peace_config]
 pub struct RpcServiceConfig {
     /// The address and port the `gRPC` server listens on.
     #[default("127.0.0.1:50051".parse().unwrap())]

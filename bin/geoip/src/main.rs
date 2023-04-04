@@ -11,11 +11,11 @@ pub mod rpc;
 pub use app::*;
 pub use rpc::*;
 
-/// The main entry point of the application.
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run(
+    cfg: std::sync::Arc<GeoipConfig>,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Create a new instance of the `App.
-    let app = App::new(GeoipConfig::get());
+    let app = App::new(cfg);
 
     // Initialize the logger with the frame configuration of the `App`.
     peace_logs::init(&app.cfg.frame_cfg);
@@ -24,4 +24,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     peace_rpc::server::serve(app).await;
 
     Ok(())
+}
+
+/// The main entry point of the application.
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cfg = GeoipConfig::get();
+    peace_runtime::runtime(&cfg.runtime_cfg).unwrap().block_on(run(cfg))
 }

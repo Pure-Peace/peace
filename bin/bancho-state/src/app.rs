@@ -3,6 +3,7 @@ use peace_pb::bancho_state::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{Application, RpcFrameConfig};
+use peace_runtime::cfg::RuntimeConfig;
 use peace_services::bancho_state::{
     BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
     UserSessionsServiceImpl,
@@ -24,6 +25,9 @@ use crate::BanchoStateRpcImpl;
     propagate_version = true
 )]
 pub struct BanchoStateConfig {
+    #[command(flatten)]
+    pub runtime_cfg: RuntimeConfig,
+
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
 }

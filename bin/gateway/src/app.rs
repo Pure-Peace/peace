@@ -2,6 +2,7 @@ use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
 use peace_pb::{bancho, bancho_state};
+use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::BanchoServiceImpl,
     bancho_state::BanchoStateServiceImpl,
@@ -15,10 +16,7 @@ use peace_services::{
 };
 use std::sync::Arc;
 
-define_rpc_client_config!(
-    service_name: bancho,
-    config_name: BanchoRpcConfig
-);
+define_rpc_client_config!(service_name: bancho, config_name: BanchoRpcConfig);
 
 define_rpc_client_config!(
     service_name: bancho_state,
@@ -29,6 +27,9 @@ define_rpc_client_config!(
 #[peace_config]
 #[command(name = "gateway", author, version, about, propagate_version = true)]
 pub struct GatewayConfig {
+    #[command(flatten)]
+    pub runtime_cfg: RuntimeConfig,
+
     #[command(flatten)]
     pub frame_cfg: ApiFrameConfig,
 
