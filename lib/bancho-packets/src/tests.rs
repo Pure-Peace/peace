@@ -187,7 +187,7 @@ mod packets_writing {
     #[test]
     fn test_login_reply() {
         assert_eq!(
-            LoginReply::pack(LoginResult::Failed(
+            server::LoginReply::pack(LoginResult::Failed(
                 LoginFailedResaon::InvalidCredentials
             )),
             vec![5, 0, 0, 4, 0, 0, 0, 255, 255, 255, 255]
@@ -197,7 +197,7 @@ mod packets_writing {
     #[test]
     fn test_login_notfication() {
         assert_eq!(
-            Notification::pack("hello".into()),
+            server::Notification::pack("hello".into()),
             vec![24, 0, 0, 7, 0, 0, 0, 11, 5, 104, 101, 108, 108, 111]
         )
     }
@@ -205,7 +205,7 @@ mod packets_writing {
     #[test]
     fn test_send_message() {
         assert_eq!(
-            SendMessage::pack(
+            server::SendMessage::pack(
                 "PurePeace".into(),
                 "hello".into(),
                 "osu".into(),
@@ -222,7 +222,7 @@ mod packets_writing {
     #[test]
     fn test_change_username() {
         assert_eq!(
-            ChangeUsername::pack("PurePeace".into(), "peppy".into()),
+            server::ChangeUsername::pack("PurePeace".into(), "peppy".into()),
             vec![
                 9, 0, 0, 20, 0, 0, 0, 11, 18, 80, 117, 114, 101, 80, 101, 97,
                 99, 101, 62, 62, 62, 62, 112, 101, 112, 112, 121
@@ -233,7 +233,7 @@ mod packets_writing {
     #[test]
     fn test_rtx() {
         assert_eq!(
-            Rtx::pack("Peace".into()),
+            server::Rtx::pack("Peace".into()),
             vec![105, 0, 0, 7, 0, 0, 0, 11, 5, 80, 101, 97, 99, 101]
         )
     }
@@ -242,15 +242,15 @@ mod packets_writing {
     fn test_login() {
         let resp = PacketBuilder::new();
         let resp = resp
-            .add(LoginReply::pack(LoginResult::Success(1009)))
-            .add(ProtocolVersion::pack(19))
-            .add(Notification::pack("Welcome to osu!".into()))
-            .add(MainMenuIcon::pack(
+            .add(server::LoginReply::pack(LoginResult::Success(1009)))
+            .add(server::ProtocolVersion::pack(19))
+            .add(server::Notification::pack("Welcome to osu!".into()))
+            .add(server::MainMenuIcon::pack(
                 "https://image.png".into(),
                 "https://url.link".into(),
             ))
-            .add(SilenceEnd::pack(0))
-            .add(ChannelInfoEnd::pack());
+            .add(server::SilenceEnd::pack(0))
+            .add(server::ChannelInfoEnd::pack());
         assert_eq!(
             resp.build(),
             vec![
@@ -268,7 +268,7 @@ mod packets_writing {
     #[test]
     fn test_write_i32_list() {
         assert_eq!(
-            UserPresenceBundle::pack(&[1001, 1002, 1003]),
+            server::UserPresenceBundle::pack(&[1001, 1002, 1003]),
             vec![
                 96, 0, 0, 14, 0, 0, 0, 3, 0, 233, 3, 0, 0, 234, 3, 0, 0, 235,
                 3, 0, 0
@@ -286,8 +286,16 @@ mod packets_writing {
 
     #[test]
     fn test_user_presence() {
-        let data =
-            UserPresence::pack(5, "PurePeace".into(), 8, 48, 1, 1.0, 1.0, 666);
+        let data = server::UserPresence::pack(
+            5,
+            "PurePeace".into(),
+            8,
+            48,
+            1,
+            1.0,
+            1.0,
+            666,
+        );
         println!("{}", data.len());
         assert_eq!(
             data,
@@ -301,7 +309,7 @@ mod packets_writing {
 
     #[test]
     fn test_user_stats() {
-        let data = UserStats::pack(
+        let data = server::UserStats::pack(
             5,
             1,
             "idle".into(),
@@ -333,8 +341,9 @@ mod packets_writing {
     #[test]
     fn test_client_packets() {
         let (t1, t2, t3, t4, t5, t6) = (1, "test", "test", 2, 3, 4);
-        let data = UserChangeAction::new(t1, t2.into(), t3.into(), t4, t5, t6)
-            .into_packet_data();
+        let data =
+            client::UserChangeAction::new(t1, t2.into(), t3.into(), t4, t5, t6)
+                .into_packet_data();
 
         let mut reader = PacketReader::new(&data);
         let packet = reader.next().unwrap();

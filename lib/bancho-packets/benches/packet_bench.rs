@@ -4,36 +4,38 @@ use criterion::{criterion_group, criterion_main, Criterion};
 fn packets_write_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("packets_write");
     group.bench_function("match_join_failed packet", |b| {
-        b.iter(MatchJoinFail::pack)
+        b.iter(server::MatchJoinFail::pack)
     });
     group.bench_function("match_join_failed packet - 2", |b| {
-        b.iter(|| PacketBuilder::new().add(MatchJoinFail::pack()).build())
+        b.iter(|| {
+            PacketBuilder::new().add(server::MatchJoinFail::pack()).build()
+        })
     });
     group.bench_function("notification packet", |b| {
-        b.iter(|| Notification::pack("hello".into()))
+        b.iter(|| server::Notification::pack("hello".into()))
     });
     group.bench_function("login_reply packet", |b| {
         b.iter(|| {
-            LoginReply::pack(LoginResult::Failed(
+            server::LoginReply::pack(LoginResult::Failed(
                 LoginFailedResaon::InvalidCredentials,
             ))
         })
     });
     group.bench_function("send massage packet", |b| {
-        b.iter(|| SendMessage::pack("username".into(), "May you have enough happiness to make you sweet,enough trials to make you strong,enough sorrow to keep you human,enough hope to make you happy? Always put yourself in others’shoes.If you feel that it hurts you,it probably hurts the other person, too. The happiest of people don’t necessarily have the best of everything;they just make the most of everything that comes along their way.Happiness lies for those who cry,those who hurt, those who have searched,and those who have tried,for only they can appreciate the importance of people. Please send this message to those people who mean something to you,to those who have touched your life in one way or another,to those who make you smile when you really need it,to those that make you see the brighter side of things when you are really down,to those who you want to let them know that you appreciate their friendship.And if you don’t, don’t worry,nothing bad will happen to you,you will just miss out on the opportunity to brighten someone’s day with this message.".into(), "osu".into(), 1001))
+        b.iter(|| server::SendMessage::pack("username".into(), "May you have enough happiness to make you sweet,enough trials to make you strong,enough sorrow to keep you human,enough hope to make you happy? Always put yourself in others’shoes.If you feel that it hurts you,it probably hurts the other person, too. The happiest of people don’t necessarily have the best of everything;they just make the most of everything that comes along their way.Happiness lies for those who cry,those who hurt, those who have searched,and those who have tried,for only they can appreciate the importance of people. Please send this message to those people who mean something to you,to those who have touched your life in one way or another,to those who make you smile when you really need it,to those that make you see the brighter side of things when you are really down,to those who you want to let them know that you appreciate their friendship.And if you don’t, don’t worry,nothing bad will happen to you,you will just miss out on the opportunity to brighten someone’s day with this message.".into(), "osu".into(), 1001))
     });
     group.bench_function("login mutiple packet test1", |b| {
         b.iter(|| {
             PacketBuilder::new()
-                .add(LoginReply::pack(LoginResult::Success(1009)))
-                .add(ProtocolVersion::pack(19))
-                .add(Notification::pack("Welcome to osu!".into()))
-                .add(MainMenuIcon::pack(
+                .add(server::LoginReply::pack(LoginResult::Success(1009)))
+                .add(server::ProtocolVersion::pack(19))
+                .add(server::Notification::pack("Welcome to osu!".into()))
+                .add(server::MainMenuIcon::pack(
                     "https://image.png".into(),
                     "https://url.link".into(),
                 ))
-                .add(SilenceEnd::pack(0))
-                .add(ChannelInfoEnd::pack())
+                .add(server::SilenceEnd::pack(0))
+                .add(server::ChannelInfoEnd::pack())
                 .build()
         })
     });

@@ -11,9 +11,6 @@ pub mod client;
 /// Predefined server related bancho packets.
 pub mod server;
 
-pub use client::*;
-pub use server::*;
-
 #[cfg(feature = "derive")]
 pub use bancho_packets_derive::*;
 
