@@ -2,12 +2,16 @@ use crate::bancho_state::{
     DynUserSessionsService, PacketDataPtr, Session, UserSessionsService,
 };
 use async_trait::async_trait;
-use bancho_packets::{PacketBuilder, UserLogout};
+use bancho_packets::UserLogout;
 use derive_deref::Deref;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
-use std::{collections::HashMap, ops::Deref, sync::Arc};
-use tokio::sync::RwLock;
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    sync::Arc,
+};
+use tokio::sync::{Mutex, RwLock};
 use tools::{
     atomic::{AtomicOperation, AtomicValue, Usize, I64},
     cache::{CachedRwLock, CachedValue},
@@ -220,9 +224,40 @@ impl Deref for UserSessions {
 }
 
 #[derive(Clone)]
+pub struct Message<T: Clone> {
+    content: T,
+    has_read: HashSet<i32>,
+}
+
+#[derive(Clone, Default)]
+pub struct Queue<T: Clone> {
+    messsages: Vec<Message<T>>,
+}
+
+impl<T: Clone> Queue<T> {
+    pub fn push(&mut self, content: T) {
+        self.messsages.push(Message { content, has_read: HashSet::default() })
+    }
+
+    pub fn receive_all(&mut self, user_id: &i32) -> Vec<T> {
+        let mut messages = Vec::new();
+        for msg in self.messsages.iter_mut() {
+            if msg.has_read.contains(user_id) {
+                continue;
+            }
+
+            messages.push(msg.content.clone())
+        }
+
+        messages
+    }
+}
+
+#[derive(Clone)]
 pub struct UserSessionsServiceImpl {
     user_sessions: Arc<UserSessions>,
     online_user_info: Arc<OnlineUserInfo>,
+    notify_queue: Arc<Mutex<Queue<PacketDataPtr>>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -240,6 +275,7 @@ impl UserSessionsServiceImpl {
                 DEFAULT_ONLINE_USER_INFO_CACHE_EXPIRES,
             ))
             .into(),
+            notify_queue: Arc::default(),
         }
     }
 }
@@ -252,37 +288,28 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     #[inline]
+    fn notify_queue(&self) -> &Arc<Mutex<Queue<PacketDataPtr>>> {
+        &self.notify_queue
+    }
+
+    #[inline]
+    async fn fetch_online_user_info(&self) -> Vec<PacketDataPtr> {
+        self.online_user_info.fetch(&self).await
+    }
+
+    #[inline]
     async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
         const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
 
         let session =
             self.user_sessions.create(Session::new(create_session)).await;
 
-        /* let login_notify = Arc::new(
-            PacketBuilder::from_batch([
-                session.user_stats_packet(),
-                session.user_presence_packet(),
-            ])
-            .build(),
-        );
+        self.notify_queue
+            .lock()
+            .await
+            .push(session.user_info_packets().into());
 
-        let online_user_info = {
-            let mut online_user_info = Vec::new();
-
-            let user_sessions = self.user_sessions.read().await;
-
-            for online_user in user_sessions.values() {
-                online_user_info.extend(online_user.user_stats_packet());
-                online_user_info.extend(online_user.user_presence_packet());
-
-                online_user.push_packet(login_notify.clone()).await;
-            }
-
-            online_user_info
-        }; */
-
-        session.enqueue_packets(self.online_user_info.fetch(&self).await).await;
-
+        session.enqueue_packets(self.fetch_online_user_info().await).await;
         info!(
             target: LOG_TARGET,
             "Session created: {} [{}] ({})",
@@ -300,13 +327,10 @@ impl UserSessionsService for UserSessionsServiceImpl {
 
         let session = self.user_sessions.delete(query).await?;
 
-        let logout_notify = Arc::new(UserLogout::pack(session.user_id));
-
-        let user_sessions = self.user_sessions.read().await;
-
-        for session in user_sessions.values() {
-            session.push_packet(logout_notify.clone()).await;
-        }
+        self.notify_queue
+            .lock()
+            .await
+            .push(UserLogout::pack(session.user_id).into());
 
         info!(
             target: LOG_TARGET,
@@ -353,7 +377,7 @@ impl CachedValue for OnlineUserInfo {
         let mut online_user_info = self.inner.write().await;
 
         context
-            .user_sessions()
+            .user_sessions
             .read()
             .await
             .values()

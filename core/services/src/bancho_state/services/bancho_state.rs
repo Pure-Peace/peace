@@ -235,6 +235,17 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     {
                         data.extend(packet.iter());
                     }
+
+                    let notify = svc
+                        .user_sessions_service
+                        .notify_queue()
+                        .lock()
+                        .await
+                        .receive_all(&session.user_id);
+
+                    for packet in notify {
+                        data.extend(packet.iter());
+                    }
                 } else {
                     todo!("channel handle")
                 }
