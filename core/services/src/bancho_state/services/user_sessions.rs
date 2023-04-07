@@ -223,10 +223,13 @@ impl Deref for UserSessions {
     }
 }
 
+pub type Validator = Arc<dyn Fn() -> bool + Sync + Send + 'static>;
+
 #[derive(Clone)]
 pub struct Message<T: Clone> {
     content: T,
     has_read: HashSet<i32>,
+    validator: Option<Validator>,
 }
 
 #[derive(Clone, Default)]
@@ -235,18 +238,53 @@ pub struct Queue<T: Clone> {
 }
 
 impl<T: Clone> Queue<T> {
-    pub fn push(&mut self, content: T) {
-        self.messsages.push(Message { content, has_read: HashSet::default() })
+    #[inline]
+    pub fn push(&mut self, content: T, validator: Option<Validator>) {
+        self.messsages.push(Message {
+            content,
+            has_read: HashSet::default(),
+            validator,
+        })
     }
 
+    #[inline]
+    pub fn push_excludes(
+        &mut self,
+        content: T,
+        excludes: impl IntoIterator<Item = i32>,
+        validator: Option<Validator>,
+    ) {
+        let msg = Message {
+            content,
+            has_read: HashSet::from_iter(excludes),
+            validator,
+        };
+
+        self.messsages.push(msg)
+    }
+
+    #[inline]
     pub fn receive_all(&mut self, user_id: &i32) -> Vec<T> {
         let mut messages = Vec::new();
-        for msg in self.messsages.iter_mut() {
+        let mut removed = 0;
+        for i in 0..self.messsages.len() {
+            let i = i - removed;
+            let msg = &mut self.messsages[i];
+
             if msg.has_read.contains(user_id) {
                 continue;
             }
 
-            messages.push(msg.content.clone())
+            if let Some(valid) = &msg.validator {
+                if !valid() {
+                    self.messsages.remove(i);
+                    removed += 1;
+                    continue;
+                }
+            }
+
+            messages.push(msg.content.clone());
+            msg.has_read.insert(*user_id);
         }
 
         messages
@@ -304,10 +342,13 @@ impl UserSessionsService for UserSessionsServiceImpl {
         let session =
             self.user_sessions.create(Session::new(create_session)).await;
 
-        self.notify_queue
-            .lock()
-            .await
-            .push(session.user_info_packets().into());
+        let weak = Arc::downgrade(&session);
+
+        self.notify_queue.lock().await.push_excludes(
+            session.user_info_packets().into(),
+            [session.user_id],
+            Some(Arc::new(move || weak.upgrade().is_some())),
+        );
 
         session.enqueue_packets(self.fetch_online_user_info().await).await;
         info!(
@@ -330,7 +371,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
         self.notify_queue
             .lock()
             .await
-            .push(UserLogout::pack(session.user_id).into());
+            .push(UserLogout::pack(session.user_id).into(), None);
 
         info!(
             target: LOG_TARGET,
