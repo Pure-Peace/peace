@@ -1,7 +1,5 @@
 use super::Queue;
-use crate::bancho_state::{
-    BanchoStateError, PacketDataPtr, Session, UserSessions,
-};
+use crate::bancho_state::{BanchoStateError, Packet, Session, UserSessions};
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
@@ -27,9 +25,7 @@ pub trait BanchoStateBackgroundService {
 pub trait UserSessionsService {
     fn user_sessions(&self) -> &Arc<UserSessions>;
 
-    fn notify_queue(&self) -> &Arc<Mutex<Queue<PacketDataPtr>>>;
-
-    async fn fetch_online_user_info(&self) -> Vec<PacketDataPtr>;
+    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet>>>;
 
     async fn create(&self, create_session: CreateSessionDto) -> Arc<Session>;
 

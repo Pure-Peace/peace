@@ -3,7 +3,6 @@ use crate::bancho_state::{
 };
 use async_trait::async_trait;
 use bancho_packets::server::UserLogout;
-use derive_deref::Deref;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{
@@ -12,12 +11,7 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::{Mutex, RwLock};
-use tools::{
-    atomic::{AtomicOperation, AtomicValue, Usize, I64},
-    cache::{CachedRwLock, CachedValue},
-};
-
-pub const DEFAULT_ONLINE_USER_INFO_CACHE_EXPIRES: I64 = I64::new(60);
+use tools::atomic::{AtomicOperation, AtomicValue, Usize};
 
 #[derive(Debug, Default)]
 pub struct SessionIndexes {
@@ -294,8 +288,7 @@ impl<T: Clone> Queue<T> {
 #[derive(Clone)]
 pub struct UserSessionsServiceImpl {
     user_sessions: Arc<UserSessions>,
-    online_user_info: Arc<OnlineUserInfo>,
-    notify_queue: Arc<Mutex<Queue<PacketDataPtr>>>,
+    notify_queue: Arc<Mutex<Queue<Packet>>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -326,11 +319,6 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     #[inline]
-    async fn fetch_online_user_info(&self) -> Vec<PacketDataPtr> {
-        self.online_user_info.fetch(&self).await
-    }
-
-    #[inline]
     async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
         const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
 
@@ -345,7 +333,15 @@ impl UserSessionsService for UserSessionsServiceImpl {
             Some(Arc::new(move || weak.upgrade().is_some())),
         );
 
-        session.enqueue_packets(self.fetch_online_user_info().await).await;
+        session
+            .enqueue_packets(
+                self.user_sessions
+                    .read()
+                    .await
+                    .values()
+                    .map(|session| Packet::Data(session.user_info_packets())),
+            )
+            .await;
         info!(
             target: LOG_TARGET,
             "Session created: {} [{}] ({})",
@@ -397,51 +393,5 @@ impl UserSessionsService for UserSessionsServiceImpl {
     #[inline]
     fn len(&self) -> usize {
         self.user_sessions.len()
-    }
-}
-
-#[derive(Deref)]
-pub struct OnlineUserInfo(pub CachedRwLock<HashMap<i32, Arc<Vec<u8>>>>);
-
-#[async_trait]
-impl CachedValue for OnlineUserInfo {
-    type Context = UserSessionsServiceImpl;
-    type Output = Vec<PacketDataPtr>;
-
-    #[inline]
-    async fn fetch_new(&self, context: &Self::Context) -> Self::Output {
-        let mut online_user_info = self.inner.write().await;
-
-        context
-            .user_sessions
-            .read()
-            .await
-            .values()
-            .map(|session| {
-                let packets = Arc::new(session.user_info_packets());
-                online_user_info.insert(session.user_id, packets.clone());
-                packets
-            })
-            .collect()
-    }
-
-    #[inline]
-    async fn fetch(&self, context: &Self::Context) -> Self::Output {
-        match context.online_user_info.get() {
-            Some(online_user_info) => {
-                if !online_user_info.expired {
-                    online_user_info
-                        .cache
-                        .read()
-                        .await
-                        .values()
-                        .map(|ptr| ptr.clone())
-                        .collect()
-                } else {
-                    self.fetch_new(context).await
-                }
-            },
-            None => self.fetch_new(context).await,
-        }
     }
 }
