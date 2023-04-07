@@ -3,6 +3,7 @@ pub use atomic_float::{AtomicF32, AtomicF64};
 
 use serde::{Deserialize, Serialize};
 use std::{
+    fmt::Display,
     ops::Deref,
     sync::{atomic::*, Arc},
 };
@@ -29,6 +30,12 @@ pub trait AtomicValue: Sized {
 
 pub type Atomic<T> = AtomicAny<Arc<T>>;
 pub type AtomicOption<T> = AtomicAny<Option<Arc<T>>>;
+
+impl Display for Atomic<String> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.val())
+    }
+}
 
 impl<T> Atomic<T> {
     #[inline]
