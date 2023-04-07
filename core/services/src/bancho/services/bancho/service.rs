@@ -149,7 +149,7 @@ impl BanchoService for BanchoServiceImpl {
 
                     static MOCK_COUNT: U64 = U64::new(10000);
                     const EXCLUDE_USERS: [&str; 2] = ["test1", "test"];
-                    if EXCLUDE_USERS.binary_search(&username.as_str()).is_ok() {
+                    if EXCLUDE_USERS.contains(&username.as_str()) {
                         let user = svc
                             .users_repository
                             .get_user_by_username(
