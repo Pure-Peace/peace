@@ -1,13 +1,19 @@
 use crate::bancho_state::{
-    DynUserSessionsService, Session, UserSessionsService,
+    DynUserSessionsService, PacketDataPtr, Session, UserSessionsService,
 };
 use async_trait::async_trait;
 use bancho_packets::{PacketBuilder, UserLogout};
+use derive_deref::Deref;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 use tokio::sync::RwLock;
-use tools::atomic::{AtomicOperation, AtomicValue, Usize};
+use tools::{
+    atomic::{AtomicOperation, AtomicValue, Usize, I64},
+    cache::{CachedRwLock, CachedValue},
+};
+
+pub const DEFAULT_ONLINE_USER_INFO_CACHE_EXPIRES: I64 = I64::new(60);
 
 #[derive(Debug, Default)]
 pub struct SessionIndexes {
@@ -213,15 +219,28 @@ impl Deref for UserSessions {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone)]
 pub struct UserSessionsServiceImpl {
     user_sessions: Arc<UserSessions>,
+    online_user_info: Arc<OnlineUserInfo>,
 }
 
 impl UserSessionsServiceImpl {
     #[inline]
     pub fn into_service(self) -> DynUserSessionsService {
         Arc::new(self) as DynUserSessionsService
+    }
+
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            user_sessions: Arc::default(),
+            online_user_info: OnlineUserInfo(CachedRwLock::new(
+                Default::default(),
+                DEFAULT_ONLINE_USER_INFO_CACHE_EXPIRES,
+            ))
+            .into(),
+        }
     }
 }
 
@@ -239,7 +258,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
         let session =
             self.user_sessions.create(Session::new(create_session)).await;
 
-        let login_notify = Arc::new(
+        /* let login_notify = Arc::new(
             PacketBuilder::from_batch([
                 session.user_stats_packet(),
                 session.user_presence_packet(),
@@ -260,9 +279,9 @@ impl UserSessionsService for UserSessionsServiceImpl {
             }
 
             online_user_info
-        };
+        }; */
 
-        session.push_packet(online_user_info.into()).await;
+        session.enqueue_packets(self.online_user_info.fetch(&self).await).await;
 
         info!(
             target: LOG_TARGET,
@@ -318,5 +337,51 @@ impl UserSessionsService for UserSessionsServiceImpl {
     #[inline]
     fn len(&self) -> usize {
         self.user_sessions.len()
+    }
+}
+
+#[derive(Deref)]
+pub struct OnlineUserInfo(pub CachedRwLock<HashMap<i32, Arc<Vec<u8>>>>);
+
+#[async_trait]
+impl CachedValue for OnlineUserInfo {
+    type Context = UserSessionsServiceImpl;
+    type Output = Vec<PacketDataPtr>;
+
+    #[inline]
+    async fn fetch_new(&self, context: &Self::Context) -> Self::Output {
+        let mut online_user_info = self.inner.write().await;
+
+        context
+            .user_sessions()
+            .read()
+            .await
+            .values()
+            .map(|session| {
+                let packets = Arc::new(session.user_info_packets());
+                online_user_info.insert(session.user_id, packets.clone());
+                packets
+            })
+            .collect()
+    }
+
+    #[inline]
+    async fn fetch(&self, context: &Self::Context) -> Self::Output {
+        match context.online_user_info.get() {
+            Some(online_user_info) => {
+                if !online_user_info.expired {
+                    online_user_info
+                        .cache
+                        .read()
+                        .await
+                        .values()
+                        .map(|ptr| ptr.clone())
+                        .collect()
+                } else {
+                    self.fetch_new(context).await
+                }
+            },
+            None => self.fetch_new(context).await,
+        }
     }
 }

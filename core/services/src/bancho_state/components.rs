@@ -350,6 +350,13 @@ impl Session {
     }
 
     #[inline]
+    pub fn user_info_packets(&self) -> Vec<u8> {
+        let mut info = self.user_stats_packet();
+        info.extend(self.user_presence_packet());
+        info
+    }
+
+    #[inline]
     pub fn user_stats_packet(&self) -> Vec<u8> {
         let status = &self.bancho_status;
         let stats = self.mode_stats();
