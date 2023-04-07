@@ -2,7 +2,7 @@ use crate::bancho_state::{
     DynUserSessionsService, PacketDataPtr, Session, UserSessionsService,
 };
 use async_trait::async_trait;
-use bancho_packets::UserLogout;
+use bancho_packets::server::UserLogout;
 use derive_deref::Deref;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;

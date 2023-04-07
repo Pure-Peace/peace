@@ -1,4 +1,4 @@
-use bancho_packets::{UserPresence, UserStats};
+use bancho_packets::{server::UserPresence, server::UserStats};
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::{ConnectionInfo, CreateSessionDto};

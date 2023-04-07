@@ -256,7 +256,7 @@ impl ChatService for ChatServiceImpl {
                                     BatchEnqueueBanchoPacketsRequest {
                                         targets,
                                         packets:
-                                            bancho_packets::SendMessage::pack(
+                                            bancho_packets::server::SendMessage::pack(
                                                 "test1".into(),
                                                 message.as_str().into(),
                                                 target_channel_name
@@ -295,7 +295,7 @@ impl ChatService for ChatServiceImpl {
                                             .into(),
                                         ),
                                         packets:
-                                            bancho_packets::SendMessage::pack(
+                                            bancho_packets::server::SendMessage::pack(
                                                 sender.username.unwrap().into(),
                                                 message.into(),
                                                 target_username.into(),

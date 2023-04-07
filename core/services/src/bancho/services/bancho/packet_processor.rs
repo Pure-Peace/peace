@@ -132,7 +132,7 @@ pub async fn user_channel_join<'a>(
         .map_err(handing_err)?;
 
     Ok(HandleCompleted {
-        packets: Some(bancho_packets::ChannelJoin::pack(
+        packets: Some(bancho_packets::server::ChannelJoin::pack(
             channel_info.name.into(),
         )),
     })
@@ -166,7 +166,7 @@ pub async fn user_channel_part<'a>(
         .map_err(handing_err)?;
 
     Ok(HandleCompleted {
-        packets: Some(bancho_packets::ChannelKick::pack(
+        packets: Some(bancho_packets::server::ChannelKick::pack(
             channel_info.name.into(),
         )),
     })

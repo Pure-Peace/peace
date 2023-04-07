@@ -473,7 +473,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 let packets = Arc::new(
                     PacketBuilder::new()
-                        .add(bancho_packets::ChannelInfo::pack(
+                        .add(bancho_packets::server::ChannelInfo::pack(
                             channel_info.name.as_str().into(),
                             channel_info
                                 .description
