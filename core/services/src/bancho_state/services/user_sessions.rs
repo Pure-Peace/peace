@@ -1,5 +1,5 @@
 use crate::bancho_state::{
-    DynUserSessionsService, PacketDataPtr, Session, UserSessionsService,
+    DynUserSessionsService, Packet, Session, UserSessionsService,
 };
 use async_trait::async_trait;
 use bancho_packets::server::UserLogout;
@@ -308,12 +308,7 @@ impl UserSessionsServiceImpl {
     pub fn new() -> Self {
         Self {
             user_sessions: Arc::default(),
-            online_user_info: OnlineUserInfo(CachedRwLock::new(
-                Default::default(),
-                DEFAULT_ONLINE_USER_INFO_CACHE_EXPIRES,
-            ))
-            .into(),
-            notify_queue: Arc::default(),
+            notify_queue: Arc::new(Mutex::new(Queue { messsages: Vec::new() })),
         }
     }
 }
@@ -326,7 +321,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     #[inline]
-    fn notify_queue(&self) -> &Arc<Mutex<Queue<PacketDataPtr>>> {
+    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet>>> {
         &self.notify_queue
     }
 

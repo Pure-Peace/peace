@@ -1,11 +1,10 @@
 use super::{BanchoStateService, UserSessions};
 use crate::bancho_state::{
     BanchoStateError, CreateSessionError, DynBanchoStateBackgroundService,
-    DynBanchoStateService, DynUserSessionsService, GameMode, Mods,
+    DynBanchoStateService, DynUserSessionsService, GameMode, Mods, Packet,
     PresenceFilter, Session, UserOnlineStatus,
 };
 use async_trait::async_trait;
-use bancho_packets::PacketBuilder;
 use num_traits::FromPrimitive;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
@@ -112,7 +111,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let packet = Arc::new(request.packets);
+                let packet = Packet::new_ptr(request.packets);
 
                 let user_sessions =
                     svc.user_sessions_service.user_sessions().read().await;
@@ -140,7 +139,6 @@ impl BanchoStateService for BanchoStateServiceImpl {
             Self::Local(svc) => {
                 let EnqueueBanchoPacketsRequest { target, packets } = request;
 
-                let packet = Arc::new(packets);
                 let target = Into::<BanchoPacketTarget>::into(
                     target.ok_or(BanchoStateError::InvalidArgument)?,
                 );
@@ -150,7 +148,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         .get(&user_query)
                         .await
                         .ok_or(BanchoStateError::SessionNotExists)?
-                        .push_packet(packet)
+                        .push_packet(packets.into())
                         .await;
                 } else {
                     todo!("channel handle")
@@ -175,7 +173,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
             Self::Local(svc) => {
                 let BatchEnqueueBanchoPacketsRequest { targets, packets } =
                     request;
-                let packets = Arc::new(packets);
+                let packets = Packet::new_ptr(packets);
 
                 let user_sessions =
                     svc.user_sessions_service.user_sessions().read().await;
@@ -233,7 +231,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         .dequeue_packet(Some(&mut session_packet_queue))
                         .await
                     {
-                        data.extend(packet.iter());
+                        data.extend(packet);
                     }
 
                     let notify = svc
@@ -244,7 +242,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         .receive_all(&session.user_id);
 
                     for packet in notify {
-                        data.extend(packet.iter());
+                        data.extend(packet);
                     }
                 } else {
                     todo!("channel handle")
@@ -471,21 +469,18 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let channel_info =
                     channel_info.ok_or(BanchoStateError::InvalidArgument)?;
 
-                let packets = Arc::new(
-                    PacketBuilder::new()
-                        .add(bancho_packets::server::ChannelInfo::pack(
-                            channel_info.name.as_str().into(),
-                            channel_info
-                                .description
-                                .map(|s| s.into())
-                                .unwrap_or_default(),
-                            channel_info
-                                .counter
-                                .ok_or(BanchoStateError::InvalidArgument)?
-                                .bancho as i16,
-                        ))
-                        .build(),
-                );
+                let packets =
+                    Packet::new_ptr(bancho_packets::server::ChannelInfo::pack(
+                        channel_info.name.as_str().into(),
+                        channel_info
+                            .description
+                            .map(|s| s.into())
+                            .unwrap_or_default(),
+                        channel_info
+                            .counter
+                            .ok_or(BanchoStateError::InvalidArgument)?
+                            .bancho as i16,
+                    ));
 
                 let fails = {
                     let mut fails = Vec::<RawUserQuery>::new();

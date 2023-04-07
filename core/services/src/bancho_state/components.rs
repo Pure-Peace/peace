@@ -12,7 +12,48 @@ use uuid::Uuid;
 
 pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
-pub type PacketsQueue = Vec<PacketDataPtr>;
+
+#[derive(Debug, Clone)]
+pub enum Packet {
+    Data(PacketData),
+    Ptr(PacketDataPtr),
+}
+
+impl Packet {
+    pub fn new(data: PacketData) -> Self {
+        Self::Data(data)
+    }
+
+    pub fn new_ptr(data: PacketData) -> Self {
+        Self::Ptr(Arc::new(data))
+    }
+}
+
+impl IntoIterator for Packet {
+    type Item = u8;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Packet::Data(data) => data.into_iter(),
+            Packet::Ptr(ptr) => Arc::try_unwrap(ptr)
+                .unwrap_or_else(|ptr| (*ptr).clone())
+                .into_iter(),
+        }
+    }
+}
+
+impl From<Arc<Vec<u8>>> for Packet {
+    fn from(ptr: Arc<Vec<u8>>) -> Self {
+        Self::Ptr(ptr)
+    }
+}
+
+impl From<Vec<u8>> for Packet {
+    fn from(data: Vec<u8>) -> Self {
+        Self::Data(data)
+    }
+}
 
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash, Serialize, Deserialize)]
@@ -232,7 +273,7 @@ pub struct Session {
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
     #[serde(skip_serializing)]
-    pub packets_queue: Mutex<PacketsQueue>,
+    pub packets_queue: Mutex<Vec<Packet>>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
     pub last_active: I64,
@@ -295,7 +336,7 @@ impl Session {
     }
 
     #[inline]
-    pub async fn push_packet(&self, packet: PacketDataPtr) -> usize {
+    pub async fn push_packet(&self, packet: Packet) -> usize {
         let mut queue = self.packets_queue.lock().await;
         queue.push(packet);
         queue.len()
@@ -304,7 +345,7 @@ impl Session {
     #[inline]
     pub async fn enqueue_packets<I>(&self, packets: I) -> usize
     where
-        I: IntoIterator<Item = PacketDataPtr>,
+        I: IntoIterator<Item = Packet>,
     {
         let mut queue = self.packets_queue.lock().await;
         queue.extend(packets);
@@ -314,12 +355,10 @@ impl Session {
     #[inline]
     pub async fn dequeue_packet(
         &self,
-        queue_lock: Option<&mut MutexGuard<'_, PacketsQueue>>,
-    ) -> Option<PacketDataPtr> {
+        queue_lock: Option<&mut MutexGuard<'_, Vec<Packet>>>,
+    ) -> Option<Packet> {
         #[inline(always)]
-        fn dequeue(
-            queue: &mut MutexGuard<'_, PacketsQueue>,
-        ) -> Option<PacketDataPtr> {
+        fn dequeue(queue: &mut MutexGuard<'_, Vec<Packet>>) -> Option<Packet> {
             if !queue.is_empty() {
                 Some(queue.remove(0))
             } else {
