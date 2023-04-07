@@ -539,15 +539,15 @@ impl<'a> Iterator for PacketReader<'a> {
 /// use bancho_packets::*;
 ///
 /// let packet = PacketBuilder::new()
-///     .add(LoginReply::pack(LoginResult::Success(1009)))
-///     .add(ProtocolVersion::pack(19))
-///     .add(Notification::pack("Welcome to osu!".into()))
-///     .add(MainMenuIcon::pack(
+///     .add(server::LoginReply::pack(LoginResult::Success(1009)))
+///     .add(server::ProtocolVersion::pack(19))
+///     .add(server::Notification::pack("Welcome to osu!".into()))
+///     .add(server::MainMenuIcon::pack(
 ///         "https://image.png".into(),
 ///         "https://url.link".into(),
 ///     ))
-///     .add(SilenceEnd::pack(0))
-///     .add(ChannelInfoEnd::pack())
+///     .add(server::SilenceEnd::pack(0))
+///     .add(server::ChannelInfoEnd::pack())
 ///     .build();
 /// ```
 ///

@@ -72,22 +72,22 @@ for packet in reader {
 use bancho_packets::*;
 
 // Single packet
-let login_reply_from_server = LoginReply::pack(LoginResult::Failed(
+let login_reply_from_server = server::LoginReply::pack(LoginResult::Failed(
     LoginFailedResaon::InvalidCredentials,
 ));
-let serverside_notification = Notification::pack("hello".into());
+let serverside_notification = server::Notification::pack("hello".into());
 
 // Multiple packets with Builder
 let packets = PacketBuilder::new()
-    .add(LoginReply::pack(LoginResult::Success(1000)))
-    .add(ProtocolVersion::pack(19))
-    .add(Notification::pack("Welcome to osu!".into()))
-    .add(MainMenuIcon::pack(
+    .add(server::LoginReply::pack(LoginResult::Success(1000)))
+    .add(server::ProtocolVersion::pack(19))
+    .add(server::Notification::pack("Welcome to osu!".into()))
+    .add(server::MainMenuIcon::pack(
         "https://image.png".into(),
         "https://url.link".into(),
     ))
-    .add(SilenceEnd::pack(0))
-    .add(ChannelInfoEnd::pack())
+    .add(server::SilenceEnd::pack(0))
+    .add(server::ChannelInfoEnd::pack())
     .build();
 
 ```
