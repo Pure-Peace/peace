@@ -1,11 +1,13 @@
-use super::Queue;
 use crate::bancho_state::{BanchoStateError, Packet, Session, UserSessions};
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tools::async_collections::{BackgroundTask, BackgroundTaskError};
+use tools::{
+    async_collections::{BackgroundTask, BackgroundTaskError},
+    queue::Queue,
+};
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
 pub type DynBanchoStateBackgroundService =

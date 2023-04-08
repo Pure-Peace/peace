@@ -1,4 +1,4 @@
-use super::{BanchoStateService, ReceivedMessages, UserSessions};
+use super::{BanchoStateService, UserSessions};
 use crate::bancho_state::{
     BanchoStateError, CreateSessionError, DynBanchoStateBackgroundService,
     DynBanchoStateService, DynUserSessionsService, GameMode, Mods, Packet,
@@ -13,7 +13,7 @@ use peace_pb::{
 };
 use std::{collections::hash_map::Values, sync::Arc};
 use tonic::{transport::Channel, Code};
-use tools::atomic::AtomicValue;
+use tools::{atomic::AtomicValue, queue::ReceivedMessages};
 
 #[derive(Clone)]
 pub enum BanchoStateServiceImpl {

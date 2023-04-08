@@ -6,6 +6,7 @@ pub mod atomic;
 pub mod cache;
 pub mod constants;
 pub mod macros;
+pub mod queue;
 #[cfg(feature = "tonic_utils")]
 pub mod tonic_utils;
 

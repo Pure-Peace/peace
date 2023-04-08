@@ -6,15 +6,14 @@ use bancho_packets::server::UserLogout;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    hash::Hash,
+    collections::{BTreeMap, HashMap},
     ops::Deref,
     sync::Arc,
 };
 use tokio::sync::{Mutex, RwLock};
 use tools::{
     atomic::{AtomicOperation, AtomicValue, Usize},
-    Ulid,
+    queue::Queue,
 };
 
 #[derive(Debug, Default)]
@@ -218,98 +217,6 @@ impl Deref for UserSessions {
 
     fn deref(&self) -> &Self::Target {
         &self.indexes
-    }
-}
-
-pub type Validator = Arc<dyn Fn() -> bool + Sync + Send + 'static>;
-
-#[derive(Clone)]
-pub struct Message<T: Clone, K> {
-    pub content: T,
-    pub has_read: HashSet<K>,
-    pub validator: Option<Validator>,
-}
-
-#[derive(Clone)]
-pub struct ReceivedMessages<T: Clone> {
-    pub messages: Vec<T>,
-    pub last_msg_id: Ulid,
-}
-
-#[derive(Clone, Default)]
-pub struct Queue<T: Clone, K: Clone + Eq + Hash> {
-    pub messsages: BTreeMap<Ulid, Message<T, K>>,
-}
-
-impl<T: Clone, K: Clone + Eq + Hash> Queue<T, K> {
-    #[inline]
-    pub fn push(&mut self, content: T, validator: Option<Validator>) {
-        self.messsages.insert(
-            Ulid::generate(),
-            Message { content, has_read: HashSet::default(), validator },
-        );
-    }
-
-    #[inline]
-    pub fn push_excludes(
-        &mut self,
-        content: T,
-        excludes: impl IntoIterator<Item = K>,
-        validator: Option<Validator>,
-    ) {
-        self.messsages.insert(
-            Ulid::generate(),
-            Message {
-                content,
-                has_read: HashSet::from_iter(excludes),
-                validator,
-            },
-        );
-    }
-
-    #[inline]
-    pub fn receive(
-        &mut self,
-        read_key: &K,
-        start_msg_id: &Ulid,
-    ) -> Option<ReceivedMessages<T>> {
-        let mut should_delete = None::<Vec<Ulid>>;
-        let mut messages = None::<Vec<T>>;
-        let mut last_msg_id = None::<Ulid>;
-
-        for (msg_id, msg) in self.messsages.range_mut(start_msg_id..) {
-            if msg.has_read.contains(read_key) {
-                continue;
-            }
-
-            if let Some(valid) = &msg.validator {
-                if !valid() {
-                    match should_delete {
-                        Some(ref mut should_delete) => {
-                            should_delete.push(*msg_id)
-                        },
-                        None => should_delete = Some(vec![*msg_id]),
-                    }
-                    continue;
-                }
-            }
-
-            match messages {
-                Some(ref mut messages) => messages.push(msg.content.clone()),
-                None => messages = Some(vec![msg.content.clone()]),
-            }
-            msg.has_read.insert(read_key.clone());
-            last_msg_id = Some(*msg_id);
-        }
-
-        should_delete.map(|list| {
-            list.into_iter().map(|msg_id| self.messsages.remove(&msg_id))
-        });
-
-        messages.map(|messages| ReceivedMessages {
-            messages,
-            last_msg_id: last_msg_id.unwrap(),
-        })
     }
 }
 
