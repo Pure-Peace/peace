@@ -23,6 +23,8 @@ arc-swap = { workspace = true }
 atomic_float = { workspace = true }
 paste = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+rusty_ulid = { workspace = true }
+derive_deref = { workspace = true }
 
 # async
 tokio = { workspace = true, optional = true }

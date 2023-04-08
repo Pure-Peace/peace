@@ -27,3 +27,36 @@ impl Timestamp {
         now.as_secs() as i64
     }
 }
+
+#[derive(
+    Debug,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Clone,
+    Copy,
+    Hash,
+    derive_deref::Deref,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+pub struct Ulid(rusty_ulid::Ulid);
+
+impl Ulid {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
+    pub fn generate() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for Ulid {
+    fn default() -> Self {
+        Self(rusty_ulid::Ulid::generate())
+    }
+}
