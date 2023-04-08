@@ -25,7 +25,7 @@ pub trait BanchoStateBackgroundService {
 pub trait UserSessionsService {
     fn user_sessions(&self) -> &Arc<UserSessions>;
 
-    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet>>>;
+    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet, i32>>>;
 
     async fn create(&self, create_session: CreateSessionDto) -> Arc<Session>;
 

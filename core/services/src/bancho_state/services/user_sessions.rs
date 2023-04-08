@@ -7,6 +7,7 @@ use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
+    hash::Hash,
     ops::Deref,
     sync::Arc,
 };
@@ -223,9 +224,9 @@ impl Deref for UserSessions {
 pub type Validator = Arc<dyn Fn() -> bool + Sync + Send + 'static>;
 
 #[derive(Clone)]
-pub struct Message<T: Clone> {
+pub struct Message<T: Clone, K> {
     pub content: T,
-    pub has_read: HashSet<i32>,
+    pub has_read: HashSet<K>,
     pub validator: Option<Validator>,
 }
 
@@ -236,11 +237,11 @@ pub struct ReceivedMessages<T: Clone> {
 }
 
 #[derive(Clone, Default)]
-pub struct Queue<T: Clone> {
-    pub messsages: BTreeMap<Ulid, Message<T>>,
+pub struct Queue<T: Clone, K: Clone + Eq + Hash> {
+    pub messsages: BTreeMap<Ulid, Message<T, K>>,
 }
 
-impl<T: Clone> Queue<T> {
+impl<T: Clone, K: Clone + Eq + Hash> Queue<T, K> {
     #[inline]
     pub fn push(&mut self, content: T, validator: Option<Validator>) {
         self.messsages.insert(
@@ -253,7 +254,7 @@ impl<T: Clone> Queue<T> {
     pub fn push_excludes(
         &mut self,
         content: T,
-        excludes: impl IntoIterator<Item = i32>,
+        excludes: impl IntoIterator<Item = K>,
         validator: Option<Validator>,
     ) {
         self.messsages.insert(
@@ -269,7 +270,7 @@ impl<T: Clone> Queue<T> {
     #[inline]
     pub fn receive(
         &mut self,
-        user_id: &i32,
+        read_key: &K,
         start_msg_id: &Ulid,
     ) -> Option<ReceivedMessages<T>> {
         let mut should_delete = None::<Vec<Ulid>>;
@@ -277,7 +278,7 @@ impl<T: Clone> Queue<T> {
         let mut last_msg_id = None::<Ulid>;
 
         for (msg_id, msg) in self.messsages.range_mut(start_msg_id..) {
-            if msg.has_read.contains(user_id) {
+            if msg.has_read.contains(read_key) {
                 continue;
             }
 
@@ -297,7 +298,7 @@ impl<T: Clone> Queue<T> {
                 Some(ref mut messages) => messages.push(msg.content.clone()),
                 None => messages = Some(vec![msg.content.clone()]),
             }
-            msg.has_read.insert(*user_id);
+            msg.has_read.insert(read_key.clone());
             last_msg_id = Some(*msg_id);
         }
 
@@ -315,7 +316,7 @@ impl<T: Clone> Queue<T> {
 #[derive(Clone)]
 pub struct UserSessionsServiceImpl {
     user_sessions: Arc<UserSessions>,
-    notify_queue: Arc<Mutex<Queue<Packet>>>,
+    notify_queue: Arc<Mutex<Queue<Packet, i32>>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -343,7 +344,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     #[inline]
-    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet>>> {
+    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet, i32>>> {
         &self.notify_queue
     }
 
