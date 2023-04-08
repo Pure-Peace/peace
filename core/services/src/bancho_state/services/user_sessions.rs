@@ -6,12 +6,15 @@ use bancho_packets::server::UserLogout;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::bancho_state::UserQuery;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     ops::Deref,
     sync::Arc,
 };
 use tokio::sync::{Mutex, RwLock};
-use tools::atomic::{AtomicOperation, AtomicValue, Usize};
+use tools::{
+    atomic::{AtomicOperation, AtomicValue, Usize},
+    Ulid,
+};
 
 #[derive(Debug, Default)]
 pub struct SessionIndexes {
@@ -221,24 +224,29 @@ pub type Validator = Arc<dyn Fn() -> bool + Sync + Send + 'static>;
 
 #[derive(Clone)]
 pub struct Message<T: Clone> {
-    content: T,
-    has_read: HashSet<i32>,
-    validator: Option<Validator>,
+    pub content: T,
+    pub has_read: HashSet<i32>,
+    pub validator: Option<Validator>,
+}
+
+#[derive(Clone)]
+pub struct ReceivedMessages<T: Clone> {
+    pub messages: Vec<T>,
+    pub last_msg_id: Ulid,
 }
 
 #[derive(Clone, Default)]
 pub struct Queue<T: Clone> {
-    messsages: Vec<Message<T>>,
+    pub messsages: BTreeMap<Ulid, Message<T>>,
 }
 
 impl<T: Clone> Queue<T> {
     #[inline]
     pub fn push(&mut self, content: T, validator: Option<Validator>) {
-        self.messsages.push(Message {
-            content,
-            has_read: HashSet::default(),
-            validator,
-        })
+        self.messsages.insert(
+            Ulid::generate(),
+            Message { content, has_read: HashSet::default(), validator },
+        );
     }
 
     #[inline]
@@ -248,40 +256,55 @@ impl<T: Clone> Queue<T> {
         excludes: impl IntoIterator<Item = i32>,
         validator: Option<Validator>,
     ) {
-        let msg = Message {
-            content,
-            has_read: HashSet::from_iter(excludes),
-            validator,
-        };
-
-        self.messsages.push(msg)
+        self.messsages.insert(
+            Ulid::generate(),
+            Message {
+                content,
+                has_read: HashSet::from_iter(excludes),
+                validator,
+            },
+        );
     }
 
     #[inline]
-    pub fn receive_all(&mut self, user_id: &i32) -> Vec<T> {
-        let mut messages = Vec::new();
-        let mut removed = 0;
-        for i in 0..self.messsages.len() {
-            let i = i - removed;
-            let msg = &mut self.messsages[i];
+    pub fn receive(
+        &mut self,
+        user_id: &i32,
+        start_msg_id: &Ulid,
+    ) -> Option<ReceivedMessages<T>> {
+        let mut should_delete = None::<Vec<Ulid>>;
+        let mut messages = None::<Vec<T>>;
+        let mut last_msg_id = None::<Ulid>;
 
+        for (msg_id, msg) in self.messsages.range_mut(start_msg_id..) {
             if msg.has_read.contains(user_id) {
                 continue;
             }
 
             if let Some(valid) = &msg.validator {
                 if !valid() {
-                    self.messsages.remove(i);
-                    removed += 1;
+                    match should_delete {
+                        Some(ref mut should_delete) => {
+                            should_delete.push(*msg_id)
+                        },
+                        None => should_delete = Some(vec![*msg_id]),
+                    }
                     continue;
                 }
             }
 
-            messages.push(msg.content.clone());
+            match messages {
+                Some(ref mut messages) => messages.push(msg.content.clone()),
+                None => messages = Some(vec![msg.content.clone()]),
+            }
             msg.has_read.insert(*user_id);
+            last_msg_id = Some(*msg_id);
         }
 
-        messages
+        messages.map(|messages| ReceivedMessages {
+            messages,
+            last_msg_id: last_msg_id.unwrap(),
+        })
     }
 }
 
@@ -301,7 +324,9 @@ impl UserSessionsServiceImpl {
     pub fn new() -> Self {
         Self {
             user_sessions: Arc::default(),
-            notify_queue: Arc::new(Mutex::new(Queue { messsages: Vec::new() })),
+            notify_queue: Arc::new(Mutex::new(Queue {
+                messsages: BTreeMap::new(),
+            })),
         }
     }
 }

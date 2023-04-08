@@ -99,6 +99,7 @@ arc-swap = "1.6"
 memmap2 = "0.5"
 maxminddb = "0.23"
 atomic_float = "0.1"
+rusty_ulid = "2.0"
 
 # derives
 bitmask-enum = "2.1"

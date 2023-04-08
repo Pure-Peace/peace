@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, I64},
-    Timestamp,
+    Timestamp, Ulid,
 };
 use uuid::Uuid;
 
@@ -274,6 +274,7 @@ pub struct Session {
     pub connection_info: ConnectionInfo,
     #[serde(skip_serializing)]
     pub packets_queue: Mutex<Vec<Packet>>,
+    pub notify_index: Atomic<Ulid>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
     pub last_active: I64,

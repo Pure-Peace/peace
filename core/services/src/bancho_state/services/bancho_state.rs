@@ -1,4 +1,4 @@
-use super::{BanchoStateService, UserSessions};
+use super::{BanchoStateService, ReceivedMessages, UserSessions};
 use crate::bancho_state::{
     BanchoStateError, CreateSessionError, DynBanchoStateBackgroundService,
     DynBanchoStateService, DynUserSessionsService, GameMode, Mods, Packet,
@@ -234,15 +234,21 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         data.extend(packet);
                     }
 
-                    let notify = svc
-                        .user_sessions_service
-                        .notify_queue()
-                        .lock()
-                        .await
-                        .receive_all(&session.user_id);
+                    if let Some(ReceivedMessages { messages, last_msg_id }) =
+                        svc.user_sessions_service
+                            .notify_queue()
+                            .lock()
+                            .await
+                            .receive(
+                                &session.user_id,
+                                &session.notify_index.load(),
+                            )
+                    {
+                        for packet in messages {
+                            data.extend(packet);
+                        }
 
-                    for packet in notify {
-                        data.extend(packet);
+                        session.notify_index.set(last_msg_id.into());
                     }
                 } else {
                     todo!("channel handle")
