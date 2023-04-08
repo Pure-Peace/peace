@@ -301,6 +301,10 @@ impl<T: Clone> Queue<T> {
             last_msg_id = Some(*msg_id);
         }
 
+        should_delete.map(|list| {
+            list.into_iter().map(|msg_id| self.messsages.remove(&msg_id))
+        });
+
         messages.map(|messages| ReceivedMessages {
             messages,
             last_msg_id: last_msg_id.unwrap(),
