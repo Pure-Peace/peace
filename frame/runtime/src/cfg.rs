@@ -114,9 +114,9 @@ pub struct RuntimeConfig {
 
 impl CreateRuntime for RuntimeConfig {
     fn builder(&self) -> Builder {
-        crate::builder(&self)
+        crate::builder(self)
     }
     fn runtime(&self) -> Result<tokio::runtime::Runtime, std::io::Error> {
-        crate::runtime(&self)
+        crate::runtime(self)
     }
 }
