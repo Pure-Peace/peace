@@ -203,6 +203,8 @@ pub trait LoggingConfig {
 
 /// Configure with [`LoggingConfig`].
 pub fn init(cfg: &impl LoggingConfig) {
+    println!(">> Log level: {:?} (debug_mode: {})", cfg.log_level(), cfg.debug());
+
     env_filter(Some(&format!(
         "{},{}",
         LevelFilter::from(cfg.log_level()),
