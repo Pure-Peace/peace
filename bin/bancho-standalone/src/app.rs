@@ -7,11 +7,14 @@ use peace_repositories::users::UsersRepositoryImpl;
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::{
-        BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
+        BanchoBackgroundServiceConfigs, BanchoBackgroundServiceImpl,
+        BanchoServiceImpl, CliBanchoBackgroundServiceConfigs,
+        PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
     bancho_state::{
-        BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
-        UserSessionsServiceImpl,
+        BanchoStateBackgroundServiceConfigs, BanchoStateBackgroundServiceImpl,
+        BanchoStateServiceImpl, CliBanchoStateBackgroundServiceConfigs,
+        UserSessionsRecycleConfig, UserSessionsServiceImpl,
     },
     chat::{ChannelServiceImpl, ChatServiceImpl},
     gateway::bancho_endpoints::{
@@ -52,6 +55,13 @@ pub struct BanchoStandaloneConfig {
     pub debug_endpoints: bool,
 
     #[command(flatten)]
+    pub bancho_state_background_service_configs:
+        CliBanchoStateBackgroundServiceConfigs,
+
+    #[command(flatten)]
+    pub bancho_background_service_configs: CliBanchoBackgroundServiceConfigs,
+
+    #[command(flatten)]
     pub geoip: GeoipRpcConfig,
 
     #[arg(long, short = 'P')]
@@ -90,7 +100,21 @@ impl Application for App {
             BanchoStateBackgroundServiceImpl::new(user_session_service.clone())
                 .into_service();
 
-        bancho_state_background_service.start_all();
+        let bancho_state_background_service_config =
+            BanchoStateBackgroundServiceConfigs {
+                user_sessions_recycle: UserSessionsRecycleConfig::build(
+                    self.cfg
+                        .bancho_state_background_service_configs
+                        .user_sessions_recycle_deactive_secs,
+                    self.cfg
+                        .bancho_state_background_service_configs
+                        .user_sessions_recycle_interval_secs,
+                )
+                .into(),
+            };
+
+        bancho_state_background_service
+            .start_all(bancho_state_background_service_config);
 
         let bancho_state_service = BanchoStateServiceImpl::local(
             user_session_service,
@@ -127,7 +151,19 @@ impl Application for App {
             BanchoBackgroundServiceImpl::new(password_service.cache().clone())
                 .into_service();
 
-        bancho_background_service.start_all();
+        let bancho_background_service_config = BanchoBackgroundServiceConfigs {
+            password_caches_recycle: PasswordCachesRecycleConfig::build(
+                self.cfg
+                    .bancho_background_service_configs
+                    .password_caches_recycle_deactive_secs,
+                self.cfg
+                    .bancho_background_service_configs
+                    .password_caches_recycle_interval_secs,
+            )
+            .into(),
+        };
+
+        bancho_background_service.start_all(bancho_background_service_config);
 
         let bancho_service = BanchoServiceImpl::local(
             users_repository,

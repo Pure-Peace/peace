@@ -1,3 +1,4 @@
+use crate::atomic::{Atomic, AtomicOption, AtomicValue, Bool, U64};
 use arc_swap::ArcSwapOption;
 use std::{
     future::Future,
@@ -6,6 +7,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
+    time::Duration,
 };
 use tokio::{signal, sync::Notify, task::JoinHandle};
 
@@ -160,13 +162,16 @@ impl BackgroundTaskManager {
         Self { task: Arc::new(ArcSwapOption::empty()) }
     }
 
-    pub fn start(&self, factory: BackgroundTaskFactory, manual_stop: bool) {
+    pub fn start(
+        &self,
+        factory: BackgroundTaskFactory,
+        config: DynBackgroundTaskConfig,
+    ) {
         if self.task.load().is_some() {
             return;
         }
 
-        self.task
-            .store(Some(Arc::new(BackgroundTask::start(factory, manual_stop))));
+        self.task.store(Some(Arc::new(BackgroundTask::start(factory, config))));
     }
 
     pub fn stop(
@@ -185,6 +190,90 @@ impl BackgroundTaskManager {
     }
 }
 
+pub trait BackgroundTaskConfig {
+    fn loop_exec(&self) -> bool {
+        false
+    }
+
+    fn loop_interval(&self) -> Option<Duration> {
+        None
+    }
+
+    fn manual_stop(&self) -> bool {
+        false
+    }
+}
+
+pub type DynBackgroundTaskConfig =
+    Arc<dyn BackgroundTaskConfig + Sync + Send + 'static>;
+
+#[derive(Debug, Clone, Default)]
+pub struct OnceBackgroundTaskConfig;
+
+impl BackgroundTaskConfig for OnceBackgroundTaskConfig {}
+
+#[derive(Debug, Default)]
+pub struct LoopBackgroundTaskConfig {
+    pub loop_interval: AtomicOption<Duration>,
+    pub manual_stop: Bool,
+}
+
+impl BackgroundTaskConfig for LoopBackgroundTaskConfig {
+    fn loop_exec(&self) -> bool {
+        true
+    }
+
+    fn loop_interval(&self) -> Option<Duration> {
+        self.loop_interval.val().map(|d| *d)
+    }
+
+    fn manual_stop(&self) -> bool {
+        self.manual_stop.val()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CustomBackgroundTaskConfig {
+    pub loop_exec: Bool,
+    pub loop_interval: AtomicOption<Duration>,
+    pub manual_stop: Bool,
+}
+
+impl BackgroundTaskConfig for CustomBackgroundTaskConfig {
+    fn loop_exec(&self) -> bool {
+        self.loop_exec.val()
+    }
+
+    fn loop_interval(&self) -> Option<Duration> {
+        self.loop_interval.val().map(|d| *d)
+    }
+
+    fn manual_stop(&self) -> bool {
+        self.manual_stop.val()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct CommonRecycleBackgroundTaskConfig {
+    pub dead: U64,
+    pub loop_interval: Atomic<Duration>,
+    pub manual_stop: Bool,
+}
+
+impl BackgroundTaskConfig for CommonRecycleBackgroundTaskConfig {
+    fn loop_exec(&self) -> bool {
+        true
+    }
+
+    fn loop_interval(&self) -> Option<Duration> {
+        Some(*self.loop_interval.val())
+    }
+
+    fn manual_stop(&self) -> bool {
+        self.manual_stop.val()
+    }
+}
+
 #[derive(Clone)]
 pub struct BackgroundTask {
     /// The join handle of the background service task.
@@ -195,7 +284,10 @@ pub struct BackgroundTask {
 }
 
 impl BackgroundTask {
-    pub fn start(factory: BackgroundTaskFactory, manual_stop: bool) -> Self {
+    pub fn start(
+        factory: BackgroundTaskFactory,
+        config: DynBackgroundTaskConfig,
+    ) -> Self {
         // Create a signal handle and store it in the `signal` field
         let signal = SignalHandle::new();
         let signal_cloned = signal.clone();
@@ -206,7 +298,7 @@ impl BackgroundTask {
 
         // Spawn a new task to execute the future
         let handle = Some(Arc::new(tokio::spawn(async move {
-            if manual_stop {
+            if config.manual_stop() {
                 // If manual stop is enabled, await the future until completion
                 fut.await;
                 Some(())

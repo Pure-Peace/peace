@@ -201,6 +201,18 @@ macro_rules! implAtomicValue {
     };
 }
 
+impl Bool {
+    #[inline]
+    pub fn is_true(&self) -> bool {
+        self.val()
+    }
+
+    #[inline]
+    pub fn is_false(&self) -> bool {
+        !self.is_true()
+    }
+}
+
 implAtomicValue!(
     bool, i8, u8, i16, u16, i32, u32, i64, u64, isize, usize, f32, f64
 );

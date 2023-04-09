@@ -1,9 +1,9 @@
 use super::BanchoStateBackgroundService;
 use crate::bancho_state::{
-    DynBanchoStateBackgroundService, DynUserSessionsService, UserSessions,
+    DynBanchoStateBackgroundService, DynUserSessionsService,
 };
 use async_trait::async_trait;
-use chrono::Utc;
+use clap_serde_derive::ClapSerde;
 use peace_pb::bancho_state::UserQuery;
 use std::{
     sync::Arc,
@@ -12,13 +12,11 @@ use std::{
 use tools::{
     async_collections::{
         BackgroundTask, BackgroundTaskError, BackgroundTaskFactory,
-        BackgroundTaskManager, SignalHandle,
+        BackgroundTaskManager, CommonRecycleBackgroundTaskConfig, SignalHandle,
     },
-    atomic::AtomicValue,
+    atomic::{Atomic, AtomicValue, U64},
+    lazy_init, Timestamp,
 };
-
-const DEACTIVE: i64 = 180;
-const SLEEP: Duration = Duration::from_secs(180);
 
 #[derive(Clone, Default)]
 pub struct Tasks {
@@ -40,64 +38,69 @@ impl BanchoStateBackgroundServiceImpl {
         Self { user_sessions_service, tasks: Tasks::default() }
     }
 
-    pub fn user_sessions_recycle_factory(&self) -> BackgroundTaskFactory {
+    pub fn user_sessions_recycle_factory(
+        &self,
+        config: Arc<CommonRecycleBackgroundTaskConfig>,
+    ) -> BackgroundTaskFactory {
         const LOG_TARGET: &str =
             "bancho_state::background_tasks::user_sessions_recycling";
-
-        #[inline]
-        async fn collect_deactive_users(
-            user_sessions: &Arc<UserSessions>,
-            current_timestamp: i64,
-        ) -> Vec<UserQuery> {
-            let mut users_deactive = Vec::new();
-            let user_sessions = user_sessions.read().await;
-
-            for session in user_sessions.values() {
-                if current_timestamp - session.last_active.val() > DEACTIVE {
-                    users_deactive.push(UserQuery::UserId(session.user_id));
-                }
-            }
-
-            users_deactive
-        }
 
         let user_sessions_service = self.user_sessions_service.to_owned();
 
         BackgroundTaskFactory::new(Arc::new(move |stop: SignalHandle| {
             let user_sessions_service = user_sessions_service.to_owned();
+            let cfg = config.to_owned();
 
             let task = async move {
                 loop {
-                    tokio::time::sleep(SLEEP).await;
+                    tokio::time::sleep(*cfg.loop_interval.load().as_ref())
+                        .await;
                     info!(target: LOG_TARGET, "Task started!");
                     let start = Instant::now();
 
-                    let users_deactive = collect_deactive_users(
-                        user_sessions_service.user_sessions(),
-                        Utc::now().timestamp(),
-                    )
-                    .await;
+                    let current_timestamp = Timestamp::now();
+                    let mut users_deactive = None::<Vec<UserQuery>>;
 
-                    for query in users_deactive.iter() {
-                        user_sessions_service.delete(query).await;
+                    let user_sessions =
+                        user_sessions_service.user_sessions().read().await;
+
+                    for session in user_sessions.values() {
+                        if current_timestamp - session.last_active.val()
+                            > cfg.dead.val() as i64
+                        {
+                            lazy_init!(users_deactive => users_deactive.push(UserQuery::UserId(session.user_id)), vec![UserQuery::UserId(session.user_id)]);
+                        }
                     }
 
-                    info!(
-                        target: LOG_TARGET,
-                        "Done in: {:?} ({} sessions cleared)",
-                        start.elapsed(),
-                        users_deactive.len()
-                    );
+                    if let Some(users_deactive) = users_deactive {
+                        for query in users_deactive.iter() {
+                            user_sessions_service.delete(query).await;
+                        }
+
+                        info!(
+                            target: LOG_TARGET,
+                            "Done in: {:?} ({} sessions cleared)",
+                            start.elapsed(),
+                            users_deactive.len()
+                        );
+                    } else {
+                        info!(
+                            target: LOG_TARGET,
+                            "Done in: {:?} (0 sessions cleared)",
+                            start.elapsed(),
+                        );
+                    }
                 }
             };
 
+            info!(
+                target: LOG_TARGET,
+                "Service started! (deactive={}s, sleep={:?})",
+                config.dead.val(),
+                config.loop_interval.val()
+            );
+
             Box::pin(async move {
-                info!(
-                    target: LOG_TARGET,
-                    "Service started! (deactive={}s, sleep={:?})",
-                    DEACTIVE,
-                    SLEEP
-                );
                 tokio::select!(
                     _ = task => {},
                     _ = stop.wait_signal() => {}
@@ -108,16 +111,59 @@ impl BanchoStateBackgroundServiceImpl {
     }
 }
 
+#[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
+pub struct CliBanchoStateBackgroundServiceConfigs {
+    #[default(180)]
+    #[arg(long, default_value = "180")]
+    pub user_sessions_recycle_deactive_secs: u64,
+
+    #[default(180)]
+    #[arg(long, default_value = "180")]
+    pub user_sessions_recycle_interval_secs: u64,
+}
+
+pub struct UserSessionsRecycleConfig;
+
+impl UserSessionsRecycleConfig {
+    pub fn build(
+        dead: u64,
+        loop_interval: u64,
+    ) -> Arc<CommonRecycleBackgroundTaskConfig> {
+        CommonRecycleBackgroundTaskConfig {
+            dead: U64::new(dead),
+            loop_interval: Atomic::new(Duration::from_secs(loop_interval)),
+            manual_stop: true.into(),
+        }
+        .into()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BanchoStateBackgroundServiceConfigs {
+    pub user_sessions_recycle: Arc<CommonRecycleBackgroundTaskConfig>,
+}
+
+impl BanchoStateBackgroundServiceConfigs {
+    pub fn new(
+        user_sessions_recycle: Arc<CommonRecycleBackgroundTaskConfig>,
+    ) -> Self {
+        Self { user_sessions_recycle }
+    }
+}
+
 #[async_trait]
 impl BanchoStateBackgroundService for BanchoStateBackgroundServiceImpl {
-    fn start_all(&self) {
-        self.start_user_sessions_recycle();
+    fn start_all(&self, configs: BanchoStateBackgroundServiceConfigs) {
+        self.start_user_sessions_recycle(configs.user_sessions_recycle);
     }
 
-    fn start_user_sessions_recycle(&self) {
+    fn start_user_sessions_recycle(
+        &self,
+        config: Arc<CommonRecycleBackgroundTaskConfig>,
+    ) {
         self.tasks
             .user_sessions_recycle
-            .start(self.user_sessions_recycle_factory(), true);
+            .start(self.user_sessions_recycle_factory(config.clone()), config);
     }
 
     fn stop_user_sessions_recycle(

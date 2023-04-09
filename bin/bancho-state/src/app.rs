@@ -5,8 +5,9 @@ use peace_pb::bancho_state::{
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::bancho_state::{
-    BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
-    UserSessionsServiceImpl,
+    BanchoStateBackgroundServiceConfigs, BanchoStateBackgroundServiceImpl,
+    BanchoStateServiceImpl, CliBanchoStateBackgroundServiceConfigs,
+    UserSessionsRecycleConfig, UserSessionsServiceImpl,
 };
 use std::sync::Arc;
 use tonic::{
@@ -30,6 +31,10 @@ pub struct BanchoStateConfig {
 
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
+
+    #[command(flatten)]
+    pub bancho_state_background_service_configs:
+        CliBanchoStateBackgroundServiceConfigs,
 }
 
 /// The BanchoState application struct.
@@ -68,7 +73,21 @@ impl Application for App {
             BanchoStateBackgroundServiceImpl::new(user_session_service.clone())
                 .into_service();
 
-        bancho_state_background_service.start_all();
+        let bancho_state_background_service_config =
+            BanchoStateBackgroundServiceConfigs {
+                user_sessions_recycle: UserSessionsRecycleConfig::build(
+                    self.cfg
+                        .bancho_state_background_service_configs
+                        .user_sessions_recycle_deactive_secs,
+                    self.cfg
+                        .bancho_state_background_service_configs
+                        .user_sessions_recycle_interval_secs,
+                )
+                .into(),
+            };
+
+        bancho_state_background_service
+            .start_all(bancho_state_background_service_config);
 
         let bancho_state_service = BanchoStateServiceImpl::local(
             user_session_service,

@@ -1,3 +1,4 @@
+use super::BanchoStateBackgroundServiceConfigs;
 use crate::bancho_state::{BanchoStateError, Packet, Session, UserSessions};
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
@@ -5,7 +6,9 @@ use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tools::{
-    async_collections::{BackgroundTask, BackgroundTaskError},
+    async_collections::{
+        BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
+    },
     message_queue::MessageQueue,
     Ulid,
 };
@@ -17,8 +20,11 @@ pub type DynUserSessionsService = Arc<dyn UserSessionsService + Send + Sync>;
 
 #[async_trait]
 pub trait BanchoStateBackgroundService {
-    fn start_all(&self);
-    fn start_user_sessions_recycle(&self);
+    fn start_all(&self, configs: BanchoStateBackgroundServiceConfigs);
+    fn start_user_sessions_recycle(
+        &self,
+        config: Arc<CommonRecycleBackgroundTaskConfig>,
+    );
     fn stop_user_sessions_recycle(
         &self,
     ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;

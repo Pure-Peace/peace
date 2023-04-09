@@ -1,11 +1,13 @@
-use super::PasswordCacheStore;
+use super::{BanchoBackgroundServiceConfigs, PasswordCacheStore};
 use crate::bancho::{BanchoServiceError, ProcessBanchoPacketError};
 use bancho_packets::Packet;
 use peace_domain::users::PasswordError;
 use peace_pb::bancho::*;
 use std::{net::IpAddr, sync::Arc};
 use tonic::async_trait;
-use tools::async_collections::{BackgroundTask, BackgroundTaskError};
+use tools::async_collections::{
+    BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
+};
 
 pub type DynBanchoService = Arc<dyn BanchoService + Send + Sync>;
 pub type DynBanchoBackgroundService =
@@ -14,8 +16,11 @@ pub type DynPasswordService = Arc<dyn PasswordService + Send + Sync>;
 
 #[async_trait]
 pub trait BanchoBackgroundService {
-    fn start_all(&self);
-    fn start_password_caches_recycle(&self);
+    fn start_all(&self, configs: BanchoBackgroundServiceConfigs);
+    fn start_password_caches_recycle(
+        &self,
+        config: Arc<CommonRecycleBackgroundTaskConfig>,
+    );
     fn stop_password_caches_recycle(
         &self,
     ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;

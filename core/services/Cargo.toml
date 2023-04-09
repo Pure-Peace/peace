@@ -31,6 +31,8 @@ bitmask-enum = { workspace = true }
 derive_deref = { workspace = true }
 arc-swap = { workspace = true }
 memmap2 = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
 maxminddb = { workspace = true, features = ["mmap"] }
 uuid = { workspace = true, features = ["v4"] }
 serde = { workspace = true, features = ["derive"] }
@@ -45,7 +47,7 @@ peace_db = { workspace = true }
 peace_pb = { workspace = true }
 peace_domain = { workspace = true }
 peace_repositories = { workspace = true }
-
+peace_cfg = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros"] }

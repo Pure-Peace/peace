@@ -12,7 +12,9 @@ use peace_rpc::{
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::{
-        BanchoBackgroundServiceImpl, BanchoServiceImpl, PasswordServiceImpl,
+        BanchoBackgroundServiceConfigs, BanchoBackgroundServiceImpl,
+        BanchoServiceImpl, CliBanchoBackgroundServiceConfigs,
+        PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
     bancho_state::BanchoStateServiceImpl,
     chat::ChatServiceImpl,
@@ -61,6 +63,9 @@ pub struct BanchoConfig {
 
     #[command(flatten)]
     pub chat: ChatRpcConfig,
+
+    #[command(flatten)]
+    pub bancho_background_service_configs: CliBanchoBackgroundServiceConfigs,
 
     #[arg(long, short = 'P')]
     pub geo_db_path: Option<PathBuf>,
@@ -132,7 +137,19 @@ impl Application for App {
             BanchoBackgroundServiceImpl::new(password_service.cache().clone())
                 .into_service();
 
-        bancho_background_service.start_all();
+        let bancho_background_service_config = BanchoBackgroundServiceConfigs {
+            password_caches_recycle: PasswordCachesRecycleConfig::build(
+                self.cfg
+                    .bancho_background_service_configs
+                    .password_caches_recycle_deactive_secs,
+                self.cfg
+                    .bancho_background_service_configs
+                    .password_caches_recycle_interval_secs,
+            )
+            .into(),
+        };
+
+        bancho_background_service.start_all(bancho_background_service_config);
 
         let bancho_service = BanchoServiceImpl::local(
             users_repository,

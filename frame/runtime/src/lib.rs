@@ -17,7 +17,7 @@ pub fn builder(cfg: &RuntimeConfig) -> Builder {
     let mut builder = if cfg.runtime_multi_thread {
         info!(
             "[Runtime type]: multi thread (runtime_worker_threads: {:?})",
-            cfg.runtime_worker_threads
+            cfg.runtime_worker_threads.unwrap_or(1)
         );
         runtime::Builder::new_multi_thread()
     } else {

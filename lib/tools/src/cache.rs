@@ -1,9 +1,11 @@
 use async_trait::async_trait;
-use chrono::Utc;
 use std::{future::Future, pin::Pin, sync::Arc};
 use tokio::sync::RwLock;
 
-use crate::atomic::{AtomicOption, AtomicValue, I64};
+use crate::{
+    atomic::{AtomicOption, AtomicValue, I64},
+    Timestamp,
+};
 
 #[async_trait]
 pub trait CachedValue {
@@ -42,7 +44,7 @@ impl<T> CachedAtomic<T> {
 
     #[inline]
     pub fn update_time(&self) {
-        self.last_update.set(Utc::now().timestamp());
+        self.last_update.set(Timestamp::now());
     }
 
     #[inline]
@@ -61,7 +63,7 @@ impl<T> CachedAtomic<T> {
 
     #[inline]
     pub fn is_expired(&self) -> bool {
-        Utc::now().timestamp() - self.expires.val() > self.last_update.val()
+        Timestamp::now() - self.expires.val() > self.last_update.val()
     }
 
     #[inline]
@@ -96,7 +98,7 @@ impl<T> CachedRwLock<T> {
 
     #[inline]
     pub fn update_time(&self) {
-        self.last_update.set(Utc::now().timestamp());
+        self.last_update.set(Timestamp::now());
     }
 
     #[inline]
@@ -117,7 +119,7 @@ impl<T> CachedRwLock<T> {
 
     #[inline]
     pub fn is_expired(&self) -> bool {
-        Utc::now().timestamp() - self.expires.val() > self.last_update.val()
+        Timestamp::now() - self.expires.val() > self.last_update.val()
     }
 
     #[inline]
