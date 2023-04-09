@@ -107,4 +107,12 @@ macro_rules! lazy_init {
             None => $option = Some($init),
         };
     };
+    ($option:ident, $(|)? $( $pattern:pat_param )|+ $( if $guard: expr )? => $handle: expr, $init: expr) => {
+        match $option {
+            $( $pattern )|+ $( if $guard )? => {
+                $handle;
+            },
+            None => $option = Some($init),
+        };
+    };
 }
