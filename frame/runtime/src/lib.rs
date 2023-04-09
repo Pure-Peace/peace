@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 #[macro_use]
 extern crate peace_logs;
 
@@ -15,13 +16,13 @@ pub trait CreateRuntime {
 
 pub fn builder(cfg: &RuntimeConfig) -> Builder {
     let mut builder = if cfg.runtime_multi_thread {
-        info!(
-            "[Runtime type]: multi thread (runtime_worker_threads: {:?})",
+        println!(
+            ">> Runtime: multi thread (runtime_worker_threads: {:?})",
             cfg.runtime_worker_threads.unwrap_or(1)
         );
         runtime::Builder::new_multi_thread()
     } else {
-        info!("[Runtime type]: single thread");
+        println!(">> Runtime: single thread");
         runtime::Builder::new_current_thread()
     };
 

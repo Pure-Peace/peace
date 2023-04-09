@@ -14,8 +14,6 @@ pub use rpc::*;
 pub async fn run(
     cfg: std::sync::Arc<BanchoStateConfig>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    tools::main_startup_info!();
-
     // Create a new instance of the `App.
     let app = App::new(cfg);
 
@@ -27,6 +25,8 @@ pub async fn run(
 
 /// The main entry point of the application.
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tools::main_startup_info!();
+
     let cfg = BanchoStateConfig::get();
     // Initialize the logger.
     peace_logs::init(&cfg.frame_cfg);

@@ -9,8 +9,6 @@ pub mod app;
 pub use app::*;
 
 pub async fn run(cfg: std::sync::Arc<GatewayConfig>) {
-    tools::main_startup_info!();
-
     // Create a new instance of the `App.
     let app = App::new(cfg);
 
@@ -20,6 +18,8 @@ pub async fn run(cfg: std::sync::Arc<GatewayConfig>) {
 
 /// The main entry point of the application.
 pub fn main() {
+    tools::main_startup_info!();
+
     let cfg = GatewayConfig::get();
     // Initialize the logger.
     peace_logs::init(&cfg.frame_cfg);
