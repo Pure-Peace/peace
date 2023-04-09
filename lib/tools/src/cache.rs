@@ -3,7 +3,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use tokio::sync::RwLock;
 
 use crate::{
-    atomic::{AtomicOption, AtomicValue, I64},
+    atomic::{AtomicOption, AtomicValue, U64},
     Timestamp,
 };
 
@@ -23,22 +23,22 @@ pub struct Cached<T> {
 
 pub struct CachedAtomic<T> {
     pub inner: AtomicOption<T>,
-    pub expires: I64,
-    pub last_update: I64,
+    pub expires: U64,
+    pub last_update: U64,
 }
 
 impl<T> CachedAtomic<T> {
     #[inline]
-    pub fn new(expires: I64) -> Self {
+    pub fn new(expires: U64) -> Self {
         Self {
             inner: AtomicOption::default(),
             expires,
-            last_update: I64::default(),
+            last_update: U64::default(),
         }
     }
 
     #[inline]
-    pub fn new_with_init(expires: I64, init: T, last_update: I64) -> Self {
+    pub fn new_with_init(expires: U64, init: T, last_update: U64) -> Self {
         Self { inner: AtomicOption::new(init), expires, last_update }
     }
 
@@ -48,7 +48,7 @@ impl<T> CachedAtomic<T> {
     }
 
     #[inline]
-    pub fn set_expries(&self, expires: i64) {
+    pub fn set_expries(&self, expires: u64) {
         self.expires.set(expires)
     }
 
@@ -81,18 +81,18 @@ impl<T> CachedAtomic<T> {
 
 pub struct CachedRwLock<T> {
     pub inner: RwLock<T>,
-    pub expires: I64,
-    pub last_update: I64,
+    pub expires: U64,
+    pub last_update: U64,
 }
 
 impl<T> CachedRwLock<T> {
     #[inline]
-    pub fn new(inner: RwLock<T>, expires: I64) -> Self {
-        Self { inner, expires, last_update: I64::default() }
+    pub fn new(inner: RwLock<T>, expires: U64) -> Self {
+        Self { inner, expires, last_update: U64::default() }
     }
 
     #[inline]
-    pub fn new_with_init(expires: I64, init: T, last_update: I64) -> Self {
+    pub fn new_with_init(expires: U64, init: T, last_update: U64) -> Self {
         Self { inner: RwLock::new(init), expires, last_update }
     }
 
@@ -102,7 +102,7 @@ impl<T> CachedRwLock<T> {
     }
 
     #[inline]
-    pub fn set_expries(&self, expires: i64) {
+    pub fn set_expries(&self, expires: u64) {
         self.expires.set(expires)
     }
 

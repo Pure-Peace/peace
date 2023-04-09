@@ -14,11 +14,11 @@ use peace_pb::{
 use std::sync::Arc;
 use tonic::transport::Channel;
 use tools::{
-    atomic::I64,
+    atomic::U64,
     cache::{CachedAtomic, CachedValue},
 };
 
-pub const DEFAULT_CHANNEL_CACHE_EXPIRES: I64 = I64::new(300);
+pub const DEFAULT_CHANNEL_CACHE_EXPIRES: U64 = U64::new(300);
 
 #[derive(Clone)]
 pub enum ChatServiceImpl {

@@ -62,8 +62,7 @@ impl BanchoBackgroundServiceImpl {
                         password_cache_store.lock().await;
 
                     for (key, cache) in password_cache_store.iter() {
-                        if current_timestamp - cache.last_hit()
-                            > cfg.dead.val() as i64
+                        if current_timestamp - cache.last_hit() > cfg.dead.val()
                         {
                             lazy_init!(deactive_caches => deactive_caches.push(key.to_owned()), vec![key.to_owned()]);
                         }

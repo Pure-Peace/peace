@@ -68,7 +68,7 @@ impl BanchoStateBackgroundServiceImpl {
 
                         for session in user_sessions.values() {
                             if current_timestamp - session.last_active.val()
-                                > cfg.dead.val() as i64
+                                > cfg.dead.val()
                             {
                                 lazy_init!(sessions_deactive => sessions_deactive.push(session.clone()), vec![session.clone()]);
                             }

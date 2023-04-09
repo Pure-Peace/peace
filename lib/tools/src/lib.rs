@@ -21,11 +21,11 @@ pub fn split_string(s: &str, sep: char) -> Vec<String> {
 pub struct Timestamp;
 
 impl Timestamp {
-    pub fn now() -> i64 {
-        let now = std::time::SystemTime::now()
+    pub fn now() -> u64 {
+        std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .expect("system time before Unix epoch");
-        now.as_secs() as i64
+            .expect("system time before Unix epoch")
+            .as_secs()
     }
 }
 

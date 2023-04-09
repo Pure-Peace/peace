@@ -5,7 +5,7 @@ use peace_domain::bancho_state::{ConnectionInfo, CreateSessionDto};
 use std::sync::Arc;
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
-    atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, I64},
+    atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, U32, U64},
     Timestamp, Ulid,
 };
 use uuid::Uuid;
@@ -197,22 +197,22 @@ impl PresenceFilter {
 
 #[derive(Debug, Default, Serialize)]
 pub struct ModeStats {
-    pub rank: I32,
+    pub rank: U32,
     pub pp_v2: F32,
     pub accuracy: F32,
-    pub total_hits: I32,
-    pub total_score: I64,
-    pub ranked_score: I64,
-    pub playcount: I32,
-    pub playtime: I64,
-    pub max_combo: I32,
+    pub total_hits: U32,
+    pub total_score: U64,
+    pub ranked_score: U64,
+    pub playcount: U32,
+    pub playtime: U64,
+    pub max_combo: U32,
 }
 
 #[derive(Debug, Default, Serialize)]
 pub struct BanchoStatus {
     pub online_status: Atomic<UserOnlineStatus>,
     pub description: Atomic<String>,
-    pub beatmap_id: I32,
+    pub beatmap_id: U32,
     pub beatmap_md5: Atomic<String>,
     pub mods: Atomic<Mods>,
     pub mode: Atomic<GameMode>,
@@ -224,7 +224,7 @@ impl BanchoStatus {
         &self,
         online_status: UserOnlineStatus,
         description: String,
-        beatmap_id: i32,
+        beatmap_id: u32,
         beatmap_md5: String,
         mods: Mods,
         mode: GameMode,
@@ -277,7 +277,7 @@ pub struct Session {
     pub notify_index: Atomic<Ulid>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
-    pub last_active: I64,
+    pub last_active: U64,
 }
 
 impl Session {
@@ -408,12 +408,12 @@ impl Session {
             status.beatmap_md5.to_string().into(),
             status.mods.load().bits(),
             status.mode.load().val(),
-            status.beatmap_id.val(),
-            stats.map(|s| s.ranked_score.val()).unwrap_or_default(),
+            status.beatmap_id.val() as i32,
+            stats.map(|s| s.ranked_score.val()).unwrap_or_default() as i64,
             stats.map(|s| s.accuracy.val()).unwrap_or_default(),
-            stats.map(|s| s.playcount.val()).unwrap_or_default(),
-            stats.map(|s| s.total_score.val()).unwrap_or_default(),
-            stats.map(|s| s.rank.val()).unwrap_or_default(),
+            stats.map(|s| s.playcount.val()).unwrap_or_default() as i32,
+            stats.map(|s| s.total_score.val()).unwrap_or_default() as i64,
+            stats.map(|s| s.rank.val()).unwrap_or_default() as i32,
             stats.map(|s| s.pp_v2.val() as i16).unwrap_or_default(),
         )
     }
@@ -428,7 +428,7 @@ impl Session {
             1, // todo
             self.connection_info.location.longitude as f32,
             self.connection_info.location.latitude as f32,
-            self.mode_stats().map(|s| s.rank.val()).unwrap_or_default(),
+            self.mode_stats().map(|s| s.rank.val()).unwrap_or_default() as i32,
         )
     }
 }

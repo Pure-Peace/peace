@@ -872,7 +872,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 session.bancho_status.update_all(
                     online_status,
                     description,
-                    beatmap_id,
+                    beatmap_id as u32,
                     beatmap_md5,
                     mods,
                     mode,

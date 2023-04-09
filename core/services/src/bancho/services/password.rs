@@ -12,7 +12,7 @@ pub type PasswordCacheStore =
 
 pub struct PasswordCache {
     raw: RawPassword,
-    last_hit: i64,
+    last_hit: u64,
 }
 
 impl PasswordCache {
@@ -20,7 +20,7 @@ impl PasswordCache {
         Self { raw, last_hit: Timestamp::now() }
     }
 
-    pub fn last_hit(&self) -> i64 {
+    pub fn last_hit(&self) -> u64 {
         self.last_hit
     }
 }
