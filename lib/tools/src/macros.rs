@@ -29,6 +29,34 @@ macro_rules! listening {
 }
 
 #[macro_export]
+macro_rules! main_startup_info {
+    ($($banner: expr)?) => {
+        println!("{}", $crate::constants::PEACE_BANNER);
+        $(println!("\n{}", $banner))?;
+        println!(
+            "\n>> PEACE PROJECT @ 2023\n>> Running {} v{}\n  | authors: {}\n  | git repository: {}\n  | docs website: {}\n",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_AUTHORS"),
+            env!("CARGO_PKG_REPOSITORY"),
+            env!("CARGO_PKG_HOMEPAGE")
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! framework_info {
+    ($($banner: expr)?) => {
+        $(println!("\n{}", $banner))?;
+        println!(
+            ">> Framework {} v{}\n",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+        );
+    };
+}
+
+#[macro_export]
 /// Display code execution time
 ///
 /// Examples:

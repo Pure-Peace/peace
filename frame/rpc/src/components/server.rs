@@ -13,6 +13,8 @@ use peace_pb::logs::logs_rpc_server::LogsRpcServer;
 
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
+    tools::framework_info!();
+
     // Get the configuration from the application.
     let cfg = app_cfg.frame_cfg_arc();
 

@@ -7,6 +7,8 @@ use tools::async_collections::shutdown_signal;
 
 /// Start service.
 pub async fn serve(app_cfg: impl Application) {
+    tools::framework_info!();
+
     let cfg = app_cfg.frame_cfg_arc();
     let app = router::app(app_cfg).await;
 

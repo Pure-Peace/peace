@@ -1,5 +1,6 @@
 [package]
 name = "bancho-standalone"
+banner = ""
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
@@ -34,3 +35,5 @@ peace_pb = { workspace = true }
 peace_db = { workspace = true }
 peace_services = { workspace = true }
 peace_repositories = { workspace = true }
+
+tools = { workspace = true }

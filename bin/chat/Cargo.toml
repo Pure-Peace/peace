@@ -33,3 +33,5 @@ peace_pb = { workspace = true }
 peace_db = { workspace = true }
 peace_services = { workspace = true }
 peace_repositories = { workspace = true }
+
+tools = { workspace = true }

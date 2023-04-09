@@ -10,6 +10,8 @@ pub mod app;
 pub use app::*;
 
 pub async fn run(cfg: std::sync::Arc<BanchoStandaloneConfig>) {
+    tools::main_startup_info!();
+
     // Create a new instance of the `App.
     let app = App::new(cfg);
 

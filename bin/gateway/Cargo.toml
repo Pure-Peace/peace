@@ -32,3 +32,5 @@ peace_runtime = { workspace = true }
 
 peace_pb = { workspace = true }
 peace_services = { workspace = true }
+
+tools = { workspace = true }
