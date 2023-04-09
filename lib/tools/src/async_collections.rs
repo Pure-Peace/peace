@@ -214,7 +214,7 @@ impl BackgroundTaskConfig for OnceBackgroundTaskConfig {}
 
 #[derive(Debug, Default)]
 pub struct LoopBackgroundTaskConfig {
-    pub loop_interval: AtomicOption<Duration>,
+    pub loop_interval: Atomic<Duration>,
     pub manual_stop: Bool,
 }
 
@@ -224,7 +224,7 @@ impl BackgroundTaskConfig for LoopBackgroundTaskConfig {
     }
 
     fn loop_interval(&self) -> Option<Duration> {
-        self.loop_interval.val().map(|d| *d)
+        Some(*self.loop_interval.val())
     }
 
     fn manual_stop(&self) -> bool {

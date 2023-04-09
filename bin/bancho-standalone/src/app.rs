@@ -14,7 +14,8 @@ use peace_services::{
     bancho_state::{
         BanchoStateBackgroundServiceConfigs, BanchoStateBackgroundServiceImpl,
         BanchoStateServiceImpl, CliBanchoStateBackgroundServiceConfigs,
-        UserSessionsRecycleConfig, UserSessionsServiceImpl,
+        NotifyMessagesRecycleConfig, UserSessionsRecycleConfig,
+        UserSessionsServiceImpl,
     },
     chat::{ChannelServiceImpl, ChatServiceImpl},
     gateway::bancho_endpoints::{
@@ -93,8 +94,7 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let user_session_service =
-            UserSessionsServiceImpl::new().into_service();
+        let user_session_service = Arc::new(UserSessionsServiceImpl::new());
 
         let bancho_state_background_service =
             BanchoStateBackgroundServiceImpl::new(user_session_service.clone())
@@ -109,6 +109,11 @@ impl Application for App {
                     self.cfg
                         .bancho_state_background_service_configs
                         .user_sessions_recycle_interval_secs,
+                ),
+                notify_messages_recyce: NotifyMessagesRecycleConfig::build(
+                    self.cfg
+                        .bancho_state_background_service_configs
+                        .notify_messages_recycle_interval_secs,
                 ),
             };
 

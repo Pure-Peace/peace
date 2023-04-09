@@ -17,6 +17,119 @@ use tools::{
     Ulid,
 };
 
+#[derive(Clone)]
+pub struct UserSessionsServiceImpl {
+    pub user_sessions: Arc<UserSessions>,
+    pub notify_queue: Arc<Mutex<MessageQueue<Packet, i32, Ulid>>>,
+}
+
+impl UserSessionsServiceImpl {
+    #[inline]
+    pub fn into_service(self) -> DynUserSessionsService {
+        Arc::new(self) as DynUserSessionsService
+    }
+
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            user_sessions: Arc::default(),
+            notify_queue: Arc::new(Mutex::new(MessageQueue {
+                messages: BTreeMap::new(),
+            })),
+        }
+    }
+}
+
+#[async_trait]
+impl UserSessionsService for UserSessionsServiceImpl {
+    #[inline]
+    fn user_sessions(&self) -> &Arc<UserSessions> {
+        &self.user_sessions
+    }
+
+    #[inline]
+    fn notify_queue(&self) -> &Arc<Mutex<MessageQueue<Packet, i32, Ulid>>> {
+        &self.notify_queue
+    }
+
+    #[inline]
+    async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
+        const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
+
+        let session =
+            self.user_sessions.create(Session::new(create_session)).await;
+
+        let weak = Arc::downgrade(&session);
+
+        self.notify_queue.lock().await.push_excludes(
+            session.user_info_packets().into(),
+            [session.user_id],
+            Some(Arc::new(move |_| weak.upgrade().is_some())),
+        );
+
+        session
+            .enqueue_packets(
+                self.user_sessions
+                    .read()
+                    .await
+                    .values()
+                    .map(|session| Packet::Data(session.user_info_packets())),
+            )
+            .await;
+        info!(
+            target: LOG_TARGET,
+            "Session created: {} [{}] ({})",
+            session.username.load(),
+            session.user_id,
+            session.id
+        );
+
+        session
+    }
+
+    #[inline]
+    async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
+        const LOG_TARGET: &str = "bancho_state::user_sessions::delete_session";
+
+        let session = self.user_sessions.delete(query).await?;
+
+        self.notify_queue
+            .lock()
+            .await
+            .push(UserLogout::pack(session.user_id).into(), None);
+
+        info!(
+            target: LOG_TARGET,
+            "Session deleted: {} [{}] ({})",
+            session.username.load(),
+            session.user_id,
+            session.id
+        );
+
+        Some(session)
+    }
+
+    #[inline]
+    async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
+        self.user_sessions.get(query).await
+    }
+
+    #[inline]
+    async fn exists(&self, query: &UserQuery) -> bool {
+        self.user_sessions.exists(query).await
+    }
+
+    #[inline]
+    async fn clear(&self) {
+        self.user_sessions.clear().await
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.user_sessions.len()
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct SessionIndexes {
     /// A hash map that maps session IDs to user data
@@ -218,118 +331,5 @@ impl Deref for UserSessions {
 
     fn deref(&self) -> &Self::Target {
         &self.indexes
-    }
-}
-
-#[derive(Clone)]
-pub struct UserSessionsServiceImpl {
-    user_sessions: Arc<UserSessions>,
-    notify_queue: Arc<Mutex<MessageQueue<Packet, i32, Ulid>>>,
-}
-
-impl UserSessionsServiceImpl {
-    #[inline]
-    pub fn into_service(self) -> DynUserSessionsService {
-        Arc::new(self) as DynUserSessionsService
-    }
-
-    #[inline]
-    pub fn new() -> Self {
-        Self {
-            user_sessions: Arc::default(),
-            notify_queue: Arc::new(Mutex::new(MessageQueue {
-                messsages: BTreeMap::new(),
-            })),
-        }
-    }
-}
-
-#[async_trait]
-impl UserSessionsService for UserSessionsServiceImpl {
-    #[inline]
-    fn user_sessions(&self) -> &Arc<UserSessions> {
-        &self.user_sessions
-    }
-
-    #[inline]
-    fn notify_queue(&self) -> &Arc<Mutex<MessageQueue<Packet, i32, Ulid>>> {
-        &self.notify_queue
-    }
-
-    #[inline]
-    async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
-        const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
-
-        let session =
-            self.user_sessions.create(Session::new(create_session)).await;
-
-        let weak = Arc::downgrade(&session);
-
-        self.notify_queue.lock().await.push_excludes(
-            session.user_info_packets().into(),
-            [session.user_id],
-            Some(Arc::new(move |_| weak.upgrade().is_some())),
-        );
-
-        session
-            .enqueue_packets(
-                self.user_sessions
-                    .read()
-                    .await
-                    .values()
-                    .map(|session| Packet::Data(session.user_info_packets())),
-            )
-            .await;
-        info!(
-            target: LOG_TARGET,
-            "Session created: {} [{}] ({})",
-            session.username.load(),
-            session.user_id,
-            session.id
-        );
-
-        session
-    }
-
-    #[inline]
-    async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        const LOG_TARGET: &str = "bancho_state::user_sessions::delete_session";
-
-        let session = self.user_sessions.delete(query).await?;
-
-        self.notify_queue
-            .lock()
-            .await
-            .push(UserLogout::pack(session.user_id).into(), None);
-
-        info!(
-            target: LOG_TARGET,
-            "Session deleted: {} [{}] ({})",
-            session.username.load(),
-            session.user_id,
-            session.id
-        );
-
-        Some(session)
-    }
-
-    #[inline]
-    async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        self.user_sessions.get(query).await
-    }
-
-    #[inline]
-    async fn exists(&self, query: &UserQuery) -> bool {
-        self.user_sessions.exists(query).await
-    }
-
-    #[inline]
-    async fn clear(&self) {
-        self.user_sessions.clear().await
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.user_sessions.len()
     }
 }

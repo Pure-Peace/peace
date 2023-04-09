@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tools::{
     async_collections::{
-        BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
+        BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig, LoopBackgroundTaskConfig,
     },
     message_queue::MessageQueue,
     Ulid,
@@ -26,6 +26,15 @@ pub trait BanchoStateBackgroundService {
         config: Arc<CommonRecycleBackgroundTaskConfig>,
     );
     fn stop_user_sessions_recycle(
+        &self,
+    ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;
+
+    fn start_notify_messages_recyce(
+        &self,
+        config: Arc<LoopBackgroundTaskConfig>,
+    );
+
+    fn stop_notify_messages_recyce(
         &self,
     ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;
 }

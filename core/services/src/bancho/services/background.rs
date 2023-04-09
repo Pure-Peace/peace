@@ -17,13 +17,13 @@ use tools::{
 
 #[derive(Clone, Default)]
 pub struct Tasks {
-    password_caches_recycle: BackgroundTaskManager,
+    pub password_caches_recycle: BackgroundTaskManager,
 }
 
 #[derive(Clone)]
 pub struct BanchoBackgroundServiceImpl {
-    password_cache_store: PasswordCacheStore,
-    tasks: Tasks,
+    pub password_cache_store: PasswordCacheStore,
+    pub tasks: Tasks,
 }
 
 impl BanchoBackgroundServiceImpl {
