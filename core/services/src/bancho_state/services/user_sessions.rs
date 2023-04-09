@@ -268,7 +268,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
         self.notify_queue.lock().await.push_excludes(
             session.user_info_packets().into(),
             [session.user_id],
-            Some(Arc::new(move || weak.upgrade().is_some())),
+            Some(Arc::new(move |_| weak.upgrade().is_some())),
         );
 
         session
