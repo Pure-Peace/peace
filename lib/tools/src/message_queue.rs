@@ -1,3 +1,4 @@
+use crate::lazy_init;
 use std::{
     collections::{BTreeMap, HashSet},
     hash::Hash,
@@ -91,20 +92,12 @@ where
 
             if let Some(valid) = &msg.validator {
                 if !valid() {
-                    match should_delete {
-                        Some(ref mut should_delete) => {
-                            should_delete.push(msg_id.clone())
-                        },
-                        None => should_delete = Some(vec![msg_id.clone()]),
-                    }
+                    lazy_init!(should_delete => should_delete.push(msg_id.clone()), vec![msg_id.clone()]);
                     continue;
                 }
             }
 
-            match messages {
-                Some(ref mut messages) => messages.push(msg.content.clone()),
-                None => messages = Some(vec![msg.content.clone()]),
-            }
+            lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
             msg.has_read.insert(read_key.clone());
             last_msg_id = Some(msg_id.clone());
 

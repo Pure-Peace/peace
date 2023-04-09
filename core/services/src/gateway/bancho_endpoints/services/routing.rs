@@ -13,6 +13,7 @@ use peace_pb::{
     bancho_state::{BanchoPacketTarget, UserQuery},
 };
 use std::{net::IpAddr, sync::Arc};
+use tools::lazy_init;
 
 pub struct BanchoRoutingServiceImpl {
     bancho_handler_service: DynBanchoHandlerService,
@@ -55,22 +56,12 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
                 self.bancho_handler_service
                     .process_bancho_packets(user_id, session_id, body)
                     .await?
-                    .map(|extra_packets| match builder {
-                        Some(ref mut builder) => builder.extend(extra_packets),
-                        None => {
-                            builder = Some(PacketBuilder::from(extra_packets))
-                        },
-                    });
+                    .map(|extra_packets| lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets)));
 
                 self.bancho_handler_service
                     .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
                     .await
-                    .map(|extra_packets| match builder {
-                        Some(ref mut builder) => builder.extend(extra_packets),
-                        None => {
-                            builder = Some(PacketBuilder::from(extra_packets))
-                        },
-                    });
+                    .map(|extra_packets| lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets)));
 
                 Ok(builder
                     .map(|b| b.build())

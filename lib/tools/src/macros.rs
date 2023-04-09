@@ -81,3 +81,30 @@ macro_rules! time_spent {
         )*
     };
 }
+
+#[macro_export]
+/// Lazy init or handle
+///
+/// Examples:
+/// ```rust,ignore
+/// let mut messages = None::<Vec<T>>;
+/// lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
+///
+/// // equals to:
+/// match messages {
+///     Some(ref mut messages) => messages.push(msg.content.clone()),
+///     None => messages = Some(vec![msg.content.clone()]),
+/// }
+///
+///
+/// ```
+macro_rules! lazy_init {
+    ($option: ident => $handle: expr, $init: expr) => {
+        match $option {
+            Some(ref mut $option) => {
+                $handle;
+            },
+            None => $option = Some($init),
+        };
+    };
+}

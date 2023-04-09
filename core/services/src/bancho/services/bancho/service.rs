@@ -17,7 +17,7 @@ use peace_pb::{
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
-use tools::tonic_utils::RawRequest;
+use tools::{tonic_utils::RawRequest, lazy_init};
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
@@ -331,14 +331,7 @@ impl BanchoService for BanchoServiceImpl {
                         .await
                     {
                         Ok(HandleCompleted { packets: Some(packets) }) => {
-                            match builder {
-                                Some(ref mut builder) => {
-                                    builder.extend(packets)
-                                },
-                                None => {
-                                    builder = Some(PacketBuilder::from(packets))
-                                },
-                            }
+                            lazy_init!(builder => builder.extend(packets), PacketBuilder::from(packets));
                         },
                         Err(err) => {
                             failed += 1;
