@@ -1,10 +1,9 @@
 use super::BanchoStateBackgroundService;
 use crate::bancho_state::{
-    DynBanchoStateBackgroundService, DynUserSessionsService,
+    DynBanchoStateBackgroundService, DynUserSessionsService, Session,
 };
 use async_trait::async_trait;
 use clap_serde_derive::ClapSerde;
-use peace_pb::bancho_state::UserQuery;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -59,22 +58,40 @@ impl BanchoStateBackgroundServiceImpl {
                     let start = Instant::now();
 
                     let current_timestamp = Timestamp::now();
-                    let mut users_deactive = None::<Vec<UserQuery>>;
+                    let mut users_deactive = None::<Vec<Arc<Session>>>;
 
-                    let user_sessions =
-                        user_sessions_service.user_sessions().read().await;
+                    {
+                        let user_sessions =
+                            user_sessions_service.user_sessions().read().await;
 
-                    for session in user_sessions.values() {
-                        if current_timestamp - session.last_active.val()
-                            > cfg.dead.val() as i64
-                        {
-                            lazy_init!(users_deactive => users_deactive.push(UserQuery::UserId(session.user_id)), vec![UserQuery::UserId(session.user_id)]);
+                        for session in user_sessions.values() {
+                            if current_timestamp - session.last_active.val()
+                                > cfg.dead.val() as i64
+                            {
+                                lazy_init!(users_deactive => users_deactive.push(session.clone()), vec![session.clone()]);
+                            }
                         }
                     }
 
                     if let Some(users_deactive) = users_deactive {
-                        for query in users_deactive.iter() {
-                            user_sessions_service.delete(query).await;
+                        {
+                            let user_sessions =
+                                user_sessions_service.user_sessions();
+                            let mut indexes = user_sessions.write().await;
+
+                            for session in users_deactive.iter() {
+                                user_sessions.delete_inner(
+                                    &mut indexes,
+                                    &session.user_id,
+                                    &session.username.load(),
+                                    &session.id,
+                                    session
+                                        .username_unicode
+                                        .load()
+                                        .as_deref()
+                                        .map(|s| s.as_str()),
+                                );
+                            }
                         }
 
                         info!(

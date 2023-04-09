@@ -70,10 +70,12 @@ impl BanchoBackgroundServiceImpl {
                     }
 
                     if let Some(deactive_caches) = deactive_caches {
-                        let mut password_cache_store = password_cache_store;
+                        {
+                            let mut password_cache_store = password_cache_store;
 
-                        for key in deactive_caches.iter() {
-                            password_cache_store.remove(key);
+                            for key in deactive_caches.iter() {
+                                password_cache_store.remove(key);
+                            }
                         }
 
                         info!(

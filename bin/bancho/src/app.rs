@@ -145,8 +145,7 @@ impl Application for App {
                 self.cfg
                     .bancho_background_service_configs
                     .password_caches_recycle_interval_secs,
-            )
-            .into(),
+            ),
         };
 
         bancho_background_service.start_all(bancho_background_service_config);
