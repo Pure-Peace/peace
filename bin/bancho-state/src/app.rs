@@ -5,10 +5,10 @@ use peace_pb::bancho_state::{
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::bancho_state::{
-    BanchoStateBackgroundServiceConfigs, BanchoStateBackgroundServiceImpl,
-    BanchoStateServiceImpl, CliBanchoStateBackgroundServiceConfigs,
-    NotifyMessagesRecycleConfig, UserSessionsRecycleConfig,
-    UserSessionsServiceImpl,
+    BanchoStateBackgroundService, BanchoStateBackgroundServiceConfigs,
+    BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
+    CliBanchoStateBackgroundServiceConfigs, NotifyMessagesRecycleConfig,
+    UserSessionsRecycleConfig, UserSessionsServiceImpl,
 };
 use std::sync::Arc;
 use tonic::{
@@ -69,9 +69,9 @@ impl Application for App {
     async fn service(&self, mut configured_server: Server) -> Router {
         let user_session_service = Arc::new(UserSessionsServiceImpl::new());
 
-        let bancho_state_background_service =
-            BanchoStateBackgroundServiceImpl::new(user_session_service.clone())
-                .into_service();
+        let bancho_state_background_service = Arc::new(
+            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
+        );
 
         let bancho_state_background_service_config =
             BanchoStateBackgroundServiceConfigs {

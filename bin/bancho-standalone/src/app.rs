@@ -12,10 +12,10 @@ use peace_services::{
         PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
     bancho_state::{
-        BanchoStateBackgroundServiceConfigs, BanchoStateBackgroundServiceImpl,
-        BanchoStateServiceImpl, CliBanchoStateBackgroundServiceConfigs,
-        NotifyMessagesRecycleConfig, UserSessionsRecycleConfig,
-        UserSessionsServiceImpl,
+        BanchoStateBackgroundService, BanchoStateBackgroundServiceConfigs,
+        BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
+        CliBanchoStateBackgroundServiceConfigs, NotifyMessagesRecycleConfig,
+        UserSessionsRecycleConfig, UserSessionsServiceImpl,
     },
     chat::{ChannelServiceImpl, ChatServiceImpl},
     gateway::bancho_endpoints::{
@@ -96,9 +96,9 @@ impl Application for App {
 
         let user_session_service = Arc::new(UserSessionsServiceImpl::new());
 
-        let bancho_state_background_service =
-            BanchoStateBackgroundServiceImpl::new(user_session_service.clone())
-                .into_service();
+        let bancho_state_background_service = Arc::new(
+            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
+        );
 
         let bancho_state_background_service_config =
             BanchoStateBackgroundServiceConfigs {

@@ -184,4 +184,4 @@ message ChannelUpdateNotifyRequest {
   peace.services.chat.ChannelInfo channel_info = 2;
 }
 
-message ChannelUpdateNotifyResponse { repeated RawUserQuery fails = 1; }
+message ChannelUpdateNotifyResponse {}

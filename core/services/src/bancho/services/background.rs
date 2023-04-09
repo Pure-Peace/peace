@@ -58,7 +58,7 @@ impl BanchoBackgroundServiceImpl {
                     let current_timestamp = Timestamp::now();
                     let mut deactive_caches = None::<Vec<String>>;
 
-                    let password_cache_store =
+                    let mut password_cache_store =
                         password_cache_store.lock().await;
 
                     for (key, cache) in password_cache_store.iter() {
@@ -69,27 +69,21 @@ impl BanchoBackgroundServiceImpl {
                         }
                     }
 
-                    if let Some(deactive_caches) = deactive_caches {
-                        {
-                            let mut password_cache_store = password_cache_store;
-
+                    let removed_count = match deactive_caches {
+                        Some(deactive_caches) => {
                             for key in deactive_caches.iter() {
                                 password_cache_store.remove(key);
                             }
-                        }
-
-                        info!(
-                            target: LOG_TARGET,
-                            "Done in: {:?} ({} caches cleared)",
-                            start.elapsed(),
                             deactive_caches.len()
-                        );
-                    }
+                        },
+                        None => 0,
+                    };
 
                     info!(
                         target: LOG_TARGET,
-                        "Done in: {:?} (0 caches cleared)",
+                        "Done in: {:?} ({} caches removed)",
                         start.elapsed(),
+                        removed_count
                     );
                 }
             };

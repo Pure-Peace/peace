@@ -1,8 +1,11 @@
-use super::{BanchoStateService, UserSessions};
+use super::{
+    BanchoStateBackgroundServiceImpl, BanchoStateService, UserSessions,
+    UserSessionsServiceImpl,
+};
 use crate::bancho_state::{
-    BanchoStateError, CreateSessionError, DynBanchoStateBackgroundService,
-    DynBanchoStateService, DynUserSessionsService, GameMode, Mods, Packet,
-    PresenceFilter, Session, UserOnlineStatus,
+    BanchoStateError, CreateSessionError, DynBanchoStateService, GameMode,
+    Mods, Packet, PresenceFilter, Session, UserOnlineStatus,
+    UserSessionsService,
 };
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
@@ -31,8 +34,8 @@ impl BanchoStateServiceImpl {
     }
 
     pub fn local(
-        user_sessions_service: DynUserSessionsService,
-        bancho_state_background_service: DynBanchoStateBackgroundService,
+        user_sessions_service: Arc<UserSessionsServiceImpl>,
+        bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
     ) -> Self {
         Self::Local(BanchoStateServiceLocal::new(
             user_sessions_service,
@@ -56,15 +59,15 @@ impl BanchoStateServiceRemote {
 
 #[derive(Clone)]
 pub struct BanchoStateServiceLocal {
-    user_sessions_service: DynUserSessionsService,
+    user_sessions_service: Arc<UserSessionsServiceImpl>,
     #[allow(dead_code)]
-    bancho_state_background_service: DynBanchoStateBackgroundService,
+    bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
 }
 
 impl BanchoStateServiceLocal {
     pub fn new(
-        user_sessions_service: DynUserSessionsService,
-        bancho_state_background_service: DynBanchoStateBackgroundService,
+        user_sessions_service: Arc<UserSessionsServiceImpl>,
+        bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
     ) -> Self {
         Self { user_sessions_service, bancho_state_background_service }
     }
@@ -114,7 +117,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let packet = Packet::new_ptr(request.packets);
 
                 let user_sessions =
-                    svc.user_sessions_service.user_sessions().read().await;
+                    svc.user_sessions_service.user_sessions.read().await;
 
                 for session in user_sessions.values() {
                     session.push_packet(packet.clone()).await;
@@ -489,41 +492,38 @@ impl BanchoStateService for BanchoStateServiceImpl {
                             .bancho as i16,
                     ));
 
-                let fails = {
-                    let mut fails = Vec::<RawUserQuery>::new();
-                    let indexes =
-                        svc.user_sessions_service.user_sessions().read().await;
+                match notify_targets {
+                    Some(notify_targets) => {
+                        let indexes = svc
+                            .user_sessions_service
+                            .user_sessions()
+                            .read()
+                            .await;
 
-                    match notify_targets {
-                        Some(notify_targets) => {
-                            let notify_targets = notify_targets
-                                .value
-                                .into_iter()
-                                .map(|t| t.into())
-                                .collect::<Vec<UserQuery>>();
+                        let notify_targets = notify_targets
+                            .value
+                            .into_iter()
+                            .map(|t| t.into())
+                            .collect::<Vec<UserQuery>>();
 
-                            for user_query in notify_targets {
-                                if let Some(session) = UserSessions::get_inner(
-                                    &indexes,
-                                    &user_query,
-                                ) {
-                                    session.push_packet(packets.clone()).await;
-                                } else {
-                                    fails.push(user_query.into())
-                                }
-                            }
-                        },
-                        None => {
-                            for session in indexes.values() {
+                        for user_query in notify_targets {
+                            if let Some(session) =
+                                UserSessions::get_inner(&indexes, &user_query)
+                            {
                                 session.push_packet(packets.clone()).await;
                             }
-                        },
-                    }
+                        }
+                    },
+                    None => {
+                        svc.user_sessions_service
+                            .notify_queue
+                            .lock()
+                            .await
+                            .push(packets.clone(), None);
+                    },
+                }
 
-                    fails
-                };
-
-                Ok(ChannelUpdateNotifyResponse { fails })
+                Ok(ChannelUpdateNotifyResponse::default())
             },
         }
     }
