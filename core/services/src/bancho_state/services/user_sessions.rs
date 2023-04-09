@@ -13,7 +13,8 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 use tools::{
     atomic::{AtomicOperation, AtomicValue, Usize},
-    queue::Queue,
+    message_queue::MessageQueue,
+    Ulid,
 };
 
 #[derive(Debug, Default)]
@@ -223,7 +224,7 @@ impl Deref for UserSessions {
 #[derive(Clone)]
 pub struct UserSessionsServiceImpl {
     user_sessions: Arc<UserSessions>,
-    notify_queue: Arc<Mutex<Queue<Packet, i32>>>,
+    notify_queue: Arc<Mutex<MessageQueue<Packet, i32, Ulid>>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -236,7 +237,7 @@ impl UserSessionsServiceImpl {
     pub fn new() -> Self {
         Self {
             user_sessions: Arc::default(),
-            notify_queue: Arc::new(Mutex::new(Queue {
+            notify_queue: Arc::new(Mutex::new(MessageQueue {
                 messsages: BTreeMap::new(),
             })),
         }
@@ -251,7 +252,7 @@ impl UserSessionsService for UserSessionsServiceImpl {
     }
 
     #[inline]
-    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet, i32>>> {
+    fn notify_queue(&self) -> &Arc<Mutex<MessageQueue<Packet, i32, Ulid>>> {
         &self.notify_queue
     }
 

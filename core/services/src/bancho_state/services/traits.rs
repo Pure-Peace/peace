@@ -6,7 +6,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tools::{
     async_collections::{BackgroundTask, BackgroundTaskError},
-    queue::Queue,
+    message_queue::MessageQueue,
+    Ulid,
 };
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
@@ -27,7 +28,7 @@ pub trait BanchoStateBackgroundService {
 pub trait UserSessionsService {
     fn user_sessions(&self) -> &Arc<UserSessions>;
 
-    fn notify_queue(&self) -> &Arc<Mutex<Queue<Packet, i32>>>;
+    fn notify_queue(&self) -> &Arc<Mutex<MessageQueue<Packet, i32, Ulid>>>;
 
     async fn create(&self, create_session: CreateSessionDto) -> Arc<Session>;
 

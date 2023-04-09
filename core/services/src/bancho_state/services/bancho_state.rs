@@ -13,7 +13,7 @@ use peace_pb::{
 };
 use std::{collections::hash_map::Values, sync::Arc};
 use tonic::{transport::Channel, Code};
-use tools::{atomic::AtomicValue, queue::ReceivedMessages};
+use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
 #[derive(Clone)]
 pub enum BanchoStateServiceImpl {
@@ -242,6 +242,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                             .receive(
                                 &session.user_id,
                                 &session.notify_index.load(),
+                                None,
                             )
                     {
                         for packet in messages {

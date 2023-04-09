@@ -6,7 +6,7 @@ pub mod atomic;
 pub mod cache;
 pub mod constants;
 pub mod macros;
-pub mod queue;
+pub mod message_queue;
 #[cfg(feature = "tonic_utils")]
 pub mod tonic_utils;
 
@@ -49,15 +49,16 @@ impl Ulid {
     pub fn new() -> Self {
         Self::default()
     }
-
-    #[inline]
-    pub fn generate() -> Self {
-        Self::new()
-    }
 }
 
 impl Default for Ulid {
     fn default() -> Self {
         Self(rusty_ulid::Ulid::generate())
+    }
+}
+
+impl message_queue::MessageId for Ulid {
+    fn generate() -> Self {
+        Self::new()
     }
 }
