@@ -1,5 +1,6 @@
 use crate::bancho_state::{
     DynUserSessionsService, Packet, Session, UserSessionsService,
+    PRESENCE_SHARD,
 };
 use async_trait::async_trait;
 use bancho_packets::server::UserLogout;
@@ -62,25 +63,32 @@ impl UserSessionsService for UserSessionsServiceImpl {
         let weak = Arc::downgrade(&session);
 
         self.notify_queue.lock().await.push_excludes(
-            session.user_info_packets().into(),
+            bancho_packets::server::UserPresenceSingle::pack(session.user_id)
+                .into(),
             [session.user_id],
             Some(Arc::new(move |_| weak.upgrade().is_some())),
         );
 
-        let user_ids = {
-            self.user_sessions
-                .read()
-                .await
-                .keys()
-                .cloned()
-                .collect::<Vec<i32>>()
-        };
+        let online_users = self
+            .user_sessions
+            .read()
+            .await
+            .keys()
+            .cloned()
+            .collect::<Vec<i32>>();
 
-        session
-            .push_packet(Packet::Data(
-                bancho_packets::server::UserPresenceBundle::pack(&user_ids),
+        let mut pending_packets =
+            Vec::with_capacity(1 + online_users.len() / PRESENCE_SHARD);
+
+        pending_packets.push(Packet::Data(session.user_info_packets()));
+
+        for shard in online_users.chunks(PRESENCE_SHARD) {
+            pending_packets.push(Packet::Data(
+                bancho_packets::server::UserPresenceBundle::pack(shard),
             ))
-            .await;
+        }
+
+        session.enqueue_packets(pending_packets).await;
 
         info!(
             target: LOG_TARGET,
