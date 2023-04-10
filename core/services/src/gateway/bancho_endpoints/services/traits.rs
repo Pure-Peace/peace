@@ -9,6 +9,7 @@ use peace_pb::{
     bancho_state::{BanchoPacketTarget, UserQuery},
 };
 use std::{net::IpAddr, sync::Arc};
+use tools::Ulid;
 
 pub type DynBanchoRoutingService = Arc<dyn BanchoRoutingService + Send + Sync>;
 pub type DynBanchoHandlerService = Arc<dyn BanchoHandlerService + Send + Sync>;
@@ -112,7 +113,7 @@ pub trait BanchoHandlerService {
     async fn process_bancho_packets(
         &self,
         user_id: i32,
-        session_id: String,
+        session_id: Ulid,
         body: Vec<u8>,
     ) -> Result<Option<Vec<u8>>, BanchoHttpError>;
 

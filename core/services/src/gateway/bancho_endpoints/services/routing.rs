@@ -46,9 +46,7 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
             Some(BanchoClientToken(session_id)) => {
                 let user_id = self
                     .bancho_handler_service
-                    .check_user_session(UserQuery::SessionId(
-                        session_id.to_owned(),
-                    ))
+                    .check_user_session(UserQuery::SessionId(session_id))
                     .await?;
 
                 let mut builder = None::<PacketBuilder>;

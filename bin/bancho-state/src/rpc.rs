@@ -75,7 +75,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<ExecSuccess>, Status> {
         self.bancho_state_service
-            .delete_user_session(request.into_inner().into())
+            .delete_user_session(request.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -86,7 +86,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<UserSessionExistsResponse>, Status> {
         self.bancho_state_service
-            .check_user_session_exists(request.into_inner().into())
+            .check_user_session_exists(request.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -97,7 +97,7 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<GetUserSessionResponse>, Status> {
         self.bancho_state_service
-            .get_user_session(request.into_inner().into())
+            .get_user_session(request.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)

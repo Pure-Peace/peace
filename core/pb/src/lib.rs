@@ -1,25 +1,27 @@
 pub mod protobufs;
 pub use protobufs::*;
+use tonic::{Code, Status};
 
 pub const OUT_DIR: &str = "generated";
 
-#[derive(Debug, Clone)]
-pub struct ConvertError(String);
+#[derive(thiserror::Error, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConvertError {
+    #[error(transparent)]
+    DecodingError(#[from] tools::DecodingError),
+    #[error("invalid params")]
+    InvalidParams,
+    #[error("from Channel target is not support")]
+    FromChannelTarget,
+}
 
 impl ConvertError {
-    pub fn new<D: ::core::fmt::Display>(raw: D) -> Self {
-        Self(raw.to_string())
+    fn tonic_code(&self) -> Code {
+        Code::InvalidArgument
     }
 }
 
-impl ToString for ConvertError {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
-
-impl From<ConvertError> for String {
+impl From<ConvertError> for Status {
     fn from(err: ConvertError) -> Self {
-        err.0
+        Status::new(err.tonic_code(), err.to_string())
     }
 }

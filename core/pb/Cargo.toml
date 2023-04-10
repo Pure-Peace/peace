@@ -16,6 +16,9 @@ serde = { workspace = true, features = ["derive"] }
 
 
 bitmask-enum = { workspace = true }
+thiserror = { workspace = true }
+
+tools = { workspace = true }
 
 
 [build-dependencies]

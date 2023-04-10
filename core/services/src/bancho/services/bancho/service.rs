@@ -13,11 +13,12 @@ use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
     chat::GetPublicChannelsResponse,
+    ConvertError,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{net::IpAddr, sync::Arc, time::Instant};
+use std::{net::IpAddr, str::FromStr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
-use tools::{tonic_utils::RawRequest, lazy_init};
+use tools::{lazy_init, tonic_utils::RawRequest, Ulid};
 
 #[derive(Clone)]
 pub enum BanchoServiceImpl {
@@ -493,7 +494,8 @@ impl BanchoService for BanchoServiceImpl {
                 let _ = svc
                     .bancho_state_service
                     .check_user_session_exists(UserQuery::SessionId(
-                        request.session_id,
+                        Ulid::from_str(request.session_id.as_str())
+                            .map_err(ConvertError::DecodingError)?,
                     ))
                     .await;
 
@@ -520,10 +522,18 @@ impl BanchoService for BanchoServiceImpl {
                     .bancho_state_service
                     .send_user_stats_packet(SendUserStatsPacketRequest {
                         user_query: Some(
-                            UserQuery::SessionId(session_id.to_owned()).into(),
+                            UserQuery::SessionId(
+                                Ulid::from_str(session_id.as_str())
+                                    .map_err(ConvertError::DecodingError)?,
+                            )
+                            .into(),
                         ),
                         to: Some(
-                            BanchoPacketTarget::SessionId(session_id).into(),
+                            BanchoPacketTarget::SessionId(
+                                Ulid::from_str(session_id.as_str())
+                                    .map_err(ConvertError::DecodingError)?,
+                            )
+                            .into(),
                         ),
                     })
                     .await?;
@@ -551,7 +561,11 @@ impl BanchoService for BanchoServiceImpl {
                     .bancho_state_service
                     .send_all_presences(SendAllPresencesRequest {
                         to: Some(
-                            BanchoPacketTarget::SessionId(session_id).into(),
+                            BanchoPacketTarget::SessionId(
+                                Ulid::from_str(session_id.as_str())
+                                    .map_err(ConvertError::DecodingError)?,
+                            )
+                            .into(),
                         ),
                     })
                     .await?;
@@ -585,8 +599,11 @@ impl BanchoService for BanchoServiceImpl {
                                 })
                                 .collect(),
                             to: Some(
-                                BanchoPacketTarget::SessionId(session_id)
-                                    .into(),
+                                BanchoPacketTarget::SessionId(
+                                    Ulid::from_str(session_id.as_str())
+                                        .map_err(ConvertError::DecodingError)?,
+                                )
+                                .into(),
                             ),
                         },
                     )
@@ -622,7 +639,11 @@ impl BanchoService for BanchoServiceImpl {
                     .bancho_state_service
                     .update_user_bancho_status(UpdateUserBanchoStatusRequest {
                         user_query: Some(
-                            UserQuery::SessionId(session_id).into(),
+                            UserQuery::SessionId(
+                                Ulid::from_str(session_id.as_str())
+                                    .map_err(ConvertError::DecodingError)?,
+                            )
+                            .into(),
                         ),
                         online_status,
                         description,
@@ -655,7 +676,11 @@ impl BanchoService for BanchoServiceImpl {
                 svc.bancho_state_service
                     .update_presence_filter(UpdatePresenceFilterRequest {
                         user_query: Some(
-                            UserQuery::SessionId(session_id).into(),
+                            UserQuery::SessionId(
+                                Ulid::from_str(session_id.as_str())
+                                    .map_err(ConvertError::DecodingError)?,
+                            )
+                            .into(),
                         ),
                         presence_filter,
                     })
@@ -701,7 +726,8 @@ impl BanchoService for BanchoServiceImpl {
             Self::Local(svc) => {
                 svc.bancho_state_service
                     .delete_user_session(UserQuery::SessionId(
-                        request.session_id,
+                        Ulid::from_str(request.session_id.as_str())
+                            .map_err(ConvertError::DecodingError)?,
                     ))
                     .await?;
 
@@ -731,7 +757,11 @@ impl BanchoService for BanchoServiceImpl {
                             .map(|user_id| UserQuery::UserId(user_id).into())
                             .collect(),
                         to: Some(
-                            BanchoPacketTarget::SessionId(session_id).into(),
+                            BanchoPacketTarget::SessionId(
+                                Ulid::from_str(session_id.as_str())
+                                    .map_err(ConvertError::DecodingError)?,
+                            )
+                            .into(),
                         ),
                     })
                     .await?;

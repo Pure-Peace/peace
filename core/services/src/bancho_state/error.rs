@@ -2,6 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use peace_pb::ConvertError;
 use tonic::{Code, Status};
 
 #[derive(thiserror::Error, Debug)]
@@ -18,6 +19,8 @@ pub enum BanchoStateError {
     SessionNotExists,
     #[error(transparent)]
     CreateSessionError(#[from] CreateSessionError),
+    #[error(transparent)]
+    ConvertError(#[from] ConvertError),
     #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }
@@ -27,6 +30,7 @@ impl BanchoStateError {
         match self {
             Self::SessionNotExists => Code::NotFound,
             Self::InvalidArgument => Code::InvalidArgument,
+            Self::ConvertError(_) => Code::InvalidArgument,
             _ => Code::Unknown,
         }
     }

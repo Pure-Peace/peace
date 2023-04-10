@@ -14,7 +14,7 @@ use peace_pb::{
     bancho_state::{bancho_state_rpc_client::BanchoStateRpcClient, *},
     base::ExecSuccess,
 };
-use std::{collections::hash_map::Values, sync::Arc};
+use std::sync::Arc;
 use tonic::{transport::Channel, Code};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
@@ -142,9 +142,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
             Self::Local(svc) => {
                 let EnqueueBanchoPacketsRequest { target, packets } = request;
 
-                let target = Into::<BanchoPacketTarget>::into(
-                    target.ok_or(BanchoStateError::InvalidArgument)?,
-                );
+                let target = target
+                    .ok_or(BanchoStateError::InvalidArgument)?
+                    .into_packet_target()?;
 
                 if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
                     svc.user_sessions_service
@@ -182,11 +182,9 @@ impl BanchoStateService for BanchoStateServiceImpl {
                     svc.user_sessions_service.user_sessions().read().await;
 
                 for target in targets {
-                    let target = Into::<BanchoPacketTarget>::into(target);
+                    let target = target.into_packet_target()?;
 
-                    if let Ok(user_query) =
-                        TryInto::<UserQuery>::try_into(target)
-                    {
+                    if let Ok(user_query) = target.into_user_query() {
                         if let Some(session) =
                             UserSessions::get_inner(&user_sessions, &user_query)
                         {
@@ -214,13 +212,14 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let target = Into::<BanchoPacketTarget>::into(
-                    request.target.ok_or(BanchoStateError::InvalidArgument)?,
-                );
+                let target = request
+                    .target
+                    .ok_or(BanchoStateError::InvalidArgument)?
+                    .into_packet_target()?;
 
                 let mut data = Vec::new();
 
-                if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
+                if let Ok(user_query) = target.into_user_query() {
                     let session = svc
                         .user_sessions_service
                         .get(&user_query)
@@ -308,7 +307,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 // Return the new session ID in a response.
                 Ok(CreateUserSessionResponse {
-                    session_id: session.id.to_owned(),
+                    session_id: session.id.to_string(),
                 })
             },
         }
@@ -390,7 +389,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Create a response with the user session details
                 Ok(GetUserSessionResponse {
                     // Copy the session ID into the response
-                    session_id: Some(session.id.to_owned()),
+                    session_id: Some(session.id.to_string()),
                     // Copy the user ID into the response
                     user_id: Some(session.user_id),
                     // Copy the username into the response
@@ -426,7 +425,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Get session based on the provided query
                 let session = svc
                     .user_sessions_service
-                    .get(&query.into())
+                    .get(&query.into_user_query()?)
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
@@ -436,7 +435,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 // Set the response fields based on the requested fields
                 if fields.intersects(UserSessionFields::SessionId) {
-                    res.session_id = Some(session.id.to_owned());
+                    res.session_id = Some(session.id.to_string());
                 }
 
                 if fields.intersects(UserSessionFields::UserId) {
@@ -503,7 +502,8 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         let notify_targets = notify_targets
                             .value
                             .into_iter()
-                            .map(|t| t.into())
+                            .map(|t| t.into_user_query())
+                            .filter_map(|q| q.ok())
                             .collect::<Vec<UserQuery>>();
 
                         for user_query in notify_targets {
@@ -544,9 +544,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 let indexes = user_sessions.read().await;
 
                 #[inline]
-                fn collect_data<K>(
-                    values: Values<'_, K, Arc<Session>>,
-                ) -> Vec<UserData> {
+                fn collect_data<'a, I>(values: I) -> Vec<UserData>
+                where
+                    I: Iterator<Item = &'a Arc<Session>>,
+                {
                     values
                         .map(|session| UserData {
                             json: serde_json::to_string(session)
@@ -601,7 +602,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Get session based on the provided query
                 let session = svc
                     .user_sessions_service
-                    .get(&query.into())
+                    .get(&query.into_user_query()?)
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
@@ -631,8 +632,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 if request.user_queries.is_empty() {
                     return Ok(ExecSuccess {});
                 }
-                let to =
-                    request.to.ok_or(BanchoStateError::InvalidArgument)?.into();
+                let to = request
+                    .to
+                    .ok_or(BanchoStateError::InvalidArgument)?
+                    .into_packet_target()?;
 
                 let user_stats_packets = {
                     let mut user_stats_packets = Vec::new();
@@ -641,7 +644,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         svc.user_sessions_service.user_sessions().read().await;
 
                     for raw_query in request.user_queries {
-                        let query = raw_query.into();
+                        let query = raw_query.into_user_query()?;
                         let session = match &query {
                             UserQuery::UserId(user_id) => {
                                 indexes.user_id.get(user_id)
@@ -695,9 +698,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 .map_err(BanchoStateError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let to = Into::<BanchoPacketTarget>::into(
-                    request.to.ok_or(BanchoStateError::InvalidArgument)?,
-                );
+                let to = request
+                    .to
+                    .ok_or(BanchoStateError::InvalidArgument)?
+                    .into_packet_target()?;
 
                 let presences_packets = {
                     let mut presences_packets = Vec::new();
@@ -743,9 +747,10 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 if request.user_queries.is_empty() {
                     return Ok(ExecSuccess {});
                 }
-                let to = Into::<BanchoPacketTarget>::into(
-                    request.to.ok_or(BanchoStateError::InvalidArgument)?,
-                );
+                let to = request
+                    .to
+                    .ok_or(BanchoStateError::InvalidArgument)?
+                    .into_packet_target()?;
 
                 let presences_packets = {
                     let mut presences_packets = Vec::new();
@@ -754,7 +759,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                         svc.user_sessions_service.user_sessions().read().await;
 
                     for raw_query in request.user_queries {
-                        let query = raw_query.into();
+                        let query = raw_query.into_user_query()?;
                         let session = match &query {
                             UserQuery::UserId(user_id) => {
                                 indexes.user_id.get(user_id)
@@ -821,7 +826,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
                 // Get session based on the provided query
                 let session = svc
                     .user_sessions_service
-                    .get(&query.into())
+                    .get(&query.into_user_query()?)
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 
@@ -860,7 +865,7 @@ impl BanchoStateService for BanchoStateServiceImpl {
 
                 let session = svc
                     .user_sessions_service
-                    .get(&query.into())
+                    .get(&query.into_user_query()?)
                     .await
                     .ok_or(BanchoStateError::SessionNotExists)?;
 

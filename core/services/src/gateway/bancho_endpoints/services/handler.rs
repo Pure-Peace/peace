@@ -15,6 +15,7 @@ use peace_pb::{
     },
 };
 use std::{net::IpAddr, sync::Arc};
+use tools::Ulid;
 
 #[derive(Clone)]
 pub struct BanchoHandlerServiceImpl {
@@ -64,7 +65,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     async fn process_bancho_packets(
         &self,
         user_id: i32,
-        session_id: String,
+        session_id: Ulid,
         body: Vec<u8>,
     ) -> Result<Option<Vec<u8>>, BanchoHttpError> {
         if PacketReader::new(&body).next().is_none() {
@@ -74,7 +75,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         let HandleCompleted { packets } = self
             .bancho_service
             .batch_process_bancho_packets(BatchProcessBanchoPacketsRequest {
-                session_id,
+                session_id: session_id.to_string(),
                 user_id,
                 packets: body,
             })

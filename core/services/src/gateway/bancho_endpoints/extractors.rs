@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::{parser, BanchoHttpError};
 use axum::{
     async_trait,
@@ -9,6 +11,7 @@ use axum::{
 use derive_deref::Deref;
 use hyper::header::USER_AGENT;
 use peace_pb::bancho::LoginRequest;
+use tools::Ulid;
 
 pub static OSU_USER_AGENT: HeaderName = HeaderName::from_static("osu!");
 pub static OSU_VERSION: HeaderName = HeaderName::from_static("osu-version");
@@ -63,7 +66,8 @@ where
         parts
             .headers
             .get(&OSU_VERSION)
-            .and_then(|hv| hv.to_str().ok()).map(|s| s.to_owned())
+            .and_then(|hv| hv.to_str().ok())
+            .map(|s| s.to_owned())
             .map(Self)
             .ok_or(BanchoHttpError::InvalidOsuVersionHeader)
     }
@@ -77,7 +81,7 @@ impl std::fmt::Display for BanchoClientVersion {
 
 /// Wrapper for the `osu-token` header value.
 #[derive(Debug, Deref, Serialize, Deserialize)]
-pub struct BanchoClientToken(pub String);
+pub struct BanchoClientToken(pub Ulid);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for BanchoClientToken
@@ -98,7 +102,8 @@ where
         parts
             .headers
             .get(&OSU_TOKEN)
-            .and_then(|hv| hv.to_str().ok()).map(|s| s.to_owned())
+            .and_then(|hv| hv.to_str().ok())
+            .and_then(|s| Ulid::from_str(s).ok())
             .map(Self)
             .ok_or(BanchoHttpError::InvalidOsuTokenHeader)
     }
@@ -106,7 +111,7 @@ where
 
 impl std::fmt::Display for BanchoClientToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.0.to_string())
     }
 }
 

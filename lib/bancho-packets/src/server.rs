@@ -402,7 +402,6 @@ packet_struct!(
 packet_struct!(
     PacketId::BANCHO_USER_PRESENCE_BUNDLE,
     /// #96: BANCHO_USER_PRESENCE_BUNDLE
-    /// UNUSED
     UserPresenceBundle<'a> { player_ids: &'a [i32] }
 );
 

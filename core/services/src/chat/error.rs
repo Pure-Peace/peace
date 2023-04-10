@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use peace_pb::ConvertError;
 use tonic::{Code, Status};
 
 #[derive(thiserror::Error, Debug)]
@@ -11,6 +12,8 @@ pub enum ChatServiceError {
     InvalidArgument,
     #[error("channel not exists")]
     ChannelNotExists,
+    #[error(transparent)]
+    ConvertError(#[from] ConvertError),
     #[error("bancho state error: {0}")]
     BanchoStateError(#[from] BanchoStateError),
     #[error("{}", .0.message())]
@@ -22,6 +25,7 @@ impl ChatServiceError {
         match self {
             Self::ChannelNotExists => Code::NotFound,
             Self::InvalidArgument => Code::InvalidArgument,
+            Self::ConvertError(_) => Code::InvalidArgument,
             _ => Code::Unknown,
         }
     }

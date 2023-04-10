@@ -8,7 +8,6 @@ use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, U32, U64},
     Timestamp, Ulid,
 };
-use uuid::Uuid;
 
 pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
@@ -254,7 +253,7 @@ pub struct UserModeStatSets {
 #[derive(Debug, Default, Serialize)]
 pub struct Session {
     /// Unique session ID of session.
-    pub id: String,
+    pub id: Ulid,
     /// Unique user ID.
     pub user_id: i32,
     /// User's username.
@@ -297,7 +296,7 @@ impl Session {
         } = create_session;
 
         Self {
-            id: Uuid::new_v4().to_string(),
+            id: Ulid::new(),
             user_id,
             username: username.into(),
             username_unicode: username_unicode.into(),

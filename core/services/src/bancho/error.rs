@@ -5,6 +5,7 @@ use axum::{
 };
 use bancho_packets::PacketId;
 use peace_domain::users::PasswordError;
+use peace_pb::ConvertError;
 use peace_repositories::GetUserError;
 use tonic::{Code, Status};
 
@@ -59,6 +60,8 @@ pub enum BanchoServiceError {
     LoginError(#[from] LoginError),
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
+    #[error(transparent)]
+    ConvertError(#[from] ConvertError),
     #[error("{}", .0.message())]
     RpcError(#[from] Status),
 }
@@ -68,6 +71,7 @@ impl BanchoServiceError {
         match self {
             Self::SessionNotExists => Code::NotFound,
             Self::BanchoPacketTarget => Code::InvalidArgument,
+            Self::ConvertError(_) => Code::InvalidArgument,
             _ => Code::Unknown,
         }
     }

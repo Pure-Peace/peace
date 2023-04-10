@@ -125,7 +125,7 @@ impl ChatService for ChatServiceImpl {
 
                 let channel_query = channel_query
                     .ok_or(ChatServiceError::InvalidArgument)?
-                    .into();
+                    .into_channel_query()?;
                 let platforms =
                     platforms.map(|p| PlatformsLoader::load_from_vec(p.value));
 
@@ -160,7 +160,7 @@ impl ChatService for ChatServiceImpl {
 
                 let channel_query = channel_query
                     .ok_or(ChatServiceError::InvalidArgument)?
-                    .into();
+                    .into_channel_query()?;
                 let platforms =
                     platforms.map(|p| PlatformsLoader::load_from_vec(p.value));
 
@@ -192,7 +192,7 @@ impl ChatService for ChatServiceImpl {
 
                 let channel_query = channel_query
                     .ok_or(ChatServiceError::InvalidArgument)?
-                    .into();
+                    .into_channel_query()?;
 
                 let channel = svc
                     .channel_service
@@ -222,9 +222,9 @@ impl ChatService for ChatServiceImpl {
 
                 let platform = Platform::from_u16(platform as u16)
                     .ok_or(ChatServiceError::InvalidArgument)?;
-                let target = Into::<ChatMessageTarget>::into(
-                    target.ok_or(ChatServiceError::InvalidArgument)?,
-                );
+                let target = target
+                    .ok_or(ChatServiceError::InvalidArgument)?
+                    .into_message_target()?;
 
                 match platform {
                     Platform::Bancho => match target {

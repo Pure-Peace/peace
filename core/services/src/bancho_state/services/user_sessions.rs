@@ -67,15 +67,21 @@ impl UserSessionsService for UserSessionsServiceImpl {
             Some(Arc::new(move |_| weak.upgrade().is_some())),
         );
 
+        let user_ids = {
+            self.user_sessions
+                .read()
+                .await
+                .keys()
+                .cloned()
+                .collect::<Vec<i32>>()
+        };
+
         session
-            .enqueue_packets(
-                self.user_sessions
-                    .read()
-                    .await
-                    .values()
-                    .map(|session| Packet::Data(session.user_info_packets())),
-            )
+            .push_packet(Packet::Data(
+                bancho_packets::server::UserPresenceBundle::pack(&user_ids),
+            ))
             .await;
+
         info!(
             target: LOG_TARGET,
             "Session created: {} [{}] ({})",
@@ -133,9 +139,9 @@ impl UserSessionsService for UserSessionsServiceImpl {
 #[derive(Debug, Default)]
 pub struct SessionIndexes {
     /// A hash map that maps session IDs to user data
-    pub session_id: HashMap<String, Arc<Session>>,
+    pub session_id: BTreeMap<Ulid, Arc<Session>>,
     /// A hash map that maps user IDs to user data
-    pub user_id: HashMap<i32, Arc<Session>>,
+    pub user_id: BTreeMap<i32, Arc<Session>>,
     /// A hash map that maps usernames to user data
     pub username: HashMap<String, Arc<Session>>,
     /// A hash map that maps Unicode usernames to user data
@@ -143,7 +149,7 @@ pub struct SessionIndexes {
 }
 
 impl Deref for SessionIndexes {
-    type Target = HashMap<i32, Arc<Session>>;
+    type Target = BTreeMap<i32, Arc<Session>>;
 
     fn deref(&self) -> &Self::Target {
         &self.user_id
@@ -183,7 +189,7 @@ impl UserSessions {
             }
 
             // Insert the user data into the relevant hash maps
-            indexes.session_id.insert(session.id.clone(), session.clone());
+            indexes.session_id.insert(session.id, session.clone());
             indexes.user_id.insert(session.user_id, session.clone());
             indexes
                 .username
@@ -235,7 +241,7 @@ impl UserSessions {
         indexes: &mut SessionIndexes,
         user_id: &i32,
         username: &str,
-        session_id: &str,
+        session_id: &Ulid,
         username_unicode: Option<&str>,
     ) -> Option<Arc<Session>> {
         let mut removed = None;

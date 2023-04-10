@@ -34,7 +34,6 @@ memmap2 = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
 maxminddb = { workspace = true, features = ["mmap"] }
-uuid = { workspace = true, features = ["v4"] }
 serde = { workspace = true, features = ["derive"] }
 
 
