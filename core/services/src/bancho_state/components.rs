@@ -2,7 +2,7 @@ use bancho_packets::{server::UserPresence, server::UserStats};
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::{ConnectionInfo, CreateSessionDto};
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, I32, U32, U64},
@@ -272,7 +272,7 @@ pub struct Session {
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
     #[serde(skip_serializing)]
-    pub packets_queue: Mutex<Vec<Packet>>,
+    pub packets_queue: Mutex<VecDeque<Packet>>,
     pub notify_index: Atomic<Ulid>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
@@ -307,7 +307,7 @@ impl Session {
             only_friend_pm_allowed: only_friend_pm_allowed.into(),
             connection_info,
             packets_queue: initial_packets
-                .map(|p| vec![p.into()].into())
+                .map(|init| VecDeque::from([init.into()]).into())
                 .unwrap_or_default(),
             created_at: Utc::now(),
             last_active: Timestamp::now().into(),
@@ -338,7 +338,7 @@ impl Session {
     #[inline]
     pub async fn push_packet(&self, packet: Packet) -> usize {
         let mut queue = self.packets_queue.lock().await;
-        queue.push(packet);
+        queue.push_back(packet);
         queue.len()
     }
 
@@ -355,20 +355,11 @@ impl Session {
     #[inline]
     pub async fn dequeue_packet(
         &self,
-        queue_lock: Option<&mut MutexGuard<'_, Vec<Packet>>>,
+        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
     ) -> Option<Packet> {
-        #[inline(always)]
-        fn dequeue(queue: &mut MutexGuard<'_, Vec<Packet>>) -> Option<Packet> {
-            if !queue.is_empty() {
-                Some(queue.remove(0))
-            } else {
-                None
-            }
-        }
-
         match queue_lock {
-            Some(queue) => dequeue(queue),
-            None => dequeue(&mut self.packets_queue.lock().await),
+            Some(queue) => queue.pop_front(),
+            None => self.packets_queue.lock().await.pop_front(),
         }
     }
 
