@@ -69,16 +69,21 @@ impl UserSessionsService for UserSessionsServiceImpl {
             Some(Arc::new(move |_| weak.upgrade().is_some())),
         );
 
-        let online_users = self
-            .user_sessions
-            .read()
-            .await
-            .keys()
-            .cloned()
-            .collect::<Vec<i32>>();
+        let online_users = {
+            self.user_sessions
+                .read()
+                .await
+                .keys()
+                .copied()
+                .collect::<Vec<i32>>()
+        };
 
-        let mut pending_packets =
-            Vec::with_capacity(1 + online_users.len() / PRESENCE_SHARD);
+        let online_users_len = online_users.len();
+
+        let mut pending_packets = Vec::with_capacity(
+            online_users_len / PRESENCE_SHARD
+                + if (online_users_len % PRESENCE_SHARD) > 0 { 2 } else { 1 },
+        );
 
         pending_packets.push(Packet::Data(session.user_info_packets()));
 
