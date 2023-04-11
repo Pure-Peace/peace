@@ -363,4 +363,17 @@ mod packets_writing {
             (r1, r2.as_str(), r3.as_str(), r4, r5, r6)
         )
     }
+
+    #[test]
+    fn test_packet_len_estimate() {
+        assert_eq!(
+            server::UserPresenceBundle::new(&[]).packet_len(),
+            server::UserPresenceBundle::pack(&[]).len()
+        );
+
+        assert_eq!(
+            server::UserPresenceBundle::new(&[1, 2, 3]).packet_len(),
+            server::UserPresenceBundle::pack(&[4, 5, 6]).len()
+        );
+    }
 }

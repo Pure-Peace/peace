@@ -1260,7 +1260,7 @@ pub mod macros {
             impl $(< $($lifetimes),* >)? $crate::BanchoPacketLength for $struct_name $(< $($lifetimes),* >)? {
                 #[inline]
                 fn packet_len(&self) -> usize {
-                    let mut _len = 0;
+                    let mut _len = $crate::BANCHO_PACKET_HEADER_LENGTH;
                     $(_len += self.$field_name.packet_len();)*
                     _len
                 }
