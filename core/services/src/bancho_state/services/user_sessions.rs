@@ -1,6 +1,6 @@
 use crate::bancho_state::{
     DynUserSessionsService, Packet, Session, UserSessionsService,
-    PRESENCE_SHARD,
+    PRESENCE_SHARD_SIZE,
 };
 use async_trait::async_trait;
 use bancho_packets::server::UserLogout;
@@ -77,17 +77,23 @@ impl UserSessionsService for UserSessionsServiceImpl {
                 .copied()
                 .collect::<Vec<i32>>()
         };
-
         let online_users_len = online_users.len();
 
-        let mut pending_packets = Vec::with_capacity(
-            online_users_len / PRESENCE_SHARD
-                + if (online_users_len % PRESENCE_SHARD) > 0 { 2 } else { 1 },
-        );
+        let mut presence_shard_count = online_users_len / PRESENCE_SHARD_SIZE;
+        if (online_users_len % PRESENCE_SHARD_SIZE) > 0 {
+            presence_shard_count += 1
+        };
 
-        pending_packets.push(Packet::Data(session.user_info_packets()));
+        let session_info = session.user_info_packets();
 
-        for shard in online_users.chunks(PRESENCE_SHARD) {
+        let pre_alloc_size = session_info.len()
+            + (9 + presence_shard_count * PRESENCE_SHARD_SIZE * 4);
+
+        let mut pending_packets = Vec::with_capacity(pre_alloc_size);
+
+        pending_packets.push(Packet::Data(session_info));
+
+        for shard in online_users.chunks(PRESENCE_SHARD_SIZE) {
             pending_packets.push(Packet::Data(
                 bancho_packets::server::UserPresenceBundle::pack(shard),
             ))
