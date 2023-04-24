@@ -105,19 +105,19 @@ impl ChatService for ChatServiceImpl {
         }
     }
 
-    async fn join_into_channel(
+    async fn add_user_into_channel(
         &self,
-        request: JoinIntoChannelRequest,
+        request: AddUserIntoChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
-                .join_into_channel(request)
+                .add_user_into_channel(request)
                 .await
                 .map_err(ChatServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let JoinIntoChannelRequest {
+                let AddUserIntoChannelRequest {
                     channel_query,
                     user_id,
                     platforms,
@@ -131,7 +131,7 @@ impl ChatService for ChatServiceImpl {
 
                 let channel = svc
                     .channel_service
-                    .join_user(&channel_query, user_id, platforms)
+                    .add_user(&channel_query, user_id, platforms)
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
@@ -140,19 +140,19 @@ impl ChatService for ChatServiceImpl {
         }
     }
 
-    async fn leave_from_channel(
+    async fn remove_user_platforms_from_channel(
         &self,
-        request: LeaveFromChannelRequest,
+        request: RemoveUserPlatformsFromChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
-                .leave_from_channel(request)
+                .remove_user_platforms_from_channel(request)
                 .await
                 .map_err(ChatServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let LeaveFromChannelRequest {
+                let RemoveUserPlatformsFromChannelRequest {
                     channel_query,
                     user_id,
                     platforms,
@@ -166,7 +166,7 @@ impl ChatService for ChatServiceImpl {
 
                 let channel = svc
                     .channel_service
-                    .leave_user(&channel_query, &user_id, platforms.as_deref())
+                    .remove_user_platforms(&channel_query, &user_id, platforms.as_deref())
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
@@ -175,19 +175,19 @@ impl ChatService for ChatServiceImpl {
         }
     }
 
-    async fn delete_from_channel(
+    async fn remove_user_from_channel(
         &self,
-        request: DeleteFromChannelRequest,
+        request: RemoveUserFromChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
-                .delete_from_channel(request)
+                .remove_user_from_channel(request)
                 .await
                 .map_err(ChatServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
             Self::Local(svc) => {
-                let DeleteFromChannelRequest { channel_query, user_id } =
+                let RemoveUserFromChannelRequest { channel_query, user_id } =
                     request;
 
                 let channel_query = channel_query
@@ -196,7 +196,7 @@ impl ChatService for ChatServiceImpl {
 
                 let channel = svc
                     .channel_service
-                    .delete_user(&channel_query, &user_id)
+                    .remove_user(&channel_query, &user_id)
                     .await
                     .ok_or(ChatServiceError::ChannelNotExists)?;
 
@@ -205,14 +205,14 @@ impl ChatService for ChatServiceImpl {
         }
     }
 
-    async fn send_message_to(
+    async fn send_message(
         &self,
         request: SendMessageRequest,
     ) -> Result<SendMessageResponse, ChatServiceError> {
         match self {
             Self::Remote(svc) => svc
                 .client()
-                .send_message_to(request)
+                .send_message(request)
                 .await
                 .map_err(ChatServiceError::RpcError)
                 .map(|resp| resp.into_inner()),
@@ -232,7 +232,7 @@ impl ChatService for ChatServiceImpl {
                         ChatMessageTarget::ChannelName(target_channel_name) => {
                             let channel = svc
                                 .channel_service
-                                .get(&ChannelQuery::ChannelName(
+                                .get_channel(&ChannelQuery::ChannelName(
                                     target_channel_name.to_owned(),
                                 ))
                                 .await
@@ -343,15 +343,14 @@ impl CachedValue for PublicChannelInfo {
     #[inline]
     async fn fetch(&self, context: &Self::Context) -> Self::Output {
         Ok(match context.public_channel_info.get() {
-            Some(cached_value) => {
+            Some(cached_value) =>
                 if !cached_value.expired {
                     cached_value.cache.to_vec()
                 } else {
                     self.fetch_new(context)
                         .await
                         .unwrap_or(cached_value.cache.to_vec())
-                }
-            },
+                },
             None => self.fetch_new(context).await?,
         })
     }

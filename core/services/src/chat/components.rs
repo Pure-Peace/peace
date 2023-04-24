@@ -72,7 +72,7 @@ impl OnlinePlatforms {
     pub fn val(&self) -> Option<Vec<Platform>> {
         let platforms = self.0.load();
         if platforms.is_empty() {
-            return None;
+            return None
         }
 
         Some(platforms.iter().map(|p| p.to_owned()).collect())
@@ -134,7 +134,7 @@ pub struct SessionCounter {
 
 impl SessionCounter {
     #[inline]
-    pub fn get_counter(&self, platform: Option<&Platform>) -> &'_ U64 {
+    pub fn counter(&self, platform: Option<&Platform>) -> &'_ U64 {
         if let Some(platform) = platform {
             match platform {
                 &Platform::Bancho => &self.platform_bancho,
@@ -147,8 +147,8 @@ impl SessionCounter {
     }
 
     #[inline]
-    pub fn get_conter_value(&self, platform: Option<&Platform>) -> u64 {
-        self.get_counter(platform).val()
+    pub fn value(&self, platform: Option<&Platform>) -> u64 {
+        self.counter(platform).val()
     }
 }
 
@@ -187,12 +187,12 @@ impl ChannelSessions {
     }
 
     #[inline]
-    pub async fn join(
+    pub async fn add_user(
         &self,
         user_id: i32,
-        new_platforms: Option<Vec<Platform>>,
+        additional_platforms: Option<Vec<Platform>>,
     ) {
-        match new_platforms {
+        match additional_platforms {
             Some(platforms) => {
                 let mut indexes = self.indexes.write().await;
 
@@ -250,7 +250,7 @@ impl ChannelSessions {
     }
 
     #[inline]
-    pub async fn delete(&self, user_id: &i32) {
+    pub async fn remove_user(&self, user_id: &i32) {
         let mut indexes = self.indexes.write().await;
 
         indexes
@@ -269,12 +269,12 @@ impl ChannelSessions {
     }
 
     #[inline]
-    pub async fn leave(
+    pub async fn remove_user_platforms(
         &self,
         user_id: &i32,
-        leave_platforms: Option<&[Platform]>,
+        platforms: Option<&[Platform]>,
     ) {
-        match leave_platforms {
+        match platforms {
             Some(platforms) => {
                 let mut indexes = self.indexes.write().await;
 
@@ -325,7 +325,7 @@ impl ChannelSessions {
     }
 
     #[inline]
-    pub async fn exists(
+    pub async fn user_exists(
         &self,
         user_id: &i32,
         platforms: Option<&Platform>,
@@ -380,36 +380,8 @@ impl Channel {
     }
 
     #[inline]
-    pub async fn join(
-        &self,
-        user_id: i32,
-        new_platforms: Option<Vec<Platform>>,
-    ) {
-        self.sessions.join(user_id, new_platforms).await;
-    }
-
-    #[inline]
-    pub async fn delete(&self, user_id: &i32) {
-        self.sessions.delete(user_id).await;
-    }
-
-    #[inline]
-    pub async fn leave(
-        &self,
-        user_id: &i32,
-        leave_platforms: Option<&[Platform]>,
-    ) {
-        self.sessions.leave(user_id, leave_platforms).await;
-    }
-
-    #[inline]
-    pub async fn exists(&self, user_id: &i32, platforms: Option<&Platform>) {
-        self.sessions.exists(user_id, platforms).await;
-    }
-
-    #[inline]
     pub fn session_count(&self, platform: Option<&Platform>) -> u64 {
-        self.sessions.counter.get_conter_value(platform)
+        self.sessions.counter.value(platform)
     }
 
     #[inline]

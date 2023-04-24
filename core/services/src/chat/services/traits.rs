@@ -12,22 +12,22 @@ pub trait ChatService {
         &self,
     ) -> Result<GetPublicChannelsResponse, ChatServiceError>;
 
-    async fn join_into_channel(
+    async fn add_user_into_channel(
         &self,
-        request: JoinIntoChannelRequest,
+        request: AddUserIntoChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError>;
 
-    async fn leave_from_channel(
+    async fn remove_user_platforms_from_channel(
         &self,
-        request: LeaveFromChannelRequest,
+        request: RemoveUserPlatformsFromChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError>;
 
-    async fn delete_from_channel(
+    async fn remove_user_from_channel(
         &self,
-        request: DeleteFromChannelRequest,
+        request: RemoveUserFromChannelRequest,
     ) -> Result<ChannelInfo, ChatServiceError>;
 
-    async fn send_message_to(
+    async fn send_message(
         &self,
         request: SendMessageRequest,
     ) -> Result<SendMessageResponse, ChatServiceError>;
@@ -39,39 +39,39 @@ pub trait ChannelService {
 
     async fn initialize_public_channels(&self);
 
-    async fn create(
+    async fn add_channel(
         &self,
         metadata: ChannelMetadata,
         users: Vec<i32>,
     ) -> Arc<Channel>;
 
-    async fn join_user(
+    async fn add_user(
         &self,
         query: &ChannelQuery,
         user_id: i32,
         platforms: Option<Vec<Platform>>,
     ) -> Option<Arc<Channel>>;
 
-    async fn leave_user(
+    async fn remove_user_platforms(
         &self,
         query: &ChannelQuery,
         user_id: &i32,
         platforms: Option<&[Platform]>,
     ) -> Option<Arc<Channel>>;
 
-    async fn delete_user(
+    async fn remove_user(
         &self,
         query: &ChannelQuery,
         user_id: &i32,
     ) -> Option<Arc<Channel>>;
 
-    async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>>;
+    async fn remove_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>>;
 
-    async fn get(&self, query: &ChannelQuery) -> Option<Arc<Channel>>;
+    async fn get_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>>;
 
-    async fn exists(&self, query: &ChannelQuery) -> bool;
+    async fn is_channel_exists(&self, query: &ChannelQuery) -> bool;
 
-    async fn clear(&self);
+    async fn clear_all_channels(&self);
 
-    fn len(&self) -> usize;
+    fn channel_count(&self) -> usize;
 }

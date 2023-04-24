@@ -40,24 +40,24 @@ impl Deref for Channels {
 
 impl Channels {
     #[inline]
-    pub async fn create(&self, channel: Channel) -> Arc<Channel> {
+    pub async fn add_channel(&self, channel: Channel) -> Arc<Channel> {
         let channel = Arc::new(channel);
         let mut indexes = self.write().await;
-        self.create_inner(&mut indexes, channel.clone());
+        self.add_channel_inner(&mut indexes, channel.clone());
 
         channel
     }
 
     #[inline]
-    pub fn create_inner(
+    pub fn add_channel_inner(
         &self,
         indexes: &mut ChannelIndexes,
         channel: Arc<Channel>,
     ) {
         if let Some(old_channel) =
-            self.get_inner(indexes, &ChannelQuery::ChannelId(channel.id))
+            self.get_channel_inner(indexes, &ChannelQuery::ChannelId(channel.id))
         {
-            self.delete_inner(
+            self.remove_channel_inner(
                 indexes,
                 &old_channel.id,
                 &old_channel.name.load(),
@@ -74,16 +74,16 @@ impl Channels {
     }
 
     #[inline]
-    pub async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+    pub async fn remove_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
         let mut indexes = self.write().await;
 
-        let channel = self.get_inner(&indexes, query)?;
+        let channel = self.get_channel_inner(&indexes, query)?;
 
-        self.delete_inner(&mut indexes, &channel.id, &channel.name.load())
+        self.remove_channel_inner(&mut indexes, &channel.id, &channel.name.load())
     }
 
     #[inline]
-    pub fn delete_inner(
+    pub fn remove_channel_inner(
         &self,
         indexes: &mut ChannelIndexes,
         channel_id: &u64,
@@ -109,13 +109,13 @@ impl Channels {
     }
 
     #[inline]
-    pub async fn get(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+    pub async fn get_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
         let indexes = self.read().await;
-        self.get_inner(&indexes, query)
+        self.get_channel_inner(&indexes, query)
     }
 
     #[inline]
-    pub fn get_inner(
+    pub fn get_channel_inner(
         &self,
         indexes: &ChannelIndexes,
         query: &ChannelQuery,
@@ -132,7 +132,7 @@ impl Channels {
     }
 
     #[inline]
-    pub async fn exists(&self, query: &ChannelQuery) -> bool {
+    pub async fn is_channel_exists(&self, query: &ChannelQuery) -> bool {
         let indexes = self.read().await;
         match query {
             ChannelQuery::ChannelId(channel_id) => {
@@ -145,7 +145,7 @@ impl Channels {
     }
 
     #[inline]
-    pub async fn clear(&self) {
+    pub async fn clear_all_channels(&self) {
         let mut indexes = self.write().await;
         indexes.channel_id.clear();
         indexes.channel_name.clear();
@@ -155,7 +155,7 @@ impl Channels {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn channel_count(&self) -> usize {
         self.len.val()
     }
 }
@@ -214,7 +214,7 @@ impl ChannelService for ChannelServiceImpl {
         {
             let mut indexes = self.channels.write().await;
             for channel in public_channels {
-                self.channels.create_inner(&mut indexes, channel.into());
+                self.channels.add_channel_inner(&mut indexes, channel.into());
             }
         };
 
@@ -222,7 +222,7 @@ impl ChannelService for ChannelServiceImpl {
     }
 
     #[inline]
-    async fn create(
+    async fn add_channel(
         &self,
         metadata: ChannelMetadata,
         users: Vec<i32>,
@@ -231,7 +231,7 @@ impl ChannelService for ChannelServiceImpl {
 
         let channel = self
             .channels
-            .create(Channel::new(metadata, Some(ChannelSessions::new(users))))
+            .add_channel(Channel::new(metadata, Some(ChannelSessions::new(users))))
             .await;
 
         info!(
@@ -246,52 +246,52 @@ impl ChannelService for ChannelServiceImpl {
     }
 
     #[inline]
-    async fn join_user(
+    async fn add_user(
         &self,
         query: &ChannelQuery,
         user_id: i32,
         platforms: Option<Vec<Platform>>,
     ) -> Option<Arc<Channel>> {
-        let channel = self.channels.get(query).await?;
-        channel.join(user_id, platforms).await;
+        let channel = self.channels.get_channel(query).await?;
+        channel.sessions.add_user(user_id, platforms).await;
 
         Some(channel)
     }
 
     #[inline]
-    async fn leave_user(
+    async fn remove_user_platforms(
         &self,
         query: &ChannelQuery,
         user_id: &i32,
         platforms: Option<&[Platform]>,
     ) -> Option<Arc<Channel>> {
-        let channel = self.channels.get(query).await?;
-        channel.leave(user_id, platforms).await;
+        let channel = self.channels.get_channel(query).await?;
+        channel.sessions.remove_user_platforms(user_id, platforms).await;
 
         Some(channel)
     }
 
     #[inline]
-    async fn delete_user(
+    async fn remove_user(
         &self,
         query: &ChannelQuery,
         user_id: &i32,
     ) -> Option<Arc<Channel>> {
-        let channel = self.channels.get(query).await?;
-        channel.delete(user_id).await;
+        let channel = self.channels.get_channel(query).await?;
+        channel.sessions.remove_user(user_id).await;
 
         Some(channel)
     }
 
     #[inline]
-    async fn delete(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
-        const LOG_TARGET: &str = "chat::channel::delete_channel";
+    async fn remove_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+        const LOG_TARGET: &str = "chat::channel::remove_channel";
 
-        let channel = self.channels.delete(query).await?;
+        let channel = self.channels.remove_channel(query).await?;
 
         info!(
             target: LOG_TARGET,
-            "Channel deleted: {} [{}] ({:?})",
+            "Channel removed: {} [{}] ({:?})",
             channel.name.load(),
             channel.id,
             channel.channel_type
@@ -301,22 +301,22 @@ impl ChannelService for ChannelServiceImpl {
     }
 
     #[inline]
-    async fn get(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
-        self.channels.get(query).await
+    async fn get_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+        self.channels.get_channel(query).await
     }
 
     #[inline]
-    async fn exists(&self, query: &ChannelQuery) -> bool {
-        self.channels.exists(query).await
+    async fn is_channel_exists(&self, query: &ChannelQuery) -> bool {
+        self.channels.is_channel_exists(query).await
     }
 
     #[inline]
-    async fn clear(&self) {
-        self.channels.clear().await
+    async fn clear_all_channels(&self) {
+        self.channels.clear_all_channels().await
     }
 
     #[inline]
-    fn len(&self) -> usize {
-        self.channels.len()
+    fn channel_count(&self) -> usize {
+        self.channels.channel_count()
     }
 }

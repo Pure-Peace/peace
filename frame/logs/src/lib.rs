@@ -12,13 +12,13 @@ use clap::Parser;
 use clap_serde_derive::ClapSerde;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
+use tracing_subscriber::EnvFilter;
 use std::{
     str::FromStr,
     sync::{Arc, Mutex},
 };
 pub use tracing::log::LevelFilter;
 pub use tracing::*;
-pub use tracing_subscriber::*;
 pub use tracing_subscriber::{
     fmt, layer::Layered, prelude::*, reload, reload::Handle, reload::Layer,
     Registry,

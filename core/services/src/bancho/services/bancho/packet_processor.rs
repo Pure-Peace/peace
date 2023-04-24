@@ -11,7 +11,7 @@ use peace_pb::{
     bancho_state::ChannelUpdateNotifyRequest,
     chat::{
         ChannelQuery, ChatMessageTarget, ChatPlatform, ChatPlatforms,
-        JoinIntoChannelRequest, LeaveFromChannelRequest, SendMessageRequest,
+        AddUserIntoChannelRequest, RemoveUserPlatformsFromChannelRequest, SendMessageRequest,
     },
 };
 use std::error::Error;
@@ -68,7 +68,7 @@ pub async fn send_public_message<'a>(
 
     svc_local
         .chat_service
-        .send_message_to(SendMessageRequest {
+        .send_message(SendMessageRequest {
             sender_id: user_id,
             message: chat_message.content,
             target: Some(
@@ -90,7 +90,7 @@ pub async fn send_private_message<'a>(
 
     svc_local
         .chat_service
-        .send_message_to(SendMessageRequest {
+        .send_message(SendMessageRequest {
             sender_id: user_id,
             message: chat_message.content,
             target: Some(
@@ -112,7 +112,7 @@ pub async fn user_channel_join<'a>(
 
     let channel_info = svc_local
         .chat_service
-        .join_into_channel(JoinIntoChannelRequest {
+        .add_user_into_channel(AddUserIntoChannelRequest {
             channel_query: Some(ChannelQuery::ChannelName(channel_name).into()),
             user_id,
             platforms: Some(ChatPlatforms {
@@ -146,7 +146,7 @@ pub async fn user_channel_part<'a>(
 
     let channel_info = svc_local
         .chat_service
-        .leave_from_channel(LeaveFromChannelRequest {
+        .remove_user_platforms_from_channel(RemoveUserPlatformsFromChannelRequest {
             channel_query: Some(ChannelQuery::ChannelName(channel_name).into()),
             user_id,
             platforms: Some(ChatPlatforms {

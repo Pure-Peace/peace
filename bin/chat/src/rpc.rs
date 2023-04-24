@@ -27,45 +27,45 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
             .map(Response::new)
     }
 
-    async fn join_into_channel(
+    async fn add_user_into_channel(
         &self,
-        request: Request<JoinIntoChannelRequest>,
+        request: Request<AddUserIntoChannelRequest>,
     ) -> Result<Response<ChannelInfo>, Status> {
         self.chat_service
-            .join_into_channel(request.into_inner())
+            .add_user_into_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
     }
 
-    async fn leave_from_channel(
+    async fn remove_user_platforms_from_channel(
         &self,
-        request: Request<LeaveFromChannelRequest>,
+        request: Request<RemoveUserPlatformsFromChannelRequest>,
     ) -> Result<Response<ChannelInfo>, Status> {
         self.chat_service
-            .leave_from_channel(request.into_inner())
+            .remove_user_platforms_from_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
     }
 
-    async fn delete_from_channel(
+    async fn remove_user_from_channel(
         &self,
-        request: Request<DeleteFromChannelRequest>,
+        request: Request<RemoveUserFromChannelRequest>,
     ) -> Result<Response<ChannelInfo>, Status> {
         self.chat_service
-            .delete_from_channel(request.into_inner())
+            .remove_user_from_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
     }
 
-    async fn send_message_to(
+    async fn send_message(
         &self,
         request: Request<SendMessageRequest>,
     ) -> Result<Response<SendMessageResponse>, Status> {
         self.chat_service
-            .send_message_to(request.into_inner())
+            .send_message(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
