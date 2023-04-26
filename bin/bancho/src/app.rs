@@ -16,7 +16,7 @@ use peace_services::{
         BanchoServiceImpl, CliBanchoBackgroundServiceConfigs,
         PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
-    bancho_state::BanchoStateServiceImpl,
+    bancho_state::BanchoStateServiceRemote,
     chat::ChatServiceImpl,
     geoip::GeoipServiceImpl,
 };
@@ -125,7 +125,7 @@ impl Application for App {
             UsersRepositoryImpl::new(peace_db_conn).into_service();
 
         let bancho_state_service =
-            BanchoStateServiceImpl::remote(bancho_state_rpc_client)
+            BanchoStateServiceRemote::new(bancho_state_rpc_client)
                 .into_service();
 
         let chat_service =

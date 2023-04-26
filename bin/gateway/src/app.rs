@@ -5,7 +5,7 @@ use peace_pb::{bancho, bancho_state};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::BanchoServiceImpl,
-    bancho_state::BanchoStateServiceImpl,
+    bancho_state::BanchoStateServiceRemote,
     gateway::{
         bancho_endpoints::{
             routes::{BanchoDebugRouter, BanchoRouter},
@@ -75,7 +75,7 @@ impl Application for App {
                 );
 
         let bancho_state_service =
-            BanchoStateServiceImpl::remote(bancho_state_rpc_client)
+            BanchoStateServiceRemote::new(bancho_state_rpc_client)
                 .into_service();
 
         let bancho_service =

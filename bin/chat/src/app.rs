@@ -8,7 +8,7 @@ use peace_pb::{
 use peace_rpc::{Application, RpcClientConfig, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
-    bancho_state::BanchoStateServiceImpl,
+    bancho_state::BanchoStateServiceRemote,
     chat::{ChannelServiceImpl, ChatServiceImpl},
 };
 use std::sync::Arc;
@@ -74,7 +74,7 @@ impl Application for App {
             });
 
         let bancho_state_service =
-            BanchoStateServiceImpl::remote(bancho_state_rpc_client)
+            BanchoStateServiceRemote::new(bancho_state_rpc_client)
                 .into_service();
 
         let channel_service =

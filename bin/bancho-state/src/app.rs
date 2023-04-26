@@ -93,7 +93,7 @@ impl Application for App {
         bancho_state_background_service
             .start_all(bancho_state_background_service_config);
 
-        let bancho_state_service = BanchoStateServiceImpl::local(
+        let bancho_state_service = BanchoStateServiceImpl::new(
             user_session_service,
             bancho_state_background_service,
         )
