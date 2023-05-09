@@ -145,11 +145,9 @@ impl Application for App {
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service = ChatServiceImpl::local(
-            channel_service,
-            bancho_state_service.clone(),
-        )
-        .into_service();
+        let chat_service =
+            ChatServiceImpl::new(channel_service, bancho_state_service.clone())
+                .into_service();
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_service.cache().clone())

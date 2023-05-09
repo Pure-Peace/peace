@@ -17,7 +17,7 @@ use peace_services::{
         PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
     bancho_state::BanchoStateServiceRemote,
-    chat::ChatServiceImpl,
+    chat::ChatServiceRemote,
     geoip::GeoipServiceImpl,
 };
 use std::{path::PathBuf, sync::Arc};
@@ -129,7 +129,7 @@ impl Application for App {
                 .into_service();
 
         let chat_service =
-            ChatServiceImpl::remote(chat_rpc_client).into_service();
+            ChatServiceRemote::new(chat_rpc_client).into_service();
 
         let password_service = PasswordServiceImpl::default().into_service();
 

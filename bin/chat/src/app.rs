@@ -83,7 +83,7 @@ impl Application for App {
         channel_service.initialize_public_channels().await;
 
         let chat_service =
-            ChatServiceImpl::local(channel_service, bancho_state_service)
+            ChatServiceImpl::new(channel_service, bancho_state_service)
                 .into_service();
 
         let chat_rpc = ChatRpcImpl::new(chat_service);
