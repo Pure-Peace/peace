@@ -3,7 +3,7 @@ use clap_serde_derive::ClapSerde;
 use peace_pb::geoip::{geoip_rpc_server::GeoipRpcServer, GEOIP_DESCRIPTOR_SET};
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::geoip::{GeoipServiceImpl, GeoipServiceLocal};
+use peace_services::geoip::GeoipServiceImpl;
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
     async_trait,
@@ -48,10 +48,9 @@ impl Application for App {
         let geo_db_path =
             self.cfg.geo_db_path.as_ref().expect("geo_db_path is required");
 
-        let geoip_service = GeoipServiceImpl::local(
-            GeoipServiceLocal::from_path(geo_db_path.to_str().unwrap()),
-        )
-        .into_service();
+        let geoip_service =
+            GeoipServiceImpl::from_path(geo_db_path.to_str().unwrap())
+                .into_service();
 
         let geoip_rpc = GeoipRpcImpl::new(geoip_service);
 

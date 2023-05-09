@@ -18,7 +18,7 @@ use peace_services::{
     },
     bancho_state::BanchoStateServiceRemote,
     chat::ChatServiceRemote,
-    geoip::GeoipServiceImpl,
+    geoip::GeoipServiceBuilder,
 };
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
@@ -112,14 +112,13 @@ impl Application for App {
                 panic!("{}", err)
             });
 
-        let geoip_service = GeoipServiceImpl::local_or_remote(
+        let geoip_service = GeoipServiceBuilder::build(
             self.cfg.geo_db_path.as_ref().map(|path| {
                 path.to_str().expect("failed to parse geo_db_path")
             }),
             Some(&self.cfg.geoip),
         )
-        .await
-        .into_service();
+        .await;
 
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn).into_service();

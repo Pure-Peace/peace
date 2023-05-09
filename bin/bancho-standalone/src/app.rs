@@ -23,7 +23,7 @@ use peace_services::{
         BanchoDebugEndpointsDocs, BanchoEndpointsDocs,
         BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
     },
-    geoip::GeoipServiceImpl,
+    geoip::GeoipServiceBuilder,
 };
 use std::{path::PathBuf, sync::Arc};
 use utoipa::OpenApi;
@@ -131,14 +131,13 @@ impl Application for App {
 
         let password_service = PasswordServiceImpl::default().into_service();
 
-        let geoip_service = GeoipServiceImpl::local_or_remote(
+        let geoip_service = GeoipServiceBuilder::build(
             self.cfg.geo_db_path.as_ref().map(|path| {
                 path.to_str().expect("failed to parse geo_db_path")
             }),
             Some(&self.cfg.geoip),
         )
-        .await
-        .into_service();
+        .await;
 
         let channel_service =
             ChannelServiceImpl::new(peace_db_conn).into_service();
