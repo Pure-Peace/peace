@@ -149,7 +149,7 @@ impl Application for App {
 
         bancho_background_service.start_all(bancho_background_service_config);
 
-        let bancho_service = BanchoServiceImpl::local(
+        let bancho_service = BanchoServiceImpl::new(
             users_repository,
             bancho_state_service,
             password_service,
