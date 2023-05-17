@@ -1,0 +1,37 @@
+[package]
+name = "signature-server"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+
+[[bin]]
+name = "signature-server"
+path = "src/main.rs"
+
+
+[dependencies]
+tonic = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+
+
+peace_logs = { workspace = true, features = ["grpc", "cli"] }
+peace_rpc = { workspace = true, features = [
+    "tls",
+    "admin_endpoints",
+    "reflection",
+] }
+peace_runtime = { workspace = true }
+
+
+peace_pb = { workspace = true }
+peace_services = { workspace = true }
+peace_domain = { workspace = true }
+
+tools = { workspace = true }

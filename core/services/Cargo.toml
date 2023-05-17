@@ -35,7 +35,8 @@ clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
 maxminddb = { workspace = true, features = ["mmap"] }
 serde = { workspace = true, features = ["derive"] }
-
+ed25519 = { workspace = true }
+hex = { workspace = true }
 
 bancho-packets = { workspace = true }
 tools = { workspace = true, features = ["all"] }

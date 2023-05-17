@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+import "peace/base.proto";
+
+package peace.services.signature;
+
+service SignatureRPC {
+  rpc SignMessage(SignMessageRequest) returns (SignMessageResponse);
+  rpc VerifyMessage(VerifyMessageRequest) returns (VerifyMessageResponse);
+  rpc ReloadFromPem(ReloadFromPemRequest) returns (peace.base.ExecSuccess);
+  rpc ReloadFromPemFile(ReloadFromPemFileRequest)
+      returns (peace.base.ExecSuccess);
+  rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
+}
+
+message SignMessageRequest { string message = 1; }
+
+message SignMessageResponse { string signature = 1; }
+
+message VerifyMessageRequest {
+  string message = 1;
+  string signature = 2;
+}
+
+message VerifyMessageResponse { bool is_valid = 1; }
+
+message ReloadFromPemRequest { string ed25519_private_key = 1; }
+
+message ReloadFromPemFileRequest { string ed25519_private_key_file_path = 1; }
+
+message GetPublicKeyRequest {}
+
+message GetPublicKeyResponse { string public_key = 1; }
