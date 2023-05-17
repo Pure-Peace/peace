@@ -8,6 +8,8 @@ pub mod atomic;
 #[cfg(feature = "cache")]
 pub mod cache;
 pub mod constants;
+#[cfg(feature = "crypto")]
+pub mod crypto;
 pub mod macros;
 pub mod message_queue;
 #[cfg(feature = "tonic_utils")]

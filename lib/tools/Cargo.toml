@@ -11,14 +11,15 @@ authors.workspace = true
 [features]
 default = []
 
-all = ["async_collections", "tonic_utils", "cache"]
+all = ["async_collections", "tonic_utils", "cache", "crypto"]
 async_collections = ["tokio"]
 tonic_utils = ["tonic"]
 cache = ["async-trait", "chrono"]
-
+crypto = ["ed25519", "ed25519-dalek", "rand"]
 
 [dependencies]
 thiserror = { workspace = true }
+anyhow = { workspace = true }
 arc-swap = { workspace = true }
 atomic_float = { workspace = true }
 paste = { workspace = true }
@@ -35,3 +36,11 @@ tonic = { workspace = true, optional = true }
 # cache
 async-trait = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
+
+# crypto
+ed25519 = { workspace = true, optional = true }
+ed25519-dalek = { workspace = true, optional = true, features = [
+    "rand_core",
+    "pem",
+] }
+rand = { workspace = true, optional = true }
