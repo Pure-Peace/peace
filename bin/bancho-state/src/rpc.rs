@@ -1,6 +1,12 @@
+use std::str::FromStr;
+
 use peace_pb::{bancho_state::*, base::ExecSuccess};
-use peace_services::bancho_state::DynBanchoStateService;
+use peace_services::{
+    bancho_state::DynBanchoStateService,
+    gateway::bancho_endpoints::components::BanchoClientToken,
+};
 use tonic::{Request, Response, Status};
+use tools::Ulid;
 
 #[derive(Clone)]
 pub struct BanchoStateRpcImpl {
@@ -81,12 +87,31 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .map(Response::new)
     }
 
-    async fn check_user_session_exists(
+    async fn check_user_token(
+        &self,
+        request: Request<CheckUserTokenRequest>,
+    ) -> Result<Response<CheckUserTokenResponse>, Status> {
+        let CheckUserTokenRequest { user_id, session_id, signature } =
+            request.into_inner();
+
+        self.bancho_state_service
+            .check_user_token(BanchoClientToken {
+                user_id,
+                session_id: Ulid::from_str(session_id.as_str())
+                    .map_err(|err| Status::invalid_argument(err.to_string()))?,
+                signature,
+            })
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
+
+    async fn is_user_online(
         &self,
         request: Request<RawUserQuery>,
-    ) -> Result<Response<UserSessionExistsResponse>, Status> {
+    ) -> Result<Response<UserOnlineResponse>, Status> {
         self.bancho_state_service
-            .check_user_session_exists(request.into_inner().into_user_query()?)
+            .is_user_online(request.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)

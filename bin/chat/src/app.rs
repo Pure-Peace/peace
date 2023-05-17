@@ -1,26 +1,19 @@
 use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
-use peace_pb::{
-    bancho_state,
-    chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET},
-};
+use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_rpc::{Application, RpcClientConfig, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho_state::BanchoStateServiceRemote,
     chat::{ChannelServiceImpl, ChatServiceImpl},
+    rpc_config::BanchoStateRpcConfig,
 };
 use std::sync::Arc;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
 };
-
-define_rpc_client_config!(
-    service_name: bancho_state,
-    config_name: BanchoStateRpcConfig
-);
 
 #[peace_config]
 #[command(name = "chat", author, version, about, propagate_version = true)]

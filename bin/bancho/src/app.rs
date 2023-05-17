@@ -1,9 +1,8 @@
 use crate::BanchoRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
-use peace_pb::{
-    bancho::{bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET},
-    bancho_state, chat, geoip,
+use peace_pb::bancho::{
+    bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET,
 };
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
@@ -19,29 +18,13 @@ use peace_services::{
     bancho_state::BanchoStateServiceRemote,
     chat::ChatServiceRemote,
     geoip::GeoipServiceBuilder,
+    rpc_config::{BanchoStateRpcConfig, ChatRpcConfig, GeoipRpcConfig},
 };
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
 };
-
-define_rpc_client_config!(
-    service_name: bancho_state,
-    config_name: BanchoStateRpcConfig
-);
-
-define_rpc_client_config!(
-    service_name: geoip,
-    config_name: GeoipRpcConfig,
-    default_uri: "http://127.0.0.1:12346"
-);
-
-define_rpc_client_config!(
-    service_name: chat,
-    config_name: ChatRpcConfig,
-    default_uri: "http://127.0.0.1:12347"
-);
 
 #[peace_config]
 #[command(name = "bancho", author, version, about, propagate_version = true)]

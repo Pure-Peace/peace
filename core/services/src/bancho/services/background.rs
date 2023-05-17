@@ -52,7 +52,7 @@ impl BanchoBackgroundServiceImpl {
                 loop {
                     tokio::time::sleep(*cfg.loop_interval.load().as_ref())
                         .await;
-                    info!(target: LOG_TARGET, "Task started!");
+                    debug!(target: LOG_TARGET, "password caches recycling started!");
                     let start = Instant::now();
 
                     let current_timestamp = Timestamp::now();
@@ -78,7 +78,7 @@ impl BanchoBackgroundServiceImpl {
                         None => 0,
                     };
 
-                    info!(
+                    debug!(
                         target: LOG_TARGET,
                         "Done in: {:?} ({} caches removed)",
                         start.elapsed(),

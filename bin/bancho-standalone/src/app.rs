@@ -2,7 +2,6 @@ use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application};
 use peace_db::{peace::PeaceDbConfig, DbConfig};
-use peace_pb::geoip;
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
@@ -24,15 +23,11 @@ use peace_services::{
         BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
     },
     geoip::GeoipServiceBuilder,
+    rpc_config::{GeoipRpcConfig, SignatureRpcConfig},
+    signature::SignatureServiceBuilder,
 };
 use std::{path::PathBuf, sync::Arc};
 use utoipa::OpenApi;
-
-define_rpc_client_config!(
-    service_name: geoip,
-    config_name: GeoipRpcConfig,
-    default_uri: "http://127.0.0.1:12346"
-);
 
 #[peace_config]
 #[command(
@@ -67,6 +62,12 @@ pub struct BanchoStandaloneConfig {
 
     #[arg(long, short = 'P')]
     pub geo_db_path: Option<PathBuf>,
+
+    #[command(flatten)]
+    pub signature_rpc_cfg: SignatureRpcConfig,
+
+    #[arg(long)]
+    pub ed25519_private_key_path: Option<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -96,6 +97,15 @@ impl Application for App {
 
         let user_session_service = Arc::new(UserSessionsServiceImpl::new());
 
+        let signature_service = SignatureServiceBuilder::build(
+            self.cfg.ed25519_private_key_path.as_ref().map(|path| {
+                path.to_str()
+                    .expect("failed to parse \"--ed25519_private_key_path\"")
+            }),
+            Some(&self.cfg.signature_rpc_cfg),
+        )
+        .await;
+
         let bancho_state_background_service = Arc::new(
             BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
         );
@@ -123,6 +133,7 @@ impl Application for App {
         let bancho_state_service = BanchoStateServiceImpl::new(
             user_session_service,
             bancho_state_background_service,
+            signature_service,
         )
         .into_service();
 
@@ -133,7 +144,7 @@ impl Application for App {
 
         let geoip_service = GeoipServiceBuilder::build(
             self.cfg.geo_db_path.as_ref().map(|path| {
-                path.to_str().expect("failed to parse geo_db_path")
+                path.to_str().expect("failed to parse \"--geo_db_path\"")
             }),
             Some(&self.cfg.geoip),
         )

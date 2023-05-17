@@ -1,7 +1,6 @@
 use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
-use peace_pb::{bancho, bancho_state};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::BanchoServiceRemote,
@@ -13,16 +12,9 @@ use peace_services::{
         },
         docs::GatewayApiDocs,
     },
+    rpc_config::{BanchoRpcConfig, BanchoStateRpcConfig},
 };
 use std::sync::Arc;
-
-define_rpc_client_config!(service_name: bancho, config_name: BanchoRpcConfig);
-
-define_rpc_client_config!(
-    service_name: bancho_state,
-    config_name: BanchoStateRpcConfig,
-    default_uri: "http://127.0.0.1:12345"
-);
 
 #[peace_config]
 #[command(name = "gateway", author, version, about, propagate_version = true)]

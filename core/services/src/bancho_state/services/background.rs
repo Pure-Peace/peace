@@ -54,7 +54,7 @@ impl BanchoStateBackgroundServiceImpl {
                 loop {
                     tokio::time::sleep(*cfg.loop_interval.load().as_ref())
                         .await;
-                    info!(target: LOG_TARGET, "Task started!");
+                    debug!(target: LOG_TARGET, "user sessions recycling started!");
                     let start = Instant::now();
 
                     let mut sessions_deactive = None::<Vec<Arc<Session>>>;
@@ -118,7 +118,7 @@ impl BanchoStateBackgroundServiceImpl {
 
                     let end = start.elapsed();
 
-                    info!(
+                    debug!(
                         target: LOG_TARGET,
                         "Done in: {end:?} ({removed_deactive_sessions} sessions removed, {removed_notify_msg} old notify msg removed)",
                     );
@@ -159,7 +159,7 @@ impl BanchoStateBackgroundServiceImpl {
                 loop {
                     tokio::time::sleep(*cfg.loop_interval.load().as_ref())
                         .await;
-                    info!(target: LOG_TARGET, "Task started!");
+                    debug!(target: LOG_TARGET, "notify messages recycling started!");
                     let start = Instant::now();
 
                     let mut invalid_messages = None::<Vec<Ulid>>;
@@ -184,7 +184,7 @@ impl BanchoStateBackgroundServiceImpl {
 
                     let end = start.elapsed();
 
-                    info!(
+                    debug!(
                         target: LOG_TARGET,
                         "Done in: {end:?} ({removed_notify_msg} invalid notify msg removed)",
                     );
