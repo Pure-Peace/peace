@@ -6,6 +6,7 @@ use crate::{
     },
     bancho_state::DynBanchoStateService,
     chat::DynChatService,
+    gateway::bancho_endpoints::components::BanchoClientToken,
     geoip::DynGeoipService,
 };
 use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
@@ -176,7 +177,7 @@ impl BanchoService for BanchoServiceImpl {
         let geoip_data =
             self.geoip_service.lookup_with_ip_address(client_ip).await.ok();
 
-        let CreateUserSessionResponse { session_id } = self
+        let CreateUserSessionResponse { session_id, signature } = self
             .bancho_state_service
             .create_user_session(CreateUserSessionRequest {
                 user_id: user.id,
@@ -246,6 +247,7 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(LoginSuccess {
             session_id,
+            signature,
             user_id: user.id,
             packets: packet_builder.build(),
         })
@@ -379,15 +381,16 @@ impl BanchoService for BanchoServiceImpl {
 
     async fn ping(
         &self,
-        request: PingRequest,
+        PingRequest { user_id, session_id, signature }: PingRequest,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        let _ = self
-            .bancho_state_service
-            .check_user_session_exists(UserQuery::SessionId(
-                Ulid::from_str(request.session_id.as_str())
+        self.bancho_state_service
+            .check_user_token(BanchoClientToken {
+                user_id,
+                session_id: Ulid::from_str(session_id.as_str())
                     .map_err(ConvertError::DecodingError)?,
-            ))
-            .await;
+                signature,
+            })
+            .await?;
 
         Ok(HandleCompleted::default())
     }

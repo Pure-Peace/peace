@@ -45,8 +45,7 @@ pub mod bancho_state {
     };
     use crate::ConvertError;
     use bitmask_enum::bitmask;
-    use std::fmt;
-    use std::{error::Error, str::FromStr};
+    use std::{error::Error, fmt, str::FromStr};
     use tools::{DecodingError, Ulid};
 
     #[bitmask(i32)]
@@ -177,12 +176,9 @@ pub mod bancho_state {
                 Self::SessionId(session_id) => UserQuery::SessionId(session_id),
                 Self::UserId(user_id) => UserQuery::UserId(user_id),
                 Self::Username(username) => UserQuery::Username(username),
-                Self::UsernameUnicode(username_unicode) => {
-                    UserQuery::UsernameUnicode(username_unicode)
-                },
-                Self::Channel(_) => {
-                    return Err(ConvertError::FromChannelTarget)
-                },
+                Self::UsernameUnicode(username_unicode) =>
+                    UserQuery::UsernameUnicode(username_unicode),
+                Self::Channel(_) => return Err(ConvertError::FromChannelTarget),
             })
         }
     }
@@ -356,4 +352,11 @@ pub mod geoip {
 
     pub const GEOIP_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace.services.geoip.descriptor");
+}
+
+pub mod signature {
+    proto!("peace.services.signature");
+
+    pub const SIGNATURE_DESCRIPTOR_SET: &[u8] =
+        descriptor!("peace.services.signature.descriptor");
 }

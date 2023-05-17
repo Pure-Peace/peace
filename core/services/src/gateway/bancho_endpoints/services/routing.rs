@@ -2,17 +2,15 @@ use super::traits::{
     BanchoRoutingService, DynBanchoHandlerService, DynBanchoRoutingService,
 };
 use crate::gateway::bancho_endpoints::{
-    extractors::{BanchoClientToken, BanchoClientVersion},
+    components::BanchoClientToken,
+    extractors::{BanchoClientVersion, OsuTokenHeader},
     BanchoHttpError, CHO_PROTOCOL, CHO_TOKEN,
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::PacketBuilder;
-use peace_pb::{
-    bancho::LoginSuccess,
-    bancho_state::{BanchoPacketTarget, UserQuery},
-};
-use std::{net::IpAddr, sync::Arc};
+use peace_pb::{bancho::LoginSuccess, bancho_state::BanchoPacketTarget};
+use std::{net::IpAddr, str::FromStr, sync::Arc};
 use tools::lazy_init;
 
 pub struct BanchoRoutingServiceImpl {
@@ -37,54 +35,62 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
 
     async fn bancho_post(
         &self,
-        session_id: Option<BanchoClientToken>,
+        token: Option<OsuTokenHeader>,
         version: Option<BanchoClientVersion>,
         ip: IpAddr,
         body: Vec<u8>,
     ) -> Result<Response, BanchoHttpError> {
-        match session_id {
-            Some(BanchoClientToken(session_id)) => {
-                let user_id = self
-                    .bancho_handler_service
-                    .check_user_session(UserQuery::SessionId(session_id))
-                    .await?;
+        if let Some(OsuTokenHeader(token)) = token {
+            let token = BanchoClientToken::from_str(&token)?;
 
-                let mut builder = None::<PacketBuilder>;
+            self.bancho_handler_service.check_user_token(token.clone()).await?;
 
-                self.bancho_handler_service
+            let BanchoClientToken { user_id, session_id, .. } = token;
+
+            let mut builder = None::<PacketBuilder>;
+
+            self.bancho_handler_service
                     .process_bancho_packets(user_id, session_id, body)
                     .await?
                     .map(|extra_packets| lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets)));
 
-                self.bancho_handler_service
+            self.bancho_handler_service
                     .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
                     .await
                     .map(|extra_packets| lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets)));
 
-                Ok(builder
-                    .map(|b| b.build())
-                    .unwrap_or_default()
-                    .into_response())
-            },
-            None => {
-                let LoginSuccess { session_id, user_id, mut packets } = self
-                    .bancho_handler_service
-                    .bancho_login(body, ip, version)
-                    .await
-                    .map_err(BanchoHttpError::LoginFailed)?;
+            return Ok(builder
+                .map(|b| b.build())
+                .unwrap_or_default()
+                .into_response())
+        };
 
-                if let Some(p) = self
-                    .bancho_handler_service
-                    .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
-                    .await
-                {
-                    packets.extend(p);
-                }
+        let LoginSuccess { session_id, signature, user_id, mut packets } = self
+            .bancho_handler_service
+            .bancho_login(body, ip, version)
+            .await
+            .map_err(BanchoHttpError::LoginFailed)?;
 
-                Ok(([(CHO_TOKEN, session_id.as_str()), CHO_PROTOCOL], packets)
-                    .into_response())
-            },
+        if let Some(p) = self
+            .bancho_handler_service
+            .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
+            .await
+        {
+            packets.extend(p);
         }
+
+        Ok((
+            [
+                (
+                    CHO_TOKEN,
+                    BanchoClientToken::encode(user_id, &session_id, &signature)
+                        .as_str(),
+                ),
+                CHO_PROTOCOL,
+            ],
+            packets,
+        )
+            .into_response())
     }
 
     async fn get_screenshot(&self) -> Response {

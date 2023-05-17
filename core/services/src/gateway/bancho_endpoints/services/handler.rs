@@ -3,16 +3,15 @@ use crate::{
     bancho::DynBanchoService,
     bancho_state::{BanchoStateError, DynBanchoStateService},
     gateway::bancho_endpoints::{
-        extractors::BanchoClientVersion, parser, BanchoHttpError, LoginError,
+        components::BanchoClientToken, extractors::BanchoClientVersion, parser,
+        BanchoHttpError, LoginError,
     },
 };
 use async_trait::async_trait;
 use bancho_packets::PacketReader;
 use peace_pb::{
     bancho::*,
-    bancho_state::{
-        BanchoPacketTarget, DequeueBanchoPacketsRequest, UserQuery,
-    },
+    bancho_state::{BanchoPacketTarget, DequeueBanchoPacketsRequest},
 };
 use std::{net::IpAddr, sync::Arc};
 use tools::Ulid;
@@ -46,12 +45,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<LoginSuccess, LoginError> {
         if version.is_none() {
-            return Err(LoginError::EmptyClientVersion);
+            return Err(LoginError::EmptyClientVersion)
         }
 
         let request = parser::parse_osu_login_request_body(body)?;
         if request.client_version != version.unwrap().as_str() {
-            return Err(LoginError::MismatchedClientVersion);
+            return Err(LoginError::MismatchedClientVersion)
         }
 
         Ok(self
@@ -69,7 +68,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         body: Vec<u8>,
     ) -> Result<Option<Vec<u8>>, BanchoHttpError> {
         if PacketReader::new(&body).next().is_none() {
-            return Err(BanchoHttpError::InvalidBanchoPacket);
+            return Err(BanchoHttpError::InvalidBanchoPacket)
         }
 
         let HandleCompleted { packets } = self
@@ -81,7 +80,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             })
             .await?;
 
-        return Ok(packets);
+        return Ok(packets)
     }
 
     #[inline]
@@ -99,20 +98,18 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     }
 
     #[inline]
-    async fn check_user_session(
+    async fn check_user_token(
         &self,
-        query: UserQuery,
-    ) -> Result<i32, BanchoHttpError> {
-        Ok(self
-            .bancho_state_service
-            .check_user_session_exists(query)
-            .await
-            .map_err(|err| match err {
-                BanchoStateError::SessionNotExists => {
-                    BanchoHttpError::SessionNotExists(err)
-                },
+        token: BanchoClientToken,
+    ) -> Result<(), BanchoHttpError> {
+        self.bancho_state_service.check_user_token(token).await.map_err(
+            |err| match err {
+                BanchoStateError::SessionNotExists =>
+                    BanchoHttpError::SessionNotExists(err),
                 _ => BanchoHttpError::BanchoStateError(err),
-            })?
-            .user_id)
+            },
+        )?;
+
+        Ok(())
     }
 }

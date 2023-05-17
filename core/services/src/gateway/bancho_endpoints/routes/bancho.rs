@@ -1,5 +1,5 @@
 use crate::gateway::bancho_endpoints::{
-    extractors::{BanchoClientToken, BanchoClientVersion, BanchoRequestBody},
+    extractors::{BanchoClientVersion, BanchoRequestBody, OsuTokenHeader},
     BanchoHttpError, DynBanchoRoutingService,
 };
 use axum::{extract::Path, response::Response, routing::*, Extension, Router};
@@ -71,12 +71,12 @@ pub async fn bancho_get(
 )]
 pub async fn bancho_post(
     Extension(routing_service): Extension<DynBanchoRoutingService>,
-    session_id: Option<BanchoClientToken>,
+    token: Option<OsuTokenHeader>,
     version: Option<BanchoClientVersion>,
     ClientIp(ip): ClientIp,
     BanchoRequestBody(body): BanchoRequestBody,
 ) -> Result<Response, BanchoHttpError> {
-    routing_service.bancho_post(session_id, version, ip, body.into()).await
+    routing_service.bancho_post(token, version, ip, body.into()).await
 }
 
 /// Bancho get_screenshot

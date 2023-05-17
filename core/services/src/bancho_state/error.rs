@@ -1,3 +1,4 @@
+use crate::signature::error::SignatureError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -17,6 +18,10 @@ pub enum BanchoStateError {
     InvalidArgument,
     #[error("session not exists")]
     SessionNotExists,
+    #[error("invalid token")]
+    InvalidToken,
+    #[error(transparent)]
+    SignatureError(#[from] SignatureError),
     #[error(transparent)]
     CreateSessionError(#[from] CreateSessionError),
     #[error(transparent)]
@@ -29,6 +34,7 @@ impl BanchoStateError {
     fn tonic_code(&self) -> Code {
         match self {
             Self::SessionNotExists => Code::NotFound,
+            Self::InvalidToken => Code::Unauthenticated,
             Self::InvalidArgument => Code::InvalidArgument,
             Self::ConvertError(_) => Code::InvalidArgument,
             _ => Code::Unknown,

@@ -68,9 +68,9 @@ impl BanchoHttpError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::ParseRequestError => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::FailedToProcessBanchoPackets(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            },
+            Self::FailedToProcessBanchoPackets(_) =>
+                StatusCode::INTERNAL_SERVER_ERROR,
+            Self::SessionNotExists(_) => StatusCode::FORBIDDEN,
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             _ => StatusCode::OK,
         }
@@ -102,7 +102,7 @@ impl IntoResponse for BanchoHttpError {
             },
 
             Self::SessionNotExists(_) => {
-                PacketBuilder::new().add(server::BanchoRestart::new(0)).build().into_response()
+                (self.status_code(), "session not exists").into_response()
             },
 
             _ => (self.status_code(), self.to_string()).into_response(),

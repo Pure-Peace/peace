@@ -22,7 +22,10 @@ service BanchoStateRPC {
   rpc DeleteUserSession(RawUserQuery) returns (peace.base.ExecSuccess);
 
   // Check specified user session, if session not exists will return error(404)
-  rpc CheckUserSessionExists(RawUserQuery) returns (UserSessionExistsResponse);
+  rpc IsUserOnline(RawUserQuery) returns (UserOnlineResponse);
+
+  rpc CheckUserToken(CheckUserTokenRequest) returns (CheckUserTokenResponse);
+
   // Get user info from sessions and returns `SessionId`, `UserId`, `Username`,
   // `UsernameUnicode` fields, if session not exists will return error(404)
   rpc GetUserSession(RawUserQuery) returns (GetUserSessionResponse);
@@ -122,9 +125,23 @@ message CreateUserSessionRequest {
   ConnectionInfo connection_info = 9;
 }
 
-message CreateUserSessionResponse { string session_id = 1; }
+message CreateUserSessionResponse {
+  string session_id = 1;
+  string signature = 2;
+}
 
-message UserSessionExistsResponse { int32 user_id = 1; }
+message UserOnlineResponse {
+  int32 user_id = 1;
+  string session_id = 2;
+}
+
+message CheckUserTokenRequest {
+  int32 user_id = 1;
+  string session_id = 2;
+  string signature = 3;
+}
+
+message CheckUserTokenResponse {}
 
 message GetUserSessionResponse {
   optional string session_id = 1;

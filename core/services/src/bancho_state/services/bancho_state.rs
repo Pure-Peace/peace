@@ -2,10 +2,14 @@ use super::{
     BanchoStateBackgroundServiceImpl, BanchoStateService, UserSessions,
     UserSessionsServiceImpl,
 };
-use crate::bancho_state::{
-    BanchoStateError, CreateSessionError, DynBanchoStateService, GameMode,
-    Mods, Packet, PresenceFilter, Session, UserOnlineStatus,
-    UserSessionsService,
+use crate::{
+    bancho_state::{
+        BanchoStateError, CreateSessionError, DynBanchoStateService, GameMode,
+        Mods, Packet, PresenceFilter, Session, UserOnlineStatus,
+        UserSessionsService,
+    },
+    gateway::bancho_endpoints::components::BanchoClientToken,
+    signature::DynSignatureService,
 };
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
@@ -23,14 +27,20 @@ pub struct BanchoStateServiceImpl {
     user_sessions_service: Arc<UserSessionsServiceImpl>,
     #[allow(dead_code)]
     bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
+    signature_service: DynSignatureService,
 }
 
 impl BanchoStateServiceImpl {
     pub fn new(
         user_sessions_service: Arc<UserSessionsServiceImpl>,
         bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
+        signature_service: DynSignatureService,
     ) -> Self {
-        Self { user_sessions_service, bancho_state_background_service }
+        Self {
+            user_sessions_service,
+            bancho_state_background_service,
+            signature_service,
+        }
     }
 
     pub fn into_service(self) -> DynBanchoStateService {
@@ -230,8 +240,16 @@ impl BanchoStateService for BanchoStateServiceImpl {
             })
             .await;
 
+        let session_id = session.id.to_string();
+        let signature = self
+            .signature_service
+            .sign(
+                BanchoClientToken::encode_content(user_id, &session_id).into(),
+            )
+            .await?;
+
         // Return the new session ID in a response.
-        Ok(CreateUserSessionResponse { session_id: session.id.to_string() })
+        Ok(CreateUserSessionResponse { session_id, signature })
     }
 
     async fn delete_user_session(
@@ -242,24 +260,44 @@ impl BanchoStateService for BanchoStateServiceImpl {
         Ok(ExecSuccess {})
     }
 
-    async fn check_user_session_exists(
+    async fn check_user_token(
+        &self,
+        token: BanchoClientToken,
+    ) -> Result<CheckUserTokenResponse, BanchoStateError> {
+        if !self
+            .signature_service
+            .verify(token.content().into(), token.signature.into())
+            .await
+            .map_err(|_| BanchoStateError::InvalidToken)?
+        {
+            return Err(BanchoStateError::InvalidToken)
+        }
+
+        let session = self
+            .user_sessions_service
+            .get(&UserQuery::SessionId(token.session_id))
+            .await
+            .ok_or(BanchoStateError::SessionNotExists)?;
+
+        session.update_active();
+
+        Ok(CheckUserTokenResponse::default())
+    }
+
+    async fn is_user_online(
         &self,
         query: UserQuery,
-    ) -> Result<UserSessionExistsResponse, BanchoStateError> {
-        // Get session based on the provided query
-        let user_id = {
-            let session = self
-                .user_sessions_service
-                .get(&query)
-                .await
-                .ok_or(BanchoStateError::SessionNotExists)?;
+    ) -> Result<UserOnlineResponse, BanchoStateError> {
+        let session = self
+            .user_sessions_service
+            .get(&query)
+            .await
+            .ok_or(BanchoStateError::SessionNotExists)?;
 
-            session.update_active();
-            session.user_id
-        };
-
-        // Return the user ID in a response.
-        Ok(UserSessionExistsResponse { user_id })
+        Ok(UserOnlineResponse {
+            user_id: session.user_id,
+            session_id: session.id.to_string(),
+        })
     }
 
     async fn get_user_session(
@@ -729,12 +767,29 @@ impl BanchoStateService for BanchoStateServiceRemote {
             .map(|resp| resp.into_inner())
     }
 
-    async fn check_user_session_exists(
+    async fn check_user_token(
+        &self,
+        token: BanchoClientToken,
+    ) -> Result<CheckUserTokenResponse, BanchoStateError> {
+        self.client()
+            .check_user_token(token)
+            .await
+            .map_err(|status| {
+                if status.code() == Code::NotFound {
+                    BanchoStateError::SessionNotExists
+                } else {
+                    BanchoStateError::RpcError(status)
+                }
+            })
+            .map(|resp| resp.into_inner())
+    }
+
+    async fn is_user_online(
         &self,
         query: UserQuery,
-    ) -> Result<UserSessionExistsResponse, BanchoStateError> {
+    ) -> Result<UserOnlineResponse, BanchoStateError> {
         self.client()
-            .check_user_session_exists(Into::<RawUserQuery>::into(query))
+            .is_user_online(Into::<RawUserQuery>::into(query))
             .await
             .map_err(|status| {
                 if status.code() == Code::NotFound {

@@ -1,13 +1,11 @@
 use crate::gateway::bancho_endpoints::{
-    extractors::{BanchoClientToken, BanchoClientVersion},
+    components::BanchoClientToken,
+    extractors::{BanchoClientVersion, OsuTokenHeader},
     BanchoHttpError, LoginError,
 };
 use async_trait::async_trait;
 use axum::response::Response;
-use peace_pb::{
-    bancho::LoginSuccess,
-    bancho_state::{BanchoPacketTarget, UserQuery},
-};
+use peace_pb::{bancho::LoginSuccess, bancho_state::BanchoPacketTarget};
 use std::{net::IpAddr, sync::Arc};
 use tools::Ulid;
 
@@ -22,7 +20,7 @@ pub trait BanchoRoutingService {
     /// post /
     async fn bancho_post(
         &self,
-        session_id: Option<BanchoClientToken>,
+        token: Option<OsuTokenHeader>,
         version: Option<BanchoClientVersion>,
         ip: IpAddr,
         body: Vec<u8>,
@@ -122,8 +120,8 @@ pub trait BanchoHandlerService {
         target: BanchoPacketTarget,
     ) -> Option<Vec<u8>>;
 
-    async fn check_user_session(
+    async fn check_user_token(
         &self,
-        query: UserQuery,
-    ) -> Result<i32, BanchoHttpError>;
+        token: BanchoClientToken,
+    ) -> Result<(), BanchoHttpError>;
 }

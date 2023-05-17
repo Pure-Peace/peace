@@ -26,7 +26,11 @@ service BanchoRPC {
 
 message HandleCompleted { optional bytes packets = 1; }
 
-message PingRequest { string session_id = 1; }
+message PingRequest {
+  int32 user_id = 1;
+  string session_id = 2;
+  string signature = 3;
+}
 
 message ClientHashes {
   string path_hash = 1;
@@ -48,8 +52,9 @@ message LoginRequest {
 
 message LoginSuccess {
   string session_id = 1;
-  int32 user_id = 2;
-  bytes packets = 3;
+  string signature = 2;
+  int32 user_id = 3;
+  bytes packets = 4;
 }
 
 message RequestStatusUpdateRequest { string session_id = 1; }

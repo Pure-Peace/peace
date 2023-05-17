@@ -1,5 +1,8 @@
 use super::BanchoStateBackgroundServiceConfigs;
-use crate::bancho_state::{BanchoStateError, Packet, Session, UserSessions};
+use crate::{
+    bancho_state::{BanchoStateError, Packet, Session, UserSessions},
+    gateway::bancho_endpoints::components::BanchoClientToken,
+};
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
@@ -7,7 +10,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tools::{
     async_collections::{
-        BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig, LoopBackgroundTaskConfig,
+        BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
+        LoopBackgroundTaskConfig,
     },
     message_queue::MessageQueue,
     Ulid,
@@ -90,10 +94,15 @@ pub trait BanchoStateService {
         query: UserQuery,
     ) -> Result<ExecSuccess, BanchoStateError>;
 
-    async fn check_user_session_exists(
+    async fn check_user_token(
+        &self,
+        token: BanchoClientToken,
+    ) -> Result<CheckUserTokenResponse, BanchoStateError>;
+
+    async fn is_user_online(
         &self,
         query: UserQuery,
-    ) -> Result<UserSessionExistsResponse, BanchoStateError>;
+    ) -> Result<UserOnlineResponse, BanchoStateError>;
 
     async fn get_user_session(
         &self,
