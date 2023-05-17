@@ -336,8 +336,8 @@ pub mod macros {
     /// #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize)]
     /// pub struct GatewayConfig {
     ///     /// Bancho service address.
-    ///     #[default("http://127.0.0.1:50051".to_owned())]
-    ///     #[arg(long, default_value = "http://127.0.0.1:50051")]
+    ///     #[default("http://127.0.0.1:5010".to_owned())]
+    ///     #[arg(long, default_value = "http://127.0.0.1:5010")]
     ///     pub bancho_addr: String,
     /// }
     ///
@@ -414,7 +414,7 @@ pub mod macros {
     /// ```
     macro_rules! macro_define_rpc_client_config {
         (service_name: $service_name: ty, config_name: $config_name: ty) => {
-            $crate::macro_define_rpc_client_config!(service_name: $service_name, config_name: $config_name, default_uri: "http://127.0.0.1:50051");
+            $crate::macro_define_rpc_client_config!(service_name: $service_name, config_name: $config_name, default_uri: "http://127.0.0.1:5010");
         };
         (service_name: $service_name: ty, config_name: $config_name: ty, default_uri: $default_uri: literal) => {
             $crate::macros::____private::paste::paste! {
@@ -509,7 +509,7 @@ pub mod macros {
                             let service_factory =
                                 $crate::macros::____private::service_fn(move |_| tokio::net::UnixStream::connect(uds.to_owned()));
                             let endpoint =
-                                $crate::macros::____private::Endpoint::try_from("http://[::]:50051")?;
+                                $crate::macros::____private::Endpoint::try_from("http://[::]:5010")?;
 
                             let channel = if self.lazy_connect() {
                                 endpoint.connect_with_connector_lazy(service_factory)

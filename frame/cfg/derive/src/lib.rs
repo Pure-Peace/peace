@@ -17,8 +17,8 @@ use syn::{parse_macro_input, DeriveInput};
 /// #[derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize, SingletonConfig)]
 /// pub struct GatewayConfig {
 ///     /// Bancho service address.
-///     #[default("http://127.0.0.1:50051".to_owned())]
-///     #[arg(long, default_value = "http://127.0.0.1:50051")]
+///     #[default("http://127.0.0.1:5010".to_owned())]
+///     #[arg(long, default_value = "http://127.0.0.1:5010")]
 ///     pub bancho_addr: String,
 /// }
 ///
