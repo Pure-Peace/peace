@@ -1,4 +1,5 @@
 use super::{DynGeoipService, GeoipError, GeoipService};
+use crate::rpc_config::GeoipRpcConfig;
 use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
 use maxminddb::{geoip2, Mmap, Reader};
@@ -9,22 +10,24 @@ use std::{net::IpAddr, sync::Arc};
 use tonic::transport::Channel;
 
 const LANGUAGE: &str = "en";
+const DEFAULT_GEO_DB_PATH: &str = "GeoLite2-City.mmdb";
 
 pub struct GeoipServiceBuilder;
 
 impl GeoipServiceBuilder {
     pub async fn build(
         geo_db_path: Option<&str>,
-        geoip_rpc_config: Option<
-            &impl RpcClientConfig<RpcClient = GeoipRpcClient<Channel>>,
-        >,
+        geoip_rpc_config: Option<&GeoipRpcConfig>,
     ) -> DynGeoipService {
         info!("initializing Geoip service...");
-        let mut service = geo_db_path
-            .map(|path| GeoipServiceImpl::from_path(path).into_service());
+        let mut service = GeoipServiceImpl::from_path(
+            geo_db_path.unwrap_or(DEFAULT_GEO_DB_PATH),
+        )
+        .ok()
+        .map(|svc| svc.into_service());
 
         if service.is_some() {
-            info!("Geoip service init successful, type: `Local`");
+            info!("Geoip service init successful, type: \"Local\"");
             return service.unwrap()
         }
 
@@ -33,17 +36,26 @@ impl GeoipServiceBuilder {
                 .connect_client()
                 .await
                 .map(|client| {
-                    info!("Geoip service init successful, type: `Remote`");
+                    info!("Geoip service init successful, type: \"Remote\"");
                     GeoipServiceRemote::new(client).into_service()
                 })
                 .ok();
         }
 
-        service
-            .unwrap_or_else(|| {
-                warn!("Geoip service init failed, will not be able to use related features");
-                GeoipServiceImpl::lazy_init().into_service()
-            })
+        service.unwrap_or_else(|| {
+            warn!(
+                "
+        Geoip service init failed, will not be able to use related features!
+
+        Please make sure you have downloaded the \"GeoLite2 City\" database
+        and put it in the specified location (\"GeoLite2-City.mmdb\").
+        If you have not downloaded it,
+        please register and log in to your account here:
+        \"https://www.maxmind.com/en/accounts/470006/geoip/downloads\"
+"
+            );
+            GeoipServiceImpl::lazy_init().into_service()
+        })
     }
 }
 
@@ -78,17 +90,8 @@ impl GeoipServiceImpl {
         Arc::new(self) as DynGeoipService
     }
 
-    pub fn from_path(path: &str) -> Self {
-        let geo_db = GeoipServiceImpl::load_db(path).expect(
-            "
-        Please make sure you have downloaded the `GeoLite2 City` database
-        and put it in the specified location (`GeoLite2-City.mmdb`).
-        If you have not downloaded it,
-        please register and log in to your account here:
-        `https://www.maxmind.com /en/accounts/470006/geoip/downloads`
-        ",
-        );
-        Self::new(geo_db)
+    pub fn from_path(path: &str) -> Result<Self, GeoipError> {
+        Ok(Self::new(GeoipServiceImpl::load_db(path)?))
     }
 
     pub fn lazy_init() -> Self {

@@ -50,6 +50,7 @@ impl Application for App {
 
         let geoip_service =
             GeoipServiceImpl::from_path(geo_db_path.to_str().unwrap())
+                .unwrap()
                 .into_service();
 
         let geoip_rpc = GeoipRpcImpl::new(geoip_service);
