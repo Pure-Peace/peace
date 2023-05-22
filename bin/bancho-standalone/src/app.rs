@@ -8,6 +8,7 @@ use peace_services::{
     bancho::{
         BanchoBackgroundServiceConfigs, BanchoBackgroundServiceImpl,
         BanchoServiceImpl, CliBanchoBackgroundServiceConfigs,
+        GetPasswordCacheStore, IntoBanchoService, IntoPasswordService,
         PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
     bancho_state::{
@@ -145,7 +146,8 @@ impl Application for App {
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
-        let password_service = PasswordServiceImpl::default().into_service();
+        let password_service = PasswordServiceImpl::default();
+        let password_cache_store = password_service.cache_store().clone();
 
         let geoip_service =
             GeoipServiceBuilder::build::<GeoipServiceImpl, GeoipServiceRemote>(
@@ -166,7 +168,7 @@ impl Application for App {
                 .into_service();
 
         let bancho_background_service =
-            BanchoBackgroundServiceImpl::new(password_service.cache().clone())
+            BanchoBackgroundServiceImpl::new(password_cache_store)
                 .into_service();
 
         let bancho_background_service_config = BanchoBackgroundServiceConfigs {
@@ -185,7 +187,7 @@ impl Application for App {
         let bancho_service = BanchoServiceImpl::new(
             users_repository,
             bancho_state_service.clone(),
-            password_service,
+            password_service.into_service(),
             bancho_background_service,
             geoip_service,
             chat_service,

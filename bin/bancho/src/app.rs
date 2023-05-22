@@ -13,6 +13,7 @@ use peace_services::{
     bancho::{
         BanchoBackgroundServiceConfigs, BanchoBackgroundServiceImpl,
         BanchoServiceImpl, CliBanchoBackgroundServiceConfigs,
+        GetPasswordCacheStore, IntoBanchoService, IntoPasswordService,
         PasswordCachesRecycleConfig, PasswordServiceImpl,
     },
     bancho_state::BanchoStateServiceRemote,
@@ -114,10 +115,11 @@ impl Application for App {
         let chat_service =
             ChatServiceRemote::new(chat_rpc_client).into_service();
 
-        let password_service = PasswordServiceImpl::default().into_service();
+        let password_service = PasswordServiceImpl::default();
+        let password_cache_store = password_service.cache_store().clone();
 
         let bancho_background_service =
-            BanchoBackgroundServiceImpl::new(password_service.cache().clone())
+            BanchoBackgroundServiceImpl::new(password_cache_store)
                 .into_service();
 
         let bancho_background_service_config = BanchoBackgroundServiceConfigs {
@@ -136,7 +138,7 @@ impl Application for App {
         let bancho_service = BanchoServiceImpl::new(
             users_repository,
             bancho_state_service,
-            password_service,
+            password_service.into_service(),
             bancho_background_service,
             geoip_service,
             chat_service,

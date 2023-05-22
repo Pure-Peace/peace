@@ -1,6 +1,6 @@
 use super::PacketContext;
 use crate::{
-    bancho::{BanchoService, ProcessBanchoPacketError},
+    bancho::{traits::*, ProcessBanchoPacketError},
     bancho_state::PresenceFilter,
     chat::Platform,
 };

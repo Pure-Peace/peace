@@ -1,4 +1,6 @@
-use crate::bancho::{DynPasswordService, PasswordService};
+use crate::bancho::{
+    GetPasswordCacheStore, IntoPasswordService, PasswordService,
+};
 use async_trait::async_trait;
 use peace_domain::users::{Password, PasswordError};
 use std::{collections::HashMap, sync::Arc};
@@ -27,37 +29,38 @@ impl PasswordCache {
 
 #[derive(Clone, Default)]
 pub struct PasswordServiceImpl {
-    cache: PasswordCacheStore,
+    pub cache_store: PasswordCacheStore,
 }
 
-impl PasswordServiceImpl {
-    pub fn into_service(self) -> DynPasswordService {
-        Arc::new(self) as DynPasswordService
+impl IntoPasswordService for PasswordServiceImpl {}
+
+impl GetPasswordCacheStore for PasswordServiceImpl {
+    #[inline]
+    fn cache_store(&self) -> &PasswordCacheStore {
+        &self.cache_store
     }
 }
 
 #[async_trait]
 impl PasswordService for PasswordServiceImpl {
-    fn cache(&self) -> &PasswordCacheStore {
-        &self.cache
-    }
-
     async fn verify_password(
         &self,
         hashed_password: &str,
         password: &str,
     ) -> Result<(), PasswordError> {
-        if let Some(cached) = self.cache.lock().await.get_mut(hashed_password) {
+        if let Some(cached) =
+            self.cache_store.lock().await.get_mut(hashed_password)
+        {
             if cached.raw == password {
                 cached.last_hit = Timestamp::now();
-                return Ok(());
+                return Ok(())
             } else {
-                return Err(PasswordError::InvalidPassword);
+                return Err(PasswordError::InvalidPassword)
             }
         }
 
         let () = Password::verify_password(hashed_password, password)?;
-        self.cache.lock().await.insert(
+        self.cache_store.lock().await.insert(
             hashed_password.to_owned(),
             PasswordCache::new(password.to_owned()),
         );

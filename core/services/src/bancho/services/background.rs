@@ -1,5 +1,5 @@
 use super::{BanchoBackgroundService, PasswordCacheStore};
-use crate::bancho::DynBanchoBackgroundService;
+use crate::bancho::{DynBanchoBackgroundService, PasswordBackgroundService};
 use async_trait::async_trait;
 use clap_serde_derive::ClapSerde;
 use std::{
@@ -52,7 +52,10 @@ impl BanchoBackgroundServiceImpl {
                 loop {
                     tokio::time::sleep(*cfg.loop_interval.load().as_ref())
                         .await;
-                    debug!(target: LOG_TARGET, "password caches recycling started!");
+                    debug!(
+                        target: LOG_TARGET,
+                        "password caches recycling started!"
+                    );
                     let start = Instant::now();
 
                     let current_timestamp = Timestamp::now();
@@ -150,7 +153,10 @@ impl BanchoBackgroundService for BanchoBackgroundServiceImpl {
     fn start_all(&self, configs: BanchoBackgroundServiceConfigs) {
         self.start_password_caches_recycle(configs.password_caches_recycle);
     }
+}
 
+#[async_trait]
+impl PasswordBackgroundService for BanchoBackgroundServiceImpl {
     fn start_password_caches_recycle(
         &self,
         config: Arc<CommonRecycleBackgroundTaskConfig>,

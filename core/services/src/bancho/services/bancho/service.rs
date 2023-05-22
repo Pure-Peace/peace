@@ -1,8 +1,7 @@
 use crate::{
     bancho::{
-        packet_processor, BanchoService, BanchoServiceError,
-        DynBanchoBackgroundService, DynBanchoService, DynPasswordService,
-        LoginError, ProcessBanchoPacketError,
+        packet_processor, traits::*, BanchoServiceError, LoginError,
+        ProcessBanchoPacketError,
     },
     bancho_state::DynBanchoStateService,
     chat::DynChatService,
@@ -17,25 +16,15 @@ use peace_pb::{
     ConvertError,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{net::IpAddr, str::FromStr, sync::Arc, time::Instant};
+use std::{net::IpAddr, str::FromStr, time::Instant};
 use tonic::{async_trait, transport::Channel};
 use tools::{lazy_init, tonic_utils::RawRequest, Ulid};
 
-#[derive(Clone)]
-pub struct BanchoServiceRemote(BanchoRpcClient<Channel>);
-
-impl BanchoServiceRemote {
-    pub fn new(bancho_rpc_client: BanchoRpcClient<Channel>) -> Self {
-        Self(bancho_rpc_client)
-    }
-
-    pub fn into_service(self) -> DynBanchoService {
-        Arc::new(self) as DynBanchoService
-    }
-
-    pub fn client(&self) -> BanchoRpcClient<Channel> {
-        self.0.clone()
-    }
+pub struct PacketContext<'a> {
+    pub session_id: &'a str,
+    pub user_id: i32,
+    pub packet: Packet<'a>,
+    pub svc: &'a BanchoServiceImpl,
 }
 
 #[derive(Clone)]
@@ -69,21 +58,14 @@ impl BanchoServiceImpl {
             chat_service,
         }
     }
-
-    pub fn into_service(self) -> DynBanchoService {
-        Arc::new(self) as DynBanchoService
-    }
 }
 
-pub struct PacketContext<'a> {
-    pub session_id: &'a str,
-    pub user_id: i32,
-    pub packet: Packet<'a>,
-    pub svc: &'a BanchoServiceImpl,
-}
+impl BanchoService for BanchoServiceImpl {}
+
+impl IntoBanchoService for BanchoServiceImpl {}
 
 #[async_trait]
-impl BanchoService for BanchoServiceImpl {
+impl Login for BanchoServiceImpl {
     async fn login(
         &self,
         client_ip: IpAddr,
@@ -252,7 +234,9 @@ impl BanchoService for BanchoServiceImpl {
             packets: packet_builder.build(),
         })
     }
-
+}
+#[async_trait]
+impl BatchProcessPackets for BanchoServiceImpl {
     async fn batch_process_bancho_packets(
         &self,
         request: BatchProcessBanchoPacketsRequest,
@@ -298,7 +282,9 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted { packets: builder.map(|b| b.build()) })
     }
-
+}
+#[async_trait]
+impl ProcessPackets for BanchoServiceImpl {
     #[inline]
     async fn process_bancho_packet(
         &self,
@@ -378,7 +364,9 @@ impl BanchoService for BanchoServiceImpl {
                 )),
         })
     }
-
+}
+#[async_trait]
+impl ClientPing for BanchoServiceImpl {
     async fn ping(
         &self,
         PingRequest { user_id, session_id, signature }: PingRequest,
@@ -394,7 +382,9 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
-
+}
+#[async_trait]
+impl RequestStatusUpdate for BanchoServiceImpl {
     async fn request_status_update(
         &self,
         request: RequestStatusUpdateRequest,
@@ -423,7 +413,9 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
-
+}
+#[async_trait]
+impl PresenceRequestAll for BanchoServiceImpl {
     async fn presence_request_all(
         &self,
         request: PresenceRequestAllRequest,
@@ -445,7 +437,9 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
-
+}
+#[async_trait]
+impl RequestStats for BanchoServiceImpl {
     async fn request_stats(
         &self,
         request: StatsRequest,
@@ -469,7 +463,9 @@ impl BanchoService for BanchoServiceImpl {
             .await?;
         Ok(HandleCompleted::default())
     }
-
+}
+#[async_trait]
+impl ChangeAction for BanchoServiceImpl {
     async fn change_action(
         &self,
         request: ChangeActionRequest,
@@ -504,7 +500,10 @@ impl BanchoService for BanchoServiceImpl {
             .await?;
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl ReceiveUpdates for BanchoServiceImpl {
     async fn receive_updates(
         &self,
         request: ReceiveUpdatesRequest,
@@ -526,7 +525,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl ToggleBlockNonFriendDms for BanchoServiceImpl {
     async fn toggle_block_non_friend_dms(
         &self,
         request: ToggleBlockNonFriendDmsRequest,
@@ -537,7 +539,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl UserLogout for BanchoServiceImpl {
     async fn user_logout(
         &self,
         request: UserLogoutRequest,
@@ -551,7 +556,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl RequestPresence for BanchoServiceImpl {
     async fn request_presence(
         &self,
         request: PresenceRequest,
@@ -576,7 +584,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl SpectateStop for BanchoServiceImpl {
     async fn spectate_stop(
         &self,
         request: SpectateStopRequest,
@@ -585,7 +596,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl SpectateCant for BanchoServiceImpl {
     async fn spectate_cant(
         &self,
         request: SpectateCantRequest,
@@ -594,7 +608,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl LobbyPart for BanchoServiceImpl {
     async fn lobby_part(
         &self,
         request: LobbyPartRequest,
@@ -603,7 +620,10 @@ impl BanchoService for BanchoServiceImpl {
 
         Ok(HandleCompleted::default())
     }
+}
 
+#[async_trait]
+impl LobbyJoin for BanchoServiceImpl {
     async fn lobby_join(
         &self,
         request: LobbyJoinRequest,
@@ -614,8 +634,28 @@ impl BanchoService for BanchoServiceImpl {
     }
 }
 
+#[derive(Clone)]
+pub struct BanchoServiceRemote(BanchoRpcClient<Channel>);
+
+impl BanchoService for BanchoServiceRemote {}
+
+impl IntoBanchoService for BanchoServiceRemote {}
+
+impl FromClient for BanchoServiceRemote {
+    #[inline]
+    fn from_client(client: BanchoRpcClient<Channel>) -> Self {
+        Self(client)
+    }
+}
+
+impl BanchoServiceRpc for BanchoServiceRemote {
+    fn client(&self) -> BanchoRpcClient<Channel> {
+        self.0.clone()
+    }
+}
+
 #[async_trait]
-impl BanchoService for BanchoServiceRemote {
+impl Login for BanchoServiceRemote {
     async fn login(
         &self,
         client_ip: IpAddr,
@@ -627,7 +667,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl BatchProcessPackets for BanchoServiceRemote {
     async fn batch_process_bancho_packets(
         &self,
         request: BatchProcessBanchoPacketsRequest,
@@ -638,7 +680,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(ProcessBanchoPacketError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl ProcessPackets for BanchoServiceRemote {
     #[inline]
     async fn process_bancho_packet(
         &self,
@@ -657,7 +701,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(ProcessBanchoPacketError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl ClientPing for BanchoServiceRemote {
     async fn ping(
         &self,
         request: PingRequest,
@@ -668,7 +714,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl RequestStatusUpdate for BanchoServiceRemote {
     async fn request_status_update(
         &self,
         request: RequestStatusUpdateRequest,
@@ -679,7 +727,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl PresenceRequestAll for BanchoServiceRemote {
     async fn presence_request_all(
         &self,
         request: PresenceRequestAllRequest,
@@ -690,7 +740,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl RequestStats for BanchoServiceRemote {
     async fn request_stats(
         &self,
         request: StatsRequest,
@@ -701,7 +753,9 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
-
+}
+#[async_trait]
+impl ChangeAction for BanchoServiceRemote {
     async fn change_action(
         &self,
         request: ChangeActionRequest,
@@ -712,7 +766,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl ReceiveUpdates for BanchoServiceRemote {
     async fn receive_updates(
         &self,
         request: ReceiveUpdatesRequest,
@@ -723,7 +780,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl ToggleBlockNonFriendDms for BanchoServiceRemote {
     async fn toggle_block_non_friend_dms(
         &self,
         request: ToggleBlockNonFriendDmsRequest,
@@ -734,7 +794,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl UserLogout for BanchoServiceRemote {
     async fn user_logout(
         &self,
         request: UserLogoutRequest,
@@ -745,7 +808,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl RequestPresence for BanchoServiceRemote {
     async fn request_presence(
         &self,
         request: PresenceRequest,
@@ -756,7 +822,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl SpectateStop for BanchoServiceRemote {
     async fn spectate_stop(
         &self,
         request: SpectateStopRequest,
@@ -767,7 +836,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl SpectateCant for BanchoServiceRemote {
     async fn spectate_cant(
         &self,
         request: SpectateCantRequest,
@@ -778,7 +850,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl LobbyPart for BanchoServiceRemote {
     async fn lobby_part(
         &self,
         request: LobbyPartRequest,
@@ -789,7 +864,10 @@ impl BanchoService for BanchoServiceRemote {
             .map_err(BanchoServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl LobbyJoin for BanchoServiceRemote {
     async fn lobby_join(
         &self,
         request: LobbyJoinRequest,
