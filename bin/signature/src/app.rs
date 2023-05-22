@@ -5,7 +5,9 @@ use peace_pb::signature::{
 };
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::signature::SignatureServiceBuilder;
+use peace_services::signature::{
+    SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
+};
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
     async_trait,
@@ -47,7 +49,10 @@ impl Application for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let signature_service = SignatureServiceBuilder::build(
+        let signature_service = SignatureServiceBuilder::build::<
+            SignatureServiceImpl,
+            SignatureServiceRemote,
+        >(
             self.cfg.ed25519_private_key_path.as_ref().map(|path| {
                 path.to_str()
                     .expect("failed to parse \"ed25519_private_key_path\"")

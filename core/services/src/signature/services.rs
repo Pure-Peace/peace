@@ -1,4 +1,8 @@
-use super::{error::SignatureError, DynSignatureService, SignatureService};
+use super::{
+    error::SignatureError, DynSignatureService, FromClient, FromSigner,
+    IntoSignatureService, ReloadSigner, RequestPublicKey, SignMessage,
+    SignatureService, SignatureServiceRpc, VerifyMessage,
+};
 use crate::rpc_config::SignatureRpcConfig;
 use async_trait::async_trait;
 use derive_deref::Deref;
@@ -9,7 +13,7 @@ use peace_pb::signature::{
     ReloadFromPemFileRequest, ReloadFromPemRequest, SignMessageRequest,
     VerifyMessageRequest,
 };
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 use tonic::transport::Channel;
 use tools::crypto::SignerManager;
 
@@ -18,16 +22,20 @@ const DEFAULT_ED25519_PEM_FILE_PATH: &str = "signature_svc_priv_key.pem";
 pub struct SignatureServiceBuilder;
 
 impl SignatureServiceBuilder {
-    pub async fn build(
+    pub async fn build<I, R>(
         ed25519_pem_path: Option<&str>,
         signature_rpc_config: Option<&SignatureRpcConfig>,
-    ) -> DynSignatureService {
+    ) -> DynSignatureService
+    where
+        I: IntoSignatureService + FromSigner,
+        R: IntoSignatureService + FromClient,
+    {
         info!("initializing Signature service...");
         let mut service = SignerManager::from_pem_file(
             ed25519_pem_path.unwrap_or(DEFAULT_ED25519_PEM_FILE_PATH),
         )
         .ok()
-        .map(|signer| SignatureServiceImpl::new(signer).into_service());
+        .map(|signer| I::from_signer(signer).into_service());
 
         if service.is_some() {
             info!("Signature service init successful, type: \"Local\"");
@@ -42,20 +50,20 @@ impl SignatureServiceBuilder {
                     info!(
                         "Signature service init successful, type: \"Remote\""
                     );
-                    SignatureServiceRemote::new(client).into_service()
+                    R::from_client(client).into_service()
                 })
                 .ok();
         }
 
         service.unwrap_or_else(|| {
             info!("Generating new ed25519 private key...");
-            let manager = SignerManager::new_rand();
-            manager
+            let signer = SignerManager::new_rand();
+            signer
                 .store_to_pem_file(
                     ed25519_pem_path.unwrap_or(DEFAULT_ED25519_PEM_FILE_PATH),
                 )
                 .unwrap();
-            SignatureServiceImpl::new(manager).into_service()
+            I::from_signer(signer).into_service()
         })
     }
 }
@@ -65,36 +73,20 @@ pub struct SignatureServiceImpl {
     pub signer: SignerManager,
 }
 
-impl SignatureServiceImpl {
+#[async_trait]
+impl SignatureService for SignatureServiceImpl {}
+
+impl IntoSignatureService for SignatureServiceImpl {}
+
+impl FromSigner for SignatureServiceImpl {
     #[inline]
-    pub fn new(signer: SignerManager) -> Self {
+    fn from_signer(signer: SignerManager) -> Self {
         Self { signer }
-    }
-
-    pub fn into_service(self) -> DynSignatureService {
-        Arc::new(self) as DynSignatureService
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct SignatureServiceRemote(SignatureRpcClient<Channel>);
-
-impl SignatureServiceRemote {
-    pub fn new(signature_rpc_client: SignatureRpcClient<Channel>) -> Self {
-        Self(signature_rpc_client)
-    }
-
-    pub fn client(&self) -> SignatureRpcClient<Channel> {
-        self.0.clone()
-    }
-
-    pub fn into_service(self) -> DynSignatureService {
-        Arc::new(self) as DynSignatureService
     }
 }
 
 #[async_trait]
-impl SignatureService for SignatureServiceImpl {
+impl SignMessage for SignatureServiceImpl {
     #[inline]
     async fn sign<'a>(
         &self,
@@ -102,7 +94,10 @@ impl SignatureService for SignatureServiceImpl {
     ) -> Result<String, SignatureError> {
         Ok(self.signer.sign(message.as_bytes())?.to_string())
     }
+}
 
+#[async_trait]
+impl VerifyMessage for SignatureServiceImpl {
     #[inline]
     async fn verify<'a>(
         &self,
@@ -118,7 +113,10 @@ impl SignatureService for SignatureServiceImpl {
         };
         Ok(self.signer.verify(message.as_bytes(), &signature).is_ok())
     }
+}
 
+#[async_trait]
+impl ReloadSigner for SignatureServiceImpl {
     #[inline]
     async fn reload_from_pem<'a>(
         &self,
@@ -136,15 +134,38 @@ impl SignatureService for SignatureServiceImpl {
             .signer
             .reload_from_pem_file(ed25519_private_key_file_path.as_ref())?)
     }
+}
 
+#[async_trait]
+impl RequestPublicKey for SignatureServiceImpl {
     #[inline]
     async fn public_key(&self) -> Result<String, SignatureError> {
         Ok(self.signer.public_key()?)
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SignatureServiceRemote(SignatureRpcClient<Channel>);
+
+impl SignatureServiceRpc for SignatureServiceRemote {
+    #[inline]
+    fn client(&self) -> SignatureRpcClient<Channel> {
+        self.0.clone()
+    }
+}
+
+impl FromClient for SignatureServiceRemote {
+    fn from_client(client: SignatureRpcClient<Channel>) -> Self {
+        Self(client)
+    }
+}
+
+impl SignatureService for SignatureServiceRemote {}
+
+impl IntoSignatureService for SignatureServiceRemote {}
+
 #[async_trait]
-impl SignatureService for SignatureServiceRemote {
+impl SignMessage for SignatureServiceRemote {
     #[inline]
     async fn sign<'a>(
         &self,
@@ -156,7 +177,10 @@ impl SignatureService for SignatureServiceRemote {
             .map_err(SignatureError::RpcError)
             .map(|resp| resp.into_inner().signature)
     }
+}
 
+#[async_trait]
+impl VerifyMessage for SignatureServiceRemote {
     #[inline]
     async fn verify<'a>(
         &self,
@@ -172,7 +196,10 @@ impl SignatureService for SignatureServiceRemote {
             .map_err(SignatureError::RpcError)
             .map(|resp| resp.into_inner().is_valid)
     }
+}
 
+#[async_trait]
+impl ReloadSigner for SignatureServiceRemote {
     #[inline]
     async fn reload_from_pem<'a>(
         &self,
@@ -203,7 +230,10 @@ impl SignatureService for SignatureServiceRemote {
 
         Ok(())
     }
+}
 
+#[async_trait]
+impl RequestPublicKey for SignatureServiceRemote {
     #[inline]
     async fn public_key(&self) -> Result<String, SignatureError> {
         self.client()

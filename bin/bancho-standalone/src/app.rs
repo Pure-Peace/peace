@@ -24,7 +24,9 @@ use peace_services::{
     },
     geoip::{GeoipServiceBuilder, GeoipServiceImpl, GeoipServiceRemote},
     rpc_config::{GeoipRpcConfig, SignatureRpcConfig},
-    signature::SignatureServiceBuilder,
+    signature::{
+        SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
+    },
 };
 use std::{path::PathBuf, sync::Arc};
 use utoipa::OpenApi;
@@ -97,7 +99,10 @@ impl Application for App {
 
         let user_session_service = Arc::new(UserSessionsServiceImpl::new());
 
-        let signature_service = SignatureServiceBuilder::build(
+        let signature_service = SignatureServiceBuilder::build::<
+            SignatureServiceImpl,
+            SignatureServiceRemote,
+        >(
             self.cfg.ed25519_private_key_path.as_ref().map(|path| {
                 path.to_str()
                     .expect("failed to parse \"--ed25519_private_key_path\"")
