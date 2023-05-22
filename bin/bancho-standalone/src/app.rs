@@ -22,7 +22,7 @@ use peace_services::{
         BanchoDebugEndpointsDocs, BanchoEndpointsDocs,
         BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
     },
-    geoip::GeoipServiceBuilder,
+    geoip::{GeoipServiceBuilder, GeoipServiceImpl, GeoipServiceRemote},
     rpc_config::{GeoipRpcConfig, SignatureRpcConfig},
     signature::SignatureServiceBuilder,
 };
@@ -142,13 +142,14 @@ impl Application for App {
 
         let password_service = PasswordServiceImpl::default().into_service();
 
-        let geoip_service = GeoipServiceBuilder::build(
-            self.cfg.geo_db_path.as_ref().map(|path| {
-                path.to_str().expect("failed to parse \"--geo_db_path\"")
-            }),
-            Some(&self.cfg.geoip),
-        )
-        .await;
+        let geoip_service =
+            GeoipServiceBuilder::build::<GeoipServiceImpl, GeoipServiceRemote>(
+                self.cfg.geo_db_path.as_ref().map(|path| {
+                    path.to_str().expect("failed to parse \"--geo_db_path\"")
+                }),
+                Some(&self.cfg.geoip),
+            )
+            .await;
 
         let channel_service =
             ChannelServiceImpl::new(peace_db_conn).into_service();
