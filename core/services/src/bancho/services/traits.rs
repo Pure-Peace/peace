@@ -2,9 +2,9 @@ use super::{BanchoBackgroundServiceConfigs, PasswordCacheStore};
 use crate::bancho::{BanchoServiceError, ProcessBanchoPacketError};
 use bancho_packets::Packet;
 use peace_domain::users::PasswordError;
-use peace_pb::bancho::{bancho_rpc_client::BanchoRpcClient, *};
+use peace_pb::bancho::*;
 use std::{net::IpAddr, sync::Arc};
-use tonic::{async_trait, transport::Channel};
+use tonic::async_trait;
 use tools::async_collections::{
     BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
 };
@@ -13,6 +13,30 @@ pub type DynBanchoService = Arc<dyn BanchoService + Send + Sync>;
 pub type DynBanchoBackgroundService =
     Arc<dyn BanchoBackgroundService + Send + Sync>;
 pub type DynPasswordService = Arc<dyn PasswordService + Send + Sync>;
+
+#[async_trait]
+pub trait PasswordBackgroundService {
+    fn start_password_caches_recycle(
+        &self,
+        config: Arc<CommonRecycleBackgroundTaskConfig>,
+    );
+    fn stop_password_caches_recycle(
+        &self,
+    ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;
+}
+
+pub trait GetPasswordCacheStore {
+    fn cache_store(&self) -> &PasswordCacheStore;
+}
+
+#[async_trait]
+pub trait PasswordService {
+    async fn verify_password(
+        &self,
+        hashed_password: &str,
+        password: &str,
+    ) -> Result<(), PasswordError>;
+}
 
 #[async_trait]
 pub trait BanchoBackgroundService: PasswordBackgroundService {
@@ -40,14 +64,6 @@ pub trait BanchoService:
 {
 }
 
-pub trait IntoBanchoService:
-    BanchoService + Sized + Sync + Send + 'static
-{
-    fn into_service(self) -> DynBanchoService {
-        Arc::new(self) as DynBanchoService
-    }
-}
-
 #[async_trait]
 pub trait Login {
     async fn login(
@@ -56,6 +72,7 @@ pub trait Login {
         request: LoginRequest,
     ) -> Result<LoginSuccess, BanchoServiceError>;
 }
+
 #[async_trait]
 pub trait BatchProcessPackets {
     async fn batch_process_bancho_packets(
@@ -63,6 +80,7 @@ pub trait BatchProcessPackets {
         request: BatchProcessBanchoPacketsRequest,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
 }
+
 #[async_trait]
 pub trait ProcessPackets {
     async fn process_bancho_packet(
@@ -72,6 +90,7 @@ pub trait ProcessPackets {
         packet: Packet<'_>,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
 }
+
 #[async_trait]
 pub trait ClientPing {
     async fn ping(
@@ -79,6 +98,7 @@ pub trait ClientPing {
         request: PingRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
+
 #[async_trait]
 pub trait RequestStatusUpdate {
     async fn request_status_update(
@@ -86,6 +106,7 @@ pub trait RequestStatusUpdate {
         request: RequestStatusUpdateRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
+
 #[async_trait]
 pub trait PresenceRequestAll {
     async fn presence_request_all(
@@ -93,6 +114,7 @@ pub trait PresenceRequestAll {
         request: PresenceRequestAllRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
+
 #[async_trait]
 pub trait RequestStats {
     async fn request_stats(
@@ -100,6 +122,7 @@ pub trait RequestStats {
         request: StatsRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
+
 #[async_trait]
 pub trait ChangeAction {
     async fn change_action(
@@ -170,44 +193,4 @@ pub trait LobbyJoin {
         &self,
         request: LobbyJoinRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
-}
-
-pub trait FromClient {
-    fn from_client(client: BanchoRpcClient<Channel>) -> Self;
-}
-
-pub trait BanchoServiceRpc {
-    fn client(&self) -> BanchoRpcClient<Channel>;
-}
-
-#[async_trait]
-pub trait PasswordBackgroundService {
-    fn start_password_caches_recycle(
-        &self,
-        config: Arc<CommonRecycleBackgroundTaskConfig>,
-    );
-    fn stop_password_caches_recycle(
-        &self,
-    ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError>;
-}
-
-pub trait GetPasswordCacheStore {
-    fn cache_store(&self) -> &PasswordCacheStore;
-}
-
-#[async_trait]
-pub trait PasswordService {
-    async fn verify_password(
-        &self,
-        hashed_password: &str,
-        password: &str,
-    ) -> Result<(), PasswordError>;
-}
-
-pub trait IntoPasswordService:
-    PasswordService + Sized + Sync + Send + 'static
-{
-    fn into_service(self) -> DynPasswordService {
-        Arc::new(self) as DynPasswordService
-    }
 }

@@ -1,9 +1,10 @@
 use super::{
-    DynGeoipService, FromClient, FromGeoDb, FromPath, GeoDb, GeoipError,
-    GeoipService, GeoipServiceRpc, IntoGeoipService, LookupIpAddress,
-    ReloadGeoDb, ReloadableGeoDb,
+    DynGeoipService, FromGeoDb, FromGeoDbPath, GeoDb, GeoipError, GeoipService,
+    LookupIpAddress, ReloadGeoDb, ReloadableGeoDb,
 };
-use crate::rpc_config::GeoipRpcConfig;
+use crate::{
+    rpc_config::GeoipRpcConfig, FromRpcClient, IntoService, RpcClient,
+};
 use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
 use maxminddb::{geoip2, Reader};
@@ -24,8 +25,9 @@ impl GeoipServiceBuilder {
         cfg: Option<&GeoipRpcConfig>,
     ) -> DynGeoipService
     where
-        I: IntoGeoipService + FromPath + FromGeoDb + Default,
-        R: IntoGeoipService + FromClient,
+        I: IntoService<DynGeoipService> + FromGeoDbPath + FromGeoDb + Default,
+        R: IntoService<DynGeoipService>
+            + FromRpcClient<Client = GeoipRpcClient<Channel>>,
     {
         info!("initializing Geoip service...");
         let mut service = I::from_path(path.unwrap_or(DEFAULT_GEO_DB_PATH))
@@ -87,7 +89,7 @@ where
         .map_err(GeoipError::FailedToLoadDatabase)
 }
 
-impl FromPath for GeoipServiceImpl {}
+impl FromGeoDbPath for GeoipServiceImpl {}
 
 impl FromGeoDb for GeoipServiceImpl {
     #[inline]
@@ -98,7 +100,12 @@ impl FromGeoDb for GeoipServiceImpl {
 
 impl GeoipService for GeoipServiceImpl {}
 
-impl IntoGeoipService for GeoipServiceImpl {}
+impl IntoService<DynGeoipService> for GeoipServiceImpl {
+    #[inline]
+    fn into_service(self) -> DynGeoipService {
+        Arc::new(self) as DynGeoipService
+    }
+}
 
 #[async_trait]
 impl LookupIpAddress for GeoipServiceImpl {
@@ -200,22 +207,30 @@ impl ReloadGeoDb for GeoipServiceImpl {
 #[derive(Debug, Clone)]
 pub struct GeoipServiceRemote(GeoipRpcClient<Channel>);
 
-impl GeoipServiceRpc for GeoipServiceRemote {
+impl RpcClient for GeoipServiceRemote {
+    type Client = GeoipRpcClient<Channel>;
+
     #[inline]
-    fn client(&self) -> GeoipRpcClient<Channel> {
+    fn client(&self) -> Self::Client {
         self.0.clone()
     }
 }
 
-impl FromClient for GeoipServiceRemote {
-    fn from_client(client: GeoipRpcClient<Channel>) -> Self {
+impl FromRpcClient for GeoipServiceRemote {
+    #[inline]
+    fn from_client(client: Self::Client) -> Self {
         Self(client)
     }
 }
 
 impl GeoipService for GeoipServiceRemote {}
 
-impl IntoGeoipService for GeoipServiceRemote {}
+impl IntoService<DynGeoipService> for GeoipServiceRemote {
+    #[inline]
+    fn into_service(self) -> DynGeoipService {
+        Arc::new(self) as DynGeoipService
+    }
+}
 
 #[async_trait]
 impl LookupIpAddress for GeoipServiceRemote {

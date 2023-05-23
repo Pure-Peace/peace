@@ -7,6 +7,7 @@ use crate::{
     chat::DynChatService,
     gateway::bancho_endpoints::components::BanchoClientToken,
     geoip::DynGeoipService,
+    FromRpcClient, IntoService, RpcClient,
 };
 use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
 use peace_pb::{
@@ -16,7 +17,7 @@ use peace_pb::{
     ConvertError,
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{net::IpAddr, str::FromStr, time::Instant};
+use std::{net::IpAddr, str::FromStr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
 use tools::{lazy_init, tonic_utils::RawRequest, Ulid};
 
@@ -62,7 +63,12 @@ impl BanchoServiceImpl {
 
 impl BanchoService for BanchoServiceImpl {}
 
-impl IntoBanchoService for BanchoServiceImpl {}
+impl IntoService<DynBanchoService> for BanchoServiceImpl {
+    #[inline]
+    fn into_service(self) -> DynBanchoService {
+        Arc::new(self) as DynBanchoService
+    }
+}
 
 #[async_trait]
 impl Login for BanchoServiceImpl {
@@ -639,17 +645,24 @@ pub struct BanchoServiceRemote(BanchoRpcClient<Channel>);
 
 impl BanchoService for BanchoServiceRemote {}
 
-impl IntoBanchoService for BanchoServiceRemote {}
-
-impl FromClient for BanchoServiceRemote {
+impl IntoService<DynBanchoService> for BanchoServiceRemote {
     #[inline]
-    fn from_client(client: BanchoRpcClient<Channel>) -> Self {
+    fn into_service(self) -> DynBanchoService {
+        Arc::new(self) as DynBanchoService
+    }
+}
+
+impl FromRpcClient for BanchoServiceRemote {
+    #[inline]
+    fn from_client(client: Self::Client) -> Self {
         Self(client)
     }
 }
 
-impl BanchoServiceRpc for BanchoServiceRemote {
-    fn client(&self) -> BanchoRpcClient<Channel> {
+impl RpcClient for BanchoServiceRemote {
+    type Client = BanchoRpcClient<Channel>;
+
+    fn client(&self) -> Self::Client {
         self.0.clone()
     }
 }

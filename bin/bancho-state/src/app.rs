@@ -16,6 +16,7 @@ use peace_services::{
     signature::{
         SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
     },
+    IntoService,
 };
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
@@ -78,7 +79,7 @@ impl Application for App {
 
     /// Start the BanchoState application and return a Router.
     async fn service(&self, mut configured_server: Server) -> Router {
-        let user_session_service = Arc::new(UserSessionsServiceImpl::new());
+        let user_session_service = Arc::new(UserSessionsServiceImpl::default());
 
         let signature_service = SignatureServiceBuilder::build::<
             SignatureServiceImpl,

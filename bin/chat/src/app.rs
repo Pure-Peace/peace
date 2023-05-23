@@ -8,6 +8,7 @@ use peace_services::{
     bancho_state::BanchoStateServiceRemote,
     chat::{ChannelServiceImpl, ChatServiceImpl},
     rpc_config::BanchoStateRpcConfig,
+    FromRpcClient, IntoService,
 };
 use std::sync::Arc;
 use tonic::{
@@ -67,7 +68,7 @@ impl Application for App {
             });
 
         let bancho_state_service =
-            BanchoStateServiceRemote::new(bancho_state_rpc_client)
+            BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
                 .into_service();
 
         let channel_service =

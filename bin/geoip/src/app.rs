@@ -3,7 +3,10 @@ use clap_serde_derive::ClapSerde;
 use peace_pb::geoip::{geoip_rpc_server::GeoipRpcServer, GEOIP_DESCRIPTOR_SET};
 use peace_rpc::{Application, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::geoip::{FromPath, GeoipServiceImpl, IntoGeoipService};
+use peace_services::{
+    geoip::{FromGeoDbPath, GeoipServiceImpl},
+    IntoService,
+};
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
     async_trait,

@@ -3,7 +3,7 @@ use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
-    bancho::{BanchoServiceRemote, FromClient, IntoBanchoService},
+    bancho::BanchoServiceRemote,
     bancho_state::BanchoStateServiceRemote,
     gateway::{
         bancho_endpoints::{
@@ -13,6 +13,7 @@ use peace_services::{
         docs::GatewayApiDocs,
     },
     rpc_config::{BanchoRpcConfig, BanchoStateRpcConfig},
+    FromRpcClient, IntoService,
 };
 use std::sync::Arc;
 
@@ -67,7 +68,7 @@ impl Application for App {
                 );
 
         let bancho_state_service =
-            BanchoStateServiceRemote::new(bancho_state_rpc_client)
+            BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
                 .into_service();
 
         let bancho_service =

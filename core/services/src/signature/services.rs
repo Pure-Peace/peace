@@ -1,9 +1,10 @@
 use super::{
-    error::SignatureError, DynSignatureService, FromClient, FromSigner,
-    IntoSignatureService, ReloadSigner, RequestPublicKey, SignMessage,
-    SignatureService, SignatureServiceRpc, VerifyMessage,
+    error::SignatureError, DynSignatureService, ReloadSigner, RequestPublicKey,
+    SignMessage, SignatureService, VerifyMessage,
 };
-use crate::rpc_config::SignatureRpcConfig;
+use crate::{
+    rpc_config::SignatureRpcConfig, FromRpcClient, IntoService, RpcClient,
+};
 use async_trait::async_trait;
 use derive_deref::Deref;
 use ed25519::{self, Signature};
@@ -13,7 +14,7 @@ use peace_pb::signature::{
     ReloadFromPemFileRequest, ReloadFromPemRequest, SignMessageRequest,
     VerifyMessageRequest,
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 use tonic::transport::Channel;
 use tools::crypto::SignerManager;
 
@@ -27,15 +28,16 @@ impl SignatureServiceBuilder {
         signature_rpc_config: Option<&SignatureRpcConfig>,
     ) -> DynSignatureService
     where
-        I: IntoSignatureService + FromSigner,
-        R: IntoSignatureService + FromClient,
+        I: IntoService<DynSignatureService> + From<SignerManager>,
+        R: IntoService<DynSignatureService>
+            + FromRpcClient<Client = SignatureRpcClient<Channel>>,
     {
         info!("initializing Signature service...");
         let mut service = SignerManager::from_pem_file(
             ed25519_pem_path.unwrap_or(DEFAULT_ED25519_PEM_FILE_PATH),
         )
         .ok()
-        .map(|signer| I::from_signer(signer).into_service());
+        .map(|signer| I::from(signer).into_service());
 
         if service.is_some() {
             info!("Signature service init successful, type: \"Local\"");
@@ -63,7 +65,7 @@ impl SignatureServiceBuilder {
                     ed25519_pem_path.unwrap_or(DEFAULT_ED25519_PEM_FILE_PATH),
                 )
                 .unwrap();
-            I::from_signer(signer).into_service()
+            I::from(signer).into_service()
         })
     }
 }
@@ -76,11 +78,16 @@ pub struct SignatureServiceImpl {
 #[async_trait]
 impl SignatureService for SignatureServiceImpl {}
 
-impl IntoSignatureService for SignatureServiceImpl {}
-
-impl FromSigner for SignatureServiceImpl {
+impl IntoService<DynSignatureService> for SignatureServiceImpl {
     #[inline]
-    fn from_signer(signer: SignerManager) -> Self {
+    fn into_service(self) -> DynSignatureService {
+        Arc::new(self) as DynSignatureService
+    }
+}
+
+impl From<SignerManager> for SignatureServiceImpl {
+    #[inline]
+    fn from(signer: SignerManager) -> Self {
         Self { signer }
     }
 }
@@ -147,22 +154,29 @@ impl RequestPublicKey for SignatureServiceImpl {
 #[derive(Debug, Clone)]
 pub struct SignatureServiceRemote(SignatureRpcClient<Channel>);
 
-impl SignatureServiceRpc for SignatureServiceRemote {
+impl RpcClient for SignatureServiceRemote {
+    type Client = SignatureRpcClient<Channel>;
+
     #[inline]
-    fn client(&self) -> SignatureRpcClient<Channel> {
+    fn client(&self) -> Self::Client {
         self.0.clone()
     }
 }
 
-impl FromClient for SignatureServiceRemote {
-    fn from_client(client: SignatureRpcClient<Channel>) -> Self {
+impl FromRpcClient for SignatureServiceRemote {
+    fn from_client(client: Self::Client) -> Self {
         Self(client)
     }
 }
 
 impl SignatureService for SignatureServiceRemote {}
 
-impl IntoSignatureService for SignatureServiceRemote {}
+impl IntoService<DynSignatureService> for SignatureServiceRemote {
+    #[inline]
+    fn into_service(self) -> DynSignatureService {
+        Arc::new(self) as DynSignatureService
+    }
+}
 
 #[async_trait]
 impl SignMessage for SignatureServiceRemote {

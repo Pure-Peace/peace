@@ -51,3 +51,17 @@ pub mod rpc_config {
         default_uri: "http://127.0.0.1:5014"
     );
 }
+
+pub trait FromRpcClient: RpcClient {
+    fn from_client(client: Self::Client) -> Self;
+}
+
+pub trait RpcClient {
+    type Client;
+
+    fn client(&self) -> Self::Client;
+}
+
+pub trait IntoService<T>: Sized + Sync + Send + 'static {
+    fn into_service(self) -> T;
+}

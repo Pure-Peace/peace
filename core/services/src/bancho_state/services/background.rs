@@ -1,5 +1,8 @@
-use super::{BanchoStateBackgroundService, UserSessionsServiceImpl};
-use crate::bancho_state::{DynBanchoStateBackgroundService, Session};
+use super::{traits::*, UserSessionsServiceImpl};
+use crate::bancho_state::{
+    DynBanchoStateBackgroundService, NotifyMessagesCleaner, Session,
+    UserSessionsCleaner,
+};
 use async_trait::async_trait;
 use clap_serde_derive::ClapSerde;
 use std::{
@@ -54,7 +57,10 @@ impl BanchoStateBackgroundServiceImpl {
                 loop {
                     tokio::time::sleep(*cfg.loop_interval.load().as_ref())
                         .await;
-                    debug!(target: LOG_TARGET, "user sessions recycling started!");
+                    debug!(
+                        target: LOG_TARGET,
+                        "user sessions recycling started!"
+                    );
                     let start = Instant::now();
 
                     let mut sessions_deactive = None::<Vec<Arc<Session>>>;
@@ -67,8 +73,8 @@ impl BanchoStateBackgroundServiceImpl {
                             user_sessions_service.user_sessions.read().await;
 
                         for session in user_sessions.values() {
-                            if current_timestamp - session.last_active.val()
-                                > cfg.dead.val()
+                            if current_timestamp - session.last_active.val() >
+                                cfg.dead.val()
                             {
                                 lazy_init!(sessions_deactive => sessions_deactive.push(session.clone()), vec![session.clone()]);
                             }
@@ -159,7 +165,10 @@ impl BanchoStateBackgroundServiceImpl {
                 loop {
                     tokio::time::sleep(*cfg.loop_interval.load().as_ref())
                         .await;
-                    debug!(target: LOG_TARGET, "notify messages recycling started!");
+                    debug!(
+                        target: LOG_TARGET,
+                        "notify messages recycling started!"
+                    );
                     let start = Instant::now();
 
                     let mut invalid_messages = None::<Vec<Ulid>>;
@@ -175,9 +184,8 @@ impl BanchoStateBackgroundServiceImpl {
                         }
 
                         match invalid_messages {
-                            Some(invalid_messages) => {
-                                notify_queue.batch_remove(&invalid_messages)
-                            },
+                            Some(invalid_messages) =>
+                                notify_queue.batch_remove(&invalid_messages),
                             None => 0,
                         }
                     };
@@ -272,7 +280,10 @@ impl BanchoStateBackgroundService for BanchoStateBackgroundServiceImpl {
         self.start_user_sessions_recycle(configs.user_sessions_recycle);
         self.start_notify_messages_recyce(configs.notify_messages_recyce);
     }
+}
 
+#[async_trait]
+impl UserSessionsCleaner for BanchoStateBackgroundServiceImpl {
     fn start_user_sessions_recycle(
         &self,
         config: Arc<CommonRecycleBackgroundTaskConfig>,
@@ -287,7 +298,10 @@ impl BanchoStateBackgroundService for BanchoStateBackgroundServiceImpl {
     ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError> {
         self.tasks.user_sessions_recycle.stop()
     }
+}
 
+#[async_trait]
+impl NotifyMessagesCleaner for BanchoStateBackgroundServiceImpl {
     fn start_notify_messages_recyce(
         &self,
         config: Arc<LoopBackgroundTaskConfig>,

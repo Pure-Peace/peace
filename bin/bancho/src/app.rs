@@ -10,16 +10,12 @@ use peace_rpc::{
 };
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
-    bancho::{
-        BanchoBackgroundServiceConfigs, BanchoBackgroundServiceImpl,
-        BanchoServiceImpl, CliBanchoBackgroundServiceConfigs,
-        GetPasswordCacheStore, IntoBanchoService, IntoPasswordService,
-        PasswordCachesRecycleConfig, PasswordServiceImpl,
-    },
+    bancho::*,
     bancho_state::BanchoStateServiceRemote,
     chat::ChatServiceRemote,
     geoip::{GeoipServiceBuilder, GeoipServiceImpl, GeoipServiceRemote},
     rpc_config::{BanchoStateRpcConfig, ChatRpcConfig, GeoipRpcConfig},
+    FromRpcClient, IntoService,
 };
 use std::{path::PathBuf, sync::Arc};
 use tonic::{
@@ -109,7 +105,7 @@ impl Application for App {
             UsersRepositoryImpl::new(peace_db_conn).into_service();
 
         let bancho_state_service =
-            BanchoStateServiceRemote::new(bancho_state_rpc_client)
+            BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
                 .into_service();
 
         let chat_service =

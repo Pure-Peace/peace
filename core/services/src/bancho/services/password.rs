@@ -1,5 +1,6 @@
-use crate::bancho::{
-    GetPasswordCacheStore, IntoPasswordService, PasswordService,
+use crate::{
+    bancho::{DynPasswordService, GetPasswordCacheStore, PasswordService},
+    IntoService,
 };
 use async_trait::async_trait;
 use peace_domain::users::{Password, PasswordError};
@@ -32,7 +33,12 @@ pub struct PasswordServiceImpl {
     pub cache_store: PasswordCacheStore,
 }
 
-impl IntoPasswordService for PasswordServiceImpl {}
+impl IntoService<DynPasswordService> for PasswordServiceImpl {
+    #[inline]
+    fn into_service(self) -> DynPasswordService {
+        Arc::new(self) as DynPasswordService
+    }
+}
 
 impl GetPasswordCacheStore for PasswordServiceImpl {
     #[inline]
