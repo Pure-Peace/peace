@@ -1,3 +1,4 @@
+use super::traits::*;
 use crate::chat::{
     Channel, ChannelMetadata, ChannelService, ChannelSessions, ChannelType,
     DynChannelService, Platform,
@@ -54,8 +55,8 @@ impl Channels {
         indexes: &mut ChannelIndexes,
         channel: Arc<Channel>,
     ) {
-        if let Some(old_channel) =
-            self.get_channel_inner(indexes, &ChannelQuery::ChannelId(channel.id))
+        if let Some(old_channel) = self
+            .get_channel_inner(indexes, &ChannelQuery::ChannelId(channel.id))
         {
             self.remove_channel_inner(
                 indexes,
@@ -74,12 +75,19 @@ impl Channels {
     }
 
     #[inline]
-    pub async fn remove_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+    pub async fn remove_channel(
+        &self,
+        query: &ChannelQuery,
+    ) -> Option<Arc<Channel>> {
         let mut indexes = self.write().await;
 
         let channel = self.get_channel_inner(&indexes, query)?;
 
-        self.remove_channel_inner(&mut indexes, &channel.id, &channel.name.load())
+        self.remove_channel_inner(
+            &mut indexes,
+            &channel.id,
+            &channel.name.load(),
+        )
     }
 
     #[inline]
@@ -109,7 +117,10 @@ impl Channels {
     }
 
     #[inline]
-    pub async fn get_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+    pub async fn get_channel(
+        &self,
+        query: &ChannelQuery,
+    ) -> Option<Arc<Channel>> {
         let indexes = self.read().await;
         self.get_channel_inner(&indexes, query)
     }
@@ -121,12 +132,10 @@ impl Channels {
         query: &ChannelQuery,
     ) -> Option<Arc<Channel>> {
         match query {
-            ChannelQuery::ChannelId(channel_id) => {
-                indexes.channel_id.get(channel_id)
-            },
-            ChannelQuery::ChannelName(channel_name) => {
-                indexes.channel_name.get(channel_name)
-            },
+            ChannelQuery::ChannelId(channel_id) =>
+                indexes.channel_id.get(channel_id),
+            ChannelQuery::ChannelName(channel_name) =>
+                indexes.channel_name.get(channel_name),
         }
         .cloned()
     }
@@ -135,12 +144,10 @@ impl Channels {
     pub async fn is_channel_exists(&self, query: &ChannelQuery) -> bool {
         let indexes = self.read().await;
         match query {
-            ChannelQuery::ChannelId(channel_id) => {
-                indexes.channel_id.contains_key(channel_id)
-            },
-            ChannelQuery::ChannelName(channel_name) => {
-                indexes.channel_name.contains_key(channel_name)
-            },
+            ChannelQuery::ChannelId(channel_id) =>
+                indexes.channel_id.contains_key(channel_id),
+            ChannelQuery::ChannelName(channel_name) =>
+                indexes.channel_name.contains_key(channel_name),
         }
     }
 
@@ -180,12 +187,17 @@ impl ChannelServiceImpl {
 }
 
 #[async_trait]
-impl ChannelService for ChannelServiceImpl {
+impl ChannelService for ChannelServiceImpl {}
+
+impl ChannelStore for ChannelServiceImpl {
     #[inline]
     fn channels(&self) -> &Arc<Channels> {
         &self.channels
     }
+}
 
+#[async_trait]
+impl InitializePublicChannels for ChannelServiceImpl {
     async fn initialize_public_channels(&self) {
         const LOG_TARGET: &str = "chat::channel::initialize_public_channels";
 
@@ -220,7 +232,10 @@ impl ChannelService for ChannelServiceImpl {
 
         info!(target: LOG_TARGET, "Public channels successfully initialized.",);
     }
+}
 
+#[async_trait]
+impl AddChannel for ChannelServiceImpl {
     #[inline]
     async fn add_channel(
         &self,
@@ -231,7 +246,10 @@ impl ChannelService for ChannelServiceImpl {
 
         let channel = self
             .channels
-            .add_channel(Channel::new(metadata, Some(ChannelSessions::new(users))))
+            .add_channel(Channel::new(
+                metadata,
+                Some(ChannelSessions::new(users)),
+            ))
             .await;
 
         info!(
@@ -244,7 +262,10 @@ impl ChannelService for ChannelServiceImpl {
 
         channel
     }
+}
 
+#[async_trait]
+impl AddUser for ChannelServiceImpl {
     #[inline]
     async fn add_user(
         &self,
@@ -257,7 +278,10 @@ impl ChannelService for ChannelServiceImpl {
 
         Some(channel)
     }
+}
 
+#[async_trait]
+impl RemoveUserPlatforms for ChannelServiceImpl {
     #[inline]
     async fn remove_user_platforms(
         &self,
@@ -270,7 +294,10 @@ impl ChannelService for ChannelServiceImpl {
 
         Some(channel)
     }
+}
 
+#[async_trait]
+impl RemoveUser for ChannelServiceImpl {
     #[inline]
     async fn remove_user(
         &self,
@@ -282,9 +309,15 @@ impl ChannelService for ChannelServiceImpl {
 
         Some(channel)
     }
+}
 
+#[async_trait]
+impl RemoveChannel for ChannelServiceImpl {
     #[inline]
-    async fn remove_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
+    async fn remove_channel(
+        &self,
+        query: &ChannelQuery,
+    ) -> Option<Arc<Channel>> {
         const LOG_TARGET: &str = "chat::channel::remove_channel";
 
         let channel = self.channels.remove_channel(query).await?;
@@ -299,22 +332,33 @@ impl ChannelService for ChannelServiceImpl {
 
         Some(channel)
     }
+}
 
+#[async_trait]
+impl GetChannel for ChannelServiceImpl {
     #[inline]
     async fn get_channel(&self, query: &ChannelQuery) -> Option<Arc<Channel>> {
         self.channels.get_channel(query).await
     }
+}
 
+#[async_trait]
+impl IsChannelExists for ChannelServiceImpl {
     #[inline]
     async fn is_channel_exists(&self, query: &ChannelQuery) -> bool {
         self.channels.is_channel_exists(query).await
     }
+}
 
+#[async_trait]
+impl ClearAllChannels for ChannelServiceImpl {
     #[inline]
     async fn clear_all_channels(&self) {
         self.channels.clear_all_channels().await
     }
+}
 
+impl ChannelCount for ChannelServiceImpl {
     #[inline]
     fn channel_count(&self) -> usize {
         self.channels.channel_count()

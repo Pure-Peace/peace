@@ -1,5 +1,8 @@
 use super::{ChatService, DynChatService};
-use crate::{bancho_state::DynBanchoStateService, chat::*};
+use crate::{
+    bancho_state::DynBanchoStateService, chat::*, FromRpcClient, IntoService,
+    RpcClient,
+};
 use async_trait::async_trait;
 use derive_deref::Deref;
 use num_traits::FromPrimitive;
@@ -21,37 +24,11 @@ use tools::{
 pub const DEFAULT_CHANNEL_CACHE_EXPIRES: U64 = U64::new(300);
 
 #[derive(Clone)]
-pub struct ChatServiceRemote {
-    client: ChatRpcClient<Channel>,
-    public_channel_info: Arc<PublicChannelInfo>,
-}
-
-#[derive(Clone)]
 pub struct ChatServiceImpl {
     #[allow(dead_code)]
     channel_service: DynChannelService,
     #[allow(dead_code)]
     bancho_state_service: DynBanchoStateService,
-}
-
-impl ChatServiceRemote {
-    pub fn new(client: ChatRpcClient<Channel>) -> Self {
-        Self {
-            client,
-            public_channel_info: PublicChannelInfo(CachedAtomic::new(
-                DEFAULT_CHANNEL_CACHE_EXPIRES,
-            ))
-            .into(),
-        }
-    }
-
-    pub fn client(&self) -> ChatRpcClient<Channel> {
-        self.client.clone()
-    }
-
-    pub fn into_service(self) -> DynChatService {
-        Arc::new(self) as DynChatService
-    }
 }
 
 impl ChatServiceImpl {
@@ -68,7 +45,10 @@ impl ChatServiceImpl {
 }
 
 #[async_trait]
-impl ChatService for ChatServiceImpl {
+impl ChatService for ChatServiceImpl {}
+
+#[async_trait]
+impl GetPublicChannels for ChatServiceImpl {
     async fn get_public_channels(
         &self,
     ) -> Result<GetPublicChannelsResponse, ChatServiceError> {
@@ -82,7 +62,10 @@ impl ChatService for ChatServiceImpl {
                 .collect(),
         })
     }
+}
 
+#[async_trait]
+impl AddUserIntoChannel for ChatServiceImpl {
     async fn add_user_into_channel(
         &self,
         request: AddUserIntoChannelRequest,
@@ -104,7 +87,9 @@ impl ChatService for ChatServiceImpl {
 
         Ok(channel.rpc_channel_info())
     }
-
+}
+#[async_trait]
+impl RemoveUserPlatformsFromChannel for ChatServiceImpl {
     async fn remove_user_platforms_from_channel(
         &self,
         request: RemoveUserPlatformsFromChannelRequest,
@@ -133,7 +118,9 @@ impl ChatService for ChatServiceImpl {
 
         Ok(channel.rpc_channel_info())
     }
-
+}
+#[async_trait]
+impl RemoveUserFromChannel for ChatServiceImpl {
     async fn remove_user_from_channel(
         &self,
         request: RemoveUserFromChannelRequest,
@@ -152,7 +139,9 @@ impl ChatService for ChatServiceImpl {
 
         Ok(channel.rpc_channel_info())
     }
-
+}
+#[async_trait]
+impl SendMessage for ChatServiceImpl {
     async fn send_message(
         &self,
         request: SendMessageRequest,
@@ -248,16 +237,55 @@ impl ChatService for ChatServiceImpl {
     }
 }
 
+#[derive(Clone)]
+pub struct ChatServiceRemote {
+    pub client: ChatRpcClient<Channel>,
+    pub info: Arc<PublicChannelInfo>,
+}
+
+impl FromRpcClient for ChatServiceRemote {
+    #[inline]
+    fn from_client(client: Self::Client) -> Self {
+        Self {
+            client,
+            info: PublicChannelInfo(CachedAtomic::new(
+                DEFAULT_CHANNEL_CACHE_EXPIRES,
+            ))
+            .into(),
+        }
+    }
+}
+
+impl RpcClient for ChatServiceRemote {
+    type Client = ChatRpcClient<Channel>;
+
+    #[inline]
+    fn client(&self) -> Self::Client {
+        self.client.clone()
+    }
+}
+
+impl IntoService<DynChatService> for ChatServiceRemote {
+    #[inline]
+    fn into_service(self) -> DynChatService {
+        Arc::new(self) as DynChatService
+    }
+}
+
 #[async_trait]
-impl ChatService for ChatServiceRemote {
+impl ChatService for ChatServiceRemote {}
+
+#[async_trait]
+impl GetPublicChannels for ChatServiceRemote {
     async fn get_public_channels(
         &self,
     ) -> Result<GetPublicChannelsResponse, ChatServiceError> {
-        Ok(GetPublicChannelsResponse {
-            channels: self.public_channel_info.fetch(self).await?,
-        })
+        Ok(GetPublicChannelsResponse { channels: self.info.fetch(self).await? })
     }
+}
 
+#[async_trait]
+impl AddUserIntoChannel for ChatServiceRemote {
     async fn add_user_into_channel(
         &self,
         request: AddUserIntoChannelRequest,
@@ -268,7 +296,10 @@ impl ChatService for ChatServiceRemote {
             .map_err(ChatServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl RemoveUserPlatformsFromChannel for ChatServiceRemote {
     async fn remove_user_platforms_from_channel(
         &self,
         request: RemoveUserPlatformsFromChannelRequest,
@@ -279,7 +310,10 @@ impl ChatService for ChatServiceRemote {
             .map_err(ChatServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl RemoveUserFromChannel for ChatServiceRemote {
     async fn remove_user_from_channel(
         &self,
         request: RemoveUserFromChannelRequest,
@@ -290,7 +324,10 @@ impl ChatService for ChatServiceRemote {
             .map_err(ChatServiceError::RpcError)
             .map(|resp| resp.into_inner())
     }
+}
 
+#[async_trait]
+impl SendMessage for ChatServiceRemote {
     async fn send_message(
         &self,
         request: SendMessageRequest,
@@ -320,14 +357,14 @@ impl CachedValue for PublicChannelInfo {
             .map_err(ChatServiceError::RpcError)
             .map(|resp| {
                 let GetPublicChannelsResponse { channels } = resp.into_inner();
-                context.public_channel_info.set(Some(channels.clone().into()));
+                context.info.set(Some(channels.clone().into()));
                 channels
             })
     }
 
     #[inline]
     async fn fetch(&self, context: &Self::Context) -> Self::Output {
-        Ok(match context.public_channel_info.get() {
+        Ok(match context.info.get() {
             Some(cached_value) =>
                 if !cached_value.expired {
                     cached_value.cache.to_vec()

@@ -109,7 +109,7 @@ impl Application for App {
                 .into_service();
 
         let chat_service =
-            ChatServiceRemote::new(chat_rpc_client).into_service();
+            ChatServiceRemote::from_client(chat_rpc_client).into_service();
 
         let password_service = PasswordServiceImpl::default();
         let password_cache_store = password_service.cache_store().clone();
