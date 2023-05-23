@@ -168,7 +168,7 @@ impl BackgroundTaskManager {
         config: DynBackgroundTaskConfig,
     ) {
         if self.task.load().is_some() {
-            return;
+            return
         }
 
         self.task.store(Some(Arc::new(BackgroundTask::start(factory, config))));
@@ -179,7 +179,7 @@ impl BackgroundTaskManager {
     ) -> Result<Option<Arc<BackgroundTask>>, BackgroundTaskError> {
         if let Some(task) = self.task.load_full() {
             task.trigger_signal()?;
-            return Ok(self.task.swap(None));
+            return Ok(self.task.swap(None))
         }
 
         Ok(None)

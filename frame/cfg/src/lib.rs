@@ -207,12 +207,10 @@ where
     T: ClapSerde,
 {
     File::open(f.path.as_path()).map(|mut file| match f.ext_type {
-        ConfigFileType::Yaml => {
-            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
-        },
-        ConfigFileType::Json => {
-            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap()
-        },
+        ConfigFileType::Yaml =>
+            serde_yaml::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
+        ConfigFileType::Json =>
+            serde_json::from_reader::<_, <T as ClapSerde>::Opt>(file).unwrap(),
         ConfigFileType::Toml => {
             let mut input = String::new();
             file.read_to_string(&mut input).unwrap();

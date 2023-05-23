@@ -182,12 +182,12 @@ where
 
         for (msg_id, msg) in self.messages.range_mut(start_msg_id..) {
             if msg.has_read.contains(read_key) {
-                continue;
+                continue
             }
 
             if !msg.is_valid() {
                 lazy_init!(should_delete => should_delete.push(msg_id.clone()), vec![msg_id.clone()]);
-                continue;
+                continue
             }
 
             lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
@@ -198,7 +198,7 @@ where
                 received_msg_count += 1;
 
                 if received_msg_count >= receive_count {
-                    break;
+                    break
                 }
             }
         }

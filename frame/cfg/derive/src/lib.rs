@@ -5,8 +5,9 @@ use syn::{parse_macro_input, DeriveInput};
 #[proc_macro_derive(SingletonConfig)]
 /// Add a `get` method to the given struct.
 ///
-/// This method only initializes the configuration struct when it is called for the first time,
-/// and subsequent calls will directly return the [`std::sync::Arc<T>`] of the struct.
+/// This method only initializes the configuration struct when it is called for
+/// the first time, and subsequent calls will directly return the
+/// [`std::sync::Arc<T>`] of the struct.
 ///
 /// ```rust,ignore
 /// use clap::Parser;
@@ -44,7 +45,8 @@ pub fn derive_singleton_config(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-/// Including derives: `derive(Parser, ClapSerde, Debug, Clone, Serialize, Deserialize, SingletonConfig)`
+/// Including derives: `derive(Parser, ClapSerde, Debug, Clone, Serialize,
+/// Deserialize, SingletonConfig)`
 ///
 /// Example:
 /// ```rust,ignore

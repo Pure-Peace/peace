@@ -40,8 +40,7 @@ pub fn parse_osu_login_request_body(
     let display_city = shift(&mut client_info) == "1";
 
     // Client hashes
-    let mut client_hashes =
-        tools::split_string(&shift(&mut client_info), ':');
+    let mut client_hashes = tools::split_string(&shift(&mut client_info), ':');
 
     if client_hashes.len() < 5 {
         return Err(ParseLoginDataError::InvalidClientHashes)

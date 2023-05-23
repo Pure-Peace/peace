@@ -24,7 +24,8 @@ pub type DescriptorBuf<'a> = &'a [u8];
 /// just use [`Application`] and implement this trait for your App.
 #[async_trait]
 pub trait Application: Clone + Send + Sync + 'static {
-    /// App cfg should inherit [`RpcFrameConfig`], so this function is used to return it.
+    /// App cfg should inherit [`RpcFrameConfig`], so this function is used to
+    /// return it.
     fn frame_cfg(&self) -> &RpcFrameConfig;
 
     fn frame_cfg_arc(&self) -> Arc<RpcFrameConfig> {
@@ -32,7 +33,8 @@ pub trait Application: Clone + Send + Sync + 'static {
         FRAME_CFG.get_or_init(|| Arc::new(self.frame_cfg().clone())).clone()
     }
 
-    /// In order to implement reflection, the descriptor needs to be returned in this method.
+    /// In order to implement reflection, the descriptor needs to be returned in
+    /// this method.
     #[cfg(feature = "reflection")]
     fn service_descriptors(&self) -> Option<&[DescriptorBuf]>;
 

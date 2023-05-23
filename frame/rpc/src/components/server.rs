@@ -119,7 +119,7 @@ pub fn addr(cfg: &RpcFrameConfig) -> String {
     // If the server is using Unix Domain Sockets, return the path as the
     // address
     if let Some(path) = &cfg.rpc_uds {
-        return format!("{}", path.to_string_lossy());
+        return format!("{}", path.to_string_lossy())
     }
 
     // If the server is not using Unix Domain Sockets, return the address and

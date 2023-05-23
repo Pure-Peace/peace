@@ -1,6 +1,6 @@
 use crate::{
-    Application, PeaceApiAdminEndpointsDocs,
-    {responder, responder::shutdown_server},
+    responder, responder::shutdown_server, Application,
+    PeaceApiAdminEndpointsDocs,
 };
 use axum::{
     body::Body,
@@ -40,7 +40,8 @@ pub async fn app(app: impl Application) -> Router {
 /// The `admin_routers` provides some api endpoints for managing the server,
 /// such as setting the log level and stopping the server.
 ///
-/// You can pass in admin_token to add a layer of Authorization authentication (using Bearer).
+/// You can pass in admin_token to add a layer of Authorization authentication
+/// (using Bearer).
 pub fn admin_routers(admin_token: Option<&str>) -> Router {
     peace_logs::api::admin_routers(
         admin_token,

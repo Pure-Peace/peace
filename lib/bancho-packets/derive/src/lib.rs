@@ -4,7 +4,8 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(ReadPacket)]
-/// This derive macro will implement the `BanchoPacketRead` trait for the struct.
+/// This derive macro will implement the `BanchoPacketRead` trait for the
+/// struct.
 ///
 /// ### Usage
 ///
@@ -58,7 +59,8 @@ pub fn derive_read_packet(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(WritePacket)]
-/// This derive macro will implement the `BanchoPacketWrite` trait for the struct.
+/// This derive macro will implement the `BanchoPacketWrite` trait for the
+/// struct.
 ///
 /// ### Usage
 ///
@@ -111,7 +113,8 @@ pub fn derive_write_packet(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(PacketLength, attributes(length))]
-/// This derive macro will implement the `BanchoPacketLength` trait for the struct.
+/// This derive macro will implement the `BanchoPacketLength` trait for the
+/// struct.
 ///
 /// ### Usage
 ///
@@ -160,7 +163,7 @@ pub fn derive_packet_length(input: TokenStream) -> TokenStream {
             for attr in field.attrs.iter() {
                 if attr.path.is_ident(&format_ident!("length")) {
                     extra.push(attr.tokens.clone());
-                    return false;
+                    return false
                 }
             }
             true

@@ -1,6 +1,5 @@
 use clap_serde_derive::ClapSerde;
-use peace_cfg::TlsConfig;
-use peace_cfg::{impl_config, peace_config, SingletonConfig};
+use peace_cfg::{impl_config, peace_config, SingletonConfig, TlsConfig};
 use peace_logs::LoggingConfigArgs;
 use std::{default::Default, net::SocketAddr, ops::Deref, path::PathBuf};
 
@@ -57,22 +56,26 @@ pub struct RpcServiceConfig {
 
     /// Allow this server to accept http1 requests.
     ///
-    /// Accepting http1 requests is only useful when developing grpc-web enabled services.
-    /// If this setting is set to true but services are not correctly configured to handle grpc-web requests,
-    /// your server may return confusing (but correct) protocol errors.
+    /// Accepting http1 requests is only useful when developing grpc-web
+    /// enabled services. If this setting is set to true but services are
+    /// not correctly configured to handle grpc-web requests, your server
+    /// may return confusing (but correct) protocol errors.
     ///
     /// Default is false.
     #[default(false)]
     #[arg(short, long)]
     pub rpc_accept_http1: bool,
 
-    /// Set the concurrency limit applied to on requests inbound per connection.
+    /// Set the concurrency limit applied to on requests inbound per
+    /// connection.
     #[arg(long)]
     pub rpc_concurrency_limit_per_connection: Option<usize>,
 
     /// Sets whether to use an adaptive flow control.
     /// Defaults to false.
-    /// Enabling this will override the limits set in http2_initial_stream_window_size and http2_initial_connection_window_size.
+    /// Enabling this will override the limits set in
+    /// http2_initial_stream_window_size and
+    /// http2_initial_connection_window_size.
     #[default(Some(false))]
     #[arg(long)]
     pub rpc_http2_adaptive_window: Option<bool>,
@@ -80,8 +83,9 @@ pub struct RpcServiceConfig {
     /// Set whether HTTP2 Ping frames are enabled on accepted connections.
     ///
     /// If None is specified, HTTP2 keepalive is disabled,
-    /// otherwise the duration specified will be the time interval between HTTP2 Ping frames.
-    /// The timeout for receiving an acknowledgement of the keepalive ping can be set with Server::http2_keepalive_timeout.
+    /// otherwise the duration specified will be the time interval between
+    /// HTTP2 Ping frames. The timeout for receiving an acknowledgement of
+    /// the keepalive ping can be set with Server::http2_keepalive_timeout.
     ///
     /// Default is no HTTP2 keepalive (None)
     #[arg(long)]
@@ -89,7 +93,8 @@ pub struct RpcServiceConfig {
 
     /// Sets a timeout for receiving an acknowledgement of the keepalive ping.
     ///
-    /// If the ping is not acknowledged within the timeout, the connection will be closed. Does nothing if http2_keep_alive_interval is disabled.
+    /// If the ping is not acknowledged within the timeout, the connection will
+    /// be closed. Does nothing if http2_keep_alive_interval is disabled.
     ///
     /// Default is 20 seconds.
     #[default(Some(20))]
@@ -103,7 +108,8 @@ pub struct RpcServiceConfig {
     #[arg(long, default_value = "65535")]
     pub rpc_initial_connection_window_size: Option<u32>,
 
-    /// Sets the SETTINGS_INITIAL_WINDOW_SIZE option for HTTP2 stream-level flow control.
+    /// Sets the SETTINGS_INITIAL_WINDOW_SIZE option for HTTP2 stream-level
+    /// flow control.
     ///
     /// Default is 65,535
     #[default(Some(65535))]

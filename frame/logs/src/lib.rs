@@ -12,15 +12,18 @@ use clap::Parser;
 use clap_serde_derive::ClapSerde;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
-use tracing_subscriber::EnvFilter;
 use std::{
     str::FromStr,
     sync::{Arc, Mutex},
 };
-pub use tracing::log::LevelFilter;
-pub use tracing::*;
+pub use tracing::{log::LevelFilter, *};
+use tracing_subscriber::EnvFilter;
 pub use tracing_subscriber::{
-    fmt, layer::Layered, prelude::*, reload, reload::Handle, reload::Layer,
+    fmt,
+    layer::Layered,
+    prelude::*,
+    reload,
+    reload::{Handle, Layer},
     Registry,
 };
 
@@ -41,7 +44,6 @@ pub struct ReloadHandles<
 /// use peace_logs;
 /// peace_logs::env_filter(Some("ENV"));
 /// let _ = peace_logs::tracing();
-///
 pub fn env_filter(set_env: Option<&str>) -> EnvFilter {
     const ALWAYS: &str = ",rustls::conn=off";
     static ENV: OnceCell<Arc<Mutex<String>>> = OnceCell::new();
@@ -64,7 +66,6 @@ pub fn env_filter(set_env: Option<&str>) -> EnvFilter {
 /// let reload_handles = peace_logs::tracing();
 /// reload_handles.env_filter_reload.reload("debug").unwrap();
 /// ```
-///
 pub fn tracing() -> &'static ReloadHandles {
     static TRACING: OnceCell<ReloadHandles> = OnceCell::new();
     TRACING.get_or_init(|| {
@@ -85,7 +86,6 @@ pub fn tracing() -> &'static ReloadHandles {
 /// let _ = peace_logs::tracing();
 /// peace_logs::set_level(peace_logs::log::LevelFilter::Warn).unwrap();
 /// ```
-///
 pub fn set_level(level: LevelFilter) -> Result<(), reload::Error> {
     tracing()
         .env_filter_reload
@@ -102,7 +102,6 @@ pub fn set_level(level: LevelFilter) -> Result<(), reload::Error> {
 /// let _ = peace_logs::tracing();
 /// peace_logs::set_env_filter("ENV").unwrap();
 /// ```
-///
 pub fn set_env_filter(filter: &str) -> Result<(), reload::Error> {
     tracing().env_filter_reload.reload(env_filter(Some(filter))).unwrap();
     Ok(())
@@ -110,7 +109,8 @@ pub fn set_env_filter(filter: &str) -> Result<(), reload::Error> {
 
 /// Toggle debug (verbose) mode.
 ///
-/// Turning on debug will display information such as code line number, source file, thread id, etc.
+/// Turning on debug will display information such as code line number, source
+/// file, thread id, etc.
 pub fn toggle_debug_mode(enabled: bool) -> Result<(), reload::Error> {
     let handles = tracing();
     let layer = fmt::Layer::new();
@@ -189,7 +189,8 @@ pub struct LoggingConfigArgs {
     #[arg(short = 'F', long)]
     pub log_env_filter: Option<String>,
 
-    /// Turning on debug will display information such as code line number, source file, thread id, etc.
+    /// Turning on debug will display information such as code line number,
+    /// source file, thread id, etc.
     #[default(false)]
     #[arg(short, long)]
     pub debug: bool,
@@ -203,7 +204,11 @@ pub trait LoggingConfig {
 
 /// Configure with [`LoggingConfig`].
 pub fn init(cfg: &impl LoggingConfig) {
-    println!(">> Log level: {:?} (debug_mode: {})", cfg.log_level(), cfg.debug());
+    println!(
+        ">> Log level: {:?} (debug_mode: {})",
+        cfg.log_level(),
+        cfg.debug()
+    );
 
     env_filter(Some(&format!(
         "{},{}",

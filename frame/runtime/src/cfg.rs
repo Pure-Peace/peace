@@ -12,7 +12,8 @@ pub struct RuntimeConfig {
 
     /// Sets the number of worker threads the Runtime will use.
     ///
-    /// This can be any number above 0 though it is advised to keep this value on the smaller side.
+    /// This can be any number above 0 though it is advised to keep this value
+    /// on the smaller side.
     ///
     /// The default value is the number of cores available to the system.
     ///
@@ -38,7 +39,8 @@ pub struct RuntimeConfig {
 
     /// Enables the I/O driver.
     ///
-    /// Doing this enables using net, process, signal, and some I/O types on the runtime.
+    /// Doing this enables using net, process, signal, and some I/O types on
+    /// the runtime.
     #[default(true)]
     #[arg(long, default_value = "true")]
     pub runtime_enable_io: bool,
@@ -52,53 +54,61 @@ pub struct RuntimeConfig {
 
     /// Enables both I/O and time drivers.
     ///
-    /// Doing this is a shorthand for calling enable_io and enable_time individually.
-    /// If additional components are added to Tokio in the future,
-    /// enable_all will include these future components.
+    /// Doing this is a shorthand for calling enable_io and enable_time
+    /// individually. If additional components are added to Tokio in the
+    /// future, enable_all will include these future components.
     #[default(true)]
     #[arg(long, default_value = "true")]
     pub runtime_enable_all: bool,
 
-    /// Sets the number of scheduler ticks after which the scheduler will poll for external events (timers, I/O, and so on).
+    /// Sets the number of scheduler ticks after which the scheduler will poll
+    /// for external events (timers, I/O, and so on).
 
-    /// A scheduler "tick" roughly corresponds to one `poll` invocation on a task.
+    /// A scheduler "tick" roughly corresponds to one `poll` invocation on a
+    /// task.
     ///
     /// By default, the event interval is `61` for all scheduler types.
     ///
     /// Setting the event interval determines the effective "priority" of
     /// delivering these external events (which may wake up additional tasks),
     /// compared to executing tasks that are currently ready to run.
-    /// A smaller value is useful when tasks frequently spend a long time in polling,
-    /// or frequently yield, which can result in overly long delays picking up I/O events.
-    /// Conversely, picking up new events requires extra synchronization and syscall overhead,
-    /// so if tasks generally complete their polling quickly,
-    /// a higher event interval will minimize that overhead while still keeping the scheduler responsive to events.
+    /// A smaller value is useful when tasks frequently spend a long time in
+    /// polling, or frequently yield, which can result in overly long
+    /// delays picking up I/O events. Conversely, picking up new events
+    /// requires extra synchronization and syscall overhead, so if tasks
+    /// generally complete their polling quickly, a higher event interval
+    /// will minimize that overhead while still keeping the scheduler
+    /// responsive to events.
     #[arg(long)]
     pub runtime_event_interval: Option<u32>,
 
-    /// Sets the number of scheduler ticks after which the scheduler will poll the global task queue.
+    /// Sets the number of scheduler ticks after which the scheduler will poll
+    /// the global task queue.
     ///
-    /// A scheduler "tick" roughly corresponds to one `poll` invocation on a task.
+    /// A scheduler "tick" roughly corresponds to one `poll` invocation on a
+    /// task.
     ///
     /// By default the global queue interval is:
     ///
     /// - `31` for the current-thread scheduler.
     /// - `61` for the multithreaded scheduler.
     ///
-    /// Schedulers have a local queue of already-claimed tasks, and a global queue of incoming tasks.
-    /// Setting the interval to a smaller value increases the fairness of the scheduler,
-    /// at the cost of more synchronization overhead.
-    /// That can be beneficial for prioritizing getting started on new work,
-    /// especially if tasks frequently yield rather than complete or await on further I/O.
-    /// Conversely, a higher value prioritizes existing work,
-    /// and is a good choice when most tasks quickly complete polling.
+    /// Schedulers have a local queue of already-claimed tasks, and a global
+    /// queue of incoming tasks. Setting the interval to a smaller value
+    /// increases the fairness of the scheduler, at the cost of more
+    /// synchronization overhead. That can be beneficial for prioritizing
+    /// getting started on new work, especially if tasks frequently yield
+    /// rather than complete or await on further I/O. Conversely, a higher
+    /// value prioritizes existing work, and is a good choice when most
+    /// tasks quickly complete polling.
     #[arg(long)]
     pub runtime_global_queue_interval: Option<u32>,
 
     /// Specifies the limit for additional threads spawned by the Runtime.
     ///
-    /// These threads are used for blocking operations like tasks spawned through `[spawn_blocking]`.
-    /// Unlike the `[worker_threads]`, they are not always active and will exit if left idle for too long.
+    /// These threads are used for blocking operations like tasks spawned
+    /// through `[spawn_blocking]`. Unlike the `[worker_threads]`, they are
+    /// not always active and will exit if left idle for too long.
     /// You can change this timeout duration with `[thread_keep_alive]`.
     ///
     /// The default value is 512.
@@ -107,7 +117,8 @@ pub struct RuntimeConfig {
 
     /// Sets a custom timeout for a thread in the blocking pool (millis).
     ///
-    /// By default, the timeout for a thread is set to 10 seconds. This can be overridden using .thread_keep_alive().
+    /// By default, the timeout for a thread is set to 10 seconds. This can be
+    /// overridden using .thread_keep_alive().
     #[arg(long)]
     pub runtime_thread_keep_alive: Option<u64>,
 }

@@ -1,17 +1,18 @@
-use axum::http::header::WWW_AUTHENTICATE;
-use axum::http::{HeaderMap, HeaderValue, StatusCode};
-use axum::response::{IntoResponse, Response};
-use axum::Json;
-use std::borrow::Cow;
-use std::collections::HashMap;
+use axum::{
+    http::{header::WWW_AUTHENTICATE, HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
+    Json,
+};
+use std::{borrow::Cow, collections::HashMap};
 
 /// A common error type that can be used throughout the API.
 ///
 /// Can be returned in a `Result` from an API handler function.
 ///
-/// For convenience, this represents both API errors as well as internal recoverable errors,
-/// and maps them to appropriate status codes along with at least a minimally useful error
-/// message in a plain text body, or a JSON body in the case of `UnprocessableEntity`.
+/// For convenience, this represents both API errors as well as internal
+/// recoverable errors, and maps them to appropriate status codes along with at
+/// least a minimally useful error message in a plain text body, or a JSON body
+/// in the case of `UnprocessableEntity`.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     /// Return `401 Unauthorized`
@@ -83,9 +84,8 @@ impl Error {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Timeout => StatusCode::REQUEST_TIMEOUT,
             Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
-            Self::UnprocessableEntity { .. } => {
-                StatusCode::UNPROCESSABLE_ENTITY
-            },
+            Self::UnprocessableEntity { .. } =>
+                StatusCode::UNPROCESSABLE_ENTITY,
             Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
             Self::RpcError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -112,20 +112,20 @@ impl IntoResponse for Error {
                     StatusCode::UNPROCESSABLE_ENTITY,
                     Json(Errors { errors }),
                 )
-                    .into_response();
+                    .into_response()
             },
             Self::Unauthorized => {
                 return (
                     self.status_code(),
-                    // Include the `WWW-Authenticate` challenge required in the specification
-                    // for the `401 Unauthorized` response code:
-                    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+                    // Include the `WWW-Authenticate` challenge required in the
+                    // specification for the `401
+                    // Unauthorized` response code: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
                     [(WWW_AUTHENTICATE, HeaderValue::from_static("Token"))]
                         .into_iter()
                         .collect::<HeaderMap>(),
                     self.to_string(),
                 )
-                    .into_response();
+                    .into_response()
             },
 
             Self::RpcError(ref e) => {

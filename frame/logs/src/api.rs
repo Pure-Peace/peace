@@ -126,7 +126,8 @@ pub async fn config() -> Result<String, AppError> {
 
 /// Toggle debug mode.
 ///
-/// Turning on debug will display information such as code line number, source file, thread id, etc.
+/// Turning on debug will display information such as code line number, source
+/// file, thread id, etc.
 #[cfg_attr(feature = "openapi_axum", utoipa::path(
     put,
     context_path = "/admin",
@@ -153,7 +154,6 @@ pub async fn debug_mode(
 /// [`set_level`] : `PUT` `/admin/logs/set_level/:level`
 /// [`set_env_filter`] : `PUT` `/admin/logs/set_env_filter/:filter`
 /// [`debug_mode`] : `PUT` `/admin/logs/debug_mode/:enabled`
-///
 pub fn admin_routers(
     admin_token: Option<&str>,
     others_router: Option<Router>,
@@ -187,9 +187,8 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             AppError::ParamError(err) => (StatusCode::BAD_REQUEST, err),
-            AppError::InternalError(err) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, err)
-            },
+            AppError::InternalError(err) =>
+                (StatusCode::INTERNAL_SERVER_ERROR, err),
         };
 
         let body = Json(json!({

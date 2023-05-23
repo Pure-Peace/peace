@@ -47,7 +47,8 @@ pub async fn any_path(
     mut req: Request<Body>,
     app: impl Application,
 ) -> Response {
-    // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert panic.
+    // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert
+    // panic.
     req.extensions_mut().remove::<axum::extract::MatchedPath>();
 
     match app.match_hostname(host, &req).await {
@@ -69,11 +70,11 @@ pub async fn call_router(
 
 pub async fn handle_error(error: BoxError) -> Error {
     if error.is::<timeout::error::Elapsed>() {
-        return Error::Timeout;
+        return Error::Timeout
     }
 
     if error.is::<load_shed::error::Overloaded>() {
-        return Error::Unavailable;
+        return Error::Unavailable
     }
 
     anyhow::anyhow!("Unhandled internal error: {:?}", error).into()

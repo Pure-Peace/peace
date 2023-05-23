@@ -36,7 +36,7 @@ impl Email {
         let s = s.trim().to_ascii_lowercase();
 
         if !Self::regex().is_match(s.as_str()) {
-            return Err(EmailError);
+            return Err(EmailError)
         }
 
         Ok(Self(s))
@@ -83,7 +83,7 @@ impl Checker for Ascii {
     #[inline]
     fn check(s: &str) -> Result<(), UsernameError> {
         if !s.is_ascii() {
-            return Err(UsernameError::InvalidAsciiCharacters);
+            return Err(UsernameError::InvalidAsciiCharacters)
         }
         Ok(())
     }
@@ -158,7 +158,7 @@ where
         let s = s.trim();
         T::check(s)?;
         if s.contains(' ') && s.contains('_') {
-            return Err(UsernameError::UnderscoresAndSpacesNotExistsBoth);
+            return Err(UsernameError::UnderscoresAndSpacesNotExistsBoth)
         }
         Ok(Self::new(s.to_owned()))
     }

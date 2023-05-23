@@ -124,7 +124,6 @@ macro_rules! time_spent {
 ///     None => messages = Some(vec![msg.content.clone()]),
 /// }
 ///
-///
 /// ```
 macro_rules! lazy_init {
     ($option: ident => $handle: expr, $init: expr) => {

@@ -1,6 +1,5 @@
 use clap_serde_derive::ClapSerde;
-use peace_cfg::TlsConfig;
-use peace_cfg::{impl_config, peace_config, SingletonConfig};
+use peace_cfg::{impl_config, peace_config, SingletonConfig, TlsConfig};
 use peace_logs::LoggingConfigArgs;
 use std::{default::Default, net::SocketAddr, ops::Deref};
 
@@ -75,7 +74,8 @@ pub struct ApiServiceConfig {
     #[arg(long)]
     pub tcp_nodelay: bool,
 
-    /// Set whether to sleep on accept errors, to avoid exhausting file descriptor limits.
+    /// Set whether to sleep on accept errors, to avoid exhausting file
+    /// descriptor limits.
     #[default(true)]
     #[arg(long, default_value = "true")]
     pub tcp_sleep_on_accept_errors: bool,
@@ -86,11 +86,13 @@ pub struct ApiServiceConfig {
     pub tcp_keepalive: Option<u64>,
 
     /// Set the duration between two successive TCP keepalive retransmissions,
-    /// if acknowledgement to the previous keepalive transmission is not received.
+    /// if acknowledgement to the previous keepalive transmission is not
+    /// received.
     #[arg(long)]
     pub tcp_keepalive_interval: Option<u64>,
 
-    /// Set the number of retransmissions to be carried out before declaring that remote end is not available.
+    /// Set the number of retransmissions to be carried out before declaring
+    /// that remote end is not available.
     #[arg(long)]
     pub tcp_keepalive_retries: Option<u32>,
 

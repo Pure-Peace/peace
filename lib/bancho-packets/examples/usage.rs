@@ -4,9 +4,9 @@ use bancho_packets::*;
 
 fn main() {
     // Single packet
-    let login_reply_from_server = server::LoginReply::pack(LoginResult::Failed(
-        LoginFailedResaon::InvalidCredentials,
-    ));
+    let login_reply_from_server = server::LoginReply::pack(
+        LoginResult::Failed(LoginFailedResaon::InvalidCredentials),
+    );
     let serverside_notification = server::Notification::pack("hello".into());
 
     // Multiple packets with Builder

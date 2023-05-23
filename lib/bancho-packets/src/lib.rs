@@ -342,7 +342,6 @@ pub struct ClientChangeAction {
 ///         },
 ///     }
 /// }
-///
 /// ```
 pub struct PayloadReader<'a> {
     pub(crate) payload: &'a [u8],
@@ -456,7 +455,6 @@ impl<'a> PayloadReader<'a> {
 ///         },
 ///     }
 /// }
-///
 /// ```
 pub struct PacketReader<'a> {
     buf: &'a [u8],
@@ -505,7 +503,7 @@ impl<'a> Iterator for PacketReader<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if (self.buf.len() - self.ptr) < BANCHO_PACKET_HEADER_LENGTH {
-            return None;
+            return None
         }
         // Slice packet header data `[u8; 7]`,
         // including packet id, payload length
@@ -550,7 +548,6 @@ impl<'a> Iterator for PacketReader<'a> {
 ///     .add(server::ChannelInfoEnd::pack())
 ///     .build();
 /// ```
-///
 pub struct PacketBuilder {
     buffer: Vec<u8>,
 }
@@ -672,7 +669,8 @@ impl From<Vec<u8>> for PacketBuilder {
     }
 }
 
-/// Can use [`PayloadReader`] to read data from type `T` which implements this trait.
+/// Can use [`PayloadReader`] to read data from type `T` which implements this
+/// trait.
 pub trait BanchoPacketRead<T> {
     fn read(reader: &mut PayloadReader) -> Option<T>;
 }
@@ -681,7 +679,7 @@ impl BanchoPacketRead<String> for String {
     #[inline]
     fn read(reader: &mut PayloadReader) -> Option<String> {
         if reader.payload.get(reader.index())? != &0xb {
-            return None;
+            return None
         }
         reader.increase_index(1);
         let data_length = reader.read_uleb128()? as usize;
@@ -736,9 +734,11 @@ macro_rules! impl_read_number_array {
 
 impl_read_number_array!(i8, u8, i16, u16, i32, u32, i64, u64);
 
-/// [`BanchoPacketWrite`] is a trait used to convert rust internal data types to bancho packets ([`Vec<u8>`]).
+/// [`BanchoPacketWrite`] is a trait used to convert rust internal data types to
+/// bancho packets ([`Vec<u8>`]).
 pub trait BanchoPacketWrite {
-    /// Convert [`self`] into a bancho packet and write it into `buf` [`Vec<u8>`].
+    /// Convert [`self`] into a bancho packet and write it into `buf`
+    /// [`Vec<u8>`].
     fn write_into_buf(self, buf: &mut Vec<u8>);
 
     #[inline]
@@ -974,11 +974,13 @@ impl BanchoPacketWrite for MatchData {
     }
 }
 
-/// [`BanchoPacketLength`] is a trait used to calculate the byte length of the data converted to bancho packet.
+/// [`BanchoPacketLength`] is a trait used to calculate the byte length of the
+/// data converted to bancho packet.
 pub trait BanchoPacketLength {
     #[inline]
-    /// Calculate the byte length of `self` after being converted into a bancho packet,
-    /// which is used to allocate [`Vec`] space in advance to improve performance.
+    /// Calculate the byte length of `self` after being converted into a bancho
+    /// packet, which is used to allocate [`Vec`] space in advance to
+    /// improve performance.
     ///
     /// If not implemented, return `0`.
     fn packet_len(&self) -> usize {
@@ -1071,7 +1073,7 @@ pub fn u32_to_uleb128(mut unsigned: u32) -> ([u8; 5], usize) {
 
     loop {
         if unsigned < 0x80 {
-            break;
+            break
         }
         data[ptr] = ((unsigned & 0x7f) | 0x80) as u8;
         ptr += 1;
@@ -1091,7 +1093,7 @@ pub fn uleb128_to_u32(uleb128_bytes: &[u8]) -> Option<(u32, usize)> {
         index += 1;
         if (byte & 0x80) == 0 {
             val |= (*byte as u32) << shift;
-            return Some((val, index));
+            return Some((val, index))
         }
         val |= ((byte & 0x7f) as u32) << shift;
         shift += 7;

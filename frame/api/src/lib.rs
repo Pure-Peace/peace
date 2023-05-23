@@ -22,7 +22,8 @@ use utoipa::openapi::OpenApi;
 /// just use [`Application`] and implement this trait for App.
 #[async_trait]
 pub trait Application: Clone + Send + Sync + 'static {
-    /// App cfg should inherit [`ApiFrameConfig`], so this function is used to return it.
+    /// App cfg should inherit [`ApiFrameConfig`], so this function is used to
+    /// return it.
     fn frame_cfg(&self) -> &ApiFrameConfig;
 
     fn frame_cfg_arc(&self) -> Arc<ApiFrameConfig> {
@@ -40,7 +41,8 @@ pub trait Application: Clone + Send + Sync + 'static {
     /// This is for `hostname routing`.
     ///
     /// Match the hostname with the specified service, and return a router,
-    /// and the server will try to execute the corresponding implementation according to the path.
+    /// and the server will try to execute the corresponding implementation
+    /// according to the path.
     async fn match_hostname(
         &self,
         _host: Host,

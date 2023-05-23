@@ -1,5 +1,4 @@
-use peace_logs::api::AdminAuth;
-use peace_logs::api::CommonHandleResponse;
+use peace_logs::api::{AdminAuth, CommonHandleResponse};
 use utoipa::OpenApi;
 
 #[derive(OpenApi)]
