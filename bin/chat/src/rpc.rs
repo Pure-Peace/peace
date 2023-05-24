@@ -4,7 +4,6 @@ use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
 pub struct ChatRpcImpl {
-    #[allow(dead_code)]
     chat_service: DynChatService,
 }
 

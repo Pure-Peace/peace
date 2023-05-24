@@ -25,9 +25,8 @@ pub const DEFAULT_CHANNEL_CACHE_EXPIRES: U64 = U64::new(300);
 
 #[derive(Clone)]
 pub struct ChatServiceImpl {
-    #[allow(dead_code)]
     channel_service: DynChannelService,
-    #[allow(dead_code)]
+
     bancho_state_service: DynBanchoStateService,
 }
 

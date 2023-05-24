@@ -1,7 +1,7 @@
+use super::packet_processor::PacketProcessor;
 use crate::{
     bancho::{
-        packet_processor, traits::*, BanchoServiceError, LoginError,
-        ProcessBanchoPacketError,
+        traits::*, BanchoServiceError, LoginError, ProcessBanchoPacketError,
     },
     bancho_state::DynBanchoStateService,
     chat::DynChatService,
@@ -21,23 +21,13 @@ use std::{net::IpAddr, str::FromStr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
 use tools::{lazy_init, tonic_utils::RawRequest, Ulid};
 
-pub struct PacketContext<'a> {
-    pub session_id: &'a str,
-    pub user_id: i32,
-    pub packet: Packet<'a>,
-    pub svc: &'a BanchoServiceImpl,
-}
-
 #[derive(Clone)]
 pub struct BanchoServiceImpl {
     pub users_repository: DynUsersRepository,
     pub bancho_state_service: DynBanchoStateService,
     pub password_service: DynPasswordService,
-    #[allow(dead_code)]
     pub bancho_background_service: DynBanchoBackgroundService,
-    #[allow(dead_code)]
     pub geoip_service: DynGeoipService,
-    #[allow(dead_code)]
     pub chat_service: DynChatService,
 }
 
@@ -289,6 +279,7 @@ impl BatchProcessPackets for BanchoServiceImpl {
         Ok(HandleCompleted { packets: builder.map(|b| b.build()) })
     }
 }
+
 #[async_trait]
 impl ProcessPackets for BanchoServiceImpl {
     #[inline]
@@ -298,39 +289,39 @@ impl ProcessPackets for BanchoServiceImpl {
         user_id: i32,
         packet: Packet<'_>,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        let ctx = PacketContext { session_id, user_id, packet, svc: self };
+        let processor =
+            PacketProcessor { session_id, user_id, packet, service: self };
 
-        Ok(match ctx.packet.id {
+        Ok(match processor.packet.id {
             PacketId::OSU_PING => HandleCompleted::default(),
             // Message
             PacketId::OSU_SEND_PUBLIC_MESSAGE =>
-                packet_processor::send_public_message(ctx).await?,
+                processor.send_public_message().await?,
             PacketId::OSU_SEND_PRIVATE_MESSAGE =>
-                packet_processor::send_private_message(ctx).await?,
+                processor.send_private_message().await?,
             PacketId::OSU_USER_CHANNEL_JOIN =>
-                packet_processor::user_channel_join(ctx).await?,
+                processor.user_channel_join().await?,
             PacketId::OSU_USER_CHANNEL_PART =>
-                packet_processor::user_channel_part(ctx).await?,
+                processor.user_channel_part().await?,
             // User
             PacketId::OSU_USER_REQUEST_STATUS_UPDATE =>
-                packet_processor::user_request_status_update(ctx).await?,
+                processor.user_request_status_update().await?,
             PacketId::OSU_USER_PRESENCE_REQUEST_ALL =>
-                packet_processor::user_presence_request_all(ctx).await?,
+                processor.user_presence_request_all().await?,
             PacketId::OSU_USER_STATS_REQUEST =>
-                packet_processor::user_stats_request(ctx).await?,
+                processor.user_stats_request().await?,
             PacketId::OSU_USER_CHANGE_ACTION =>
-                packet_processor::user_change_action(ctx).await?,
+                processor.user_change_action().await?,
             PacketId::OSU_USER_RECEIVE_UPDATES =>
-                packet_processor::user_receive_updates(ctx).await?,
+                processor.user_receive_updates().await?,
             PacketId::OSU_USER_FRIEND_ADD => todo!(),
             PacketId::OSU_USER_FRIEND_REMOVE => todo!(),
             PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS =>
-                packet_processor::user_toggle_block_non_friend_dms(ctx).await?,
-            PacketId::OSU_USER_LOGOUT =>
-                packet_processor::user_logout(ctx).await?,
+                processor.user_toggle_block_non_friend_dms().await?,
+            PacketId::OSU_USER_LOGOUT => processor.user_logout().await?,
             PacketId::OSU_USER_SET_AWAY_MESSAGE => todo!(),
             PacketId::OSU_USER_PRESENCE_REQUEST =>
-                packet_processor::user_presence_request(ctx).await?,
+                processor.user_presence_request().await?,
             // Spectate
             PacketId::OSU_SPECTATE_START => todo!(),
             PacketId::OSU_SPECTATE_STOP => todo!(),
@@ -366,7 +357,7 @@ impl ProcessPackets for BanchoServiceImpl {
             PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
             _ =>
                 return Err(ProcessBanchoPacketError::UnhandledPacket(
-                    ctx.packet.id,
+                    processor.packet.id,
                 )),
         })
     }

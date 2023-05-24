@@ -169,9 +169,8 @@ impl Channels {
 
 #[derive(Debug, Clone, Default)]
 pub struct ChannelServiceImpl {
-    channels: Arc<Channels>,
-    #[allow(dead_code)]
-    peace_db_conn: DatabaseConnection,
+    pub channels: Arc<Channels>,
+    pub peace_db_conn: DatabaseConnection,
 }
 
 impl ChannelServiceImpl {

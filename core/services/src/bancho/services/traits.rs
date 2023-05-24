@@ -43,7 +43,6 @@ pub trait BanchoBackgroundService: PasswordBackgroundService {
     fn start_all(&self, configs: BanchoBackgroundServiceConfigs);
 }
 
-#[async_trait]
 pub trait BanchoService:
     Login
     + BatchProcessPackets
@@ -193,4 +192,104 @@ pub trait LobbyJoin {
         &self,
         request: LobbyJoinRequest,
     ) -> Result<HandleCompleted, BanchoServiceError>;
+}
+
+pub trait BanchoPacketProcessor:
+    ProcessSendPublicMessage
+    + ProcessSendPrivateMessage
+    + ProcessUserChannelJoin
+    + ProcessUserChannelPart
+    + ProcessUserRequestStatusUpdate
+    + ProcessUserPresenceRequestAll
+    + ProcessUserStatsRequest
+    + ProcessUserChangeAction
+    + ProcessUserReceiveUpdates
+    + ProcessUserToggleBlockNonFriendDms
+    + ProcessUserLogout
+    + ProcessUserPresenceRequest
+{
+}
+
+#[async_trait]
+pub trait ProcessSendPublicMessage {
+    async fn send_public_message(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessSendPrivateMessage {
+    async fn send_private_message(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserChannelJoin {
+    async fn user_channel_join(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserChannelPart {
+    async fn user_channel_part(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserRequestStatusUpdate {
+    async fn user_request_status_update(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserPresenceRequestAll {
+    async fn user_presence_request_all(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserStatsRequest {
+    async fn user_stats_request(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserChangeAction {
+    async fn user_change_action(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserReceiveUpdates {
+    async fn user_receive_updates(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserToggleBlockNonFriendDms {
+    async fn user_toggle_block_non_friend_dms(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserLogout {
+    async fn user_logout(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
+}
+
+#[async_trait]
+pub trait ProcessUserPresenceRequest {
+    async fn user_presence_request(
+        &self,
+    ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
 }
