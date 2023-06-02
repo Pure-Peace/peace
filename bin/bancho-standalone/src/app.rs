@@ -14,7 +14,7 @@ use peace_services::{
     signature::*,
     IntoService,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use utoipa::OpenApi;
 
 #[peace_config]
@@ -49,13 +49,13 @@ pub struct BanchoStandaloneConfig {
     pub geoip: GeoipRpcConfig,
 
     #[arg(long, short = 'P')]
-    pub geo_db_path: Option<PathBuf>,
+    pub geo_db_path: Option<String>,
 
     #[command(flatten)]
     pub signature_rpc_cfg: SignatureRpcConfig,
 
     #[arg(long)]
-    pub ed25519_private_key_path: Option<PathBuf>,
+    pub ed25519_private_key_path: Option<String>,
 }
 
 #[derive(Clone)]
@@ -89,10 +89,7 @@ impl Application for App {
             SignatureServiceImpl,
             SignatureServiceRemote,
         >(
-            self.cfg.ed25519_private_key_path.as_ref().map(|path| {
-                path.to_str()
-                    .expect("failed to parse \"--ed25519_private_key_path\"")
-            }),
+            self.cfg.ed25519_private_key_path.as_deref(),
             Some(&self.cfg.signature_rpc_cfg),
         )
         .await;
@@ -136,9 +133,7 @@ impl Application for App {
 
         let geoip_service =
             GeoipServiceBuilder::build::<GeoipServiceImpl, GeoipServiceRemote>(
-                self.cfg.geo_db_path.as_ref().map(|path| {
-                    path.to_str().expect("failed to parse \"--geo_db_path\"")
-                }),
+                self.cfg.geo_db_path.as_deref(),
                 Some(&self.cfg.geoip),
             )
             .await;

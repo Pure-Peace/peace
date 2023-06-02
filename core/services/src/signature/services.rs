@@ -46,7 +46,7 @@ impl SignatureServiceBuilder {
 
         if let Some(cfg) = signature_rpc_config {
             service = cfg
-                .connect_client()
+                .try_connect()
                 .await
                 .map(|client| {
                     info!(

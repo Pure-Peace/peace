@@ -297,10 +297,13 @@ pub trait RpcClientConfig {
 
     /// Connects the RPC client
     ///
-    /// # Errors
-    ///
     /// Returns an `anyhow::Error` if the client could not be connected.
-    async fn connect_client(&self) -> Result<Self::RpcClient, anyhow::Error>;
+    async fn try_connect(&self) -> Result<Self::RpcClient, anyhow::Error>;
+
+    /// Connects the RPC client
+    ///
+    /// `panic` if the client could not be connected.
+    async fn connect(&self) -> Self::RpcClient;
 }
 
 pub mod macros {
@@ -480,15 +483,18 @@ pub mod macros {
                     }
 
                     #[inline]
-                    async fn connect_client(&self) -> Result<Self::RpcClient, $crate::macros::____private::Error> {
+                    async fn try_connect(&self) -> Result<Self::RpcClient, $crate::macros::____private::Error> {
+                        #[inline]
                         fn display_endpoint(s: impl std::fmt::Display) {
                             $crate::macros::____private::peace_logs::info!(concat!("[Config] ", stringify!($service_name), " gRPC service endpoint: {}"), s);
                         }
 
+                        #[inline]
                         fn display_connecting() {
                             $crate::macros::____private::peace_logs::info!(concat!("Attempting to connect to ", stringify!($service_name), " gRPC endpoint..."));
                         }
 
+                        #[inline]
                         async fn connect_endpoint(
                             endpoint: $crate::macros::____private::Endpoint,
                             lazy_connect: bool,
@@ -542,6 +548,13 @@ pub mod macros {
                             )
                             .await?,
                         ))
+                    }
+
+                    #[inline]
+                    async fn connect(&self) -> Self::RpcClient {
+                        self.try_connect().await.expect(
+                            concat!("Unable to connect to the ", stringify!($service_name), " gRPC service, please make sure the service is started.")
+                        )
                     }
                 }
             }

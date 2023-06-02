@@ -17,7 +17,7 @@ use peace_services::{
     rpc_config::{BanchoStateRpcConfig, ChatRpcConfig, GeoipRpcConfig},
     FromRpcClient, IntoService,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -48,7 +48,7 @@ pub struct BanchoConfig {
     pub bancho_background_service_configs: CliBanchoBackgroundServiceConfigs,
 
     #[arg(long, short = 'P')]
-    pub geo_db_path: Option<PathBuf>,
+    pub geo_db_path: Option<String>,
 }
 
 #[derive(Clone)]
@@ -80,23 +80,13 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let bancho_state_rpc_client =
-            self.cfg.bancho_state.connect_client().await.unwrap_or_else(|err| {
-                error!("Unable to connect to the bancho_state gRPC service, please make sure the service is started.");
-                panic!("{}", err)
-            });
+        let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
 
-        let chat_rpc_client =
-            self.cfg.chat.connect_client().await.unwrap_or_else(|err| {
-                error!("Unable to connect to the chat gRPC service, please make sure the service is started.");
-                panic!("{}", err)
-            });
+        let chat_rpc_client = self.cfg.chat.connect().await;
 
         let geoip_service =
             GeoipServiceBuilder::build::<GeoipServiceImpl, GeoipServiceRemote>(
-                self.cfg.geo_db_path.as_ref().map(|path| {
-                    path.to_str().expect("failed to parse geo_db_path")
-                }),
+                self.cfg.geo_db_path.as_deref(),
                 Some(&self.cfg.geoip),
             )
             .await;

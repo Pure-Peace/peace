@@ -41,7 +41,7 @@ impl GeoipServiceBuilder {
 
         if let Some(cfg) = cfg {
             service = cfg
-                .connect_client()
+                .try_connect()
                 .await
                 .map(|client| {
                     info!("Geoip service init successful, type: \"Remote\"");

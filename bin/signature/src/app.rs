@@ -8,7 +8,7 @@ use peace_runtime::cfg::RuntimeConfig;
 use peace_services::signature::{
     SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -24,7 +24,7 @@ pub struct SignatureConfig {
     pub frame_cfg: RpcFrameConfig,
 
     #[arg(long, short = 'P')]
-    pub ed25519_private_key_path: Option<PathBuf>,
+    pub ed25519_private_key_path: Option<String>,
 }
 
 #[derive(Clone)]
@@ -49,17 +49,12 @@ impl Application for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let signature_service = SignatureServiceBuilder::build::<
-            SignatureServiceImpl,
-            SignatureServiceRemote,
-        >(
-            self.cfg.ed25519_private_key_path.as_ref().map(|path| {
-                path.to_str()
-                    .expect("failed to parse \"ed25519_private_key_path\"")
-            }),
-            None,
-        )
-        .await;
+        let signature_service =
+            SignatureServiceBuilder::build::<
+                SignatureServiceImpl,
+                SignatureServiceRemote,
+            >(self.cfg.ed25519_private_key_path.as_deref(), None)
+            .await;
 
         let signature_rpc = SignatureRpcImpl::new(signature_service);
 

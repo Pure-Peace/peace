@@ -7,7 +7,7 @@ use peace_services::{
     geoip::{FromGeoDbPath, GeoipServiceImpl},
     IntoService,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -23,7 +23,7 @@ pub struct GeoipConfig {
     pub frame_cfg: RpcFrameConfig,
 
     #[arg(long, short = 'P')]
-    pub geo_db_path: Option<PathBuf>,
+    pub geo_db_path: Option<String>,
 }
 
 #[derive(Clone)]
@@ -51,10 +51,9 @@ impl Application for App {
         let geo_db_path =
             self.cfg.geo_db_path.as_ref().expect("geo_db_path is required");
 
-        let geoip_service =
-            GeoipServiceImpl::from_path(geo_db_path.to_str().unwrap())
-                .unwrap()
-                .into_service();
+        let geoip_service = GeoipServiceImpl::from_path(geo_db_path.as_str())
+            .unwrap()
+            .into_service();
 
         let geoip_rpc = GeoipRpcImpl::new(geoip_service);
 

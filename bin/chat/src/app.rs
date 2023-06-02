@@ -61,11 +61,7 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let bancho_state_rpc_client =
-            self.cfg.bancho_state.connect_client().await.unwrap_or_else(|err| {
-                error!("Unable to connect to the bancho_state gRPC service, please make sure the service is started.");
-                panic!("{}", err)
-            });
+        let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
 
         let bancho_state_service =
             BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
