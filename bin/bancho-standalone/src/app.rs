@@ -99,21 +99,9 @@ impl Application for App {
         );
 
         let bancho_state_background_service_config =
-            BanchoStateBackgroundServiceConfigs {
-                user_sessions_recycle: UserSessionsRecycleConfig::build(
-                    self.cfg
-                        .bancho_state_background_service_configs
-                        .user_sessions_recycle_deactive_secs,
-                    self.cfg
-                        .bancho_state_background_service_configs
-                        .user_sessions_recycle_interval_secs,
-                ),
-                notify_messages_recyce: NotifyMessagesRecycleConfig::build(
-                    self.cfg
-                        .bancho_state_background_service_configs
-                        .notify_messages_recycle_interval_secs,
-                ),
-            };
+            BanchoStateBackgroundServiceConfigs::with_cfg(
+                &self.cfg.bancho_state_background_service_configs,
+            );
 
         bancho_state_background_service
             .start_all(bancho_state_background_service_config);
@@ -152,13 +140,8 @@ impl Application for App {
                 .into_service();
 
         let bancho_background_service_config = BanchoBackgroundServiceConfigs {
-            password_caches_recycle: PasswordCachesRecycleConfig::build(
-                self.cfg
-                    .bancho_background_service_configs
-                    .password_caches_recycle_deactive_secs,
-                self.cfg
-                    .bancho_background_service_configs
-                    .password_caches_recycle_interval_secs,
+            password_caches_recycle: PasswordCachesRecycleConfig::buid_with_cfg(
+                &self.cfg.bancho_background_service_configs,
             ),
         };
 

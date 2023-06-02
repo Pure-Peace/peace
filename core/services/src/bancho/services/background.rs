@@ -122,6 +122,7 @@ pub struct CliBanchoBackgroundServiceConfigs {
 pub struct PasswordCachesRecycleConfig;
 
 impl PasswordCachesRecycleConfig {
+    #[inline]
     pub fn build(
         dead: u64,
         loop_interval: u64,
@@ -132,6 +133,16 @@ impl PasswordCachesRecycleConfig {
             manual_stop: true.into(),
         }
         .into()
+    }
+
+    #[inline]
+    pub fn buid_with_cfg(
+        cfg: &CliBanchoBackgroundServiceConfigs,
+    ) -> Arc<CommonRecycleBackgroundTaskConfig> {
+        Self::build(
+            cfg.password_caches_recycle_deactive_secs,
+            cfg.password_caches_recycle_interval_secs,
+        )
     }
 }
 

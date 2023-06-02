@@ -9,8 +9,7 @@ use peace_services::{
     bancho_state::{
         BanchoStateBackgroundService, BanchoStateBackgroundServiceConfigs,
         BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
-        CliBanchoStateBackgroundServiceConfigs, NotifyMessagesRecycleConfig,
-        UserSessionsRecycleConfig, UserSessionsServiceImpl,
+        CliBanchoStateBackgroundServiceConfigs, UserSessionsServiceImpl,
     },
     rpc_config::SignatureRpcConfig,
     signature::{
@@ -95,21 +94,9 @@ impl Application for App {
         );
 
         let bancho_state_background_service_config =
-            BanchoStateBackgroundServiceConfigs {
-                user_sessions_recycle: UserSessionsRecycleConfig::build(
-                    self.cfg
-                        .bancho_state_background_service_configs
-                        .user_sessions_recycle_deactive_secs,
-                    self.cfg
-                        .bancho_state_background_service_configs
-                        .user_sessions_recycle_interval_secs,
-                ),
-                notify_messages_recyce: NotifyMessagesRecycleConfig::build(
-                    self.cfg
-                        .bancho_state_background_service_configs
-                        .notify_messages_recycle_interval_secs,
-                ),
-            };
+            BanchoStateBackgroundServiceConfigs::with_cfg(
+                &self.cfg.bancho_state_background_service_configs,
+            );
 
         bancho_state_background_service
             .start_all(bancho_state_background_service_config);

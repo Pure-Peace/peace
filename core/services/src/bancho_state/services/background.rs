@@ -245,6 +245,16 @@ impl UserSessionsRecycleConfig {
         }
         .into()
     }
+
+    #[inline]
+    pub fn buid_with_cfg(
+        cfg: &CliBanchoStateBackgroundServiceConfigs,
+    ) -> Arc<CommonRecycleBackgroundTaskConfig> {
+        Self::build(
+            cfg.user_sessions_recycle_deactive_secs,
+            cfg.user_sessions_recycle_interval_secs,
+        )
+    }
 }
 
 pub struct NotifyMessagesRecycleConfig;
@@ -257,6 +267,13 @@ impl NotifyMessagesRecycleConfig {
         }
         .into()
     }
+
+    #[inline]
+    pub fn buid_with_cfg(
+        cfg: &CliBanchoStateBackgroundServiceConfigs,
+    ) -> Arc<LoopBackgroundTaskConfig> {
+        Self::build(cfg.notify_messages_recycle_interval_secs)
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -266,11 +283,24 @@ pub struct BanchoStateBackgroundServiceConfigs {
 }
 
 impl BanchoStateBackgroundServiceConfigs {
+    #[inline]
     pub fn new(
         user_sessions_recycle: Arc<CommonRecycleBackgroundTaskConfig>,
         notify_messages_recyce: Arc<LoopBackgroundTaskConfig>,
     ) -> Self {
         Self { user_sessions_recycle, notify_messages_recyce }
+    }
+
+    #[inline]
+    pub fn with_cfg(cfg: &CliBanchoStateBackgroundServiceConfigs) -> Self {
+        Self {
+            user_sessions_recycle: UserSessionsRecycleConfig::buid_with_cfg(
+                &cfg,
+            ),
+            notify_messages_recyce: NotifyMessagesRecycleConfig::buid_with_cfg(
+                &cfg,
+            ),
+        }
     }
 }
 

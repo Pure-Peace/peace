@@ -109,13 +109,8 @@ impl Application for App {
                 .into_service();
 
         let bancho_background_service_config = BanchoBackgroundServiceConfigs {
-            password_caches_recycle: PasswordCachesRecycleConfig::build(
-                self.cfg
-                    .bancho_background_service_configs
-                    .password_caches_recycle_deactive_secs,
-                self.cfg
-                    .bancho_background_service_configs
-                    .password_caches_recycle_interval_secs,
+            password_caches_recycle: PasswordCachesRecycleConfig::buid_with_cfg(
+                &self.cfg.bancho_background_service_configs,
             ),
         };
 
