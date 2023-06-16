@@ -1,7 +1,7 @@
 use crate::{
-    bancho::{traits::*, BanchoServiceImpl, ProcessBanchoPacketError},
-    bancho_state::PresenceFilter,
-    chat::Platform,
+    bancho::{traits::*, ProcessBanchoPacketError},
+    bancho_state::{BanchoStateService, PresenceFilter},
+    chat::{ChatService, Platform},
 };
 use async_trait::async_trait;
 use bancho_packets::{
@@ -24,7 +24,9 @@ pub struct PacketProcessor<'a> {
     pub session_id: &'a str,
     pub user_id: i32,
     pub packet: Packet<'a>,
-    pub service: &'a BanchoServiceImpl,
+    pub bancho_service: &'a (dyn BanchoService + Send + Sync),
+    pub bancho_state_service: &'a (dyn BanchoStateService + Send + Sync),
+    pub chat_service: &'a (dyn ChatService + Send + Sync),
 }
 
 impl<'a> Debug for PacketProcessor<'a> {
@@ -89,8 +91,7 @@ impl<'a> ProcessSendPublicMessage for PacketProcessor<'a> {
             _ => {},
         };
 
-        self.service
-            .chat_service
+        self.chat_service
             .send_message(SendMessageRequest {
                 sender_id: self.user_id,
                 message: chat_message.content,
@@ -114,8 +115,7 @@ impl<'a> ProcessSendPrivateMessage for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         let chat_message = read_chat_message(self.packet.payload)?;
 
-        self.service
-            .chat_service
+        self.chat_service
             .send_message(SendMessageRequest {
                 sender_id: self.user_id,
                 message: chat_message.content,
@@ -140,7 +140,6 @@ impl<'a> ProcessUserChannelJoin for PacketProcessor<'a> {
         let channel_name = read_channel_name(self.packet.payload)?;
 
         let channel_info = self
-            .service
             .chat_service
             .add_user_into_channel(AddUserIntoChannelRequest {
                 channel_query: Some(
@@ -154,8 +153,7 @@ impl<'a> ProcessUserChannelJoin for PacketProcessor<'a> {
             .await
             .map_err(handing_err)?;
 
-        self.service
-            .bancho_state_service
+        self.bancho_state_service
             .channel_update_notify(ChannelUpdateNotifyRequest {
                 notify_targets: None,
                 channel_info: Some(channel_info.to_owned()),
@@ -180,7 +178,6 @@ impl<'a> ProcessUserChannelPart for PacketProcessor<'a> {
         let channel_name = read_channel_name(self.packet.payload)?;
 
         let channel_info = self
-            .service
             .chat_service
             .remove_user_platforms_from_channel(
                 RemoveUserPlatformsFromChannelRequest {
@@ -196,8 +193,7 @@ impl<'a> ProcessUserChannelPart for PacketProcessor<'a> {
             .await
             .map_err(handing_err)?;
 
-        self.service
-            .bancho_state_service
+        self.bancho_state_service
             .channel_update_notify(ChannelUpdateNotifyRequest {
                 notify_targets: None,
                 channel_info: Some(channel_info.to_owned()),
@@ -219,7 +215,7 @@ impl<'a> ProcessUserRequestStatusUpdate for PacketProcessor<'a> {
     async fn user_request_status_update(
         &self,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        self.service
+        self.bancho_service
             .request_status_update(RequestStatusUpdateRequest {
                 session_id: self.session_id.to_owned(),
             })
@@ -236,7 +232,7 @@ impl<'a> ProcessUserPresenceRequestAll for PacketProcessor<'a> {
     async fn user_presence_request_all(
         &self,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        self.service
+        self.bancho_service
             .presence_request_all(PresenceRequestAllRequest {
                 session_id: self.session_id.to_owned(),
             })
@@ -261,7 +257,7 @@ impl<'a> ProcessUserStatsRequest for PacketProcessor<'a> {
         .read::<Vec<i32>>()
         .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
 
-        self.service
+        self.bancho_service
             .request_stats(StatsRequest {
                 session_id: self.session_id.to_owned(),
                 request_users,
@@ -294,7 +290,7 @@ impl<'a> ProcessUserChangeAction for PacketProcessor<'a> {
         .read::<ClientChangeAction>()
         .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
 
-        self.service
+        self.bancho_service
             .change_action(ChangeActionRequest {
                 session_id: self.session_id.to_owned(),
                 online_status: online_status as i32,
@@ -328,7 +324,7 @@ impl<'a> ProcessUserReceiveUpdates for PacketProcessor<'a> {
         )
         .unwrap_or_default();
 
-        self.service
+        self.bancho_service
             .receive_updates(ReceiveUpdatesRequest {
                 session_id: self.session_id.to_owned(),
                 presence_filter: presence_filter.val(),
@@ -352,10 +348,10 @@ impl<'a> ProcessUserToggleBlockNonFriendDms for PacketProcessor<'a> {
                 .ok_or(ProcessBanchoPacketError::PacketPayloadNotExists)?,
         )
         .read::<i32>()
-        .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)? ==
-            1;
+        .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?
+            == 1;
 
-        self.service
+        self.bancho_service
             .toggle_block_non_friend_dms(ToggleBlockNonFriendDmsRequest {
                 session_id: self.session_id.to_owned(),
                 toggle,
@@ -373,7 +369,7 @@ impl<'a> ProcessUserLogout for PacketProcessor<'a> {
     async fn user_logout(
         &self,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        self.service
+        self.bancho_service
             .user_logout(UserLogoutRequest {
                 session_id: self.session_id.to_owned(),
             })
@@ -398,7 +394,7 @@ impl<'a> ProcessUserPresenceRequest for PacketProcessor<'a> {
         .read::<Vec<i32>>()
         .ok_or(ProcessBanchoPacketError::InvalidPacketPayload)?;
 
-        self.service
+        self.bancho_service
             .request_presence(PresenceRequest {
                 session_id: self.session_id.to_owned(),
                 request_users,

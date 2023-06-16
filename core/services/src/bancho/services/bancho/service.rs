@@ -32,6 +32,7 @@ pub struct BanchoServiceImpl {
 }
 
 impl BanchoServiceImpl {
+    #[inline]
     pub fn new(
         users_repository: DynUsersRepository,
         bancho_state_service: DynBanchoStateService,
@@ -289,8 +290,14 @@ impl ProcessPackets for BanchoServiceImpl {
         user_id: i32,
         packet: Packet<'_>,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        let processor =
-            PacketProcessor { session_id, user_id, packet, service: self };
+        let processor = PacketProcessor {
+            session_id,
+            user_id,
+            packet,
+            bancho_service: self,
+            bancho_state_service: self.bancho_state_service.as_ref(),
+            chat_service: self.chat_service.as_ref(),
+        };
 
         Ok(match processor.packet.id {
             PacketId::OSU_PING => HandleCompleted::default(),

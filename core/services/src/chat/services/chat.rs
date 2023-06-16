@@ -154,6 +154,7 @@ impl SendMessage for ChatServiceImpl {
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_message_target()?;
 
+        // TODO: Redo
         match platform {
             Platform::Bancho => match target {
                 ChatMessageTarget::ChannelId(_) => todo!(),
