@@ -1,7 +1,7 @@
 use super::{ChatService, DynChatService};
 use crate::{
-    bancho_state::DynBanchoStateService, chat::*, FromRpcClient, IntoService,
-    RpcClient,
+    bancho_state::DynBanchoStateService, chat::*, message::DynMessageService,
+    FromRpcClient, IntoService, RpcClient,
 };
 use async_trait::async_trait;
 use derive_deref::Deref;
@@ -25,17 +25,18 @@ pub const DEFAULT_CHANNEL_CACHE_EXPIRES: U64 = U64::new(300);
 
 #[derive(Clone)]
 pub struct ChatServiceImpl {
-    channel_service: DynChannelService,
-
-    bancho_state_service: DynBanchoStateService,
+    pub channel_service: DynChannelService,
+    pub bancho_state_service: DynBanchoStateService,
+    pub message_service: DynMessageService,
 }
 
 impl ChatServiceImpl {
     pub fn new(
         channel_service: DynChannelService,
         bancho_state_service: DynBanchoStateService,
+        message_service: DynMessageService,
     ) -> Self {
-        Self { channel_service, bancho_state_service }
+        Self { channel_service, bancho_state_service, message_service }
     }
 
     pub fn into_service(self) -> DynChatService {
@@ -154,8 +155,17 @@ impl SendMessage for ChatServiceImpl {
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_message_target()?;
 
+        self.message_service
+            .publish_stream(
+                Subjects::Message.to_string(),
+                ChatMessage { sender_id, message, platform, target }
+                    .to_bytes()
+                    .map_err(ChatServiceError::SerializeError)?,
+            )
+            .await?;
+
         // TODO: Redo
-        match platform {
+        /* match platform {
             Platform::Bancho => match target {
                 ChatMessageTarget::ChannelId(_) => todo!(),
                 ChatMessageTarget::ChannelName(target_channel_name) => {
@@ -231,7 +241,7 @@ impl SendMessage for ChatServiceImpl {
             },
             Platform::Lazer => todo!(),
             Platform::Web => todo!(),
-        };
+        }; */
 
         Ok(SendMessageResponse { message_id: 0 })
     }
@@ -365,14 +375,15 @@ impl CachedValue for PublicChannelInfo {
     #[inline]
     async fn fetch(&self, context: &Self::Context) -> Self::Output {
         Ok(match context.info.get() {
-            Some(cached_value) =>
+            Some(cached_value) => {
                 if !cached_value.expired {
                     cached_value.cache.to_vec()
                 } else {
                     self.fetch_new(context)
                         .await
                         .unwrap_or(cached_value.cache.to_vec())
-                },
+                }
+            },
             None => self.fetch_new(context).await?,
         })
     }

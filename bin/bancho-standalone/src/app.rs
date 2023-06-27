@@ -10,6 +10,7 @@ use peace_services::{
     chat::*,
     gateway::bancho_endpoints::{routes::*, *},
     geoip::*,
+    message::MessageServiceImpl,
     rpc_config::*,
     signature::*,
     IntoService,
@@ -56,6 +57,10 @@ pub struct BanchoStandaloneConfig {
 
     #[arg(long)]
     pub ed25519_private_key_path: Option<String>,
+
+    #[default("nats://localhost:4222".parse().unwrap())]
+    #[arg(long, default_value = "nats://localhost:4222")]
+    pub nats_url: String,
 }
 
 #[derive(Clone)]
@@ -82,6 +87,11 @@ impl Application for App {
             .connect()
             .await
             .expect("failed to connect peace db, please check.");
+
+        let message_service = MessageServiceImpl::from(
+            async_nats::connect(&self.cfg.nats_url).await.unwrap(),
+        )
+        .into_service();
 
         let user_session_service = Arc::new(UserSessionsServiceImpl::default());
 
@@ -131,9 +141,12 @@ impl Application for App {
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service =
-            ChatServiceImpl::new(channel_service, bancho_state_service.clone())
-                .into_service();
+        let chat_service = ChatServiceImpl::new(
+            channel_service,
+            bancho_state_service.clone(),
+            message_service,
+        )
+        .into_service();
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_cache_store)

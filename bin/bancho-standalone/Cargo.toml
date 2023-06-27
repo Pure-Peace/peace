@@ -25,6 +25,7 @@ serde = { workspace = true, features = ["derive"] }
 clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
 
+async-nats = { workspace = true }
 
 peace_logs = { workspace = true, features = ["cli"] }
 peace_api = { workspace = true, features = ["tls"] }

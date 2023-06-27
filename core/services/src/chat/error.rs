@@ -1,4 +1,4 @@
-use crate::bancho_state::BanchoStateError;
+use crate::{bancho_state::BanchoStateError, message::error::MessageError};
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -12,8 +12,12 @@ pub enum ChatServiceError {
     InvalidArgument,
     #[error("channel not exists")]
     ChannelNotExists,
+    #[error("{}", .0)]
+    SerializeError(serde_json::Error),
     #[error(transparent)]
     ConvertError(#[from] ConvertError),
+    #[error(transparent)]
+    MessageError(#[from] MessageError),
     #[error("bancho state error: {0}")]
     BanchoStateError(#[from] BanchoStateError),
     #[error("{}", .0.message())]

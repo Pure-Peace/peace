@@ -45,6 +45,7 @@ pub mod bancho_state {
     };
     use crate::ConvertError;
     use bitmask_enum::bitmask;
+    use serde::{Deserialize, Serialize};
     use std::{error::Error, fmt, str::FromStr};
     use tools::{DecodingError, Ulid};
 
@@ -56,7 +57,7 @@ pub mod bancho_state {
         UsernameUnicode,
     }
 
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
     pub enum UserQuery {
         SessionId(Ulid),
         UserId(i32),
@@ -119,7 +120,7 @@ pub mod bancho_state {
         }
     }
 
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
     pub enum BanchoPacketTarget {
         UserId(i32),
         Username(String),
@@ -176,9 +177,12 @@ pub mod bancho_state {
                 Self::SessionId(session_id) => UserQuery::SessionId(session_id),
                 Self::UserId(user_id) => UserQuery::UserId(user_id),
                 Self::Username(username) => UserQuery::Username(username),
-                Self::UsernameUnicode(username_unicode) =>
-                    UserQuery::UsernameUnicode(username_unicode),
-                Self::Channel(_) => return Err(ConvertError::FromChannelTarget),
+                Self::UsernameUnicode(username_unicode) => {
+                    UserQuery::UsernameUnicode(username_unicode)
+                },
+                Self::Channel(_) => {
+                    return Err(ConvertError::FromChannelTarget)
+                },
             })
         }
     }
@@ -222,12 +226,14 @@ pub mod chat {
     pub const CHAT_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace.services.chat.descriptor");
 
+    use serde::{Deserialize, Serialize};
+
     use self::{
         raw_channel_query::QueryType, raw_chat_message_target::TargetType,
     };
     use crate::ConvertError;
 
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
     pub enum ChannelQuery {
         ChannelId(u64),
         ChannelName(String),
@@ -272,7 +278,7 @@ pub mod chat {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub enum ChatMessageTarget {
         ChannelId(u64),
         ChannelName(String),

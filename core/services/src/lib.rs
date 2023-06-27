@@ -14,6 +14,7 @@ pub mod bancho_state;
 pub mod chat;
 pub mod gateway;
 pub mod geoip;
+pub mod message;
 pub mod signature;
 
 pub mod rpc_config {
@@ -50,6 +51,12 @@ pub mod rpc_config {
         config_name: SignatureRpcConfig,
         default_uri: "http://127.0.0.1:5014"
     );
+
+    /* define_rpc_client_config!(
+        service_name: message,
+        config_name: MessageRpcConfig,
+        default_uri: "http://127.0.0.1:5015"
+    ); */
 }
 
 pub trait FromRpcClient: RpcClient {

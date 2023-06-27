@@ -37,6 +37,8 @@ maxminddb = { workspace = true, features = ["mmap"] }
 serde = { workspace = true, features = ["derive"] }
 ed25519 = { workspace = true }
 hex = { workspace = true }
+bytes = { workspace = true }
+async-nats = { workspace = true }
 
 bancho-packets = { workspace = true }
 tools = { workspace = true, features = ["all"] }

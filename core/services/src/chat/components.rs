@@ -9,7 +9,9 @@ use std::{
 use tokio::sync::RwLock;
 use tools::atomic::{Atomic, AtomicOperation, AtomicOption, AtomicValue, U64};
 
-#[derive(Debug, Copy, Clone, Default, PartialEq, Primitive)]
+#[derive(
+    Debug, Copy, Clone, Default, PartialEq, Primitive, Serialize, Deserialize,
+)]
 pub enum ChannelType {
     #[default]
     Private = 0,
@@ -19,7 +21,18 @@ pub enum ChannelType {
     Spectaor = 4,
 }
 
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Primitive, Hash)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    Primitive,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
 pub enum Platform {
     #[default]
     Bancho = 0,
@@ -72,7 +85,7 @@ impl OnlinePlatforms {
     pub fn val(&self) -> Option<Vec<Platform>> {
         let platforms = self.0.load();
         if platforms.is_empty() {
-            return None
+            return None;
         }
 
         Some(platforms.iter().map(|p| p.to_owned()).collect())

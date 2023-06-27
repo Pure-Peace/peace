@@ -7,6 +7,7 @@ use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho_state::BanchoStateServiceRemote,
     chat::{ChannelServiceImpl, ChatServiceImpl},
+    message::MessageServiceImpl,
     rpc_config::BanchoStateRpcConfig,
     FromRpcClient, IntoService,
 };
@@ -30,6 +31,10 @@ pub struct ChatServiceConfig {
 
     #[command(flatten)]
     pub bancho_state: BanchoStateRpcConfig,
+
+    #[default("nats://localhost:4222".parse().unwrap())]
+    #[arg(long, default_value = "nats://localhost:4222")]
+    pub nats_url: String,
 }
 
 #[derive(Clone)]
@@ -61,6 +66,11 @@ impl Application for App {
             .await
             .expect("failed to connect peace db, please check.");
 
+        let message_service = MessageServiceImpl::from(
+            async_nats::connect(&self.cfg.nats_url).await.unwrap(),
+        )
+        .into_service();
+
         let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
 
         let bancho_state_service =
@@ -72,9 +82,12 @@ impl Application for App {
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service =
-            ChatServiceImpl::new(channel_service, bancho_state_service)
-                .into_service();
+        let chat_service = ChatServiceImpl::new(
+            channel_service,
+            bancho_state_service,
+            message_service,
+        )
+        .into_service();
 
         let chat_rpc = ChatRpcImpl::new(chat_service);
 
