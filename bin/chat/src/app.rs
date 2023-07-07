@@ -6,7 +6,7 @@ use peace_rpc::{Application, RpcClientConfig, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho_state::BanchoStateServiceRemote,
-    chat::{ChannelServiceImpl, ChatServiceImpl},
+    chat::{ChannelServiceImpl, ChatServiceImpl, QueueServiceImpl},
     rpc_config::BanchoStateRpcConfig,
     FromRpcClient, IntoService,
 };
@@ -67,14 +67,19 @@ impl Application for App {
             BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
                 .into_service();
 
+        let queue_service = QueueServiceImpl::new().into_service();
+
         let channel_service =
             ChannelServiceImpl::new(peace_db_conn).into_service();
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service =
-            ChatServiceImpl::new(channel_service, bancho_state_service)
-                .into_service();
+        let chat_service = ChatServiceImpl::new(
+            channel_service,
+            bancho_state_service,
+            queue_service,
+        )
+        .into_service();
 
         let chat_rpc = ChatRpcImpl::new(chat_service);
 

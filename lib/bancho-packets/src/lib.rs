@@ -503,7 +503,7 @@ impl<'a> Iterator for PacketReader<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if (self.buf.len() - self.ptr) < BANCHO_PACKET_HEADER_LENGTH {
-            return None
+            return None;
         }
         // Slice packet header data `[u8; 7]`,
         // including packet id, payload length
@@ -641,6 +641,7 @@ impl PacketBuilder {
         self
     }
 
+    #[allow(clippy::should_implement_trait)]
     #[inline]
     /// Add an packet to [`PacketBuilder`].
     pub fn add<P>(mut self, packet: P) -> Self
@@ -679,7 +680,7 @@ impl BanchoPacketRead<String> for String {
     #[inline]
     fn read(reader: &mut PayloadReader) -> Option<String> {
         if reader.payload.get(reader.index())? != &0xb {
-            return None
+            return None;
         }
         reader.increase_index(1);
         let data_length = reader.read_uleb128()? as usize;
@@ -882,6 +883,7 @@ macro_rules! impl_write_number_array {
         }
     };
     (@bancho_packet_length_inner $t:ty) => {
+        #[allow(clippy::manual_slice_size_calculation)]
         #[inline]
         fn packet_len(&self) -> usize {
             std::mem::size_of::<u16>() + (std::mem::size_of::<$t>() * self.len())
@@ -1073,7 +1075,7 @@ pub fn u32_to_uleb128(mut unsigned: u32) -> ([u8; 5], usize) {
 
     loop {
         if unsigned < 0x80 {
-            break
+            break;
         }
         data[ptr] = ((unsigned & 0x7f) | 0x80) as u8;
         ptr += 1;
@@ -1093,7 +1095,7 @@ pub fn uleb128_to_u32(uleb128_bytes: &[u8]) -> Option<(u32, usize)> {
         index += 1;
         if (byte & 0x80) == 0 {
             val |= (*byte as u32) << shift;
-            return Some((val, index))
+            return Some((val, index));
         }
         val |= ((byte & 0x7f) as u32) << shift;
         shift += 7;
@@ -1269,6 +1271,7 @@ pub mod macros {
             }
 
             impl$(< $($lifetimes),* >)? $struct_name$(< $($lifetimes),* >)? {
+                #[allow(clippy::too_many_arguments)]
                 #[inline]
                 pub fn new(
                     $($field_name: $field_type,)*
@@ -1276,6 +1279,7 @@ pub mod macros {
                     Self { $($field_name,)* }
                 }
 
+                #[allow(clippy::too_many_arguments)]
                 #[inline]
                 pub fn pack(
                     $($field_name: $field_type,)*

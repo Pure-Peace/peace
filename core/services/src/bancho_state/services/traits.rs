@@ -1,6 +1,9 @@
 use super::BanchoStateBackgroundServiceConfigs;
 use crate::{
-    bancho_state::{BanchoStateError, Packet, Session, UserSessions},
+    bancho_state::{
+        BanchoExtend, BanchoSession, BanchoStateError, Packet, Session,
+        UserSessions,
+    },
     gateway::bancho_endpoints::components::BanchoClientToken,
 };
 use async_trait::async_trait;
@@ -77,8 +80,8 @@ pub trait UserSessionsService:
 
 pub trait UserSessionsCount: UserSessionsStore {
     #[inline]
-    fn len(&self) -> usize {
-        self.user_sessions().len()
+    fn length(&self) -> usize {
+        self.user_sessions().length()
     }
 }
 
@@ -93,7 +96,7 @@ pub trait UserSessionsClear: UserSessionsStore {
 #[async_trait]
 pub trait UserSessionsGet: UserSessionsStore {
     #[inline]
-    async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
+    async fn get(&self, query: &UserQuery) -> Option<Arc<BanchoSession>> {
         self.user_sessions().get(query).await
     }
 }
@@ -101,12 +104,12 @@ pub trait UserSessionsGet: UserSessionsStore {
 #[async_trait]
 pub trait UserSessionsDelete: UserSessionsStore + NotifyMessagesQueue {
     #[inline]
-    async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
+    async fn delete(&self, query: &UserQuery) -> Option<Arc<BanchoSession>> {
         const LOG_TARGET: &str = "bancho_state::user_sessions::delete_session";
 
         let session = self.user_sessions().delete(query).await?;
 
-        self.notify_queue().lock().await.push(
+        self.notify_queue().lock().await.push_message(
             bancho_packets::server::UserLogout::pack(session.user_id).into(),
             None,
         );
@@ -126,16 +129,21 @@ pub trait UserSessionsDelete: UserSessionsStore + NotifyMessagesQueue {
 #[async_trait]
 pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
     #[inline]
-    async fn create(&self, create_session: CreateSessionDto) -> Arc<Session> {
+    async fn create(
+        &self,
+        create_session: CreateSessionDto<BanchoExtend>,
+    ) -> Arc<BanchoSession> {
         const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
         const PRESENCE_SHARD_SIZE: usize = 512;
 
-        let session =
-            self.user_sessions().create(Session::new(create_session)).await;
+        let session = self
+            .user_sessions()
+            .create(Session::new(create_session), true)
+            .await;
 
         let weak = Arc::downgrade(&session);
 
-        self.notify_queue().lock().await.push_excludes(
+        self.notify_queue().lock().await.push_message_excludes(
             bancho_packets::server::UserPresenceSingle::pack(session.user_id)
                 .into(),
             [session.user_id],
@@ -159,8 +167,8 @@ pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
 
         let session_info = session.user_info_packets();
 
-        let pre_alloc_size = session_info.len() +
-            (9 + presence_shard_count * PRESENCE_SHARD_SIZE * 4);
+        let pre_alloc_size = session_info.len()
+            + (9 + presence_shard_count * PRESENCE_SHARD_SIZE * 4);
 
         let mut pending_packets = Vec::with_capacity(pre_alloc_size);
 
@@ -203,7 +211,6 @@ pub trait BanchoStateService:
     + BatchSendUserStatsPacket
     + SendUserStatsPacket
     + GetAllSessions
-    + ChannelUpdateNotify
     + GetUserSessionWithFields
     + GetUserSession
     + IsUserOnline
@@ -270,14 +277,6 @@ pub trait GetAllSessions {
     async fn get_all_sessions(
         &self,
     ) -> Result<GetAllSessionsResponse, BanchoStateError>;
-}
-
-#[async_trait]
-pub trait ChannelUpdateNotify {
-    async fn channel_update_notify(
-        &self,
-        request: ChannelUpdateNotifyRequest,
-    ) -> Result<ChannelUpdateNotifyResponse, BanchoStateError>;
 }
 
 #[async_trait]

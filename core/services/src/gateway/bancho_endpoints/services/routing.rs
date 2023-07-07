@@ -9,7 +9,7 @@ use crate::gateway::bancho_endpoints::{
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::PacketBuilder;
-use peace_pb::{bancho::LoginSuccess, bancho_state::BanchoPacketTarget};
+use peace_pb::{bancho::LoginSuccess, bancho_state::UserQuery};
 use std::{net::IpAddr, str::FromStr, sync::Arc};
 use tools::lazy_init;
 
@@ -49,20 +49,34 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
 
             let mut builder = None::<PacketBuilder>;
 
-            self.bancho_handler_service
-                    .process_bancho_packets(user_id, session_id, body)
-                    .await?
-                    .map(|extra_packets| lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets)));
+            if let Some(extra_packets) = self
+                .bancho_handler_service
+                .process_bancho_packets(user_id, session_id, body)
+                .await?
+            {
+                lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
+            }
 
-            self.bancho_handler_service
-                    .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
-                    .await
-                    .map(|extra_packets| lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets)));
+            if let Some(extra_packets) = self
+                .bancho_handler_service
+                .pull_bancho_packets(UserQuery::UserId(user_id))
+                .await
+            {
+                lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
+            }
+
+            if let Some(extra_packets) = self
+                .bancho_handler_service
+                .pull_chat_packets(UserQuery::UserId(user_id))
+                .await
+            {
+                lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
+            }
 
             return Ok(builder
                 .map(|b| b.build())
                 .unwrap_or_default()
-                .into_response())
+                .into_response());
         };
 
         let LoginSuccess { session_id, signature, user_id, mut packets } = self
@@ -73,7 +87,7 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
 
         if let Some(p) = self
             .bancho_handler_service
-            .pull_bancho_packets(BanchoPacketTarget::UserId(user_id))
+            .pull_bancho_packets(UserQuery::UserId(user_id))
             .await
         {
             packets.extend(p);

@@ -2,7 +2,7 @@ use crate::lazy_init;
 use std::{
     collections::{BTreeMap, HashSet},
     hash::Hash,
-    ops::{Deref, DerefMut, RangeBounds},
+    ops::RangeBounds,
     sync::Arc,
 };
 
@@ -41,57 +41,15 @@ where
     }
 }
 
-impl<T, K> Deref for Message<T, K> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-
-impl<T, K> DerefMut for Message<T, K> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
-
 #[derive(Clone)]
 pub struct ReceivedMessages<T, I> {
     pub messages: Vec<T>,
     pub last_msg_id: I,
 }
 
-impl<T, I> Deref for ReceivedMessages<T, I> {
-    type Target = Vec<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.messages
-    }
-}
-
-impl<T, I> DerefMut for ReceivedMessages<T, I> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.messages
-    }
-}
-
 #[derive(Clone, Default)]
 pub struct MessageQueue<T, K, I> {
     pub messages: BTreeMap<I, Message<T, K>>,
-}
-
-impl<T, K, I> Deref for MessageQueue<T, K, I> {
-    type Target = BTreeMap<I, Message<T, K>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.messages
-    }
-}
-
-impl<T, K, I> DerefMut for MessageQueue<T, K, I> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.messages
-    }
 }
 
 impl<T, K, I> MessageQueue<T, K, I>
@@ -101,7 +59,7 @@ where
     I: MessageId,
 {
     #[inline]
-    pub fn push(
+    pub fn push_message(
         &mut self,
         content: T,
         validator: Option<MessageValidator<T, K>>,
@@ -113,7 +71,7 @@ where
     }
 
     #[inline]
-    pub fn push_excludes(
+    pub fn push_message_excludes(
         &mut self,
         content: T,
         excludes: impl IntoIterator<Item = K>,
@@ -130,15 +88,18 @@ where
     }
 
     #[inline]
-    pub fn batch_remove(&mut self, keys: &[I]) -> usize {
-        for id in keys {
+    pub fn remove_messages(&mut self, message_ids: &[I]) -> usize {
+        let mut success = 0;
+        for id in message_ids {
             self.messages.remove(id);
+            success += 1;
         }
-        keys.len()
+
+        success
     }
 
     #[inline]
-    pub fn remove_range<R>(&mut self, range: R) -> usize
+    pub fn remove_messages_in_range<R>(&mut self, range: R) -> usize
     where
         R: RangeBounds<I>,
     {
@@ -158,17 +119,17 @@ where
     }
 
     #[inline]
-    pub fn remove_before_id(&mut self, msg_id: &I) -> usize {
-        self.remove_range(..=msg_id)
+    pub fn remove_messages_before_id(&mut self, msg_id: &I) -> usize {
+        self.remove_messages_in_range(..=msg_id)
     }
 
     #[inline]
-    pub fn remove_after_id(&mut self, msg_id: &I) -> usize {
-        self.remove_range(msg_id..)
+    pub fn remove_messages_after_id(&mut self, msg_id: &I) -> usize {
+        self.remove_messages_in_range(msg_id..)
     }
 
     #[inline]
-    pub fn receive(
+    pub fn receive_messages(
         &mut self,
         read_key: &K,
         start_msg_id: &I,
@@ -182,12 +143,12 @@ where
 
         for (msg_id, msg) in self.messages.range_mut(start_msg_id..) {
             if msg.has_read.contains(read_key) {
-                continue
+                continue;
             }
 
             if !msg.is_valid() {
                 lazy_init!(should_delete => should_delete.push(msg_id.clone()), vec![msg_id.clone()]);
-                continue
+                continue;
             }
 
             lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
@@ -198,7 +159,7 @@ where
                 received_msg_count += 1;
 
                 if received_msg_count >= receive_count {
-                    break
+                    break;
                 }
             }
         }

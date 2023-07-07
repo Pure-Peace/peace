@@ -68,8 +68,9 @@ impl BanchoHttpError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::ParseRequestError => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::FailedToProcessBanchoPackets(_) =>
-                StatusCode::INTERNAL_SERVER_ERROR,
+            Self::FailedToProcessBanchoPackets(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            },
             Self::SessionNotExists(_) => StatusCode::FORBIDDEN,
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
             _ => StatusCode::OK,

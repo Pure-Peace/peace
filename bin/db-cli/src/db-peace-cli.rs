@@ -83,10 +83,10 @@ async fn main() {
 
             println!("Creating user...");
             repo.create_user(CreateUser {
-                name: UsernameAscii::from_str(username.as_str()).unwrap(),
+                name: UsernameAscii::new(username.as_str()).unwrap(),
                 name_unicode: username_unicode
                     .as_ref()
-                    .map(|s| UsernameUnicode::from_str(s.as_str()).unwrap()),
+                    .map(|s| UsernameUnicode::new(s.as_str()).unwrap()),
                 password: Password::hash_password(
                     md5_password
                         .or_else(|| {
@@ -98,7 +98,7 @@ async fn main() {
                         .unwrap(),
                 )
                 .unwrap(),
-                email: Email::from_str(email.as_str()).unwrap(),
+                email: Email::new(email.as_str()).unwrap(),
                 country: None,
             })
             .await
@@ -128,10 +128,10 @@ async fn main() {
             repo.change_user_password(
                 user_id,
                 username.map(|s| {
-                    UsernameAscii::from_str(s.as_str()).unwrap().safe_name()
+                    UsernameAscii::new(s.as_str()).unwrap().safe_name()
                 }),
                 username_unicode.map(|s| {
-                    UsernameUnicode::from_str(s.as_str()).unwrap().safe_name()
+                    UsernameUnicode::new(s.as_str()).unwrap().safe_name()
                 }),
                 Password::hash_password(
                     md5_password

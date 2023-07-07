@@ -2,6 +2,7 @@ use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
     bancho_state::{BanchoStateError, DynBanchoStateService},
+    chat::DynChatService,
     gateway::bancho_endpoints::{
         components::BanchoClientToken, extractors::BanchoClientVersion, parser,
         BanchoHttpError, LoginError,
@@ -11,23 +12,25 @@ use async_trait::async_trait;
 use bancho_packets::PacketReader;
 use peace_pb::{
     bancho::*,
-    bancho_state::{BanchoPacketTarget, DequeueBanchoPacketsRequest},
+    bancho_state::{DequeueBanchoPacketsRequest, UserQuery},
 };
 use std::{net::IpAddr, sync::Arc};
 use tools::Ulid;
 
 #[derive(Clone)]
 pub struct BanchoHandlerServiceImpl {
-    bancho_service: DynBanchoService,
-    bancho_state_service: DynBanchoStateService,
+    pub bancho_service: DynBanchoService,
+    pub bancho_state_service: DynBanchoStateService,
+    pub chat_service: DynChatService,
 }
 
 impl BanchoHandlerServiceImpl {
     pub fn new(
         bancho_service: DynBanchoService,
         bancho_state_service: DynBanchoStateService,
+        chat_service: DynChatService,
     ) -> Self {
-        Self { bancho_service, bancho_state_service }
+        Self { bancho_service, bancho_state_service, chat_service }
     }
 
     pub fn into_service(self) -> DynBanchoHandlerService {
@@ -45,12 +48,12 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         version: Option<BanchoClientVersion>,
     ) -> Result<LoginSuccess, LoginError> {
         if version.is_none() {
-            return Err(LoginError::EmptyClientVersion)
+            return Err(LoginError::EmptyClientVersion);
         }
 
         let request = parser::parse_osu_login_request_body(body)?;
         if request.client_version != version.unwrap().as_str() {
-            return Err(LoginError::MismatchedClientVersion)
+            return Err(LoginError::MismatchedClientVersion);
         }
 
         Ok(self
@@ -68,7 +71,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         body: Vec<u8>,
     ) -> Result<Option<Vec<u8>>, BanchoHttpError> {
         if PacketReader::new(&body).next().is_none() {
-            return Err(BanchoHttpError::InvalidBanchoPacket)
+            return Err(BanchoHttpError::InvalidBanchoPacket);
         }
 
         let HandleCompleted { packets } = self
@@ -80,18 +83,27 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
             })
             .await?;
 
-        return Ok(packets)
+        return Ok(packets);
     }
 
     #[inline]
     async fn pull_bancho_packets(
         &self,
-        target: BanchoPacketTarget,
+        user_query: UserQuery,
     ) -> Option<Vec<u8>> {
         self.bancho_state_service
             .dequeue_bancho_packets(DequeueBanchoPacketsRequest {
-                target: Some(target.into()),
+                user_query: Some(user_query.into()),
             })
+            .await
+            .map(|resp| resp.data)
+            .ok()
+    }
+
+    #[inline]
+    async fn pull_chat_packets(&self, query: UserQuery) -> Option<Vec<u8>> {
+        self.chat_service
+            .pull_chat_packets(query)
             .await
             .map(|resp| resp.data)
             .ok()
@@ -104,8 +116,9 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     ) -> Result<(), BanchoHttpError> {
         self.bancho_state_service.check_user_token(token).await.map_err(
             |err| match err {
-                BanchoStateError::SessionNotExists =>
-                    BanchoHttpError::SessionNotExists(err),
+                BanchoStateError::SessionNotExists => {
+                    BanchoHttpError::SessionNotExists(err)
+                },
                 _ => BanchoHttpError::BanchoStateError(err),
             },
         )?;

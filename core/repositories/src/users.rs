@@ -57,12 +57,10 @@ impl UsersRepository for UsersRepositoryImpl {
         username: Option<&str>,
         username_unicode: Option<&str>,
     ) -> Result<users::Model, GetUserError> {
-        let username = username.and_then(|n| {
-            UsernameAscii::from_str(n).ok().map(|n| n.safe_name())
-        });
-        let username_unicode = username_unicode.and_then(|n| {
-            UsernameUnicode::from_str(n).ok().map(|n| n.safe_name())
-        });
+        let username = username
+            .and_then(|n| UsernameAscii::new(n).ok().map(|n| n.safe_name()));
+        let username_unicode = username_unicode
+            .and_then(|n| UsernameUnicode::new(n).ok().map(|n| n.safe_name()));
 
         self.find_user_by_username(username, username_unicode)
             .await
@@ -176,7 +174,7 @@ mod test {
             "{:?}",
             UsersRepositoryImpl::new(db.clone())
                 .find_user_by_username(
-                    Some(UsernameAscii::from_str("test").unwrap().safe_name()),
+                    Some(UsernameAscii::new("test").unwrap().safe_name()),
                     None
                 )
                 .await

@@ -163,7 +163,7 @@ pub fn derive_packet_length(input: TokenStream) -> TokenStream {
             for attr in field.attrs.iter() {
                 if attr.path.is_ident(&format_ident!("length")) {
                     extra.push(attr.tokens.clone());
-                    return false
+                    return false;
                 }
             }
             true

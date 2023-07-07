@@ -5,7 +5,7 @@ use crate::gateway::bancho_endpoints::{
 };
 use async_trait::async_trait;
 use axum::response::Response;
-use peace_pb::{bancho::LoginSuccess, bancho_state::BanchoPacketTarget};
+use peace_pb::{bancho::LoginSuccess, bancho_state::UserQuery};
 use std::{net::IpAddr, sync::Arc};
 use tools::Ulid;
 
@@ -115,10 +115,9 @@ pub trait BanchoHandlerService {
         body: Vec<u8>,
     ) -> Result<Option<Vec<u8>>, BanchoHttpError>;
 
-    async fn pull_bancho_packets(
-        &self,
-        target: BanchoPacketTarget,
-    ) -> Option<Vec<u8>>;
+    async fn pull_bancho_packets(&self, target: UserQuery) -> Option<Vec<u8>>;
+
+    async fn pull_chat_packets(&self, query: UserQuery) -> Option<Vec<u8>>;
 
     async fn check_user_token(
         &self,

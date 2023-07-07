@@ -13,7 +13,7 @@ use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
-    chat::GetPublicChannelsResponse,
+    chat::{CreateQueueRequest, GetPublicChannelsResponse},
     ConvertError,
 };
 use peace_repositories::users::DynUsersRepository;
@@ -161,7 +161,7 @@ impl Login for BanchoServiceImpl {
             .create_user_session(CreateUserSessionRequest {
                 user_id: user.id,
                 username: user.name.to_owned(),
-                username_unicode: user.name_unicode,
+                username_unicode: user.name_unicode.to_owned(),
                 privileges: 1,
                 client_version,
                 utc_offset,
@@ -173,6 +173,22 @@ impl Login for BanchoServiceImpl {
                 }),
             })
             .await?;
+
+        if let Err(err) = self
+            .chat_service
+            .create_queue(CreateQueueRequest {
+                user_id: user.id,
+                username: user.name.to_owned(),
+                username_unicode: user.name_unicode,
+                privileges: 1,
+            })
+            .await
+        {
+            warn!(
+                "Failed to create chat packet queue for user {}({}): {}",
+                user.id, user.name, err
+            )
+        }
 
         let mut packet_builder = PacketBuilder::new()
             .add(server::ProtocolVersion::new(19))
@@ -274,7 +290,7 @@ impl BatchProcessPackets for BanchoServiceImpl {
         }
 
         if failed == processed {
-            return Err(ProcessBanchoPacketError::FailedToProcessAll)
+            return Err(ProcessBanchoPacketError::FailedToProcessAll);
         }
 
         Ok(HandleCompleted { packets: builder.map(|b| b.build()) })
@@ -302,33 +318,44 @@ impl ProcessPackets for BanchoServiceImpl {
         Ok(match processor.packet.id {
             PacketId::OSU_PING => HandleCompleted::default(),
             // Message
-            PacketId::OSU_SEND_PUBLIC_MESSAGE =>
-                processor.send_public_message().await?,
-            PacketId::OSU_SEND_PRIVATE_MESSAGE =>
-                processor.send_private_message().await?,
-            PacketId::OSU_USER_CHANNEL_JOIN =>
-                processor.user_channel_join().await?,
-            PacketId::OSU_USER_CHANNEL_PART =>
-                processor.user_channel_part().await?,
+            PacketId::OSU_SEND_PUBLIC_MESSAGE => {
+                processor.send_public_message().await?
+            },
+            PacketId::OSU_SEND_PRIVATE_MESSAGE => {
+                processor.send_private_message().await?
+            },
+            PacketId::OSU_USER_CHANNEL_JOIN => {
+                processor.user_channel_join().await?
+            },
+            PacketId::OSU_USER_CHANNEL_PART => {
+                processor.user_channel_part().await?
+            },
             // User
-            PacketId::OSU_USER_REQUEST_STATUS_UPDATE =>
-                processor.user_request_status_update().await?,
-            PacketId::OSU_USER_PRESENCE_REQUEST_ALL =>
-                processor.user_presence_request_all().await?,
-            PacketId::OSU_USER_STATS_REQUEST =>
-                processor.user_stats_request().await?,
-            PacketId::OSU_USER_CHANGE_ACTION =>
-                processor.user_change_action().await?,
-            PacketId::OSU_USER_RECEIVE_UPDATES =>
-                processor.user_receive_updates().await?,
+            PacketId::OSU_USER_REQUEST_STATUS_UPDATE => {
+                processor.user_request_status_update().await?
+            },
+            PacketId::OSU_USER_PRESENCE_REQUEST_ALL => {
+                processor.user_presence_request_all().await?
+            },
+            PacketId::OSU_USER_STATS_REQUEST => {
+                processor.user_stats_request().await?
+            },
+            PacketId::OSU_USER_CHANGE_ACTION => {
+                processor.user_change_action().await?
+            },
+            PacketId::OSU_USER_RECEIVE_UPDATES => {
+                processor.user_receive_updates().await?
+            },
             PacketId::OSU_USER_FRIEND_ADD => todo!(),
             PacketId::OSU_USER_FRIEND_REMOVE => todo!(),
-            PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS =>
-                processor.user_toggle_block_non_friend_dms().await?,
+            PacketId::OSU_USER_TOGGLE_BLOCK_NON_FRIEND_DMS => {
+                processor.user_toggle_block_non_friend_dms().await?
+            },
             PacketId::OSU_USER_LOGOUT => processor.user_logout().await?,
             PacketId::OSU_USER_SET_AWAY_MESSAGE => todo!(),
-            PacketId::OSU_USER_PRESENCE_REQUEST =>
-                processor.user_presence_request().await?,
+            PacketId::OSU_USER_PRESENCE_REQUEST => {
+                processor.user_presence_request().await?
+            },
             // Spectate
             PacketId::OSU_SPECTATE_START => todo!(),
             PacketId::OSU_SPECTATE_STOP => todo!(),
@@ -362,10 +389,11 @@ impl ProcessPackets for BanchoServiceImpl {
             PacketId::OSU_TOURNAMENT_MATCH_INFO_REQUEST => todo!(),
             PacketId::OSU_TOURNAMENT_JOIN_MATCH_CHANNEL => todo!(),
             PacketId::OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL => todo!(),
-            _ =>
+            _ => {
                 return Err(ProcessBanchoPacketError::UnhandledPacket(
                     processor.packet.id,
-                )),
+                ))
+            },
         })
     }
 }
@@ -395,23 +423,19 @@ impl RequestStatusUpdate for BanchoServiceImpl {
     ) -> Result<HandleCompleted, BanchoServiceError> {
         let RequestStatusUpdateRequest { session_id } = request;
 
+        let user_query = Some(
+            UserQuery::SessionId(
+                Ulid::from_str(session_id.as_str())
+                    .map_err(ConvertError::DecodingError)?,
+            )
+            .into(),
+        );
+
         let _resp = self
             .bancho_state_service
             .send_user_stats_packet(SendUserStatsPacketRequest {
-                user_query: Some(
-                    UserQuery::SessionId(
-                        Ulid::from_str(session_id.as_str())
-                            .map_err(ConvertError::DecodingError)?,
-                    )
-                    .into(),
-                ),
-                to: Some(
-                    BanchoPacketTarget::SessionId(
-                        Ulid::from_str(session_id.as_str())
-                            .map_err(ConvertError::DecodingError)?,
-                    )
-                    .into(),
-                ),
+                user_query: user_query.clone(),
+                to: user_query,
             })
             .await?;
 
@@ -430,7 +454,7 @@ impl PresenceRequestAll for BanchoServiceImpl {
             .bancho_state_service
             .send_all_presences(SendAllPresencesRequest {
                 to: Some(
-                    BanchoPacketTarget::SessionId(
+                    UserQuery::SessionId(
                         Ulid::from_str(session_id.as_str())
                             .map_err(ConvertError::DecodingError)?,
                     )
@@ -457,7 +481,7 @@ impl RequestStats for BanchoServiceImpl {
                     .map(|user_id| UserQuery::UserId(user_id).into())
                     .collect(),
                 to: Some(
-                    BanchoPacketTarget::SessionId(
+                    UserQuery::SessionId(
                         Ulid::from_str(session_id.as_str())
                             .map_err(ConvertError::DecodingError)?,
                     )
@@ -577,7 +601,7 @@ impl RequestPresence for BanchoServiceImpl {
                     .map(|user_id| UserQuery::UserId(user_id).into())
                     .collect(),
                 to: Some(
-                    BanchoPacketTarget::SessionId(
+                    UserQuery::SessionId(
                         Ulid::from_str(session_id.as_str())
                             .map_err(ConvertError::DecodingError)?,
                     )

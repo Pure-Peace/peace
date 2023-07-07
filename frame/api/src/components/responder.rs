@@ -70,11 +70,11 @@ pub async fn call_router(
 
 pub async fn handle_error(error: BoxError) -> Error {
     if error.is::<timeout::error::Elapsed>() {
-        return Error::Timeout
+        return Error::Timeout;
     }
 
     if error.is::<load_shed::error::Overloaded>() {
-        return Error::Unavailable
+        return Error::Unavailable;
     }
 
     anyhow::anyhow!("Unhandled internal error: {:?}", error).into()

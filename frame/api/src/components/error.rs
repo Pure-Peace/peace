@@ -84,8 +84,9 @@ impl Error {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Timeout => StatusCode::REQUEST_TIMEOUT,
             Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
-            Self::UnprocessableEntity { .. } =>
-                StatusCode::UNPROCESSABLE_ENTITY,
+            Self::UnprocessableEntity { .. } => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            },
             Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
             Self::RpcError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -112,7 +113,7 @@ impl IntoResponse for Error {
                     StatusCode::UNPROCESSABLE_ENTITY,
                     Json(Errors { errors }),
                 )
-                    .into_response()
+                    .into_response();
             },
             Self::Unauthorized => {
                 return (
@@ -125,7 +126,7 @@ impl IntoResponse for Error {
                         .collect::<HeaderMap>(),
                     self.to_string(),
                 )
-                    .into_response()
+                    .into_response();
             },
 
             Self::RpcError(ref e) => {

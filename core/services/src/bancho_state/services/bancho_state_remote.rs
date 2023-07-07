@@ -193,20 +193,6 @@ impl GetUserSessionWithFields for BanchoStateServiceRemote {
 }
 
 #[async_trait]
-impl ChannelUpdateNotify for BanchoStateServiceRemote {
-    async fn channel_update_notify(
-        &self,
-        request: ChannelUpdateNotifyRequest,
-    ) -> Result<ChannelUpdateNotifyResponse, BanchoStateError> {
-        self.client()
-            .channel_update_notify(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
-    }
-}
-
-#[async_trait]
 impl GetAllSessions for BanchoStateServiceRemote {
     async fn get_all_sessions(
         &self,

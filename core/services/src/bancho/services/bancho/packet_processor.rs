@@ -10,11 +10,10 @@ use bancho_packets::{
 use num_traits::FromPrimitive;
 use peace_pb::{
     bancho::*,
-    bancho_state::ChannelUpdateNotifyRequest,
+    bancho_state::UserQuery,
     chat::{
         AddUserIntoChannelRequest, ChannelQuery, ChatMessageTarget,
-        ChatPlatform, ChatPlatforms, RemoveUserPlatformsFromChannelRequest,
-        SendMessageRequest,
+        RemoveUserPlatformsFromChannelRequest, SendMessageRequest,
     },
 };
 use std::{error::Error, fmt::Debug};
@@ -82,26 +81,28 @@ impl<'a> ProcessSendPublicMessage for PacketProcessor<'a> {
         match chat_message.target.as_str() {
             "#spectator" => {
                 // TODO: spectator chat
-                todo!("spectator chat")
+                todo!("get user's current #spectator channel id")
             },
             "#multiplayer" => {
                 // TODO: multiplayer chat
-                todo!("multiplayer chat")
+                todo!("get user's current #multiplayer channel id")
             },
             _ => {},
         };
 
-        self.chat_service
-            .send_message(SendMessageRequest {
-                sender_id: self.user_id,
-                message: chat_message.content,
-                target: Some(
-                    ChatMessageTarget::ChannelName(chat_message.target).into(),
-                ),
-                platform: ChatPlatform::Bancho as i32,
-            })
-            .await
-            .map_err(handing_err)?;
+        let request = SendMessageRequest {
+            sender_id: self.user_id,
+            message: chat_message.content,
+            target: Some(
+                ChatMessageTarget::Channel(ChannelQuery::ChannelName(
+                    chat_message.target,
+                ))
+                .into(),
+            ),
+            platforms: Platform::all().into(),
+        };
+
+        self.chat_service.send_message(request).await.map_err(handing_err)?;
 
         Ok(HandleCompleted::default())
     }
@@ -115,17 +116,19 @@ impl<'a> ProcessSendPrivateMessage for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         let chat_message = read_chat_message(self.packet.payload)?;
 
-        self.chat_service
-            .send_message(SendMessageRequest {
-                sender_id: self.user_id,
-                message: chat_message.content,
-                target: Some(
-                    ChatMessageTarget::Username(chat_message.target).into(),
-                ),
-                platform: ChatPlatform::Bancho as i32,
-            })
-            .await
-            .map_err(handing_err)?;
+        let request = SendMessageRequest {
+            sender_id: self.user_id,
+            message: chat_message.content,
+            target: Some(
+                ChatMessageTarget::User(UserQuery::Username(
+                    chat_message.target,
+                ))
+                .into(),
+            ),
+            platforms: Platform::all().into(),
+        };
+
+        self.chat_service.send_message(request).await.map_err(handing_err)?;
 
         Ok(HandleCompleted::default())
     }
@@ -139,33 +142,18 @@ impl<'a> ProcessUserChannelJoin for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         let channel_name = read_channel_name(self.packet.payload)?;
 
-        let channel_info = self
-            .chat_service
+        self.chat_service
             .add_user_into_channel(AddUserIntoChannelRequest {
                 channel_query: Some(
                     ChannelQuery::ChannelName(channel_name).into(),
                 ),
                 user_id: self.user_id,
-                platforms: Some(ChatPlatforms {
-                    value: [Platform::Bancho as i32].into(),
-                }),
+                platforms: Platform::Bancho.into(),
             })
             .await
             .map_err(handing_err)?;
 
-        self.bancho_state_service
-            .channel_update_notify(ChannelUpdateNotifyRequest {
-                notify_targets: None,
-                channel_info: Some(channel_info.to_owned()),
-            })
-            .await
-            .map_err(handing_err)?;
-
-        Ok(HandleCompleted {
-            packets: Some(bancho_packets::server::ChannelJoin::pack(
-                channel_info.name.into(),
-            )),
-        })
+        Ok(HandleCompleted { packets: None })
     }
 }
 
@@ -177,35 +165,20 @@ impl<'a> ProcessUserChannelPart for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         let channel_name = read_channel_name(self.packet.payload)?;
 
-        let channel_info = self
-            .chat_service
+        self.chat_service
             .remove_user_platforms_from_channel(
                 RemoveUserPlatformsFromChannelRequest {
                     channel_query: Some(
                         ChannelQuery::ChannelName(channel_name).into(),
                     ),
                     user_id: self.user_id,
-                    platforms: Some(ChatPlatforms {
-                        value: [Platform::Bancho as i32].into(),
-                    }),
+                    platforms: Platform::Bancho.into(),
                 },
             )
             .await
             .map_err(handing_err)?;
 
-        self.bancho_state_service
-            .channel_update_notify(ChannelUpdateNotifyRequest {
-                notify_targets: None,
-                channel_info: Some(channel_info.to_owned()),
-            })
-            .await
-            .map_err(handing_err)?;
-
-        Ok(HandleCompleted {
-            packets: Some(bancho_packets::server::ChannelKick::pack(
-                channel_info.name.into(),
-            )),
-        })
+        Ok(HandleCompleted { packets: None })
     }
 }
 

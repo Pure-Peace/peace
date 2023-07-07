@@ -139,17 +139,6 @@ impl bancho_state_rpc_server::BanchoStateRpc for BanchoStateRpcImpl {
             .map(Response::new)
     }
 
-    async fn channel_update_notify(
-        &self,
-        request: Request<ChannelUpdateNotifyRequest>,
-    ) -> Result<Response<ChannelUpdateNotifyResponse>, Status> {
-        self.bancho_state_service
-            .channel_update_notify(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
-    }
-
     async fn get_all_sessions(
         &self,
         _: Request<GetAllSessionsRequest>,

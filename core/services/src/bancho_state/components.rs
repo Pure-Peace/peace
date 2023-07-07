@@ -2,7 +2,7 @@ use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::{ConnectionInfo, CreateSessionDto};
-use peace_pb::bancho_state::{BanchoPacketTarget, UserQuery};
+use peace_pb::bancho_state::UserQuery;
 use std::{
     collections::{BTreeMap, HashMap, VecDeque},
     ops::Deref,
@@ -20,10 +20,20 @@ use tools::{
 pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
 
+pub type BanchoSession = Session<BanchoExtend>;
+pub type SessionIndexes = UserIndexes<BanchoSession>;
+pub type UserSessions = UserStore<BanchoSession>;
+
 #[derive(Debug, Clone)]
 pub enum Packet {
     Data(PacketData),
     Ptr(PacketDataPtr),
+}
+
+impl Default for Packet {
+    fn default() -> Self {
+        Self::Data(Vec::new())
+    }
 }
 
 impl Packet {
@@ -259,7 +269,41 @@ pub struct UserModeStatSets {
 }
 
 #[derive(Debug, Default, Serialize)]
-pub struct Session {
+pub struct BanchoExtend {
+    pub client_version: String,
+    pub utc_offset: u8,
+    pub presence_filter: Atomic<PresenceFilter>,
+    pub display_city: bool,
+    pub only_friend_pm_allowed: Bool,
+    pub bancho_status: BanchoStatus,
+    pub mode_stat_sets: UserModeStatSets,
+    /// Information about the user's connection.
+    pub connection_info: ConnectionInfo,
+    pub notify_index: Atomic<Ulid>,
+}
+
+impl BanchoExtend {
+    #[inline]
+    pub fn new(
+        client_version: String,
+        utc_offset: u8,
+        display_city: bool,
+        only_friend_pm_allowed: impl Into<Bool>,
+        connection_info: ConnectionInfo,
+    ) -> Self {
+        Self {
+            client_version,
+            utc_offset,
+            display_city,
+            only_friend_pm_allowed: only_friend_pm_allowed.into(),
+            connection_info,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct Session<T> {
     /// Unique session ID of session.
     pub id: Ulid,
     /// Unique user ID.
@@ -270,37 +314,46 @@ pub struct Session {
     pub username_unicode: AtomicOption<String>,
     /// User's privileges level.
     pub privileges: I32,
-    pub client_version: String,
-    pub utc_offset: u8,
-    pub presence_filter: Atomic<PresenceFilter>,
-    pub display_city: bool,
-    pub only_friend_pm_allowed: Bool,
-    pub bancho_status: BanchoStatus,
-    pub mode_stat_sets: UserModeStatSets,
-    /// Information about the user's connection.
-    pub connection_info: ConnectionInfo,
     #[serde(skip_serializing)]
     pub packets_queue: Mutex<VecDeque<Packet>>,
-    pub notify_index: Atomic<Ulid>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
     pub last_active: U64,
+    pub extend: T,
 }
 
-impl Session {
+impl<T> UserKey for Session<T> {
     #[inline]
-    pub fn new(create_session: CreateSessionDto) -> Self {
+    fn session_id(&self) -> Ulid {
+        self.id
+    }
+
+    #[inline]
+    fn user_id(&self) -> i32 {
+        self.user_id
+    }
+
+    #[inline]
+    fn username(&self) -> String {
+        self.username.load().to_string()
+    }
+
+    #[inline]
+    fn username_unicode(&self) -> Option<String> {
+        self.username_unicode.load().as_deref().map(|s| s.to_string())
+    }
+}
+
+impl<T> Session<T> {
+    #[inline]
+    pub fn new(create_session: CreateSessionDto<T>) -> Self {
         let CreateSessionDto {
             user_id,
             username,
             username_unicode,
             privileges,
-            client_version,
-            utc_offset,
-            display_city,
-            only_friend_pm_allowed,
-            connection_info,
             initial_packets,
+            extend,
         } = create_session;
 
         Self {
@@ -309,17 +362,12 @@ impl Session {
             username: username.into(),
             username_unicode: username_unicode.into(),
             privileges: privileges.into(),
-            client_version,
-            utc_offset,
-            display_city,
-            only_friend_pm_allowed: only_friend_pm_allowed.into(),
-            connection_info,
             packets_queue: initial_packets
                 .map(|init| VecDeque::from([init.into()]).into())
                 .unwrap_or_default(),
             created_at: Utc::now(),
             last_active: Timestamp::now().into(),
-            ..Default::default()
+            extend,
         }
     }
 
@@ -370,11 +418,13 @@ impl Session {
             None => self.packets_queue.lock().await.pop_front(),
         }
     }
+}
 
+impl Session<BanchoExtend> {
     #[inline]
     pub fn mode_stats(&self) -> Option<&ModeStats> {
-        let stats = &self.mode_stat_sets;
-        match &self.bancho_status.mode.load().as_ref() {
+        let stats = &self.extend.mode_stat_sets;
+        match &self.extend.bancho_status.mode.load().as_ref() {
             GameMode::Standard => stats.standard.as_ref(),
             GameMode::Taiko => stats.taiko.as_ref(),
             GameMode::Fruits => stats.fruits.as_ref(),
@@ -396,7 +446,7 @@ impl Session {
 
     #[inline]
     pub fn user_stats_packet(&self) -> Vec<u8> {
-        let status = &self.bancho_status;
+        let status = &self.extend.bancho_status;
         let stats = self.mode_stats();
 
         UserStats::pack(
@@ -421,11 +471,11 @@ impl Session {
         UserPresence::pack(
             self.user_id,
             self.username.to_string().into(),
-            self.utc_offset,
+            self.extend.utc_offset,
             0, // todo
             1, // todo
-            self.connection_info.location.longitude as f32,
-            self.connection_info.location.latitude as f32,
+            self.extend.connection_info.location.longitude as f32,
+            self.extend.connection_info.location.latitude as f32,
             self.mode_stats().map(|s| s.rank.val()).unwrap_or_default() as i32,
         )
     }
@@ -435,134 +485,139 @@ pub struct SessionFilter;
 
 impl SessionFilter {
     #[inline]
-    pub fn session_is_target(
-        session: &Session,
-        to: &BanchoPacketTarget,
-    ) -> bool {
+    pub fn session_is_target(session: &BanchoSession, to: &UserQuery) -> bool {
         match to {
-            BanchoPacketTarget::SessionId(t) => &session.id == t,
-            BanchoPacketTarget::UserId(t) => &session.user_id == t,
-            BanchoPacketTarget::Username(t) =>
-                session.username.load().as_ref() == t,
-            BanchoPacketTarget::UsernameUnicode(t) => session
+            UserQuery::SessionId(t) => &session.id == t,
+            UserQuery::UserId(t) => &session.user_id == t,
+            UserQuery::Username(t) => session.username.load().as_ref() == t,
+            UserQuery::UsernameUnicode(t) => session
                 .username_unicode
                 .load()
                 .as_deref()
                 .map(|n| n == t)
                 .unwrap_or(false),
-            _ => false,
         }
     }
 }
 
-#[derive(Debug, Default)]
-pub struct SessionIndexes {
-    /// A hash map that maps session IDs to user data
-    pub session_id: BTreeMap<Ulid, Arc<Session>>,
-    /// A hash map that maps user IDs to user data
-    pub user_id: BTreeMap<i32, Arc<Session>>,
-    /// A hash map that maps usernames to user data
-    pub username: HashMap<String, Arc<Session>>,
-    /// A hash map that maps Unicode usernames to user data
-    pub username_unicode: HashMap<String, Arc<Session>>,
+pub trait UserKey {
+    fn session_id(&self) -> Ulid;
+    fn user_id(&self) -> i32;
+    fn username(&self) -> String;
+    fn username_unicode(&self) -> Option<String>;
+}
+
+#[derive(Debug)]
+pub struct UserIndexes<T> {
+    pub session_id: BTreeMap<Ulid, Arc<T>>,
+    pub user_id: BTreeMap<i32, Arc<T>>,
+    pub username: HashMap<String, Arc<T>>,
+    pub username_unicode: HashMap<String, Arc<T>>,
+}
+
+impl<T> UserIndexes<T> {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            session_id: BTreeMap::new(),
+            user_id: BTreeMap::new(),
+            username: HashMap::new(),
+            username_unicode: HashMap::new(),
+        }
+    }
+}
+
+impl<T> Default for UserIndexes<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Deref for SessionIndexes {
-    type Target = BTreeMap<i32, Arc<Session>>;
+    type Target = BTreeMap<i32, Arc<BanchoSession>>;
 
     fn deref(&self) -> &Self::Target {
         &self.user_id
     }
 }
 
-/// A struct representing a collection of user sessions.
-#[derive(Debug, Default)]
-pub struct UserSessions {
-    pub indexes: RwLock<SessionIndexes>,
-    /// The number of user sessions in the collection
+#[derive(Debug)]
+pub struct UserStore<T> {
+    pub indexes: RwLock<UserIndexes<T>>,
     pub len: Usize,
 }
 
-impl UserSessions {
+impl<T> UserStore<T>
+where
+    T: UserKey,
+{
     #[inline]
-    pub async fn create(&self, session: Session) -> Arc<Session> {
-        let session = Arc::new(session);
+    pub fn new() -> Self {
+        Self { indexes: RwLock::new(UserIndexes::new()), len: Usize::new(0) }
+    }
+
+    #[inline]
+    pub async fn create(&self, item: T, repleace: bool) -> Arc<T> {
+        let item = Arc::new(item);
 
         {
-            let mut indexes = self.write().await;
+            let mut indexes = self.indexes.write().await;
 
-            if let Some(old_session) =
-                Self::get_inner(&indexes, &UserQuery::UserId(session.user_id))
+            if let Some(prev) =
+                Self::get_inner(&indexes, &UserQuery::UserId(item.user_id()))
             {
+                if !repleace {
+                    return prev;
+                }
+
                 self.delete_inner(
                     &mut indexes,
-                    &old_session.user_id,
-                    &old_session.username.load(),
-                    &old_session.id,
-                    old_session
-                        .username_unicode
-                        .load()
-                        .as_deref()
-                        .map(|s| s.as_str()),
+                    &prev.user_id(),
+                    &prev.username(),
+                    &prev.session_id(),
+                    prev.username_unicode().as_deref(),
                 );
             }
 
             // Insert the user data into the relevant hash maps
-            indexes.session_id.insert(session.id, session.clone());
-            indexes.user_id.insert(session.user_id, session.clone());
-            indexes
-                .username
-                .insert(session.username.to_string(), session.clone());
-
-            let _ = session
-                .username_unicode
-                .load()
-                .as_ref()
-                .map(|s| {
-                    indexes
-                        .username_unicode
-                        .insert(s.to_string(), session.clone());
-                })
-                .or_else(|| {
-                    indexes
-                        .username_unicode
-                        .insert(session.username.to_string(), session.clone());
-
-                    Some(())
-                });
+            indexes.session_id.insert(item.session_id(), item.clone());
+            indexes.user_id.insert(item.user_id(), item.clone());
+            indexes.username.insert(item.username(), item.clone());
+            indexes.username_unicode.insert(
+                item.username_unicode().unwrap_or_else(|| item.username()),
+                item.clone(),
+            )
         };
 
-        // Increment the length of the collection
         self.len.add(1);
 
-        // Return the session ID of the created or updated session
-        session
+        item
     }
 
     #[inline]
-    pub async fn delete(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        let mut indexes = self.write().await;
+    pub async fn delete(&self, query: &UserQuery) -> Option<Arc<T>> {
+        let mut indexes = self.indexes.write().await;
 
-        let session = Self::get_inner(&indexes, query)?;
+        let item = Self::get_inner(&indexes, query)?;
 
         self.delete_inner(
             &mut indexes,
-            &session.user_id,
-            &session.username.load(),
-            &session.id,
-            session.username_unicode.load().as_deref().map(|s| s.as_str()),
+            &item.user_id(),
+            &item.username(),
+            &item.session_id(),
+            item.username_unicode().as_deref(),
         )
     }
 
     #[inline]
     pub fn delete_inner(
         &self,
-        indexes: &mut SessionIndexes,
+        indexes: &mut UserIndexes<T>,
         user_id: &i32,
         username: &str,
         session_id: &Ulid,
         username_unicode: Option<&str>,
-    ) -> Option<Arc<Session>> {
+    ) -> Option<Arc<T>> {
         let mut removed = None;
 
         if let Some(s) = indexes.user_id.remove(user_id) {
@@ -583,7 +638,6 @@ impl UserSessions {
             removed = Some(s);
         }
 
-        // Decrease the length of the map if a session was removed.
         if removed.is_some() {
             self.len.sub(1);
         }
@@ -592,46 +646,50 @@ impl UserSessions {
     }
 
     #[inline]
-    pub async fn get(&self, query: &UserQuery) -> Option<Arc<Session>> {
-        let indexes = self.read().await;
+    pub async fn get(&self, query: &UserQuery) -> Option<Arc<T>> {
+        let indexes = self.indexes.read().await;
         Self::get_inner(&indexes, query)
     }
 
     #[inline]
     pub fn get_inner(
-        indexes: &SessionIndexes,
+        indexes: &UserIndexes<T>,
         query: &UserQuery,
-    ) -> Option<Arc<Session>> {
+    ) -> Option<Arc<T>> {
         match query {
             UserQuery::UserId(user_id) => indexes.user_id.get(user_id),
             UserQuery::Username(username) => indexes.username.get(username),
-            UserQuery::UsernameUnicode(username_unicode) =>
-                indexes.username_unicode.get(username_unicode),
-            UserQuery::SessionId(session_id) =>
-                indexes.session_id.get(session_id),
+            UserQuery::UsernameUnicode(username_unicode) => {
+                indexes.username_unicode.get(username_unicode)
+            },
+            UserQuery::SessionId(session_id) => {
+                indexes.session_id.get(session_id)
+            },
         }
         .cloned()
     }
 
     #[inline]
     pub async fn exists(&self, query: &UserQuery) -> bool {
-        let indexes = self.read().await;
+        let indexes = self.indexes.read().await;
         match query {
             UserQuery::UserId(user_id) => indexes.user_id.contains_key(user_id),
-            UserQuery::Username(username) =>
-                indexes.username.contains_key(username),
-            UserQuery::UsernameUnicode(username_unicode) =>
-                indexes.username_unicode.contains_key(username_unicode),
-            UserQuery::SessionId(session_id) =>
-                indexes.session_id.contains_key(session_id),
+            UserQuery::Username(username) => {
+                indexes.username.contains_key(username)
+            },
+            UserQuery::UsernameUnicode(username_unicode) => {
+                indexes.username_unicode.contains_key(username_unicode)
+            },
+            UserQuery::SessionId(session_id) => {
+                indexes.session_id.contains_key(session_id)
+            },
         }
     }
 
-    /// Clears all sessions records from the [`UserSessions`].
     #[inline]
     pub async fn clear(&self) {
-        let mut indexes = self.write().await;
-        indexes.session_id.clear();
+        let mut indexes = self.indexes.write().await;
+        indexes.user_id.clear();
         indexes.username.clear();
         indexes.username_unicode.clear();
         indexes.session_id.clear();
@@ -639,15 +697,23 @@ impl UserSessions {
         self.len.set(0);
     }
 
-    /// Returns the number of sessions in the [`UserSessions`].
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn length(&self) -> usize {
         self.len.val()
     }
 }
 
-impl Deref for UserSessions {
-    type Target = RwLock<SessionIndexes>;
+impl<T> Default for UserStore<T>
+where
+    T: UserKey,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T> Deref for UserStore<T> {
+    type Target = RwLock<UserIndexes<T>>;
 
     fn deref(&self) -> &Self::Target {
         &self.indexes

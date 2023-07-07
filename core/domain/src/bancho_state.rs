@@ -6,17 +6,13 @@ use peace_pb::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
-pub struct CreateSessionDto {
+pub struct CreateSessionDto<T> {
     pub user_id: i32,
     pub username: String,
     pub username_unicode: Option<String>,
     pub privileges: i32,
-    pub client_version: String,
-    pub utc_offset: u8,
-    pub display_city: bool,
-    pub only_friend_pm_allowed: bool,
-    pub connection_info: ConnectionInfo,
     pub initial_packets: Option<Vec<u8>>,
+    pub extend: T,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]

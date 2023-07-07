@@ -187,8 +187,9 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             AppError::ParamError(err) => (StatusCode::BAD_REQUEST, err),
-            AppError::InternalError(err) =>
-                (StatusCode::INTERNAL_SERVER_ERROR, err),
+            AppError::InternalError(err) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, err)
+            },
         };
 
         let body = Json(json!({

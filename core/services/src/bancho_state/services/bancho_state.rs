@@ -1,10 +1,9 @@
-use super::{
-    traits::*, BanchoStateBackgroundServiceImpl, UserSessionsServiceImpl,
-};
+use super::traits::*;
 use crate::{
     bancho_state::{
-        BanchoStateError, CreateSessionError, GameMode, Mods, Packet,
-        PresenceFilter, Session, SessionFilter, UserOnlineStatus, UserSessions,
+        BanchoExtend, BanchoSession, BanchoStateError, CreateSessionError,
+        GameMode, Mods, Packet, PresenceFilter, SessionFilter,
+        UserOnlineStatus, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
     signature::DynSignatureService,
@@ -19,16 +18,16 @@ use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
 #[derive(Clone)]
 pub struct BanchoStateServiceImpl {
-    pub user_sessions_service: Arc<UserSessionsServiceImpl>,
-    pub bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
+    pub user_sessions_service: DynUserSessionsService,
+    pub bancho_state_background_service: DynBanchoStateBackgroundService,
     pub signature_service: DynSignatureService,
 }
 
 impl BanchoStateServiceImpl {
     #[inline]
     pub fn new(
-        user_sessions_service: Arc<UserSessionsServiceImpl>,
-        bancho_state_background_service: Arc<BanchoStateBackgroundServiceImpl>,
+        user_sessions_service: DynUserSessionsService,
+        bancho_state_background_service: DynBanchoStateBackgroundService,
         signature_service: DynSignatureService,
     ) -> Self {
         Self {
@@ -79,7 +78,7 @@ impl UpdateUserBanchoStatus for BanchoStateServiceImpl {
         let mods = Mods::from(mods);
         let mode = GameMode::from_i32(mode).unwrap_or_default();
 
-        session.bancho_status.update_all(
+        session.extend.bancho_status.update_all(
             online_status,
             description,
             beatmap_id as u32,
@@ -95,7 +94,7 @@ impl UpdateUserBanchoStatus for BanchoStateServiceImpl {
         })
         .await?;
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -119,9 +118,9 @@ impl UpdatePresenceFilter for BanchoStateServiceImpl {
             .await
             .ok_or(BanchoStateError::SessionNotExists)?;
 
-        session.presence_filter.set(presence_filter.into());
+        session.extend.presence_filter.set(presence_filter.into());
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -132,12 +131,12 @@ impl BatchSendPresences for BanchoStateServiceImpl {
         request: BatchSendPresencesRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
         if request.user_queries.is_empty() {
-            return Ok(ExecSuccess {})
+            return Ok(ExecSuccess::default());
         }
         let to = request
             .to
             .ok_or(BanchoStateError::InvalidArgument)?
-            .into_packet_target()?;
+            .into_user_query()?;
 
         let presences_packets = {
             let mut presences_packets = Vec::new();
@@ -149,12 +148,15 @@ impl BatchSendPresences for BanchoStateServiceImpl {
                 let query = raw_query.into_user_query()?;
                 let session = match &query {
                     UserQuery::UserId(user_id) => indexes.user_id.get(user_id),
-                    UserQuery::Username(username) =>
-                        indexes.username.get(username),
-                    UserQuery::UsernameUnicode(username_unicode) =>
-                        indexes.username_unicode.get(username_unicode),
-                    UserQuery::SessionId(session_id) =>
-                        indexes.session_id.get(session_id),
+                    UserQuery::Username(username) => {
+                        indexes.username.get(username)
+                    },
+                    UserQuery::UsernameUnicode(username_unicode) => {
+                        indexes.username_unicode.get(username_unicode)
+                    },
+                    UserQuery::SessionId(session_id) => {
+                        indexes.session_id.get(session_id)
+                    },
                 };
 
                 let session = match session {
@@ -163,7 +165,7 @@ impl BatchSendPresences for BanchoStateServiceImpl {
                 };
 
                 if SessionFilter::session_is_target(session, &to) {
-                    continue
+                    continue;
                 };
 
                 presences_packets.extend(session.user_presence_packet());
@@ -173,12 +175,12 @@ impl BatchSendPresences for BanchoStateServiceImpl {
         };
 
         self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-            target: Some(to.into()),
+            user_query: Some(to.into()),
             packets: presences_packets,
         })
         .await?;
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -191,7 +193,7 @@ impl SendAllPresences for BanchoStateServiceImpl {
         let to = request
             .to
             .ok_or(BanchoStateError::InvalidArgument)?
-            .into_packet_target()?;
+            .into_user_query()?;
 
         let presences_packets = {
             let mut presences_packets = Vec::new();
@@ -201,7 +203,7 @@ impl SendAllPresences for BanchoStateServiceImpl {
 
             for session in user_sessions.values() {
                 if SessionFilter::session_is_target(session, &to) {
-                    continue
+                    continue;
                 };
 
                 presences_packets.extend(session.user_presence_packet());
@@ -211,12 +213,12 @@ impl SendAllPresences for BanchoStateServiceImpl {
         };
 
         self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-            target: Some(to.into()),
+            user_query: Some(to.into()),
             packets: presences_packets,
         })
         .await?;
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -227,12 +229,12 @@ impl BatchSendUserStatsPacket for BanchoStateServiceImpl {
         request: BatchSendUserStatsPacketRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
         if request.user_queries.is_empty() {
-            return Ok(ExecSuccess {})
+            return Ok(ExecSuccess::default());
         }
         let to = request
             .to
             .ok_or(BanchoStateError::InvalidArgument)?
-            .into_packet_target()?;
+            .into_user_query()?;
 
         let user_stats_packets = {
             let mut user_stats_packets = Vec::new();
@@ -244,12 +246,15 @@ impl BatchSendUserStatsPacket for BanchoStateServiceImpl {
                 let query = raw_query.into_user_query()?;
                 let session = match &query {
                     UserQuery::UserId(user_id) => indexes.user_id.get(user_id),
-                    UserQuery::Username(username) =>
-                        indexes.username.get(username),
-                    UserQuery::UsernameUnicode(username_unicode) =>
-                        indexes.username_unicode.get(username_unicode),
-                    UserQuery::SessionId(session_id) =>
-                        indexes.session_id.get(session_id),
+                    UserQuery::Username(username) => {
+                        indexes.username.get(username)
+                    },
+                    UserQuery::UsernameUnicode(username_unicode) => {
+                        indexes.username_unicode.get(username_unicode)
+                    },
+                    UserQuery::SessionId(session_id) => {
+                        indexes.session_id.get(session_id)
+                    },
                 };
 
                 let session = match session {
@@ -258,7 +263,7 @@ impl BatchSendUserStatsPacket for BanchoStateServiceImpl {
                 };
 
                 if SessionFilter::session_is_target(session, &to) {
-                    continue
+                    continue;
                 };
 
                 user_stats_packets.extend(session.user_stats_packet());
@@ -268,12 +273,12 @@ impl BatchSendUserStatsPacket for BanchoStateServiceImpl {
         };
 
         self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-            target: Some(to.into()),
+            user_query: Some(to.into()),
             packets: user_stats_packets,
         })
         .await?;
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -284,8 +289,6 @@ impl SendUserStatsPacket for BanchoStateServiceImpl {
         request: SendUserStatsPacketRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
         let to = request.to.ok_or(BanchoStateError::InvalidArgument)?;
-
-        // Extract the query and fields from the request
         let query =
             request.user_query.ok_or(BanchoStateError::InvalidArgument)?;
 
@@ -297,12 +300,12 @@ impl SendUserStatsPacket for BanchoStateServiceImpl {
             .ok_or(BanchoStateError::SessionNotExists)?;
 
         self.enqueue_bancho_packets(EnqueueBanchoPacketsRequest {
-            target: Some(to),
+            user_query: Some(to),
             packets: session.user_stats_packet(),
         })
         .await?;
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -318,7 +321,7 @@ impl GetAllSessions for BanchoStateServiceImpl {
         #[inline]
         fn collect_data<'a, I>(values: I) -> Vec<UserData>
         where
-            I: Iterator<Item = &'a Arc<Session>>,
+            I: Iterator<Item = &'a Arc<BanchoSession>>,
         {
             values
                 .map(|session| UserData {
@@ -338,67 +341,12 @@ impl GetAllSessions for BanchoStateServiceImpl {
         // Return a `GetAllSessionsResponse` message containing the
         // session data
         Ok(GetAllSessionsResponse {
-            len: user_sessions.len() as u64,
+            len: user_sessions.length() as u64,
             indexed_by_session_id,
             indexed_by_user_id,
             indexed_by_username,
             indexed_by_username_unicode,
         })
-    }
-}
-
-#[async_trait]
-impl ChannelUpdateNotify for BanchoStateServiceImpl {
-    async fn channel_update_notify(
-        &self,
-        request: ChannelUpdateNotifyRequest,
-    ) -> Result<ChannelUpdateNotifyResponse, BanchoStateError> {
-        let ChannelUpdateNotifyRequest { notify_targets, channel_info } =
-            request;
-
-        let channel_info =
-            channel_info.ok_or(BanchoStateError::InvalidArgument)?;
-
-        let packets =
-            Packet::new_ptr(bancho_packets::server::ChannelInfo::pack(
-                channel_info.name.as_str().into(),
-                channel_info.description.map(|s| s.into()).unwrap_or_default(),
-                channel_info
-                    .counter
-                    .ok_or(BanchoStateError::InvalidArgument)?
-                    .bancho as i16,
-            ));
-
-        match notify_targets {
-            Some(notify_targets) => {
-                let indexes =
-                    self.user_sessions_service.user_sessions().read().await;
-
-                let notify_targets = notify_targets
-                    .value
-                    .into_iter()
-                    .map(|t| t.into_user_query())
-                    .filter_map(|q| q.ok())
-                    .collect::<Vec<UserQuery>>();
-
-                for user_query in notify_targets {
-                    if let Some(session) =
-                        UserSessions::get_inner(&indexes, &user_query)
-                    {
-                        session.push_packet(packets.clone()).await;
-                    }
-                }
-            },
-            None => {
-                self.user_sessions_service
-                    .notify_queue
-                    .lock()
-                    .await
-                    .push(packets.clone(), None);
-            },
-        }
-
-        Ok(ChannelUpdateNotifyResponse::default())
     }
 }
 
@@ -508,7 +456,7 @@ impl CheckUserToken for BanchoStateServiceImpl {
             .await
             .map_err(|_| BanchoStateError::InvalidToken)?
         {
-            return Err(BanchoStateError::InvalidToken)
+            return Err(BanchoStateError::InvalidToken);
         }
 
         let session = self
@@ -530,7 +478,7 @@ impl DeleteUserSession for BanchoStateServiceImpl {
         query: UserQuery,
     ) -> Result<ExecSuccess, BanchoStateError> {
         self.user_sessions_service.delete(&query).await;
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -560,14 +508,16 @@ impl CreateUserSession for BanchoStateServiceImpl {
                 username,
                 username_unicode,
                 privileges,
-                client_version,
-                utc_offset: utc_offset as u8,
-                display_city,
-                only_friend_pm_allowed,
-                connection_info: connection_info
-                    .ok_or(CreateSessionError::InvalidConnectionInfo)?
-                    .into(),
                 initial_packets: None,
+                extend: BanchoExtend::new(
+                    client_version,
+                    utc_offset as u8,
+                    display_city,
+                    only_friend_pm_allowed,
+                    connection_info
+                        .ok_or(CreateSessionError::InvalidConnectionInfo)?
+                        .into(),
+                ),
             })
             .await;
 
@@ -590,43 +540,43 @@ impl DequeueBanchoPackets for BanchoStateServiceImpl {
         &self,
         request: DequeueBanchoPacketsRequest,
     ) -> Result<BanchoPackets, BanchoStateError> {
-        let target = request
-            .target
+        let user_query = request
+            .user_query
             .ok_or(BanchoStateError::InvalidArgument)?
-            .into_packet_target()?;
+            .into_user_query()?;
 
         let mut data = Vec::new();
 
-        if let Ok(user_query) = target.into_user_query() {
-            let session = self
-                .user_sessions_service
-                .get(&user_query)
-                .await
-                .ok_or(BanchoStateError::SessionNotExists)?;
+        let session = self
+            .user_sessions_service
+            .get(&user_query)
+            .await
+            .ok_or(BanchoStateError::SessionNotExists)?;
 
-            let mut session_packet_queue = session.packets_queue.lock().await;
+        let mut session_packet_queue = session.packets_queue.lock().await;
 
-            while let Some(packet) =
-                session.dequeue_packet(Some(&mut session_packet_queue)).await
-            {
+        while let Some(packet) =
+            session.dequeue_packet(Some(&mut session_packet_queue)).await
+        {
+            data.extend(packet);
+        }
+
+        if let Some(ReceivedMessages { messages, last_msg_id }) = self
+            .user_sessions_service
+            .notify_queue()
+            .lock()
+            .await
+            .receive_messages(
+                &session.user_id,
+                &session.extend.notify_index.load(),
+                None,
+            )
+        {
+            for packet in messages {
                 data.extend(packet);
             }
 
-            if let Some(ReceivedMessages { messages, last_msg_id }) = self
-                .user_sessions_service
-                .notify_queue()
-                .lock()
-                .await
-                .receive(&session.user_id, &session.notify_index.load(), None)
-            {
-                for packet in messages {
-                    data.extend(packet);
-                }
-
-                session.notify_index.set(last_msg_id.into());
-            }
-        } else {
-            todo!("channel handle")
+            session.extend.notify_index.set(last_msg_id.into());
         }
 
         Ok(BanchoPackets { data })
@@ -639,27 +589,23 @@ impl BatchEnqueueBanchoPackets for BanchoStateServiceImpl {
         &self,
         request: BatchEnqueueBanchoPacketsRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        let BatchEnqueueBanchoPacketsRequest { targets, packets } = request;
+        let BatchEnqueueBanchoPacketsRequest { user_queries, packets } =
+            request;
         let packets = Packet::new_ptr(packets);
 
         let user_sessions =
             self.user_sessions_service.user_sessions().read().await;
 
-        for target in targets {
-            let target = target.into_packet_target()?;
-
-            if let Ok(user_query) = target.into_user_query() {
-                if let Some(session) =
-                    UserSessions::get_inner(&user_sessions, &user_query)
-                {
-                    session.push_packet(packets.clone()).await;
-                }
-            } else {
-                todo!("channel handle")
+        for user_query in user_queries {
+            if let Some(session) = UserSessions::get_inner(
+                &user_sessions,
+                &user_query.into_user_query()?,
+            ) {
+                session.push_packet(packets.clone()).await;
             }
         }
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -669,24 +615,20 @@ impl EnqueueBanchoPackets for BanchoStateServiceImpl {
         &self,
         request: EnqueueBanchoPacketsRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        let EnqueueBanchoPacketsRequest { target, packets } = request;
+        let EnqueueBanchoPacketsRequest { user_query, packets } = request;
 
-        let target = target
+        let user_query = user_query
             .ok_or(BanchoStateError::InvalidArgument)?
-            .into_packet_target()?;
+            .into_user_query()?;
 
-        if let Ok(user_query) = TryInto::<UserQuery>::try_into(target) {
-            self.user_sessions_service
-                .get(&user_query)
-                .await
-                .ok_or(BanchoStateError::SessionNotExists)?
-                .push_packet(packets.into())
-                .await;
-        } else {
-            todo!("channel handle")
-        }
+        self.user_sessions_service
+            .get(&user_query)
+            .await
+            .ok_or(BanchoStateError::SessionNotExists)?
+            .push_packet(packets.into())
+            .await;
 
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -698,13 +640,12 @@ impl BroadcastBanchoPackets for BanchoStateServiceImpl {
     ) -> Result<ExecSuccess, BanchoStateError> {
         let packet = Packet::new_ptr(request.packets);
 
-        let user_sessions =
-            self.user_sessions_service.user_sessions.read().await;
+        self.user_sessions_service
+            .notify_queue()
+            .lock()
+            .await
+            .push_message(packet, None);
 
-        for session in user_sessions.values() {
-            session.push_packet(packet.clone()).await;
-        }
-
-        Ok(ExecSuccess {})
+        Ok(ExecSuccess::default())
     }
 }

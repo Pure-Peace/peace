@@ -5,6 +5,7 @@ use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::BanchoServiceRemote,
     bancho_state::BanchoStateServiceRemote,
+    chat::ChatServiceRemote,
     gateway::{
         bancho_endpoints::{
             routes::{BanchoDebugRouter, BanchoRouter},
@@ -12,7 +13,7 @@ use peace_services::{
         },
         docs::GatewayApiDocs,
     },
-    rpc_config::{BanchoRpcConfig, BanchoStateRpcConfig},
+    rpc_config::{BanchoRpcConfig, BanchoStateRpcConfig, ChatRpcConfig},
     FromRpcClient, IntoService,
 };
 use std::sync::Arc;
@@ -31,6 +32,9 @@ pub struct GatewayConfig {
 
     #[command(flatten)]
     pub bancho_state: BanchoStateRpcConfig,
+
+    #[command(flatten)]
+    pub chat: ChatRpcConfig,
 
     #[arg(long)]
     pub debug_endpoints: bool,
@@ -58,6 +62,8 @@ impl Application for App {
 
         let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
 
+        let chat_rpc_client = self.cfg.chat.connect().await;
+
         let bancho_state_service =
             BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
                 .into_service();
@@ -65,9 +71,13 @@ impl Application for App {
         let bancho_service =
             BanchoServiceRemote::from_client(bancho_rpc_client).into_service();
 
+        let chat_service =
+            ChatServiceRemote::from_client(chat_rpc_client).into_service();
+
         let bancho_handler_service = BanchoHandlerServiceImpl::new(
             bancho_service,
             bancho_state_service.clone(),
+            chat_service,
         )
         .into_service();
 

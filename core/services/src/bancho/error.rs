@@ -1,4 +1,4 @@
-use crate::bancho_state::BanchoStateError;
+use crate::{bancho_state::BanchoStateError, chat::ChatServiceError};
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -54,12 +54,12 @@ impl From<ProcessBanchoPacketError> for Status {
 pub enum BanchoServiceError {
     #[error("session not exists")]
     SessionNotExists,
-    #[error("invalid bancho packet target")]
-    BanchoPacketTarget,
     #[error(transparent)]
     LoginError(#[from] LoginError),
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
+    #[error(transparent)]
+    ChatServiceError(#[from] ChatServiceError),
     #[error(transparent)]
     ConvertError(#[from] ConvertError),
     #[error("{}", .0.message())]
@@ -70,7 +70,6 @@ impl BanchoServiceError {
     fn tonic_code(&self) -> Code {
         match self {
             Self::SessionNotExists => Code::NotFound,
-            Self::BanchoPacketTarget => Code::InvalidArgument,
             Self::ConvertError(_) => Code::InvalidArgument,
             _ => Code::Unknown,
         }

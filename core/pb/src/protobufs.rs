@@ -40,9 +40,7 @@ pub mod bancho_state {
     pub const BANCHO_STATE_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace.services.bancho_state.descriptor");
 
-    use self::{
-        raw_bancho_packet_target::TargetType, raw_user_query::QueryType,
-    };
+    use self::raw_user_query::QueryType;
     use crate::ConvertError;
     use bitmask_enum::bitmask;
     use std::{error::Error, fmt, str::FromStr};
@@ -62,6 +60,28 @@ pub mod bancho_state {
         UserId(i32),
         Username(String),
         UsernameUnicode(String),
+    }
+
+    impl Into<String> for UserQuery {
+        fn into(self) -> String {
+            match self {
+                Self::SessionId(val) => val.to_string(),
+                Self::UserId(val) => val.to_string(),
+                Self::Username(val) => val,
+                Self::UsernameUnicode(val) => val,
+            }
+        }
+    }
+
+    impl ToString for UserQuery {
+        fn to_string(&self) -> String {
+            match self {
+                Self::SessionId(val) => val.to_string(),
+                Self::UserId(val) => val.to_string(),
+                Self::Username(val) => val.to_owned(),
+                Self::UsernameUnicode(val) => val.to_owned(),
+            }
+        }
     }
 
     impl RawUserQuery {
@@ -118,102 +138,6 @@ pub mod bancho_state {
             }
         }
     }
-
-    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub enum BanchoPacketTarget {
-        UserId(i32),
-        Username(String),
-        UsernameUnicode(String),
-        SessionId(Ulid),
-        Channel(String),
-    }
-
-    impl BanchoPacketTarget {
-        #[inline]
-        pub fn into_user_query(self) -> Result<UserQuery, ConvertError> {
-            self.try_into()
-        }
-    }
-
-    impl RawBanchoPacketTarget {
-        #[inline]
-        pub fn into_packet_target(
-            self,
-        ) -> Result<BanchoPacketTarget, ConvertError> {
-            self.try_into()
-        }
-    }
-
-    impl TryFrom<RawBanchoPacketTarget> for BanchoPacketTarget {
-        type Error = ConvertError;
-
-        fn try_from(raw: RawBanchoPacketTarget) -> Result<Self, Self::Error> {
-            match raw.target_type() {
-                TargetType::SessionId => Ok(Self::SessionId(Ulid::from_str(
-                    raw.string_val.ok_or(ConvertError::InvalidParams)?.as_str(),
-                )?)),
-                TargetType::UserId => Ok(Self::UserId(
-                    raw.int_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-                TargetType::Username => Ok(Self::Username(
-                    raw.string_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-                TargetType::UsernameUnicode => Ok(Self::UsernameUnicode(
-                    raw.string_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-                TargetType::Channel => Ok(Self::Channel(
-                    raw.string_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-            }
-        }
-    }
-
-    impl TryInto<UserQuery> for BanchoPacketTarget {
-        type Error = ConvertError;
-
-        fn try_into(self) -> Result<UserQuery, Self::Error> {
-            Ok(match self {
-                Self::SessionId(session_id) => UserQuery::SessionId(session_id),
-                Self::UserId(user_id) => UserQuery::UserId(user_id),
-                Self::Username(username) => UserQuery::Username(username),
-                Self::UsernameUnicode(username_unicode) =>
-                    UserQuery::UsernameUnicode(username_unicode),
-                Self::Channel(_) => return Err(ConvertError::FromChannelTarget),
-            })
-        }
-    }
-
-    impl From<BanchoPacketTarget> for RawBanchoPacketTarget {
-        fn from(target: BanchoPacketTarget) -> Self {
-            match target {
-                BanchoPacketTarget::SessionId(session_id) => Self {
-                    target_type: TargetType::SessionId as i32,
-                    int_val: None,
-                    string_val: Some(session_id.to_string()),
-                },
-                BanchoPacketTarget::UserId(user_id) => Self {
-                    target_type: TargetType::UserId as i32,
-                    int_val: Some(user_id),
-                    string_val: None,
-                },
-                BanchoPacketTarget::Username(username) => Self {
-                    target_type: TargetType::Username as i32,
-                    int_val: None,
-                    string_val: Some(username),
-                },
-                BanchoPacketTarget::UsernameUnicode(username_unicode) => Self {
-                    target_type: TargetType::UsernameUnicode as i32,
-                    int_val: None,
-                    string_val: Some(username_unicode),
-                },
-                BanchoPacketTarget::Channel(channel) => Self {
-                    target_type: TargetType::Channel as i32,
-                    int_val: None,
-                    string_val: Some(channel),
-                },
-            }
-        }
-    }
 }
 
 pub mod chat {
@@ -222,10 +146,14 @@ pub mod chat {
     pub const CHAT_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace.services.chat.descriptor");
 
+    use std::str::FromStr;
+
+    use tools::Ulid;
+
     use self::{
-        raw_channel_query::QueryType, raw_chat_message_target::TargetType,
+        raw_channel_query::QueryType, raw_chat_message_target::ChatTarget,
     };
-    use crate::ConvertError;
+    use crate::{bancho_state::UserQuery, ConvertError};
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub enum ChannelQuery {
@@ -274,11 +202,8 @@ pub mod chat {
 
     #[derive(Debug, Clone)]
     pub enum ChatMessageTarget {
-        ChannelId(u64),
-        ChannelName(String),
-        UserId(i32),
-        Username(String),
-        UsernameUnicode(String),
+        Channel(ChannelQuery),
+        User(UserQuery),
     }
 
     impl RawChatMessageTarget {
@@ -295,21 +220,34 @@ pub mod chat {
 
         fn try_from(raw: RawChatMessageTarget) -> Result<Self, Self::Error> {
             match raw.target_type() {
-                TargetType::ChannelId => Ok(Self::ChannelId(
-                    raw.int_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-                TargetType::ChannelName => Ok(Self::ChannelName(
-                    raw.string_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-                TargetType::UserId => Ok(Self::UserId(
+                ChatTarget::ChannelId => {
+                    Ok(Self::Channel(ChannelQuery::ChannelId(
+                        raw.int_val.ok_or(ConvertError::InvalidParams)?,
+                    )))
+                },
+                ChatTarget::ChannelName => {
+                    Ok(Self::Channel(ChannelQuery::ChannelName(
+                        raw.string_val.ok_or(ConvertError::InvalidParams)?,
+                    )))
+                },
+                ChatTarget::SessionId => {
+                    Ok(Self::User(UserQuery::SessionId(Ulid::from_str(
+                        raw.string_val
+                            .ok_or(ConvertError::InvalidParams)?
+                            .as_str(),
+                    )?)))
+                },
+                ChatTarget::UserId => Ok(Self::User(UserQuery::UserId(
                     raw.int_val.ok_or(ConvertError::InvalidParams)? as i32,
-                )),
-                TargetType::Username => Ok(Self::Username(
+                ))),
+                ChatTarget::Username => Ok(Self::User(UserQuery::Username(
                     raw.string_val.ok_or(ConvertError::InvalidParams)?,
-                )),
-                TargetType::UsernameUnicode => Ok(Self::UsernameUnicode(
-                    raw.string_val.ok_or(ConvertError::InvalidParams)?,
-                )),
+                ))),
+                ChatTarget::UsernameUnicode => {
+                    Ok(Self::User(UserQuery::UsernameUnicode(
+                        raw.string_val.ok_or(ConvertError::InvalidParams)?,
+                    )))
+                },
             }
         }
     }
@@ -317,30 +255,41 @@ pub mod chat {
     impl From<ChatMessageTarget> for RawChatMessageTarget {
         fn from(target: ChatMessageTarget) -> Self {
             match target {
-                ChatMessageTarget::ChannelId(channel_id) => Self {
-                    target_type: TargetType::ChannelId as i32,
-                    int_val: Some(channel_id),
-                    string_val: None,
+                ChatMessageTarget::Channel(channel_query) => {
+                    match channel_query {
+                        ChannelQuery::ChannelId(channel_id) => Self {
+                            target_type: ChatTarget::ChannelId as i32,
+                            int_val: Some(channel_id),
+                            string_val: None,
+                        },
+                        ChannelQuery::ChannelName(channel_name) => Self {
+                            target_type: ChatTarget::ChannelName as i32,
+                            int_val: None,
+                            string_val: Some(channel_name),
+                        },
+                    }
                 },
-                ChatMessageTarget::ChannelName(channel_name) => Self {
-                    target_type: TargetType::ChannelName as i32,
-                    int_val: None,
-                    string_val: Some(channel_name),
-                },
-                ChatMessageTarget::UserId(user_id) => Self {
-                    target_type: TargetType::UserId as i32,
-                    int_val: Some(user_id as u64),
-                    string_val: None,
-                },
-                ChatMessageTarget::Username(username) => Self {
-                    target_type: TargetType::Username as i32,
-                    int_val: None,
-                    string_val: Some(username),
-                },
-                ChatMessageTarget::UsernameUnicode(username_unicode) => Self {
-                    target_type: TargetType::UsernameUnicode as i32,
-                    int_val: None,
-                    string_val: Some(username_unicode),
+                ChatMessageTarget::User(user_query) => match user_query {
+                    UserQuery::SessionId(session_id) => Self {
+                        target_type: ChatTarget::SessionId as i32,
+                        int_val: None,
+                        string_val: Some(session_id.to_string()),
+                    },
+                    UserQuery::UserId(user_id) => Self {
+                        target_type: ChatTarget::UserId as i32,
+                        int_val: Some(user_id as u64),
+                        string_val: None,
+                    },
+                    UserQuery::Username(username) => Self {
+                        target_type: ChatTarget::Username as i32,
+                        int_val: None,
+                        string_val: Some(username),
+                    },
+                    UserQuery::UsernameUnicode(username_unicode) => Self {
+                        target_type: ChatTarget::UsernameUnicode as i32,
+                        int_val: None,
+                        string_val: Some(username_unicode),
+                    },
                 },
             }
         }

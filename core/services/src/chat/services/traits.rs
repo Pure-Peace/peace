@@ -1,19 +1,53 @@
 use crate::chat::*;
-use peace_pb::chat::*;
+use peace_pb::{
+    bancho_state::{BanchoPackets, UserQuery},
+    base::ExecSuccess,
+    chat::*,
+};
 use std::sync::Arc;
 use tonic::async_trait;
 
 pub type DynChatService = Arc<dyn ChatService + Send + Sync>;
 pub type DynChannelService = Arc<dyn ChannelService + Send + Sync>;
+pub type DynQueueService = Arc<dyn QueueService + Send + Sync>;
+
+#[async_trait]
+pub trait ProcessBanchoMessage {
+    async fn process_bancho_message(
+        &self,
+        sender_id: i32,
+        message: String,
+        target: ChatMessageTarget,
+    ) -> Result<SendMessageResponse, ChatServiceError>;
+}
 
 #[async_trait]
 pub trait ChatService:
-    GetPublicChannels
+    CreateQueue
+    + RemoveQueue
+    + GetPublicChannels
     + AddUserIntoChannel
     + RemoveUserPlatformsFromChannel
     + RemoveUserFromChannel
     + SendMessage
+    + PullChatPackets
 {
+}
+
+#[async_trait]
+pub trait CreateQueue {
+    async fn create_queue(
+        &self,
+        request: CreateQueueRequest,
+    ) -> Result<ExecSuccess, ChatServiceError>;
+}
+
+#[async_trait]
+pub trait RemoveQueue {
+    async fn remove_queue(
+        &self,
+        query: UserQuery,
+    ) -> Result<ExecSuccess, ChatServiceError>;
 }
 
 #[async_trait]
@@ -22,12 +56,13 @@ pub trait GetPublicChannels {
         &self,
     ) -> Result<GetPublicChannelsResponse, ChatServiceError>;
 }
+
 #[async_trait]
 pub trait AddUserIntoChannel {
     async fn add_user_into_channel(
         &self,
         request: AddUserIntoChannelRequest,
-    ) -> Result<ChannelInfo, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatServiceError>;
 }
 
 #[async_trait]
@@ -35,7 +70,7 @@ pub trait RemoveUserPlatformsFromChannel {
     async fn remove_user_platforms_from_channel(
         &self,
         request: RemoveUserPlatformsFromChannelRequest,
-    ) -> Result<ChannelInfo, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatServiceError>;
 }
 
 #[async_trait]
@@ -43,7 +78,7 @@ pub trait RemoveUserFromChannel {
     async fn remove_user_from_channel(
         &self,
         request: RemoveUserFromChannelRequest,
-    ) -> Result<ChannelInfo, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatServiceError>;
 }
 
 #[async_trait]
@@ -52,6 +87,14 @@ pub trait SendMessage {
         &self,
         request: SendMessageRequest,
     ) -> Result<SendMessageResponse, ChatServiceError>;
+}
+
+#[async_trait]
+pub trait PullChatPackets {
+    async fn pull_chat_packets(
+        &self,
+        query: UserQuery,
+    ) -> Result<BanchoPackets, ChatServiceError>;
 }
 
 #[async_trait]
@@ -94,7 +137,7 @@ pub trait AddUser {
         &self,
         query: &ChannelQuery,
         user_id: i32,
-        platforms: Option<Vec<Platform>>,
+        platforms: Platform,
     ) -> Option<Arc<Channel>>;
 }
 
@@ -104,7 +147,7 @@ pub trait RemoveUserPlatforms {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-        platforms: Option<&[Platform]>,
+        platforms: Platform,
     ) -> Option<Arc<Channel>>;
 }
 
@@ -142,4 +185,22 @@ pub trait ClearAllChannels {
 
 pub trait ChannelCount {
     fn channel_count(&self) -> usize;
+}
+
+#[async_trait]
+pub trait QueueService: UserSessionsStore {
+    async fn create_queue(
+        &self,
+        request: CreateQueueRequest,
+    ) -> Result<ExecSuccess, ChatServiceError>;
+
+    async fn remove_queue(
+        &self,
+        query: &UserQuery,
+    ) -> Result<ExecSuccess, ChatServiceError>;
+}
+
+#[async_trait]
+pub trait UserSessionsStore {
+    fn user_sessions(&self) -> &Arc<UserSessions>;
 }

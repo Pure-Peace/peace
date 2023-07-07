@@ -1,30 +1,36 @@
 syntax = "proto3";
 
 import "peace/base.proto";
+import "peace/services/bancho_state.proto";
 
 package peace.services.chat;
 
 service ChatRPC {
+  rpc CreateQueue(CreateQueueRequest) returns (peace.base.ExecSuccess);
+  rpc RemoveQueue(peace.services.bancho_state.RawUserQuery) returns (peace.base.ExecSuccess);
+
   rpc GetPublicChannels(GetPublicChannelsRequest)
       returns (GetPublicChannelsResponse);
-  rpc AddUserIntoChannel(AddUserIntoChannelRequest) returns (ChannelInfo);
-  rpc RemoveUserPlatformsFromChannel(RemoveUserPlatformsFromChannelRequest) returns (ChannelInfo);
-  rpc RemoveUserFromChannel(RemoveUserFromChannelRequest) returns (ChannelInfo);
+  rpc AddUserIntoChannel(AddUserIntoChannelRequest) returns (peace.base.ExecSuccess);
+  rpc RemoveUserPlatformsFromChannel(RemoveUserPlatformsFromChannelRequest) returns (peace.base.ExecSuccess);
+  rpc RemoveUserFromChannel(RemoveUserFromChannelRequest) returns (peace.base.ExecSuccess);
 
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc PullChatPackets(peace.services.bancho_state.RawUserQuery) returns (peace.services.bancho_state.BanchoPackets);
 }
 
 message RawChatMessageTarget {
-  enum TargetType {
+  enum ChatTarget {
     // Deserialize into `ChannelId(u32)`
     ChannelId = 0;
     // Deserialize into `ChannelName(string)`
     ChannelName = 1;
-    UserId = 2;
-    Username = 3;
-    UsernameUnicode = 4;
+    SessionId = 2;
+    UserId = 3;
+    Username = 4;
+    UsernameUnicode = 5;
   }
-  TargetType target_type = 1;
+  ChatTarget target_type = 1;
   optional uint64 int_val = 2;
   optional string string_val = 3;
 }
@@ -41,6 +47,13 @@ message RawChannelQuery {
   optional string string_val = 3;
 }
 
+message CreateQueueRequest {
+  int32 user_id = 1;
+  string username = 2;
+  optional string username_unicode = 3;
+  int32 privileges = 4;
+}
+
 message GetPublicChannelsRequest {}
 
 message GetPublicChannelsResponse { repeated ChannelInfo channels = 1; }
@@ -53,12 +66,6 @@ enum ChannelType {
   Spectaor = 4;
 }
 
-enum ChatPlatform {
-  Bancho = 0;
-  Lazer = 1;
-  Web = 2;
-}
-
 message Users { repeated int32 users = 1; }
 
 message ChannelSessionsCounter {
@@ -67,8 +74,6 @@ message ChannelSessionsCounter {
   uint64 lazer = 3;
   uint64 web = 4;
 }
-
-message ChatPlatforms { repeated ChatPlatform value = 1; }
 
 message ChannelInfo {
   uint64 id = 1;
@@ -82,13 +87,13 @@ message ChannelInfo {
 message AddUserIntoChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
-  optional ChatPlatforms platforms = 3;
+  int32 platforms = 3;
 }
 
 message RemoveUserPlatformsFromChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
-  optional ChatPlatforms platforms = 3;
+  int32 platforms = 3;
 }
 
 message RemoveUserFromChannelRequest {
@@ -102,7 +107,7 @@ message SendMessageRequest {
   int32 sender_id = 1;
   string message = 2;
   RawChatMessageTarget target = 3;
-  ChatPlatform platform = 4;
+  int32 platforms = 4;
 }
 
 message SendMessageResponse { uint64 message_id = 1; }

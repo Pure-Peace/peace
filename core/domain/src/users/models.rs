@@ -24,22 +24,22 @@ pub struct CreateUser {
 pub struct Email(String);
 
 impl Email {
+    pub fn new(s: &str) -> Result<Self, EmailError> {
+        let s = s.trim().to_ascii_lowercase();
+
+        if !Self::regex().is_match(s.as_str()) {
+            return Err(EmailError);
+        }
+
+        Ok(Self(s))
+    }
+
     pub fn regex() -> &'static Regex {
         static EMAIL_REGEX: OnceCell<Regex> = OnceCell::new();
         EMAIL_REGEX.get_or_init(|| {
             Regex::new(r"^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{2,24}$")
                 .unwrap()
         })
-    }
-
-    pub fn from_str(s: &str) -> Result<Self, EmailError> {
-        let s = s.trim().to_ascii_lowercase();
-
-        if !Self::regex().is_match(s.as_str()) {
-            return Err(EmailError)
-        }
-
-        Ok(Self(s))
     }
 }
 
@@ -83,7 +83,7 @@ impl Checker for Ascii {
     #[inline]
     fn check(s: &str) -> Result<(), UsernameError> {
         if !s.is_ascii() {
-            return Err(UsernameError::InvalidAsciiCharacters)
+            return Err(UsernameError::InvalidAsciiCharacters);
         }
         Ok(())
     }
@@ -108,7 +108,7 @@ where
 {
     #[inline]
     fn from(val: UsernameSafe) -> Self {
-        Username::new(val.0)
+        Username::new_unchecked(val.0)
     }
 }
 
@@ -149,18 +149,18 @@ where
     T: Checker,
 {
     #[inline]
-    fn new(s: String) -> Self {
-        Self(s, PhantomData)
-    }
-
-    #[inline]
-    pub fn from_str(s: &str) -> Result<Self, UsernameError> {
+    pub fn new(s: &str) -> Result<Self, UsernameError> {
         let s = s.trim();
         T::check(s)?;
         if s.contains(' ') && s.contains('_') {
-            return Err(UsernameError::UnderscoresAndSpacesNotExistsBoth)
+            return Err(UsernameError::UnderscoresAndSpacesNotExistsBoth);
         }
-        Ok(Self::new(s.to_owned()))
+        Ok(Self::new_unchecked(s.to_owned()))
+    }
+
+    #[inline]
+    pub fn new_unchecked(s: String) -> Self {
+        Self(s, PhantomData)
     }
 
     #[inline]

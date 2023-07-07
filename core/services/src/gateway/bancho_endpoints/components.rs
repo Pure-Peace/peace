@@ -34,7 +34,7 @@ impl FromStr for BanchoClientToken {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let split = s.split('.').collect::<Vec<&str>>();
         if split.len() != 3 {
-            return Err(BanchoHttpError::InvalidOsuTokenHeader)
+            return Err(BanchoHttpError::InvalidOsuTokenHeader);
         }
 
         let user_id = split[0]

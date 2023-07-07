@@ -132,10 +132,12 @@ impl Channels {
         query: &ChannelQuery,
     ) -> Option<Arc<Channel>> {
         match query {
-            ChannelQuery::ChannelId(channel_id) =>
-                indexes.channel_id.get(channel_id),
-            ChannelQuery::ChannelName(channel_name) =>
-                indexes.channel_name.get(channel_name),
+            ChannelQuery::ChannelId(channel_id) => {
+                indexes.channel_id.get(channel_id)
+            },
+            ChannelQuery::ChannelName(channel_name) => {
+                indexes.channel_name.get(channel_name)
+            },
         }
         .cloned()
     }
@@ -144,10 +146,12 @@ impl Channels {
     pub async fn is_channel_exists(&self, query: &ChannelQuery) -> bool {
         let indexes = self.read().await;
         match query {
-            ChannelQuery::ChannelId(channel_id) =>
-                indexes.channel_id.contains_key(channel_id),
-            ChannelQuery::ChannelName(channel_name) =>
-                indexes.channel_name.contains_key(channel_name),
+            ChannelQuery::ChannelId(channel_id) => {
+                indexes.channel_id.contains_key(channel_id)
+            },
+            ChannelQuery::ChannelName(channel_name) => {
+                indexes.channel_name.contains_key(channel_name)
+            },
         }
     }
 
@@ -270,7 +274,7 @@ impl AddUser for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: i32,
-        platforms: Option<Vec<Platform>>,
+        platforms: Platform,
     ) -> Option<Arc<Channel>> {
         let channel = self.channels.get_channel(query).await?;
         channel.sessions.add_user(user_id, platforms).await;
@@ -286,7 +290,7 @@ impl RemoveUserPlatforms for ChannelServiceImpl {
         &self,
         query: &ChannelQuery,
         user_id: &i32,
-        platforms: Option<&[Platform]>,
+        platforms: Platform,
     ) -> Option<Arc<Channel>> {
         let channel = self.channels.get_channel(query).await?;
         channel.sessions.remove_user_platforms(user_id, platforms).await;

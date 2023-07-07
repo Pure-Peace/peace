@@ -113,6 +113,8 @@ impl Application for App {
         )
         .into_service();
 
+        let queue_service = QueueServiceImpl::new().into_service();
+
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
@@ -131,9 +133,12 @@ impl Application for App {
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service =
-            ChatServiceImpl::new(channel_service, bancho_state_service.clone())
-                .into_service();
+        let chat_service = ChatServiceImpl::new(
+            channel_service,
+            bancho_state_service.clone(),
+            queue_service,
+        )
+        .into_service();
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_cache_store)
@@ -153,13 +158,14 @@ impl Application for App {
             password_service.into_service(),
             bancho_background_service,
             geoip_service,
-            chat_service,
+            chat_service.clone(),
         )
         .into_service();
 
         let bancho_handler_service = BanchoHandlerServiceImpl::new(
             bancho_service,
             bancho_state_service.clone(),
+            chat_service,
         )
         .into_service();
 

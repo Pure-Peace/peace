@@ -2,7 +2,6 @@ syntax = "proto3";
 
 import "peace/base.proto";
 import "peace/services/geoip.proto";
-import "peace/services/chat.proto";
 
 package peace.services.bancho_state;
 
@@ -33,8 +32,6 @@ service BanchoStateRPC {
   // session not exists will return error(404)
   rpc GetUserSessionWithFields(RawUserQueryWithFields)
       returns (GetUserSessionResponse);
-  rpc ChannelUpdateNotify(ChannelUpdateNotifyRequest)
-      returns (ChannelUpdateNotifyResponse);
 
   // For debug
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
@@ -76,35 +73,17 @@ message RawUserQueryWithFields {
   int32 fields = 2;
 }
 
-message RawBanchoPacketTarget {
-  enum TargetType {
-    // Deserialize into `UserId(i32)`
-    UserId = 0;
-    // Deserialize into `Username(string)`
-    Username = 1;
-    // Deserialize into `UsernameUnicode(string)`
-    UsernameUnicode = 2;
-    // Deserialize into `SessionId(string)`
-    SessionId = 3;
-    // Deserialize into `Channel(string)`
-    Channel = 4;
-  }
-  TargetType target_type = 1;
-  optional int32 int_val = 2;
-  optional string string_val = 3;
-}
-
 message EnqueueBanchoPacketsRequest {
-  RawBanchoPacketTarget target = 1;
+  RawUserQuery user_query = 1;
   bytes packets = 2;
 }
 
 message BatchEnqueueBanchoPacketsRequest {
-  repeated RawBanchoPacketTarget targets = 1;
+  repeated RawUserQuery user_queries = 1;
   bytes packets = 2;
 }
 
-message DequeueBanchoPacketsRequest { RawBanchoPacketTarget target = 1; }
+message DequeueBanchoPacketsRequest { RawUserQuery user_query = 1; }
 
 message BanchoPackets { bytes data = 1; }
 
@@ -164,19 +143,19 @@ message GetAllSessionsResponse {
 
 message SendUserStatsPacketRequest {
   RawUserQuery user_query = 1;
-  RawBanchoPacketTarget to = 2;
+  RawUserQuery to = 2;
 }
 
 message BatchSendUserStatsPacketRequest {
   repeated RawUserQuery user_queries = 1;
-  RawBanchoPacketTarget to = 2;
+  RawUserQuery to = 2;
 }
 
-message SendAllPresencesRequest { RawBanchoPacketTarget to = 1; }
+message SendAllPresencesRequest { RawUserQuery to = 1; }
 
 message BatchSendPresencesRequest {
   repeated RawUserQuery user_queries = 1;
-  RawBanchoPacketTarget to = 2;
+  RawUserQuery to = 2;
 }
 
 message UpdatePresenceFilterRequest {
@@ -196,9 +175,3 @@ message UpdateUserBanchoStatusRequest {
 
 message UserQueries { repeated RawUserQuery value = 1; }
 
-message ChannelUpdateNotifyRequest {
-  optional UserQueries notify_targets = 1;
-  peace.services.chat.ChannelInfo channel_info = 2;
-}
-
-message ChannelUpdateNotifyResponse {}

@@ -1,6 +1,6 @@
 use super::{traits::*, UserSessionsServiceImpl};
 use crate::bancho_state::{
-    DynBanchoStateBackgroundService, NotifyMessagesCleaner, Session,
+    BanchoSession, DynBanchoStateBackgroundService, NotifyMessagesCleaner,
     UserSessionsCleaner,
 };
 use async_trait::async_trait;
@@ -63,7 +63,7 @@ impl BanchoStateBackgroundServiceImpl {
                     );
                     let start = Instant::now();
 
-                    let mut sessions_deactive = None::<Vec<Arc<Session>>>;
+                    let mut sessions_deactive = None::<Vec<Arc<BanchoSession>>>;
                     let mut oldest_notify_msg_id = None::<Ulid>;
 
                     let current_timestamp = Timestamp::now();
@@ -73,18 +73,18 @@ impl BanchoStateBackgroundServiceImpl {
                             user_sessions_service.user_sessions.read().await;
 
                         for session in user_sessions.values() {
-                            if current_timestamp - session.last_active.val() >
-                                cfg.dead.val()
+                            if current_timestamp - session.last_active.val()
+                                > cfg.dead.val()
                             {
                                 lazy_init!(sessions_deactive => sessions_deactive.push(session.clone()), vec![session.clone()]);
                             }
 
                             lazy_init!(oldest_notify_msg_id, Some(val) => {
-                                let notify_index = *session.notify_index.val();
+                                let notify_index = *session.extend.notify_index.val();
                                 if val > notify_index {
                                     oldest_notify_msg_id =  Some(notify_index);
                                 }
-                            }, *session.notify_index.load().as_ref())
+                            }, *session.extend.notify_index.load().as_ref())
                         }
                     }
 
@@ -118,7 +118,7 @@ impl BanchoStateBackgroundServiceImpl {
                             .notify_queue
                             .lock()
                             .await
-                            .remove_before_id(&oldest_notify_msg_id),
+                            .remove_messages_before_id(&oldest_notify_msg_id),
                         None => 0,
                     };
 
@@ -177,15 +177,16 @@ impl BanchoStateBackgroundServiceImpl {
                         let mut notify_queue =
                             user_sessions_service.notify_queue.lock().await;
 
-                        for (key, msg) in notify_queue.iter() {
+                        for (key, msg) in notify_queue.messages.iter() {
                             lazy_init!(invalid_messages => if !msg.is_valid() {
                                 invalid_messages.push(*key);
                             }, vec![*key]);
                         }
 
                         match invalid_messages {
-                            Some(invalid_messages) =>
-                                notify_queue.batch_remove(&invalid_messages),
+                            Some(invalid_messages) => {
+                                notify_queue.remove_messages(&invalid_messages)
+                            },
                             None => 0,
                         }
                     };
@@ -295,10 +296,10 @@ impl BanchoStateBackgroundServiceConfigs {
     pub fn with_cfg(cfg: &CliBanchoStateBackgroundServiceConfigs) -> Self {
         Self {
             user_sessions_recycle: UserSessionsRecycleConfig::buid_with_cfg(
-                &cfg,
+                cfg,
             ),
             notify_messages_recyce: NotifyMessagesRecycleConfig::buid_with_cfg(
-                &cfg,
+                cfg,
             ),
         }
     }

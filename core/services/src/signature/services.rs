@@ -41,7 +41,7 @@ impl SignatureServiceBuilder {
 
         if service.is_some() {
             info!("Signature service init successful, type: \"Local\"");
-            return service.unwrap()
+            return service.unwrap();
         }
 
         if let Some(cfg) = signature_rpc_config {

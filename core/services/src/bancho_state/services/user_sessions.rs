@@ -10,10 +10,17 @@ pub struct UserSessionsServiceImpl {
     pub notify_queue: Arc<Mutex<MessageQueue>>,
 }
 
+impl UserSessionsServiceImpl {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 impl Default for UserSessionsServiceImpl {
     fn default() -> Self {
         Self {
-            user_sessions: Arc::default(),
+            user_sessions: Arc::new(UserSessions::new()),
             notify_queue: Arc::new(Mutex::new(MessageQueue {
                 messages: BTreeMap::new(),
             })),

@@ -45,6 +45,6 @@ impl geoip_rpc_server::GeoipRpc for GeoipRpcImpl {
             .try_reload(&request.into_inner().geo_db_path)
             .await
             .map_err(|err| err.into())
-            .map(|()| Response::new(ExecSuccess {}))
+            .map(|()| Response::new(ExecSuccess::default()))
     }
 }

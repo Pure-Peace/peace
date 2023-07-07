@@ -24,7 +24,7 @@ impl LogsRpc for LogsRpcService {
             .map_err(|err| Status::internal(err.to_string()))?;
 
         info!("<LogsRpc> Set log level to: [{}]", level);
-        Ok(Response::new(ExecSuccess {}))
+        Ok(Response::new(ExecSuccess::default()))
     }
 
     async fn set_debug_mode(
@@ -36,7 +36,7 @@ impl LogsRpc for LogsRpcService {
             .map_err(|err| Status::internal(err.to_string()))?;
 
         info!("<LogsRpc> Set debug mode: [{}]", enabled);
-        Ok(Response::new(ExecSuccess {}))
+        Ok(Response::new(ExecSuccess::default()))
     }
 
     async fn set_env_filter(

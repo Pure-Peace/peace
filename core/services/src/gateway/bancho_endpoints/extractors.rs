@@ -126,7 +126,7 @@ where
             .map(|ua| ua == OSU_USER_AGENT.as_str())
             .unwrap_or(false)
         {
-            return Err(BanchoHttpError::InvalidUserAgentHeader)
+            return Err(BanchoHttpError::InvalidUserAgentHeader);
         }
 
         // Extract the request body and wrap it in a `BanchoRequestBody`.

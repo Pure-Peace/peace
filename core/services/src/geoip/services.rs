@@ -36,7 +36,7 @@ impl GeoipServiceBuilder {
 
         if service.is_some() {
             info!("Geoip service init successful, type: \"Local\"");
-            return service.unwrap()
+            return service.unwrap();
         }
 
         if let Some(cfg) = cfg {

@@ -10,12 +10,13 @@ pub fn convert(attr: TokenStream, item: TokenStream) -> TokenStream {
     if args.len() != 1 {
         return syn::Error::new_spanned(item, "Only one parameter.")
             .to_compile_error()
-            .into()
+            .into();
     }
     let arg = &args[0];
     let type_arg = match arg {
-        syn::NestedMeta::Meta(syn::Meta::Path(path)) =>
-            path.get_ident().unwrap().clone(),
+        syn::NestedMeta::Meta(syn::Meta::Path(path)) => {
+            path.get_ident().unwrap().clone()
+        },
         _ => {
             panic!("Invalid argument")
         },

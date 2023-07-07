@@ -15,20 +15,20 @@ pub fn parse_osu_login_request_body(
     let mut lines = tools::split_string(&body, '\n');
 
     if lines.len() < 3 {
-        return Err(ParseLoginDataError::InvalidLoginData)
+        return Err(ParseLoginDataError::InvalidLoginData);
     }
 
     let username = shift(&mut lines);
     let password = shift(&mut lines);
 
     if username.is_empty() || password.len() != 32 {
-        return Err(ParseLoginDataError::InvalidUserInfo)
+        return Err(ParseLoginDataError::InvalidUserInfo);
     }
 
     let mut client_info = tools::split_string(&shift(&mut lines), '|');
 
     if client_info.len() < 5 {
-        return Err(ParseLoginDataError::InvalidClientInfo)
+        return Err(ParseLoginDataError::InvalidClientInfo);
     }
 
     let client_version = shift(&mut client_info);
@@ -43,7 +43,7 @@ pub fn parse_osu_login_request_body(
     let mut client_hashes = tools::split_string(&shift(&mut client_info), ':');
 
     if client_hashes.len() < 5 {
-        return Err(ParseLoginDataError::InvalidClientHashes)
+        return Err(ParseLoginDataError::InvalidClientHashes);
     }
 
     // Only allow friend's pm

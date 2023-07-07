@@ -59,9 +59,9 @@ impl PasswordService for PasswordServiceImpl {
         {
             if cached.raw == password {
                 cached.last_hit = Timestamp::now();
-                return Ok(())
+                return Ok(());
             } else {
-                return Err(PasswordError::InvalidPassword)
+                return Err(PasswordError::InvalidPassword);
             }
         }
 
