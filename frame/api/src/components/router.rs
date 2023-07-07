@@ -1,6 +1,6 @@
 use crate::{
-    responder, responder::shutdown_server, WebApplication,
-    PeaceApiAdminEndpointsDocs,
+    responder, responder::shutdown_server, PeaceApiAdminEndpointsDocs,
+    WebApplication,
 };
 use axum::{
     body::Body,

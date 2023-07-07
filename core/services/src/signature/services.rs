@@ -65,6 +65,8 @@ impl SignatureServiceBuilder {
                     ed25519_pem_path.unwrap_or(DEFAULT_ED25519_PEM_FILE_PATH),
                 )
                 .unwrap();
+
+            info!("Signature service init successful, type: \"Local\"");
             I::from(signer).into_service()
         })
     }

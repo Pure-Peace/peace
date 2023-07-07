@@ -1,8 +1,5 @@
 use super::{ChatService, DynChatService};
-use crate::{
-    bancho_state::DynBanchoStateService, chat::*, FromRpcClient, IntoService,
-    RpcClient,
-};
+use crate::{chat::*, FromRpcClient, IntoService, RpcClient};
 use async_trait::async_trait;
 use bancho_packets::BanchoPacket;
 use derive_deref::Deref;
@@ -23,7 +20,6 @@ pub const DEFAULT_CHANNEL_CACHE_EXPIRES: u64 = 300;
 #[derive(Clone)]
 pub struct ChatServiceImpl {
     pub channel_service: DynChannelService,
-    pub bancho_state_service: DynBanchoStateService,
     pub queue_service: DynQueueService,
 }
 
@@ -31,10 +27,9 @@ impl ChatServiceImpl {
     #[inline]
     pub fn new(
         channel_service: DynChannelService,
-        bancho_state_service: DynBanchoStateService,
         queue_service: DynQueueService,
     ) -> Self {
-        Self { channel_service, bancho_state_service, queue_service }
+        Self { channel_service, queue_service }
     }
 
     #[inline]

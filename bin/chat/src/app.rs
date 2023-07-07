@@ -2,13 +2,10 @@ use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
-use peace_rpc::{RpcApplication, RpcClientConfig, RpcFrameConfig};
+use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::{
-    bancho_state::BanchoStateServiceRemote,
-    chat::{ChannelServiceImpl, ChatServiceImpl, QueueServiceImpl},
-    rpc_config::BanchoStateRpcConfig,
-    FromRpcClient, IntoService,
+use peace_services::chat::{
+    ChannelServiceImpl, ChatServiceImpl, QueueServiceImpl,
 };
 use std::sync::Arc;
 use tonic::{
@@ -28,9 +25,6 @@ pub struct ChatServiceConfig {
 
     #[command(flatten)]
     pub peace_db: PeaceDbConfig,
-
-    #[command(flatten)]
-    pub bancho_state: BanchoStateRpcConfig,
 }
 
 #[derive(Clone)]
@@ -62,12 +56,6 @@ impl RpcApplication for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
-
-        let bancho_state_service =
-            BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
-                .into_service();
-
         let queue_service = QueueServiceImpl::new().into_service();
 
         let channel_service =
@@ -75,12 +63,8 @@ impl RpcApplication for App {
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service = ChatServiceImpl::new(
-            channel_service,
-            bancho_state_service,
-            queue_service,
-        )
-        .into_service();
+        let chat_service =
+            ChatServiceImpl::new(channel_service, queue_service).into_service();
 
         let chat_rpc = ChatRpcImpl::new(chat_service);
 

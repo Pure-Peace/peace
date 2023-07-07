@@ -134,12 +134,8 @@ impl WebApplication for App {
 
         channel_service.initialize_public_channels().await;
 
-        let chat_service = ChatServiceImpl::new(
-            channel_service,
-            bancho_state_service.clone(),
-            queue_service,
-        )
-        .into_service();
+        let chat_service =
+            ChatServiceImpl::new(channel_service, queue_service).into_service();
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_cache_store)
