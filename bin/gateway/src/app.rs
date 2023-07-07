@@ -18,6 +18,7 @@ use peace_services::{
 };
 use std::sync::Arc;
 
+/// PEACE Gateway service
 #[peace_config]
 #[command(name = "gateway", author, version, about, propagate_version = true)]
 pub struct GatewayConfig {

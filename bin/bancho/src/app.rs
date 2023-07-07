@@ -23,6 +23,7 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
+/// PEACE Bancho gRPC service
 #[peace_config]
 #[command(name = "bancho", author, version, about, propagate_version = true)]
 pub struct BanchoConfig {

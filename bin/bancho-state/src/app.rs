@@ -23,6 +23,7 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
+/// BanchoState gRPC service
 #[peace_config]
 #[command(
     name = "bancho_state",

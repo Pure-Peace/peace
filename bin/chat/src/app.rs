@@ -16,6 +16,7 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
+/// PEACE Chat gRPC service
 #[peace_config]
 #[command(name = "chat", author, version, about, propagate_version = true)]
 pub struct ChatServiceConfig {

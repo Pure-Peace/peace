@@ -13,6 +13,7 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
+/// PEACE Geo-ip gRPC service
 #[peace_config]
 #[command(name = "geoip", author, version, about, propagate_version = true)]
 pub struct GeoipConfig {

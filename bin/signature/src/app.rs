@@ -14,6 +14,7 @@ use tonic::{
     transport::{server::Router, Server},
 };
 
+/// PEACE Signature service
 #[peace_config]
 #[command(name = "signature", author, version, about, propagate_version = true)]
 pub struct SignatureConfig {

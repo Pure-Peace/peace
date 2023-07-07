@@ -17,6 +17,7 @@ use peace_services::{
 use std::sync::Arc;
 use utoipa::OpenApi;
 
+/// PEACE Bancho standalone (web) service
 #[peace_config]
 #[command(
     name = "bancho-standalone",
