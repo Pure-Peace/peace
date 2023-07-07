@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{Application, RpcFrameConfig};
+use crate::{RpcApplication, RpcFrameConfig};
 use once_cell::sync::OnceCell;
 use tonic::{
     metadata::MetadataValue,
@@ -12,7 +12,7 @@ use tools::async_collections::{shutdown_signal, SignalHandle};
 use peace_pb::logs::logs_rpc_server::LogsRpcServer;
 
 /// Start service.
-pub async fn serve(app_cfg: impl Application) {
+pub async fn serve(app_cfg: impl RpcApplication) {
     tools::framework_info!();
 
     // Get the configuration from the application.
@@ -225,7 +225,7 @@ pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
 /// # Returns
 ///
 /// The `Router` with the reflection added.
-pub fn add_reflection(svr: Router, app_cfg: &impl Application) -> Router {
+pub fn add_reflection(svr: Router, app_cfg: &impl RpcApplication) -> Router {
     // Create a reflection builder
     let mut reflection = tonic_reflection::server::Builder::configure();
 

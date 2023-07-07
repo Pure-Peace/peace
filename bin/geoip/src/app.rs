@@ -1,7 +1,7 @@
 use crate::GeoipRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_pb::geoip::{geoip_rpc_server::GeoipRpcServer, GEOIP_DESCRIPTOR_SET};
-use peace_rpc::{Application, RpcFrameConfig};
+use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     geoip::{FromGeoDbPath, GeoipServiceImpl},
@@ -38,7 +38,7 @@ impl App {
 }
 
 #[async_trait]
-impl Application for App {
+impl RpcApplication for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
     }

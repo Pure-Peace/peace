@@ -1,6 +1,6 @@
 use crate::{
     components::{error::Error, http::server_handle},
-    Application,
+    WebApplication,
 };
 use axum::{
     body::{Body, BoxBody},
@@ -45,7 +45,7 @@ pub async fn shutdown_server(Path(grace_period_secs): Path<u64>) -> Response {
 pub async fn any_path(
     host: Host,
     mut req: Request<Body>,
-    app: impl Application,
+    app: impl WebApplication,
 ) -> Response {
     // Fix `axum 0.6.0-rc5` `src/extract/matched_path.rs:146` debug_assert
     // panic.

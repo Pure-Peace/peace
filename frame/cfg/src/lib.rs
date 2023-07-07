@@ -16,9 +16,6 @@ use std::{
 
 const DEFAULT_CONFIG_PATH: &str = "config.json";
 
-/// A generic configuration struct that holds a configuration file path,
-/// a boolean flag to save the current parameters as a configuration file,
-/// a command, and any additional arguments provided.
 #[derive(Parser)]
 pub struct BaseConfig<T>
 where

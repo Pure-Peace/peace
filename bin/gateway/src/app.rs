@@ -1,6 +1,6 @@
 use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
-use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
+use peace_api::{ApiFrameConfig, RpcClientConfig, WebApplication};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho::BanchoServiceRemote,
@@ -52,7 +52,7 @@ impl App {
 }
 
 #[async_trait]
-impl Application for App {
+impl WebApplication for App {
     fn frame_cfg(&self) -> &ApiFrameConfig {
         &self.cfg.frame_cfg
     }

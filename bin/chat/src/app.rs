@@ -2,7 +2,7 @@ use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
-use peace_rpc::{Application, RpcClientConfig, RpcFrameConfig};
+use peace_rpc::{RpcApplication, RpcClientConfig, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
     bancho_state::BanchoStateServiceRemote,
@@ -44,7 +44,7 @@ impl App {
 }
 
 #[async_trait]
-impl Application for App {
+impl RpcApplication for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
     }

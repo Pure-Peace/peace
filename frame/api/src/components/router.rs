@@ -1,5 +1,5 @@
 use crate::{
-    responder, responder::shutdown_server, Application,
+    responder, responder::shutdown_server, WebApplication,
     PeaceApiAdminEndpointsDocs,
 };
 use axum::{
@@ -18,7 +18,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 /// App router with some middleware.
-pub async fn app(app: impl Application) -> Router {
+pub async fn app(app: impl WebApplication) -> Router {
     let cfg = app.frame_cfg_arc();
     app_router(app)
         .await
@@ -53,7 +53,7 @@ pub fn admin_routers(admin_token: Option<&str>) -> Router {
 }
 
 /// App router
-pub async fn app_router(app: impl Application) -> Router {
+pub async fn app_router(app: impl WebApplication) -> Router {
     let cfg = app.frame_cfg();
     let mut router =
         Into::<Router>::into(SwaggerUi::new(cfg.swagger_path.clone()).url(

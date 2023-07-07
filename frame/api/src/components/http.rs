@@ -1,4 +1,4 @@
-use crate::{components::router, ApiFrameConfig, Application};
+use crate::{components::router, ApiFrameConfig, WebApplication};
 use axum::Router;
 use axum_server::{AddrIncomingConfig, Handle};
 use once_cell::sync::OnceCell;
@@ -6,7 +6,7 @@ use std::{net::SocketAddr, time::Duration};
 use tools::async_collections::shutdown_signal;
 
 /// Start service.
-pub async fn serve(app_cfg: impl Application) {
+pub async fn serve(app_cfg: impl WebApplication) {
     tools::framework_info!();
 
     let cfg = app_cfg.frame_cfg_arc();

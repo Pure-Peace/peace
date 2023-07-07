@@ -1,6 +1,6 @@
 use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
-use peace_api::{ApiFrameConfig, Application};
+use peace_api::{ApiFrameConfig, WebApplication};
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_runtime::cfg::RuntimeConfig;
@@ -70,7 +70,7 @@ impl App {
 }
 
 #[async_trait]
-impl Application for App {
+impl WebApplication for App {
     fn frame_cfg(&self) -> &ApiFrameConfig {
         &self.cfg.frame_cfg
     }

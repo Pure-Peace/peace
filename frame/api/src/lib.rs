@@ -21,7 +21,7 @@ use utoipa::openapi::OpenApi;
 /// We can build app using `peace_api`,
 /// just use [`Application`] and implement this trait for App.
 #[async_trait]
-pub trait Application: Clone + Send + Sync + 'static {
+pub trait WebApplication: Clone + Send + Sync + 'static {
     /// App cfg should inherit [`ApiFrameConfig`], so this function is used to
     /// return it.
     fn frame_cfg(&self) -> &ApiFrameConfig;

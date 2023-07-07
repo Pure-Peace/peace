@@ -6,7 +6,7 @@ use peace_pb::bancho::{
 };
 use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{
-    interceptor::client_ip, Application, RpcClientConfig, RpcFrameConfig,
+    interceptor::client_ip, RpcApplication, RpcClientConfig, RpcFrameConfig,
 };
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
@@ -63,7 +63,7 @@ impl App {
 }
 
 #[async_trait]
-impl Application for App {
+impl RpcApplication for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
     }

@@ -3,7 +3,7 @@ use clap_serde_derive::ClapSerde;
 use peace_pb::signature::{
     signature_rpc_server::SignatureRpcServer, SIGNATURE_DESCRIPTOR_SET,
 };
-use peace_rpc::{Application, RpcFrameConfig};
+use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::signature::{
     SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
@@ -39,7 +39,7 @@ impl App {
 }
 
 #[async_trait]
-impl Application for App {
+impl RpcApplication for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
     }
