@@ -9,9 +9,18 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::{Mutex, RwLock};
-use tools::atomic::{Atomic, AtomicOperation, AtomicOption, AtomicValue, U64};
+use tools::{
+    atomic::{Atomic, AtomicOperation, AtomicOption, AtomicValue, U64},
+    Ulid,
+};
 
-pub type UserSessions = UserStore<Session<()>>;
+pub type UserSessions = UserStore<Session<ChatExtend>>;
+
+#[derive(Debug, Default)]
+pub struct ChatExtend {
+    pub default_read_process: Ulid,
+    pub channel_read_process: RwLock<HashMap<u64, Ulid>>,
+}
 
 #[derive(
     Debug, Copy, Clone, Default, Primitive, PartialEq, Eq, PartialOrd, Ord, Hash,
@@ -33,6 +42,23 @@ pub enum Platform {
     Bancho = 1,
     Lazer = 2,
     Web = 3,
+}
+
+impl Platform {
+    #[inline]
+    pub const fn all_platforms() -> [Self; 3] {
+        [Self::Bancho, Self::Lazer, Self::Web]
+    }
+
+    #[inline]
+    pub fn add(&mut self, platforms: &Platform) {
+        self.bits |= platforms.bits()
+    }
+
+    #[inline]
+    pub fn remove(&mut self, platforms: &Platform) {
+        self.bits &= !platforms.bits()
+    }
 }
 
 #[derive(Debug, Default, Clone)]

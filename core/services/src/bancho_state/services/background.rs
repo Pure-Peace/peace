@@ -64,25 +64,27 @@ impl BanchoStateBackgroundServiceImpl {
                     let start = Instant::now();
 
                     let mut sessions_deactive = None::<Vec<Arc<BanchoSession>>>;
-                    let mut oldest_notify_msg_id = None::<Ulid>;
+                    // messages before this id means all users has readed
+                    let mut min_notify_msg_id_in_all_users = None::<Ulid>;
 
                     let current_timestamp = Timestamp::now();
+                    let deadline = cfg.dead.val();
 
                     {
                         let user_sessions =
                             user_sessions_service.user_sessions.read().await;
 
                         for session in user_sessions.values() {
-                            if current_timestamp - session.last_active.val()
-                                > cfg.dead.val()
+                            if session.is_deactive(current_timestamp, deadline)
                             {
                                 lazy_init!(sessions_deactive => sessions_deactive.push(session.clone()), vec![session.clone()]);
                             }
 
-                            lazy_init!(oldest_notify_msg_id, Some(val) => {
+                            // update min notify msg id
+                            lazy_init!(min_notify_msg_id_in_all_users, Some(val) => {
                                 let notify_index = *session.extend.notify_index.val();
                                 if val > notify_index {
-                                    oldest_notify_msg_id =  Some(notify_index);
+                                    min_notify_msg_id_in_all_users = Some(notify_index);
                                 }
                             }, *session.extend.notify_index.load().as_ref())
                         }
@@ -113,14 +115,16 @@ impl BanchoStateBackgroundServiceImpl {
                         None => 0,
                     };
 
-                    let removed_notify_msg = match oldest_notify_msg_id {
-                        Some(oldest_notify_msg_id) => user_sessions_service
-                            .notify_queue
-                            .lock()
-                            .await
-                            .remove_messages_before_id(&oldest_notify_msg_id),
-                        None => 0,
-                    };
+                    // remove messages that all users has readed
+                    let removed_notify_msg =
+                        match min_notify_msg_id_in_all_users {
+                            Some(min_msg_id) => user_sessions_service
+                                .notify_queue
+                                .lock()
+                                .await
+                                .remove_messages_before_id(&min_msg_id),
+                            None => 0,
+                        };
 
                     let end = start.elapsed();
 

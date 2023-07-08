@@ -382,6 +382,11 @@ impl<T> Session<T> {
     }
 
     #[inline]
+    pub fn is_deactive(&self, current_timestamp: u64, deadline: u64) -> bool {
+        current_timestamp > self.last_active.val() + deadline
+    }
+
+    #[inline]
     pub fn update_active(&self) {
         self.last_active.set(Timestamp::now());
     }
@@ -417,6 +422,31 @@ impl<T> Session<T> {
             Some(queue) => queue.pop_front(),
             None => self.packets_queue.lock().await.pop_front(),
         }
+    }
+
+    #[inline]
+    pub async fn dequeue_all_packets(
+        &self,
+        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
+    ) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        #[inline]
+        fn dequeue(
+            buf: &mut Vec<u8>,
+            queue_lock: &mut MutexGuard<'_, VecDeque<Packet>>,
+        ) {
+            while let Some(packet) = queue_lock.pop_front() {
+                buf.extend(packet);
+            }
+        }
+
+        match queue_lock {
+            Some(queue_lock) => dequeue(&mut buf, queue_lock),
+            None => dequeue(&mut buf, &mut self.packets_queue.lock().await),
+        };
+
+        buf
     }
 }
 

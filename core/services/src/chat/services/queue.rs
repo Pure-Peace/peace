@@ -1,8 +1,8 @@
 use crate::{
     bancho_state::Session,
     chat::{
-        ChatServiceError, DynQueueService, QueueService, UserSessions,
-        UserSessionsStore,
+        ChatExtend, ChatServiceError, DynQueueService, QueueService,
+        UserSessions, UserSessionsStore,
     },
 };
 use async_trait::async_trait;
@@ -54,7 +54,7 @@ impl QueueService for QueueServiceImpl {
             username_unicode,
             privileges,
             initial_packets: None,
-            extend: (),
+            extend: ChatExtend::default(),
         });
 
         self.user_sessions.create(session, false).await;

@@ -9,10 +9,11 @@ use peace_pb::{
     chat::{chat_rpc_client::ChatRpcClient, *},
 };
 use std::sync::Arc;
-use tonic::transport::Channel;
+use tonic::transport::Channel as RpcChannel;
 use tools::{
     atomic::U64,
     cache::{CachedAtomic, CachedValue},
+    message_queue::ReceivedMessages,
 };
 
 pub const DEFAULT_CHANNEL_CACHE_EXPIRES: u64 = 300;
@@ -99,23 +100,8 @@ impl AddUserIntoChannel for ChatServiceImpl {
             .ok_or(ChatServiceError::ChannelNotExists)?;
 
         if platforms.contains(Platform::Bancho) {
-            let user_notify = bancho_packets::server::ChannelJoin::pack(
-                channel.name.load().as_str().into(),
-            );
-
-            let target = match self
-                .queue_service
-                .user_sessions()
-                .get(&UserQuery::UserId(user_id))
-                .await
-            {
-                Some(target) => target,
-                None => {
-                    todo!("create session (queue) for target")
-                },
-            };
-
-            target.push_packet(user_notify.into()).await;
+            self.channel_handle_for_bancho_user(&channel, user_id).await;
+            self.channel_update_for_bancho(&channel).await;
         }
 
         Ok(ExecSuccess::default())
@@ -145,28 +131,64 @@ impl RemoveUserPlatformsFromChannel for ChatServiceImpl {
             .ok_or(ChatServiceError::ChannelNotExists)?;
 
         if platforms.contains(Platform::Bancho) {
-            let user_notify = bancho_packets::server::ChannelKick::pack(
-                channel.name.load().as_str().into(),
-            );
-
-            let target = match self
-                .queue_service
-                .user_sessions()
-                .get(&UserQuery::UserId(user_id))
-                .await
-            {
-                Some(target) => target,
-                None => {
-                    todo!("create session (queue) for target")
-                },
-            };
-
-            target.push_packet(user_notify.into()).await;
+            self.channel_handle_for_bancho_user(&channel, user_id).await;
+            self.channel_update_for_bancho(&channel).await;
         }
 
         Ok(ExecSuccess::default())
     }
 }
+
+#[async_trait]
+impl ChannelUpdateForBancho for ChatServiceImpl {
+    async fn channel_update_for_bancho(&self, channel: &Arc<Channel>) {
+        let channel_update = bancho_packets::server::ChannelInfo::pack(
+            channel.name.load().as_str().into(),
+            channel
+                .description
+                .load()
+                .as_ref()
+                .map(|s| s.to_string())
+                .unwrap_or_default()
+                .into(),
+            channel.session_count(Platform::Bancho) as i16,
+        );
+
+        channel
+            .message_queue
+            .lock()
+            .await
+            .push_message(channel_update.into(), None);
+    }
+}
+
+#[async_trait]
+impl ChannelHandleForBanchoUser for ChatServiceImpl {
+    async fn channel_handle_for_bancho_user(
+        &self,
+        channel: &Arc<Channel>,
+        user_id: i32,
+    ) {
+        let user_notify = bancho_packets::server::ChannelJoin::pack(
+            channel.name.load().as_str().into(),
+        );
+
+        let target = match self
+            .queue_service
+            .user_sessions()
+            .get(&UserQuery::UserId(user_id))
+            .await
+        {
+            Some(target) => target,
+            None => {
+                todo!("create session (queue) for target")
+            },
+        };
+
+        target.push_packet(user_notify.into()).await;
+    }
+}
+
 #[async_trait]
 impl RemoveUserFromChannel for ChatServiceImpl {
     async fn remove_user_from_channel(
@@ -179,10 +201,14 @@ impl RemoveUserFromChannel for ChatServiceImpl {
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_channel_query()?;
 
-        self.channel_service
+        let channel = self
+            .channel_service
             .remove_user(&channel_query, &user_id)
             .await
             .ok_or(ChatServiceError::ChannelNotExists)?;
+
+        self.channel_handle_for_bancho_user(&channel, user_id).await;
+        self.channel_update_for_bancho(&channel).await;
 
         Ok(ExecSuccess::default())
     }
@@ -296,15 +322,81 @@ impl SendMessage for ChatServiceImpl {
 impl PullChatPackets for ChatServiceImpl {
     async fn pull_chat_packets(
         &self,
-        _query: UserQuery,
+        query: UserQuery,
     ) -> Result<BanchoPackets, ChatServiceError> {
-        todo!()
+        let session = match self.queue_service.user_sessions().get(&query).await
+        {
+            Some(session) => session,
+            None => {
+                todo!("create queue for user")
+            },
+        };
+
+        let records = {
+            self.channel_service
+                .user_channels()
+                .read()
+                .await
+                .get(&session.user_id)
+                .cloned()
+        };
+
+        let mut data = session.dequeue_all_packets(None).await;
+
+        if records.is_some() {
+            if let Some(channel_ids) = records
+                .unwrap()
+                .platform_channels
+                .read()
+                .await
+                .get(&Platform::Bancho)
+                .map(|c| c.iter().copied().collect::<Vec<u64>>())
+            {
+                let channels = self.channel_service.channels();
+                let indexes = channels.read().await;
+
+                let mut channel_read_process =
+                    session.extend.channel_read_process.write().await;
+
+                for channel_id in channel_ids {
+                    if let Some(channel) = channels.get_channel_inner(
+                        &indexes,
+                        &ChannelQuery::ChannelId(channel_id),
+                    ) {
+                        let channel_process =
+                            { channel_read_process.get(&channel_id).cloned() };
+
+                        if let Some(ReceivedMessages {
+                            messages,
+                            last_msg_id,
+                        }) =
+                            channel.message_queue.lock().await.receive_messages(
+                                &session.user_id,
+                                &channel_process.unwrap_or(
+                                    session.extend.default_read_process,
+                                ),
+                                None,
+                            )
+                        {
+                            for packet in messages {
+                                data.extend(packet);
+                            }
+
+                            channel_read_process
+                                .insert(channel_id, last_msg_id);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(BanchoPackets { data })
     }
 }
 
 #[derive(Clone)]
 pub struct ChatServiceRemote {
-    pub client: ChatRpcClient<Channel>,
+    pub client: ChatRpcClient<RpcChannel>,
     pub info: Arc<PublicChannelInfo>,
 }
 
@@ -322,7 +414,7 @@ impl FromRpcClient for ChatServiceRemote {
 }
 
 impl RpcClient for ChatServiceRemote {
-    type Client = ChatRpcClient<Channel>;
+    type Client = ChatRpcClient<RpcChannel>;
 
     #[inline]
     fn client(&self) -> Self::Client {

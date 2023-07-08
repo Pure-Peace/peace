@@ -553,13 +553,7 @@ impl DequeueBanchoPackets for BanchoStateServiceImpl {
             .await
             .ok_or(BanchoStateError::SessionNotExists)?;
 
-        let mut session_packet_queue = session.packets_queue.lock().await;
-
-        while let Some(packet) =
-            session.dequeue_packet(Some(&mut session_packet_queue)).await
-        {
-            data.extend(packet);
-        }
+        data.extend(session.dequeue_all_packets(None).await);
 
         if let Some(ReceivedMessages { messages, last_msg_id }) = self
             .user_sessions_service

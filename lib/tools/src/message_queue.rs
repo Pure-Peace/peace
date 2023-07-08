@@ -131,8 +131,8 @@ where
     #[inline]
     pub fn receive_messages(
         &mut self,
-        read_key: &K,
-        start_msg_id: &I,
+        reader: &K,
+        from_msg_id: &I,
         receive_count: Option<usize>,
     ) -> Option<ReceivedMessages<T, I>> {
         let mut should_delete = None::<Vec<I>>;
@@ -141,8 +141,8 @@ where
 
         let mut received_msg_count = 0;
 
-        for (msg_id, msg) in self.messages.range_mut(start_msg_id..) {
-            if msg.has_read.contains(read_key) {
+        for (msg_id, msg) in self.messages.range_mut(from_msg_id..) {
+            if msg.has_read.contains(reader) {
                 continue;
             }
 
@@ -152,7 +152,7 @@ where
             }
 
             lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
-            msg.has_read.insert(read_key.clone());
+            msg.has_read.insert(reader.clone());
             last_msg_id = Some(msg_id.clone());
 
             if let Some(receive_count) = receive_count {

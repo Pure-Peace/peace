@@ -6,7 +6,11 @@ use crate::chat::{
 use async_trait::async_trait;
 use peace_db::DatabaseConnection;
 use peace_pb::chat::ChannelQuery;
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    sync::Arc,
+};
 use tokio::sync::RwLock;
 use tools::atomic::{AtomicOperation, AtomicValue, Usize};
 
@@ -22,6 +26,49 @@ impl Deref for ChannelIndexes {
 
     fn deref(&self) -> &Self::Target {
         &self.channel_id
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct UserChannelRecords {
+    pub channel_platforms: RwLock<HashMap<u64, Platform>>,
+    pub platform_channels: RwLock<HashMap<Platform, HashSet<u64>>>,
+}
+
+impl<const N: usize> From<[(u64, Platform); N]> for UserChannelRecords {
+    fn from(arr: [(u64, Platform); N]) -> Self {
+        let mut channel_platforms = HashMap::with_capacity(N);
+        let mut platform_channels = HashMap::with_capacity(N);
+
+        for (channel_id, platforms) in arr {
+            channel_platforms.insert(channel_id, platforms);
+
+            let channels = HashSet::from([channel_id]);
+
+            for p in Platform::all_platforms() {
+                if platforms.contains(p) {
+                    platform_channels.insert(p, channels.clone());
+                }
+            }
+        }
+
+        Self {
+            channel_platforms: RwLock::new(channel_platforms),
+            platform_channels: RwLock::new(platform_channels),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct UserChannels {
+    pub indexes: RwLock<HashMap<i32, Arc<UserChannelRecords>>>,
+}
+
+impl Deref for UserChannels {
+    type Target = RwLock<HashMap<i32, Arc<UserChannelRecords>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.indexes
     }
 }
 
@@ -174,6 +221,7 @@ impl Channels {
 #[derive(Debug, Clone, Default)]
 pub struct ChannelServiceImpl {
     pub channels: Arc<Channels>,
+    pub user_channels: Arc<UserChannels>,
     pub peace_db_conn: DatabaseConnection,
 }
 
@@ -196,6 +244,13 @@ impl ChannelStore for ChannelServiceImpl {
     #[inline]
     fn channels(&self) -> &Arc<Channels> {
         &self.channels
+    }
+}
+
+impl UserChannelIndex for ChannelServiceImpl {
+    #[inline]
+    fn user_channels(&self) -> &Arc<UserChannels> {
+        &self.user_channels
     }
 }
 
@@ -279,6 +334,54 @@ impl AddUser for ChannelServiceImpl {
         let channel = self.channels.get_channel(query).await?;
         channel.sessions.add_user(user_id, platforms).await;
 
+        let records =
+            { self.user_channels.read().await.get(&user_id).cloned() };
+
+        match records {
+            Some(records) => {
+                records
+                    .channel_platforms
+                    .write()
+                    .await
+                    .entry(channel.id)
+                    .and_modify(|p| p.add(&platforms))
+                    .or_insert(platforms);
+
+                let mut platform_channels =
+                    records.platform_channels.write().await;
+
+                for p in Platform::all_platforms() {
+                    if platforms.contains(p) {
+                        platform_channels
+                            .entry(p)
+                            .and_modify(|c| {
+                                c.insert(channel.id);
+                            })
+                            .or_insert_with(|| HashSet::from([channel.id]));
+                    }
+                }
+            },
+            None => {
+                let records = Arc::new(UserChannelRecords::from([(
+                    channel.id, platforms,
+                )]));
+
+                for p in Platform::all_platforms() {
+                    records
+                        .platform_channels
+                        .write()
+                        .await
+                        .entry(p)
+                        .and_modify(|c| {
+                            c.insert(channel.id);
+                        })
+                        .or_insert_with(|| HashSet::from([channel.id]));
+                }
+
+                self.user_channels.write().await.insert(user_id, records);
+            },
+        };
+
         Some(channel)
     }
 }
@@ -295,6 +398,27 @@ impl RemoveUserPlatforms for ChannelServiceImpl {
         let channel = self.channels.get_channel(query).await?;
         channel.sessions.remove_user_platforms(user_id, platforms).await;
 
+        let records = { self.user_channels.read().await.get(user_id).cloned() };
+
+        if let Some(records) = records {
+            records
+                .channel_platforms
+                .write()
+                .await
+                .entry(channel.id)
+                .and_modify(|p| p.remove(&platforms));
+
+            let mut platform_channels = records.platform_channels.write().await;
+
+            for p in Platform::all_platforms() {
+                if platforms.contains(p) {
+                    platform_channels.entry(p).and_modify(|c| {
+                        c.remove(&channel.id);
+                    });
+                }
+            }
+        };
+
         Some(channel)
     }
 }
@@ -310,6 +434,20 @@ impl RemoveUser for ChannelServiceImpl {
         let channel = self.channels.get_channel(query).await?;
         channel.sessions.remove_user(user_id).await;
 
+        let records = { self.user_channels.read().await.get(user_id).cloned() };
+
+        if let Some(records) = records {
+            records.channel_platforms.write().await.remove(&channel.id);
+
+            let mut platform_channels = records.platform_channels.write().await;
+
+            for p in Platform::all_platforms() {
+                platform_channels.entry(p).and_modify(|c| {
+                    c.remove(&channel.id);
+                });
+            }
+        };
+
         Some(channel)
     }
 }
@@ -324,6 +462,27 @@ impl RemoveChannel for ChannelServiceImpl {
         const LOG_TARGET: &str = "chat::channel::remove_channel";
 
         let channel = self.channels.remove_channel(query).await?;
+
+        let all_user_records = {
+            self.user_channels
+                .read()
+                .await
+                .values()
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+
+        for records in all_user_records {
+            records.channel_platforms.write().await.remove(&channel.id);
+
+            let mut platform_channels = records.platform_channels.write().await;
+
+            for p in Platform::all_platforms() {
+                platform_channels.entry(p).and_modify(|c| {
+                    c.remove(&channel.id);
+                });
+            }
+        }
 
         info!(
             target: LOG_TARGET,
@@ -357,7 +516,8 @@ impl IsChannelExists for ChannelServiceImpl {
 impl ClearAllChannels for ChannelServiceImpl {
     #[inline]
     async fn clear_all_channels(&self) {
-        self.channels.clear_all_channels().await
+        self.channels.clear_all_channels().await;
+        self.user_channels.write().await.clear();
     }
 }
 

@@ -74,6 +74,20 @@ pub trait RemoveUserPlatformsFromChannel {
 }
 
 #[async_trait]
+pub trait ChannelUpdateForBancho {
+    async fn channel_update_for_bancho(&self, channel: &Arc<Channel>);
+}
+
+#[async_trait]
+pub trait ChannelHandleForBanchoUser {
+    async fn channel_handle_for_bancho_user(
+        &self,
+        channel: &Arc<Channel>,
+        user_id: i32,
+    );
+}
+
+#[async_trait]
 pub trait RemoveUserFromChannel {
     async fn remove_user_from_channel(
         &self,
@@ -100,6 +114,7 @@ pub trait PullChatPackets {
 #[async_trait]
 pub trait ChannelService:
     ChannelStore
+    + UserChannelIndex
     + InitializePublicChannels
     + AddChannel
     + AddUser
@@ -115,6 +130,10 @@ pub trait ChannelService:
 
 pub trait ChannelStore {
     fn channels(&self) -> &Arc<Channels>;
+}
+
+pub trait UserChannelIndex {
+    fn user_channels(&self) -> &Arc<UserChannels>;
 }
 
 #[async_trait]
