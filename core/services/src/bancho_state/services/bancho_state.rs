@@ -2,11 +2,11 @@ use super::traits::*;
 use crate::{
     bancho_state::{
         BanchoExtend, BanchoSession, BanchoStateError, CreateSessionError,
-        GameMode, Mods, Packet, PresenceFilter, SessionFilter,
-        UserOnlineStatus, UserSessions,
+        GameMode, Mods, Packet, PresenceFilter, UserOnlineStatus, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
     signature::DynSignatureService,
+    users::SessionFilter,
     IntoService,
 };
 use async_trait::async_trait;

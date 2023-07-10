@@ -1,10 +1,10 @@
 use super::BanchoStateBackgroundServiceConfigs;
 use crate::{
     bancho_state::{
-        BanchoExtend, BanchoSession, BanchoStateError, Packet, Session,
-        UserSessions,
+        BanchoExtend, BanchoSession, BanchoStateError, Packet, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
+    users::Session,
 };
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
