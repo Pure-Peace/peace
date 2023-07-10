@@ -1,5 +1,8 @@
 use crate::GetUserError;
-use peace_db::{peace::entity::users, *};
+use peace_db::{
+    peace::{entity::users, Peace},
+    *,
+};
 use peace_domain::users::{
     CreateUser, UsernameAscii, UsernameSafe, UsernameUnicode,
 };
@@ -37,11 +40,11 @@ pub trait UsersRepository {
 
 #[derive(Debug, Default, Clone)]
 pub struct UsersRepositoryImpl {
-    conn: DatabaseConnection,
+    pub conn: DbConnection<Peace>,
 }
 
 impl UsersRepositoryImpl {
-    pub fn new(conn: DatabaseConnection) -> UsersRepositoryImpl {
+    pub fn new(conn: DbConnection<Peace>) -> UsersRepositoryImpl {
         Self { conn }
     }
 
@@ -85,7 +88,7 @@ impl UsersRepository for UsersRepositoryImpl {
                         users::Column::NameUnicodeSafe.eq(name_unicode.as_ref())
                     })),
             )
-            .one(&self.conn)
+            .one(self.conn.as_ref())
             .await
     }
 
@@ -108,7 +111,7 @@ impl UsersRepository for UsersRepositoryImpl {
             country: Set(creat_user.country),
             ..Default::default()
         })
-        .exec(&self.conn)
+        .exec(self.conn.as_ref())
         .await
     }
 
@@ -132,7 +135,7 @@ impl UsersRepository for UsersRepositoryImpl {
                         users::Column::NameUnicodeSafe.eq(name_unicode.as_ref())
                     })),
             )
-            .one(&self.conn)
+            .one(self.conn.as_ref())
             .await?
             .ok_or(DbErr::Custom("user not found".into()))?;
 
@@ -140,7 +143,7 @@ impl UsersRepository for UsersRepositoryImpl {
 
         model.password = ActiveValue::Set(password);
 
-        model.update(&self.conn).await?;
+        model.update(self.conn.as_ref()).await?;
 
         todo!()
     }
@@ -172,7 +175,7 @@ mod test {
     async fn test1(db: &DatabaseConnection) {
         println!(
             "{:?}",
-            UsersRepositoryImpl::new(db.clone())
+            UsersRepositoryImpl::new(DbConnection::from(db.clone()))
                 .find_user_by_username(
                     Some(UsernameAscii::new("test").unwrap().safe_name()),
                     None

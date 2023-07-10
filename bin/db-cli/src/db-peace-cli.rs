@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use clap4 as clap;
 use dotenvy::dotenv;
-use peace_db::Database;
+use peace_db::{Database, DbConnection};
 use peace_domain::users::{
     CreateUser, Email, Password, UsernameAscii, UsernameUnicode,
 };
@@ -73,11 +73,13 @@ async fn main() {
                 panic!("raw-password or md5-password is required.");
             }
 
-            let db = Database::connect(
-                cli.database_url.expect("database-url is required."),
-            )
-            .await
-            .unwrap();
+            let db = DbConnection::from(
+                Database::connect(
+                    cli.database_url.expect("database-url is required."),
+                )
+                .await
+                .unwrap(),
+            );
 
             let repo = UsersRepositoryImpl::new(db);
 
@@ -116,11 +118,13 @@ async fn main() {
                 panic!("raw-password or md5-password is required.");
             }
 
-            let db = Database::connect(
-                cli.database_url.expect("database-url is required."),
-            )
-            .await
-            .unwrap();
+            let db = DbConnection::from(
+                Database::connect(
+                    cli.database_url.expect("database-url is required."),
+                )
+                .await
+                .unwrap(),
+            );
 
             let repo = UsersRepositoryImpl::new(db);
 

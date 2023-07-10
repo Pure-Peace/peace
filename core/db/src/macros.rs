@@ -4,7 +4,7 @@ pub mod ____private {
     pub use clap_serde_derive::ClapSerde;
     pub use paste;
     pub use peace_logs::{self, log::LevelFilter, LogLevel};
-    pub use sea_orm::ConnectOptions;
+    pub use sea_orm::{ConnectOptions, DatabaseConnection};
     pub use serde::{Deserialize, Serialize};
 }
 
@@ -12,10 +12,8 @@ pub mod ____private {
 macro_rules! define_db {
     (db_name: $db_name: ident) => {
         paste::paste! {
-            #[derive(Debug, Clone)]
-            pub struct [<$db_name:camel Database>];
             $crate::define_db_config!(
-                config_name: [<$db_name:camel DbConfig>],
+                db_name: [<$db_name:camel>],
                 command_prefix: [<$db_name:snake>
             ]);
         }
@@ -34,22 +32,22 @@ macro_rules! define_db {
 /// ```rust
 /// use peace_cfg::define_db_config;
 ///
-/// define_db_config!(config_name: BanchoDbConfig, command_prefix: bancho);
-/// define_db_config!(config_name: LazerDbConfig, command_prefix: lazer);
+/// define_db_config!(db_name: Bancho, command_prefix: bancho);
+/// define_db_config!(db_name: Lazer, command_prefix: lazer);
 /// ```
 #[macro_export]
 macro_rules! define_db_config {
-        (config_name: $struct_name: ident, command_prefix: $prefix: ident) => {
+        (db_name: $db_name: ident, command_prefix: $prefix: ident) => {
             $crate::macros::____private::paste::paste! {
                 #[allow(non_snake_case)]
-                mod [<__def_ $struct_name _mod__>] {
+                mod [<__def_ $db_name DbConfig _mod__>] {
                     use $crate::macros::____private::{clap, ClapSerde, Deserialize, Serialize};
 
                     /// Database configurations
                     #[derive(
                         clap::Parser, clap_serde_derive::ClapSerde, Debug, Clone, Serialize, Deserialize,
                     )]
-                    pub struct $struct_name {
+                    pub struct [<$db_name DbConfig>] {
                         /// Database connection URL.
                         #[default("protocol://username:password@host/database".to_string())]
                         #[arg(
@@ -97,19 +95,22 @@ macro_rules! define_db_config {
                         pub [<$prefix _db_set_schema_search_path>]: Option<String>,
                     }
 
-                    $crate::impl_db_config!($struct_name, $prefix);
+                    #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
+                    pub struct [<$db_name:camel>];
+
+                    $crate::impl_db_config!($db_name, $prefix);
                 }
 
-                pub use [<__def_ $struct_name _mod__>]::$struct_name;
+                pub use [<__def_ $db_name DbConfig _mod__>]::{[<$db_name DbConfig>], [<$db_name:camel>]};
             }
         };
     }
 
 #[macro_export]
 macro_rules! impl_db_config {
-        ($struct_name: ident, $prefix: ident) => {
+        ($db_name: ident, $prefix: ident) => {
             $crate::macros::____private::paste::paste! {
-                impl $crate::DbConfig for $struct_name {
+                impl $crate::DbConfig<[<$db_name>]> for [<$db_name DbConfig>] {
                     fn configured_opt(&self) -> $crate::macros::____private::ConnectOptions {
                         let mut opt = $crate::macros::____private::ConnectOptions::new(self.[<$prefix _db_url>].clone());
 
