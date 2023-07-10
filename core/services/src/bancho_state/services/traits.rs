@@ -20,7 +20,7 @@ use tools::{
     Ulid,
 };
 
-pub type MessageQueue = RawMessageQueue<Packet, i32, Ulid>;
+pub type BanchoMessageQueue = RawMessageQueue<Packet, i32, Ulid>;
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
 
@@ -64,7 +64,7 @@ pub trait UserSessionsStore {
 }
 
 pub trait NotifyMessagesQueue {
-    fn notify_queue(&self) -> &Arc<Mutex<MessageQueue>>;
+    fn notify_queue(&self) -> &Arc<Mutex<BanchoMessageQueue>>;
 }
 
 #[async_trait]
@@ -180,7 +180,7 @@ pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
             ))
         }
 
-        session.enqueue_packets(pending_packets).await;
+        session.extends.packets_queue.enqueue_packets(pending_packets).await;
 
         info!(
             target: LOG_TARGET,

@@ -78,7 +78,7 @@ impl UpdateUserBanchoStatus for BanchoStateServiceImpl {
         let mods = Mods::from(mods);
         let mode = GameMode::from_i32(mode).unwrap_or_default();
 
-        session.extend.bancho_status.update_all(
+        session.extends.bancho_status.update_all(
             online_status,
             description,
             beatmap_id as u32,
@@ -118,7 +118,7 @@ impl UpdatePresenceFilter for BanchoStateServiceImpl {
             .await
             .ok_or(BanchoStateError::SessionNotExists)?;
 
-        session.extend.presence_filter.set(presence_filter.into());
+        session.extends.presence_filter.set(presence_filter.into());
 
         Ok(ExecSuccess::default())
     }
@@ -508,12 +508,12 @@ impl CreateUserSession for BanchoStateServiceImpl {
                 username,
                 username_unicode,
                 privileges,
-                initial_packets: None,
-                extend: BanchoExtend::new(
+                extends: BanchoExtend::new(
                     client_version,
                     utc_offset as u8,
                     display_city,
                     only_friend_pm_allowed,
+                    None,
                     connection_info
                         .ok_or(CreateSessionError::InvalidConnectionInfo)?
                         .into(),
@@ -553,7 +553,9 @@ impl DequeueBanchoPackets for BanchoStateServiceImpl {
             .await
             .ok_or(BanchoStateError::SessionNotExists)?;
 
-        data.extend(session.dequeue_all_packets(None).await);
+        data.extend(
+            session.extends.packets_queue.dequeue_all_packets(None).await,
+        );
 
         if let Some(ReceivedMessages { messages, last_msg_id }) = self
             .user_sessions_service
@@ -562,7 +564,7 @@ impl DequeueBanchoPackets for BanchoStateServiceImpl {
             .await
             .receive_messages(
                 &session.user_id,
-                &session.extend.notify_index.load(),
+                &session.extends.notify_index.load(),
                 None,
             )
         {
@@ -570,7 +572,7 @@ impl DequeueBanchoPackets for BanchoStateServiceImpl {
                 data.extend(packet);
             }
 
-            session.extend.notify_index.set(last_msg_id.into());
+            session.extends.notify_index.set(last_msg_id.into());
         }
 
         Ok(BanchoPackets { data })
@@ -595,7 +597,11 @@ impl BatchEnqueueBanchoPackets for BanchoStateServiceImpl {
                 &user_sessions,
                 &user_query.into_user_query()?,
             ) {
-                session.push_packet(packets.clone()).await;
+                session
+                    .extends
+                    .packets_queue
+                    .push_packet(packets.clone())
+                    .await;
             }
         }
 
@@ -619,6 +625,8 @@ impl EnqueueBanchoPackets for BanchoStateServiceImpl {
             .get(&user_query)
             .await
             .ok_or(BanchoStateError::SessionNotExists)?
+            .extends
+            .packets_queue
             .push_packet(packets.into())
             .await;
 

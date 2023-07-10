@@ -268,6 +268,82 @@ pub struct UserModeStatSets {
     pub standard_score_v2: Option<ModeStats>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct BanchoPacketsQueue {
+    pub queue: Arc<Mutex<VecDeque<Packet>>>,
+}
+
+impl From<Vec<u8>> for BanchoPacketsQueue {
+    fn from(packets: Vec<u8>) -> Self {
+        Self::new(VecDeque::from([packets.into()]))
+    }
+}
+
+impl BanchoPacketsQueue {
+    #[inline]
+    pub fn new(packets: VecDeque<Packet>) -> Self {
+        Self { queue: Arc::new(Mutex::new(packets.into())) }
+    }
+
+    #[inline]
+    pub async fn queued_packets(&self) -> usize {
+        self.queue.lock().await.len()
+    }
+
+    #[inline]
+    pub async fn push_packet(&self, packet: Packet) -> usize {
+        let mut queue = self.queue.lock().await;
+        queue.push_back(packet);
+        queue.len()
+    }
+
+    #[inline]
+    pub async fn enqueue_packets<I>(&self, packets: I) -> usize
+    where
+        I: IntoIterator<Item = Packet>,
+    {
+        let mut queue = self.queue.lock().await;
+        queue.extend(packets);
+        queue.len()
+    }
+
+    #[inline]
+    pub async fn dequeue_packet(
+        &self,
+        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
+    ) -> Option<Packet> {
+        match queue_lock {
+            Some(queue) => queue.pop_front(),
+            None => self.queue.lock().await.pop_front(),
+        }
+    }
+
+    #[inline]
+    pub async fn dequeue_all_packets(
+        &self,
+        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
+    ) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        #[inline]
+        fn dequeue(
+            buf: &mut Vec<u8>,
+            queue_lock: &mut MutexGuard<'_, VecDeque<Packet>>,
+        ) {
+            while let Some(packet) = queue_lock.pop_front() {
+                buf.extend(packet);
+            }
+        }
+
+        match queue_lock {
+            Some(queue_lock) => dequeue(&mut buf, queue_lock),
+            None => dequeue(&mut buf, &mut self.queue.lock().await),
+        };
+
+        buf
+    }
+}
+
 #[derive(Debug, Default, Serialize)]
 pub struct BanchoExtend {
     pub client_version: String,
@@ -277,6 +353,8 @@ pub struct BanchoExtend {
     pub only_friend_pm_allowed: Bool,
     pub bancho_status: BanchoStatus,
     pub mode_stat_sets: UserModeStatSets,
+    #[serde(skip_serializing)]
+    pub packets_queue: BanchoPacketsQueue,
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
     pub notify_index: Atomic<Ulid>,
@@ -289,6 +367,7 @@ impl BanchoExtend {
         utc_offset: u8,
         display_city: bool,
         only_friend_pm_allowed: impl Into<Bool>,
+        initial_packets: Option<Vec<u8>>,
         connection_info: ConnectionInfo,
     ) -> Self {
         Self {
@@ -296,6 +375,9 @@ impl BanchoExtend {
             utc_offset,
             display_city,
             only_friend_pm_allowed: only_friend_pm_allowed.into(),
+            packets_queue: initial_packets
+                .map(BanchoPacketsQueue::from)
+                .unwrap_or_default(),
             connection_info,
             ..Default::default()
         }
@@ -314,12 +396,10 @@ pub struct Session<T> {
     pub username_unicode: AtomicOption<String>,
     /// User's privileges level.
     pub privileges: I32,
-    #[serde(skip_serializing)]
-    pub packets_queue: Mutex<VecDeque<Packet>>,
     /// The timestamp of when the session was created.
     pub created_at: DateTime<Utc>,
     pub last_active: U64,
-    pub extend: T,
+    pub extends: T,
 }
 
 impl<T> UserKey for Session<T> {
@@ -352,8 +432,7 @@ impl<T> Session<T> {
             username,
             username_unicode,
             privileges,
-            initial_packets,
-            extend,
+            extends,
         } = create_session;
 
         Self {
@@ -362,12 +441,9 @@ impl<T> Session<T> {
             username: username.into(),
             username_unicode: username_unicode.into(),
             privileges: privileges.into(),
-            packets_queue: initial_packets
-                .map(|init| VecDeque::from([init.into()]).into())
-                .unwrap_or_default(),
             created_at: Utc::now(),
             last_active: Timestamp::now().into(),
-            extend,
+            extends,
         }
     }
 
@@ -390,71 +466,13 @@ impl<T> Session<T> {
     pub fn update_active(&self) {
         self.last_active.set(Timestamp::now());
     }
-
-    #[inline]
-    pub async fn queued_packets(&self) -> usize {
-        self.packets_queue.lock().await.len()
-    }
-
-    #[inline]
-    pub async fn push_packet(&self, packet: Packet) -> usize {
-        let mut queue = self.packets_queue.lock().await;
-        queue.push_back(packet);
-        queue.len()
-    }
-
-    #[inline]
-    pub async fn enqueue_packets<I>(&self, packets: I) -> usize
-    where
-        I: IntoIterator<Item = Packet>,
-    {
-        let mut queue = self.packets_queue.lock().await;
-        queue.extend(packets);
-        queue.len()
-    }
-
-    #[inline]
-    pub async fn dequeue_packet(
-        &self,
-        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
-    ) -> Option<Packet> {
-        match queue_lock {
-            Some(queue) => queue.pop_front(),
-            None => self.packets_queue.lock().await.pop_front(),
-        }
-    }
-
-    #[inline]
-    pub async fn dequeue_all_packets(
-        &self,
-        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
-    ) -> Vec<u8> {
-        let mut buf = Vec::new();
-
-        #[inline]
-        fn dequeue(
-            buf: &mut Vec<u8>,
-            queue_lock: &mut MutexGuard<'_, VecDeque<Packet>>,
-        ) {
-            while let Some(packet) = queue_lock.pop_front() {
-                buf.extend(packet);
-            }
-        }
-
-        match queue_lock {
-            Some(queue_lock) => dequeue(&mut buf, queue_lock),
-            None => dequeue(&mut buf, &mut self.packets_queue.lock().await),
-        };
-
-        buf
-    }
 }
 
 impl Session<BanchoExtend> {
     #[inline]
     pub fn mode_stats(&self) -> Option<&ModeStats> {
-        let stats = &self.extend.mode_stat_sets;
-        match &self.extend.bancho_status.mode.load().as_ref() {
+        let stats = &self.extends.mode_stat_sets;
+        match &self.extends.bancho_status.mode.load().as_ref() {
             GameMode::Standard => stats.standard.as_ref(),
             GameMode::Taiko => stats.taiko.as_ref(),
             GameMode::Fruits => stats.fruits.as_ref(),
@@ -476,7 +494,7 @@ impl Session<BanchoExtend> {
 
     #[inline]
     pub fn user_stats_packet(&self) -> Vec<u8> {
-        let status = &self.extend.bancho_status;
+        let status = &self.extends.bancho_status;
         let stats = self.mode_stats();
 
         UserStats::pack(
@@ -501,11 +519,11 @@ impl Session<BanchoExtend> {
         UserPresence::pack(
             self.user_id,
             self.username.to_string().into(),
-            self.extend.utc_offset,
+            self.extends.utc_offset,
             0, // todo
             1, // todo
-            self.extend.connection_info.location.longitude as f32,
-            self.extend.connection_info.location.latitude as f32,
+            self.extends.connection_info.location.longitude as f32,
+            self.extends.connection_info.location.latitude as f32,
             self.mode_stats().map(|s| s.rank.val()).unwrap_or_default() as i32,
         )
     }

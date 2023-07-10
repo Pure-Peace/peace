@@ -82,11 +82,11 @@ impl BanchoStateBackgroundServiceImpl {
 
                             // update min notify msg id
                             lazy_init!(min_notify_msg_id_in_all_users, Some(val) => {
-                                let notify_index = *session.extend.notify_index.val();
+                                let notify_index = *session.extends.notify_index.val();
                                 if val > notify_index {
                                     min_notify_msg_id_in_all_users = Some(notify_index);
                                 }
-                            }, *session.extend.notify_index.load().as_ref())
+                            }, *session.extends.notify_index.load().as_ref())
                         }
                     }
 

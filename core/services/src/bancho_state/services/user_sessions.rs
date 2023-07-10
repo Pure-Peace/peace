@@ -4,10 +4,10 @@ use async_trait::async_trait;
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UserSessionsServiceImpl {
     pub user_sessions: Arc<UserSessions>,
-    pub notify_queue: Arc<Mutex<MessageQueue>>,
+    pub notify_queue: Arc<Mutex<BanchoMessageQueue>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -21,7 +21,7 @@ impl Default for UserSessionsServiceImpl {
     fn default() -> Self {
         Self {
             user_sessions: Arc::new(UserSessions::new()),
-            notify_queue: Arc::new(Mutex::new(MessageQueue {
+            notify_queue: Arc::new(Mutex::new(BanchoMessageQueue {
                 messages: BTreeMap::new(),
             })),
         }
@@ -44,7 +44,7 @@ impl UserSessionsStore for UserSessionsServiceImpl {
 
 impl NotifyMessagesQueue for UserSessionsServiceImpl {
     #[inline]
-    fn notify_queue(&self) -> &Arc<Mutex<MessageQueue>> {
+    fn notify_queue(&self) -> &Arc<Mutex<BanchoMessageQueue>> {
         &self.notify_queue
     }
 }

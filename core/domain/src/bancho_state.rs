@@ -11,8 +11,7 @@ pub struct CreateSessionDto<T> {
     pub username: String,
     pub username_unicode: Option<String>,
     pub privileges: i32,
-    pub initial_packets: Option<Vec<u8>>,
-    pub extend: T,
+    pub extends: T,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
