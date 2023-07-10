@@ -3,7 +3,7 @@ use peace_pb::{
     base::ExecSuccess,
     chat::*,
 };
-use peace_services::chat::DynChatService;
+use peace_services::chat::{ChatServiceError, DynChatService};
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
@@ -19,23 +19,28 @@ impl ChatRpcImpl {
 
 #[tonic::async_trait]
 impl chat_rpc_server::ChatRpc for ChatRpcImpl {
-    async fn create_queue(
+    async fn login(
         &self,
-        request: Request<CreateQueueRequest>,
+        request: Request<LoginRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         self.chat_service
-            .create_queue(request.into_inner())
+            .login(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
     }
 
-    async fn remove_queue(
+    async fn logout(
         &self,
-        request: Request<RawUserQuery>,
+        request: Request<LogoutRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
+        let LogoutRequest { user_query, platforms } = request.into_inner();
+        let user_query = user_query
+            .ok_or(ChatServiceError::InvalidArgument)?
+            .into_user_query()?;
+
         self.chat_service
-            .remove_queue(request.into_inner().into_user_query()?)
+            .logout(user_query, platforms.into())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -52,34 +57,23 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
             .map(Response::new)
     }
 
-    async fn add_user_into_channel(
+    async fn join_channel(
         &self,
-        request: Request<AddUserIntoChannelRequest>,
+        request: Request<JoinChannelRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         self.chat_service
-            .add_user_into_channel(request.into_inner())
+            .join_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
     }
 
-    async fn remove_user_platforms_from_channel(
+    async fn leave_channel(
         &self,
-        request: Request<RemoveUserPlatformsFromChannelRequest>,
+        request: Request<LeaveChannelRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         self.chat_service
-            .remove_user_platforms_from_channel(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
-    }
-
-    async fn remove_user_from_channel(
-        &self,
-        request: Request<RemoveUserFromChannelRequest>,
-    ) -> Result<Response<ExecSuccess>, Status> {
-        self.chat_service
-            .remove_user_from_channel(request.into_inner())
+            .leave_channel(request.into_inner())
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -101,7 +95,7 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
         request: Request<RawUserQuery>,
     ) -> Result<Response<BanchoPackets>, Status> {
         self.chat_service
-            .pull_chat_packets(request.into_inner().into_user_query()?)
+            .dequeue_chat_packets(request.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)

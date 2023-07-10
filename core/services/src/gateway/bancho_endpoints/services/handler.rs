@@ -103,7 +103,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
     #[inline]
     async fn pull_chat_packets(&self, query: UserQuery) -> Option<Vec<u8>> {
         self.chat_service
-            .pull_chat_packets(query)
+            .dequeue_chat_packets(query)
             .await
             .map(|resp| resp.data)
             .ok()

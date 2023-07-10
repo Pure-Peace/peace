@@ -6,14 +6,13 @@ import "peace/services/bancho_state.proto";
 package peace.services.chat;
 
 service ChatRPC {
-  rpc CreateQueue(CreateQueueRequest) returns (peace.base.ExecSuccess);
-  rpc RemoveQueue(peace.services.bancho_state.RawUserQuery) returns (peace.base.ExecSuccess);
+  rpc Login(LoginRequest) returns (peace.base.ExecSuccess);
+  rpc Logout(LogoutRequest) returns (peace.base.ExecSuccess);
 
-  rpc GetPublicChannels(GetPublicChannelsRequest)
-      returns (GetPublicChannelsResponse);
-  rpc AddUserIntoChannel(AddUserIntoChannelRequest) returns (peace.base.ExecSuccess);
-  rpc RemoveUserPlatformsFromChannel(RemoveUserPlatformsFromChannelRequest) returns (peace.base.ExecSuccess);
-  rpc RemoveUserFromChannel(RemoveUserFromChannelRequest) returns (peace.base.ExecSuccess);
+  rpc JoinChannel(JoinChannelRequest) returns (peace.base.ExecSuccess);
+  rpc LeaveChannel(LeaveChannelRequest) returns (peace.base.ExecSuccess);
+
+  rpc GetPublicChannels(GetPublicChannelsRequest) returns (GetPublicChannelsResponse);
 
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc PullChatPackets(peace.services.bancho_state.RawUserQuery) returns (peace.services.bancho_state.BanchoPackets);
@@ -47,11 +46,17 @@ message RawChannelQuery {
   optional string string_val = 3;
 }
 
-message CreateQueueRequest {
+message LoginRequest {
   int32 user_id = 1;
   string username = 2;
   optional string username_unicode = 3;
   int32 privileges = 4;
+  int32 platforms = 5;
+}
+
+message LogoutRequest {
+  peace.services.bancho_state.RawUserQuery user_query = 1;
+  int32 platforms = 2;
 }
 
 message GetPublicChannelsRequest {}
@@ -68,40 +73,25 @@ enum ChannelType {
 
 message Users { repeated int32 users = 1; }
 
-message ChannelSessionsCounter {
-  uint64 unspecified = 1;
-  uint64 bancho = 2;
-  uint64 lazer = 3;
-  uint64 web = 4;
-}
 
 message ChannelInfo {
   uint64 id = 1;
   string name = 2;
   ChannelType channel_type = 3;
   optional string description = 4;
-  ChannelSessionsCounter counter = 5;
+  uint32 online_users = 5;
   optional Users users = 6;
 }
 
-message AddUserIntoChannelRequest {
-  RawChannelQuery channel_query = 1;
-  int32 user_id = 2;
-  int32 platforms = 3;
-}
-
-message RemoveUserPlatformsFromChannelRequest {
-  RawChannelQuery channel_query = 1;
-  int32 user_id = 2;
-  int32 platforms = 3;
-}
-
-message RemoveUserFromChannelRequest {
+message JoinChannelRequest {
   RawChannelQuery channel_query = 1;
   int32 user_id = 2;
 }
 
-message ChannelSessionCount { uint32 session_count = 1; }
+message LeaveChannelRequest {
+  RawChannelQuery channel_query = 1;
+  int32 user_id = 2;
+}
 
 message SendMessageRequest {
   int32 sender_id = 1;

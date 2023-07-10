@@ -12,8 +12,8 @@ use peace_pb::{
     bancho::*,
     bancho_state::UserQuery,
     chat::{
-        AddUserIntoChannelRequest, ChannelQuery, ChatMessageTarget,
-        RemoveUserPlatformsFromChannelRequest, SendMessageRequest,
+        ChannelQuery, ChatMessageTarget, JoinChannelRequest,
+        LeaveChannelRequest, SendMessageRequest,
     },
 };
 use std::{error::Error, fmt::Debug};
@@ -143,12 +143,11 @@ impl<'a> ProcessUserChannelJoin for PacketProcessor<'a> {
         let channel_name = read_channel_name(self.packet.payload)?;
 
         self.chat_service
-            .add_user_into_channel(AddUserIntoChannelRequest {
+            .join_channel(JoinChannelRequest {
                 channel_query: Some(
                     ChannelQuery::ChannelName(channel_name).into(),
                 ),
                 user_id: self.user_id,
-                platforms: Platform::Bancho.into(),
             })
             .await
             .map_err(handing_err)?;
@@ -166,15 +165,12 @@ impl<'a> ProcessUserChannelPart for PacketProcessor<'a> {
         let channel_name = read_channel_name(self.packet.payload)?;
 
         self.chat_service
-            .remove_user_platforms_from_channel(
-                RemoveUserPlatformsFromChannelRequest {
-                    channel_query: Some(
-                        ChannelQuery::ChannelName(channel_name).into(),
-                    ),
-                    user_id: self.user_id,
-                    platforms: Platform::Bancho.into(),
-                },
-            )
+            .leave_channel(LeaveChannelRequest {
+                channel_query: Some(
+                    ChannelQuery::ChannelName(channel_name).into(),
+                ),
+                user_id: self.user_id,
+            })
             .await
             .map_err(handing_err)?;
 

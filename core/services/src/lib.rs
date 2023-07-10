@@ -231,7 +231,7 @@ pub mod users {
         }
 
         #[inline]
-        pub async fn create(&self, item: T, repleace: bool) -> Arc<T> {
+        pub async fn create(&self, item: T) -> Arc<T> {
             let item = Arc::new(item);
 
             {
@@ -241,10 +241,6 @@ pub mod users {
                     &indexes,
                     &UserQuery::UserId(item.user_id()),
                 ) {
-                    if !repleace {
-                        return prev;
-                    }
-
                     self.delete_inner(
                         &mut indexes,
                         &prev.user_id(),

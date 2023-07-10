@@ -4,9 +4,7 @@ use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::chat::{
-    ChannelServiceImpl, ChatServiceImpl, QueueServiceImpl,
-};
+use peace_services::chat::ChatServiceImpl;
 use std::sync::Arc;
 use tonic::{
     async_trait,
@@ -56,15 +54,9 @@ impl RpcApplication for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let queue_service = QueueServiceImpl::new().into_service();
+        let chat_service = ChatServiceImpl::new(peace_db_conn).into_service();
 
-        let channel_service =
-            ChannelServiceImpl::new(peace_db_conn).into_service();
-
-        channel_service.initialize_public_channels().await;
-
-        let chat_service =
-            ChatServiceImpl::new(channel_service, queue_service).into_service();
+        chat_service.load_public_channels().await.expect("debugging");
 
         let chat_rpc = ChatRpcImpl::new(chat_service);
 

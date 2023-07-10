@@ -31,7 +31,10 @@ pub trait AtomicValue: Sized {
 pub type Atomic<T> = AtomicAny<Arc<T>>;
 pub type AtomicOption<T> = AtomicAny<Option<Arc<T>>>;
 
-impl Display for Atomic<String> {
+impl<T> Display for Atomic<T>
+where
+    T: Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.val())
     }
@@ -104,16 +107,16 @@ where
     }
 }
 
-impl From<String> for Atomic<String> {
+impl<T> From<T> for Atomic<T> {
     #[inline]
-    fn from(val: String) -> Self {
+    fn from(val: T) -> Self {
         Atomic::new(val)
     }
 }
 
-impl From<Option<String>> for AtomicOption<String> {
+impl<T> From<Option<T>> for AtomicOption<T> {
     #[inline]
-    fn from(val: Option<String>) -> Self {
+    fn from(val: Option<T>) -> Self {
         AtomicOption::from_option(val)
     }
 }

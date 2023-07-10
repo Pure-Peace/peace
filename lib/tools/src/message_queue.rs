@@ -1,6 +1,7 @@
 use crate::lazy_init;
 use std::{
     collections::{BTreeMap, HashSet},
+    fmt::Debug,
     hash::Hash,
     ops::RangeBounds,
     sync::Arc,
@@ -18,6 +19,20 @@ pub struct Message<T, K> {
     pub content: T,
     pub has_read: HashSet<K>,
     pub validator: Option<MessageValidator<T, K>>,
+}
+
+impl<T, K> Debug for Message<T, K>
+where
+    T: Debug,
+    K: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Message")
+            .field("content", &self.content)
+            .field("has_read", &self.has_read)
+            .field("validator", &self.validator.is_some())
+            .finish()
+    }
 }
 
 impl<T, K> Message<T, K> {
@@ -50,6 +65,19 @@ pub struct ReceivedMessages<T, I> {
 #[derive(Clone, Default)]
 pub struct MessageQueue<T, K, I> {
     pub messages: BTreeMap<I, Message<T, K>>,
+}
+
+impl<T, K, I> Debug for MessageQueue<T, K, I>
+where
+    T: Debug,
+    K: Debug,
+    I: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MessageQueue")
+            .field("messages", &self.messages)
+            .finish()
+    }
 }
 
 impl<T, K, I> MessageQueue<T, K, I>

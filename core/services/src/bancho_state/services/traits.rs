@@ -136,10 +136,8 @@ pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
         const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
         const PRESENCE_SHARD_SIZE: usize = 512;
 
-        let session = self
-            .user_sessions()
-            .create(Session::new(create_session), true)
-            .await;
+        let session =
+            self.user_sessions().create(Session::new(create_session)).await;
 
         let weak = Arc::downgrade(&session);
 

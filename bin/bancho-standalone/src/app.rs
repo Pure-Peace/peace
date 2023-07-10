@@ -114,8 +114,6 @@ impl WebApplication for App {
         )
         .into_service();
 
-        let queue_service = QueueServiceImpl::new().into_service();
-
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
@@ -129,13 +127,10 @@ impl WebApplication for App {
             )
             .await;
 
-        let channel_service =
-            ChannelServiceImpl::new(peace_db_conn).into_service();
-
-        channel_service.initialize_public_channels().await;
-
         let chat_service =
-            ChatServiceImpl::new(channel_service, queue_service).into_service();
+            ChatServiceImpl::new(peace_db_conn.clone()).into_service();
+
+        chat_service.load_public_channels().await.expect("debugging");
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_cache_store)

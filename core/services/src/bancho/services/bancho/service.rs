@@ -4,7 +4,7 @@ use crate::{
         traits::*, BanchoServiceError, LoginError, ProcessBanchoPacketError,
     },
     bancho_state::DynBanchoStateService,
-    chat::DynChatService,
+    chat::{DynChatService, Platform},
     gateway::bancho_endpoints::components::BanchoClientToken,
     geoip::DynGeoipService,
     FromRpcClient, IntoService, RpcClient,
@@ -13,8 +13,7 @@ use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
-    chat::{CreateQueueRequest, GetPublicChannelsResponse},
-    ConvertError,
+    chat, ConvertError,
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, str::FromStr, sync::Arc, time::Instant};
@@ -176,21 +175,22 @@ impl Login for BanchoServiceImpl {
 
         if let Err(err) = self
             .chat_service
-            .create_queue(CreateQueueRequest {
+            .login(chat::LoginRequest {
                 user_id: user.id,
                 username: user.name.to_owned(),
                 username_unicode: user.name_unicode,
                 privileges: 1,
+                platforms: Platform::Bancho.bits(),
             })
             .await
         {
             warn!(
-                "Failed to create chat packet queue for user {}({}): {}",
+                "Failed login into chat server user {}({}): {}",
                 user.id, user.name, err
             )
         }
 
-        let mut packet_builder = PacketBuilder::new()
+        let packet_builder = PacketBuilder::new()
             .add(server::ProtocolVersion::new(19))
             .add(server::LoginReply::new(bancho_packets::LoginResult::Success(
                 user.id,
@@ -199,37 +199,6 @@ impl Login for BanchoServiceImpl {
             .add(server::SilenceEnd::new(0)) // todo
             .add(server::FriendsList::new(&[])) // todo
             .add(server::Notification::new("welcome to peace!".into()));
-
-        let () = {
-            let _ = self
-                .chat_service
-                .get_public_channels()
-                .await
-                .map(|GetPublicChannelsResponse { channels }| {
-                    for channel in channels {
-                        packet_builder.extend(server::ChannelInfo::pack(
-                            channel.name.into(),
-                            channel
-                                .description
-                                .map(|s| s.into())
-                                .unwrap_or_default(),
-                            channel
-                                .counter
-                                .map(|c| c.bancho as i16)
-                                .unwrap_or_default(),
-                        ));
-                    }
-                })
-                .map_err(|err| {
-                    error!(
-                        target: LOG_TARGET,
-                        "Failed to fetch channel info, err: {:?}", err
-                    );
-                    err
-                });
-
-            packet_builder.extend(server::ChannelInfoEnd::new());
-        };
 
         info!(
             target: LOG_TARGET,
