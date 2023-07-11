@@ -234,7 +234,7 @@ impl ChatService for ChatServiceImpl {
             },
         }
 
-        todo!()
+        Ok(SendMessageResponse::default())
     }
 
     async fn join_channel(
