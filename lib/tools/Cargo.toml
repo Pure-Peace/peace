@@ -26,6 +26,7 @@ paste = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 rusty_ulid = { workspace = true }
 derive_deref = { workspace = true }
+parking_lot = { workspace = true }
 
 # async
 tokio = { workspace = true, optional = true }

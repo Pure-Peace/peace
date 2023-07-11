@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tools::{
     async_collections::{
         BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
@@ -64,7 +64,7 @@ pub trait UserSessionsStore {
 }
 
 pub trait NotifyMessagesQueue {
-    fn notify_queue(&self) -> &Arc<Mutex<BanchoMessageQueue>>;
+    fn notify_queue(&self) -> &Arc<RwLock<BanchoMessageQueue>>;
 }
 
 #[async_trait]
@@ -109,7 +109,7 @@ pub trait UserSessionsDelete: UserSessionsStore + NotifyMessagesQueue {
 
         let session = self.user_sessions().delete(query).await?;
 
-        self.notify_queue().lock().await.push_message(
+        self.notify_queue().write().await.push_message(
             bancho_packets::server::UserLogout::pack(session.user_id).into(),
             None,
         );
@@ -141,7 +141,7 @@ pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
 
         let weak = Arc::downgrade(&session);
 
-        self.notify_queue().lock().await.push_message_excludes(
+        self.notify_queue().write().await.push_message_excludes(
             bancho_packets::server::UserPresenceSingle::pack(session.user_id)
                 .into(),
             [session.user_id],

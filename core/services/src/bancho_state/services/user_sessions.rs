@@ -2,12 +2,12 @@ use super::traits::*;
 use crate::{bancho_state::UserSessions, IntoService};
 use async_trait::async_trait;
 use std::{collections::BTreeMap, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 #[derive(Debug, Clone)]
 pub struct UserSessionsServiceImpl {
     pub user_sessions: Arc<UserSessions>,
-    pub notify_queue: Arc<Mutex<BanchoMessageQueue>>,
+    pub notify_queue: Arc<RwLock<BanchoMessageQueue>>,
 }
 
 impl UserSessionsServiceImpl {
@@ -21,7 +21,7 @@ impl Default for UserSessionsServiceImpl {
     fn default() -> Self {
         Self {
             user_sessions: Arc::new(UserSessions::new()),
-            notify_queue: Arc::new(Mutex::new(BanchoMessageQueue {
+            notify_queue: Arc::new(RwLock::new(BanchoMessageQueue {
                 messages: BTreeMap::new(),
             })),
         }
@@ -44,7 +44,7 @@ impl UserSessionsStore for UserSessionsServiceImpl {
 
 impl NotifyMessagesQueue for UserSessionsServiceImpl {
     #[inline]
-    fn notify_queue(&self) -> &Arc<Mutex<BanchoMessageQueue>> {
+    fn notify_queue(&self) -> &Arc<RwLock<BanchoMessageQueue>> {
         &self.notify_queue
     }
 }

@@ -560,13 +560,14 @@ impl DequeueBanchoPackets for BanchoStateServiceImpl {
         if let Some(ReceivedMessages { messages, last_msg_id }) = self
             .user_sessions_service
             .notify_queue()
-            .lock()
+            .read()
             .await
             .receive_messages(
                 &session.user_id,
                 &session.extends.notify_index.load(),
                 None,
             )
+            .await
         {
             for packet in messages {
                 data.extend(packet);
@@ -644,7 +645,7 @@ impl BroadcastBanchoPackets for BanchoStateServiceImpl {
 
         self.user_sessions_service
             .notify_queue()
-            .lock()
+            .write()
             .await
             .push_message(packet, None);
 

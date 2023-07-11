@@ -10,7 +10,7 @@ use std::{
     ops::Deref,
     sync::{Arc, Weak},
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tools::{
     atomic::{Atomic, AtomicOperation, AtomicOption, AtomicValue, Usize, U32},
     Ulid,
@@ -129,7 +129,7 @@ pub struct Channel {
     pub users: Arc<RwLock<HashMap<i32, Option<Weak<ChatSession>>>>>,
     pub user_count: U32,
 
-    pub message_queue: Arc<Mutex<BanchoMessageQueue>>,
+    pub message_queue: Arc<RwLock<BanchoMessageQueue>>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -157,7 +157,7 @@ impl Channel {
             description: description.into(),
             users: Arc::new(users.into()),
             user_count: user_count.into(),
-            message_queue: Arc::new(Mutex::new(BanchoMessageQueue::default())),
+            message_queue: Arc::new(RwLock::new(BanchoMessageQueue::default())),
             created_at: Utc::now(),
         }
     }

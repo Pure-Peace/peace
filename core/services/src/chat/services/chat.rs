@@ -21,7 +21,7 @@ use peace_pb::{
     },
 };
 use std::{collections::VecDeque, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
 use tools::{
     atomic::{AtomicOperation, AtomicValue},
@@ -33,7 +33,7 @@ use tools::{
 pub struct ChatServiceImpl {
     pub conn: DbConnection<Peace>,
     pub user_sessions: Arc<UserSessions>,
-    pub notify_queue: Arc<Mutex<BanchoMessageQueue>>,
+    pub notify_queue: Arc<RwLock<BanchoMessageQueue>>,
     pub channels: Arc<Channels>,
 }
 
@@ -190,7 +190,7 @@ impl ChatService for ChatServiceImpl {
                     };
 
                 // push msg into channel packets queue
-                channel.message_queue.lock().await.push_message_excludes(
+                channel.message_queue.write().await.push_message_excludes(
                     Packet::Ptr(
                         server::SendMessage::pack(
                             sender.username.load().as_ref().into(),
@@ -303,7 +303,7 @@ impl ChatService for ChatServiceImpl {
         }
 
         // update channel info
-        self.notify_queue.lock().await.push_message(
+        self.notify_queue.write().await.push_message(
             Packet::Ptr(
                 server::ChannelInfo::pack(
                     channel.name.load().as_ref().into(),
@@ -382,7 +382,7 @@ impl ChatService for ChatServiceImpl {
         }
 
         // update channel info
-        self.notify_queue.lock().await.push_message(
+        self.notify_queue.write().await.push_message(
             Packet::Ptr(
                 server::ChannelInfo::pack(
                     channel.name.load().as_ref().into(),
@@ -422,12 +422,16 @@ impl ChatService for ChatServiceImpl {
         let mut data = Vec::new();
 
         // receive global notify from queue
-        if let Some(ReceivedMessages { messages, last_msg_id }) =
-            self.notify_queue.lock().await.receive_messages(
+        if let Some(ReceivedMessages { messages, last_msg_id }) = self
+            .notify_queue
+            .read()
+            .await
+            .receive_messages(
                 &session.user_id,
                 &bancho_ext.notify_index.load(),
                 None,
             )
+            .await
         {
             for packet in messages {
                 data.extend(packet);
@@ -453,11 +457,16 @@ impl ChatService for ChatServiceImpl {
             match joined_channel.ptr.upgrade() {
                 Some(channel) => {
                     if let Some(ReceivedMessages { messages, last_msg_id }) =
-                        channel.message_queue.lock().await.receive_messages(
-                            &session.user_id,
-                            &joined_channel.message_index.load(),
-                            None,
-                        )
+                        channel
+                            .message_queue
+                            .read()
+                            .await
+                            .receive_messages(
+                                &session.user_id,
+                                &joined_channel.message_index.load(),
+                                None,
+                            )
+                            .await
                     {
                         for packet in messages {
                             data.extend(packet);

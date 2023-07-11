@@ -120,7 +120,7 @@ impl BanchoStateBackgroundServiceImpl {
                         match min_notify_msg_id_in_all_users {
                             Some(min_msg_id) => user_sessions_service
                                 .notify_queue
-                                .lock()
+                                .write()
                                 .await
                                 .remove_messages_before_id(&min_msg_id),
                             None => 0,
@@ -178,19 +178,24 @@ impl BanchoStateBackgroundServiceImpl {
                     let mut invalid_messages = None::<Vec<Ulid>>;
 
                     let removed_notify_msg = {
-                        let mut notify_queue =
-                            user_sessions_service.notify_queue.lock().await;
-
-                        for (key, msg) in notify_queue.messages.iter() {
+                        for (key, msg) in user_sessions_service
+                            .notify_queue
+                            .read()
+                            .await
+                            .messages
+                            .iter()
+                        {
                             lazy_init!(invalid_messages => if !msg.is_valid() {
                                 invalid_messages.push(*key);
                             }, vec![*key]);
                         }
 
                         match invalid_messages {
-                            Some(invalid_messages) => {
-                                notify_queue.remove_messages(&invalid_messages)
-                            },
+                            Some(invalid_messages) => user_sessions_service
+                                .notify_queue
+                                .write()
+                                .await
+                                .remove_messages(&invalid_messages),
                             None => 0,
                         }
                     };

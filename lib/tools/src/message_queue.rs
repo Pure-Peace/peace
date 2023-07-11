@@ -6,6 +6,7 @@ use std::{
     ops::RangeBounds,
     sync::Arc,
 };
+use tokio::sync::RwLock;
 
 pub type MessageValidator<T, K> =
     Arc<dyn Fn(&Message<T, K>) -> bool + Sync + Send + 'static>;
@@ -17,7 +18,7 @@ pub trait MessageId: Clone + Eq + Ord {
 #[derive(Clone)]
 pub struct Message<T, K> {
     pub content: T,
-    pub has_read: HashSet<K>,
+    pub has_read: Arc<RwLock<HashSet<K>>>,
     pub validator: Option<MessageValidator<T, K>>,
 }
 
@@ -51,8 +52,13 @@ where
     K: Eq + Hash,
 {
     #[inline]
-    pub fn is_readed(&self, k: &K) -> bool {
-        self.has_read.contains(k)
+    pub async fn is_readed(&self, reader: &K) -> bool {
+        self.has_read.read().await.contains(&reader)
+    }
+
+    #[inline]
+    pub async fn mark_readed(&self, reader: K) -> bool {
+        self.has_read.write().await.insert(reader)
     }
 }
 
@@ -94,7 +100,7 @@ where
     ) {
         self.messages.insert(
             I::generate(),
-            Message { content, has_read: HashSet::default(), validator },
+            Message { content, has_read: Default::default(), validator },
         );
     }
 
@@ -109,7 +115,7 @@ where
             I::generate(),
             Message {
                 content,
-                has_read: HashSet::from_iter(excludes),
+                has_read: Arc::new(HashSet::from_iter(excludes).into()),
                 validator,
             },
         );
@@ -157,32 +163,34 @@ where
     }
 
     #[inline]
-    pub fn receive_messages(
-        &mut self,
+    pub async fn receive_messages(
+        &self,
         reader: &K,
         from_msg_id: &I,
         receive_count: Option<usize>,
     ) -> Option<ReceivedMessages<T, I>> {
-        let mut should_delete = None::<Vec<I>>;
         let mut messages = None::<Vec<T>>;
         let mut last_msg_id = None::<I>;
 
         let mut received_msg_count = 0;
 
-        for (msg_id, msg) in self.messages.range_mut(from_msg_id..) {
-            if msg.has_read.contains(reader) {
-                continue;
-            }
-
+        for (msg_id, msg) in self.messages.range(from_msg_id..) {
             if !msg.is_valid() {
-                lazy_init!(should_delete => should_delete.push(msg_id.clone()), vec![msg_id.clone()]);
                 continue;
             }
 
+            // check read state
+            if msg.is_readed(&reader).await {
+                continue;
+            }
+
+            msg.mark_readed(reader.clone()).await;
+
+            // init or push msg to list
             lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
-            msg.has_read.insert(reader.clone());
             last_msg_id = Some(msg_id.clone());
 
+            // check receive count
             if let Some(receive_count) = receive_count {
                 received_msg_count += 1;
 
@@ -191,10 +199,6 @@ where
                 }
             }
         }
-
-        should_delete.map(|list| {
-            list.into_iter().map(|msg_id| self.messages.remove(&msg_id))
-        });
 
         messages.map(|messages| ReceivedMessages {
             messages,
