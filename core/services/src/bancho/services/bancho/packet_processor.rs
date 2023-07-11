@@ -1,7 +1,7 @@
 use crate::{
     bancho::{traits::*, ProcessBanchoPacketError},
     bancho_state::{BanchoStateService, PresenceFilter},
-    chat::{ChatService, Platform},
+    chat::ChatService,
 };
 use async_trait::async_trait;
 use bancho_packets::{
@@ -91,7 +91,7 @@ impl<'a> ProcessSendPublicMessage for PacketProcessor<'a> {
         };
 
         let request = SendMessageRequest {
-            sender_id: self.user_id,
+            sender: Some(UserQuery::UserId(self.user_id).into()),
             message: chat_message.content,
             target: Some(
                 ChatMessageTarget::Channel(ChannelQuery::ChannelName(
@@ -99,7 +99,6 @@ impl<'a> ProcessSendPublicMessage for PacketProcessor<'a> {
                 ))
                 .into(),
             ),
-            platforms: Platform::all().into(),
         };
 
         self.chat_service.send_message(request).await.map_err(handing_err)?;
@@ -117,7 +116,7 @@ impl<'a> ProcessSendPrivateMessage for PacketProcessor<'a> {
         let chat_message = read_chat_message(self.packet.payload)?;
 
         let request = SendMessageRequest {
-            sender_id: self.user_id,
+            sender: Some(UserQuery::UserId(self.user_id).into()),
             message: chat_message.content,
             target: Some(
                 ChatMessageTarget::User(UserQuery::Username(
@@ -125,7 +124,6 @@ impl<'a> ProcessSendPrivateMessage for PacketProcessor<'a> {
                 ))
                 .into(),
             ),
-            platforms: Platform::all().into(),
         };
 
         self.chat_service.send_message(request).await.map_err(handing_err)?;
@@ -147,7 +145,7 @@ impl<'a> ProcessUserChannelJoin for PacketProcessor<'a> {
                 channel_query: Some(
                     ChannelQuery::ChannelName(channel_name).into(),
                 ),
-                user_id: self.user_id,
+                user_query: Some(UserQuery::UserId(self.user_id).into()),
             })
             .await
             .map_err(handing_err)?;
@@ -169,7 +167,7 @@ impl<'a> ProcessUserChannelPart for PacketProcessor<'a> {
                 channel_query: Some(
                     ChannelQuery::ChannelName(channel_name).into(),
                 ),
-                user_id: self.user_id,
+                user_query: Some(UserQuery::UserId(self.user_id).into()),
             })
             .await
             .map_err(handing_err)?;

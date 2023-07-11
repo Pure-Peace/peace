@@ -1,5 +1,5 @@
 use crate::{
-    bancho_state::{BanchoMessageQueue, BanchoPacketsQueue},
+    bancho_state::{BanchoMessageQueue, BanchoPacketsQueue, Packet},
     chat::*,
     users::Session,
     FromRpcClient, IntoService, RpcClient,
@@ -7,21 +7,27 @@ use crate::{
 use async_trait::async_trait;
 use bancho_packets::server;
 use chat::traits::{ChatService, DynChatService};
+use chrono::Utc;
 use peace_db::{peace::Peace, DbConnection};
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
     base::ExecSuccess,
     chat::{
-        chat_rpc_client::ChatRpcClient, ChannelInfo, GetPublicChannelsRequest,
-        GetPublicChannelsResponse, JoinChannelRequest, LeaveChannelRequest,
+        chat_rpc_client::ChatRpcClient, ChannelInfo, ChatMessageTarget,
+        GetPublicChannelsRequest, GetPublicChannelsResponse,
+        JoinChannelRequest, LeaveChannelRequest, LoadPublicChannelsRequest,
         LoginRequest, LogoutRequest, SendMessageRequest, SendMessageResponse,
     },
 };
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::Mutex;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
-use tools::atomic::AtomicValue;
+use tools::{
+    atomic::{AtomicOperation, AtomicValue},
+    message_queue::ReceivedMessages,
+    Ulid,
+};
 
 #[derive(Default, Clone)]
 pub struct ChatServiceImpl {
@@ -86,7 +92,7 @@ impl ChatService for ChatServiceImpl {
             None
         };
 
-        let extends = ChatExtend::new(platforms, bancho_chat_ext);
+        let extends = ChatSessionExtend::new(platforms, bancho_chat_ext, None);
 
         let session = Session::new(CreateSessionDto {
             user_id,
@@ -122,11 +128,25 @@ impl ChatService for ChatServiceImpl {
         if curr_platforms.contains(Platform::Bancho)
             && remove_platforms.contains(Platform::Bancho)
         {
-            todo!()
+            todo!("Logout from bancho")
         }
 
         // TODO: part from other platforms
+        if curr_platforms.contains(Platform::Lazer)
+            && remove_platforms.contains(Platform::Lazer)
+        {
+            todo!("Logout from Lazer")
+        }
+
+        if curr_platforms.contains(Platform::Web)
+            && remove_platforms.contains(Platform::Web)
+        {
+            todo!("Logout from Web")
+        }
+
+        // do remove platforms
         let platforms = curr_platforms.and(remove_platforms.not());
+
         if platforms.is_none() {
             self.user_sessions.delete(&query).await;
             return Ok(ExecSuccess::default());
@@ -141,6 +161,79 @@ impl ChatService for ChatServiceImpl {
         &self,
         request: SendMessageRequest,
     ) -> Result<SendMessageResponse, ChatServiceError> {
+        let SendMessageRequest { sender, message, target } = request;
+
+        let sender_query = sender
+            .ok_or(ChatServiceError::InvalidArgument)?
+            .into_user_query()?;
+
+        let sender = match self.user_sessions.get(&sender_query).await {
+            Some(sender) => sender,
+            None => {
+                todo!("sender not login")
+            },
+        };
+
+        let target = target
+            .ok_or(ChatServiceError::InvalidArgument)?
+            .into_message_target()?;
+
+        match target {
+            ChatMessageTarget::Channel(channel_query) => {
+                // get channel
+                let channel =
+                    match self.channels.get_channel(&channel_query).await {
+                        Some(channel) => channel,
+                        None => {
+                            todo!("channel not exists")
+                        },
+                    };
+
+                // push msg into channel packets queue
+                channel.message_queue.lock().await.push_message_excludes(
+                    Packet::Ptr(
+                        server::SendMessage::pack(
+                            sender.username.load().as_ref().into(),
+                            message.into(),
+                            channel.name.load().as_ref().into(),
+                            sender.user_id,
+                        )
+                        .into(),
+                    ),
+                    [sender.user_id],
+                    None,
+                );
+            },
+            ChatMessageTarget::User(user_query) => {
+                // get target user session
+                let target_user =
+                    match self.user_sessions.get(&user_query).await {
+                        Some(target_user) => target_user,
+                        None => {
+                            todo!("target not login")
+                        },
+                    };
+
+                // push msg packet if target user's bancho packets queue is exists
+                if let Some(bancho_ext) =
+                    target_user.extends.bancho_ext.as_ref()
+                {
+                    bancho_ext
+                        .packets_queue
+                        .push_packet(
+                            server::SendMessage::pack(
+                                sender.username.load().as_ref().into(),
+                                message.into(),
+                                target_user.username.load().as_ref().into(),
+                                sender.user_id,
+                            )
+                            .into(),
+                        )
+                        .await;
+                }
+            },
+        }
+
         todo!()
     }
 
@@ -148,7 +241,105 @@ impl ChatService for ChatServiceImpl {
         &self,
         request: JoinChannelRequest,
     ) -> Result<ExecSuccess, ChatServiceError> {
-        let JoinChannelRequest { channel_query, user_id } = request;
+        let JoinChannelRequest { channel_query, user_query } = request;
+
+        let user_query = user_query
+            .ok_or(ChatServiceError::InvalidArgument)?
+            .into_user_query()?;
+
+        let channel_query = channel_query
+            .ok_or(ChatServiceError::InvalidArgument)?
+            .into_channel_query()?;
+
+        let session = match self.user_sessions.get(&user_query).await {
+            Some(session) => session,
+            None => {
+                todo!("not login")
+            },
+        };
+
+        let channel = match self.channels.get_channel(&channel_query).await {
+            Some(channel) => channel,
+            None => {
+                todo!("channel not exists")
+            },
+        };
+
+        // add user into channel
+        channel.users.write().await.entry(session.user_id).or_insert_with(
+            || {
+                channel.user_count.add(1);
+                Some(Arc::downgrade(&session))
+            },
+        );
+
+        session
+            .extends
+            .joined_channels
+            .write()
+            .await
+            .entry(channel.id)
+            .or_insert_with(|| {
+                session.extends.channel_count.add(1);
+                JoinedChannel {
+                    ptr: Arc::downgrade(&channel),
+                    message_index: Ulid::default().into(),
+                    joined_time: Utc::now(),
+                }
+                .into()
+            });
+
+        // notify to user's bancho client if possible
+        if let Some(bancho_ext) = session.extends.bancho_ext.as_ref() {
+            bancho_ext
+                .packets_queue
+                .push_packet(
+                    server::ChannelJoin::pack(
+                        channel.name.load().as_ref().into(),
+                    )
+                    .into(),
+                )
+                .await;
+        }
+
+        // update channel info
+        self.notify_queue.lock().await.push_message(
+            Packet::Ptr(
+                server::ChannelInfo::pack(
+                    channel.name.load().as_ref().into(),
+                    channel
+                        .description
+                        .load()
+                        .as_deref()
+                        .map(|s| s.to_owned())
+                        .unwrap_or_default()
+                        .into(),
+                    channel.user_count.val() as i16,
+                )
+                .into(),
+            ),
+            None,
+        );
+
+        Ok(ExecSuccess::default())
+    }
+
+    async fn leave_channel(
+        &self,
+        request: LeaveChannelRequest,
+    ) -> Result<ExecSuccess, ChatServiceError> {
+        let LeaveChannelRequest { channel_query, user_query } = request;
+
+        let user_query = user_query
+            .ok_or(ChatServiceError::InvalidArgument)?
+            .into_user_query()?;
+
+        let session = match self.user_sessions.get(&user_query).await {
+            Some(session) => session,
+            None => {
+                todo!("not login")
+            },
+        };
 
         let channel_query = channel_query
             .ok_or(ChatServiceError::InvalidArgument)?
@@ -156,29 +347,148 @@ impl ChatService for ChatServiceImpl {
 
         let channel = match self.channels.get_channel(&channel_query).await {
             Some(channel) => channel,
-            None => return Ok(ExecSuccess::default()),
+            None => {
+                todo!("channel not exists")
+            },
         };
 
-        channel.users.write().await.insert(user_id);
+        // remove user from channel
+        if channel.users.write().await.remove(&session.user_id).is_some() {
+            channel.user_count.sub(1);
+        }
 
-        todo!()
-    }
+        if session
+            .extends
+            .joined_channels
+            .write()
+            .await
+            .remove(&channel.id)
+            .is_some()
+        {
+            session.extends.channel_count.sub(1);
+        }
 
-    async fn leave_channel(
-        &self,
-        request: LeaveChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        todo!()
+        // notify to user's bancho client if possible
+        if let Some(bancho_ext) = session.extends.bancho_ext.as_ref() {
+            bancho_ext
+                .packets_queue
+                .push_packet(
+                    server::ChannelKick::pack(
+                        channel.name.load().as_ref().into(),
+                    )
+                    .into(),
+                )
+                .await;
+        }
+
+        // update channel info
+        self.notify_queue.lock().await.push_message(
+            Packet::Ptr(
+                server::ChannelInfo::pack(
+                    channel.name.load().as_ref().into(),
+                    channel
+                        .description
+                        .load()
+                        .as_deref()
+                        .map(|s| s.to_owned())
+                        .unwrap_or_default()
+                        .into(),
+                    channel.user_count.val() as i16,
+                )
+                .into(),
+            ),
+            None,
+        );
+
+        Ok(ExecSuccess::default())
     }
 
     async fn dequeue_chat_packets(
         &self,
         query: UserQuery,
     ) -> Result<BanchoPackets, ChatServiceError> {
-        todo!()
+        let session = match self.user_sessions.get(&query).await {
+            Some(session) => session,
+            None => {
+                todo!("not login")
+            },
+        };
+
+        let bancho_ext = match session.extends.bancho_ext.as_ref() {
+            Some(bancho_ext) => bancho_ext,
+            None => todo!("invalid call"),
+        };
+
+        let mut data = Vec::new();
+
+        // receive global notify from queue
+        if let Some(ReceivedMessages { messages, last_msg_id }) =
+            self.notify_queue.lock().await.receive_messages(
+                &session.user_id,
+                &bancho_ext.notify_index.load(),
+                None,
+            )
+        {
+            for packet in messages {
+                data.extend(packet);
+            }
+
+            bancho_ext.notify_index.set(last_msg_id.into());
+        }
+
+        // get user's joined channels
+        let joined_channels = session
+            .extends
+            .joined_channels
+            .read()
+            .await
+            .iter()
+            .map(|(channel_id, channel)| (*channel_id, channel.clone()))
+            .collect::<Vec<(u64, Arc<JoinedChannel>)>>();
+
+        let mut invalid_channels = Vec::new();
+
+        // receive msg from each channels, and mark invalid channels ptr
+        for (channel_id, joined_channel) in joined_channels {
+            match joined_channel.ptr.upgrade() {
+                Some(channel) => {
+                    if let Some(ReceivedMessages { messages, last_msg_id }) =
+                        channel.message_queue.lock().await.receive_messages(
+                            &session.user_id,
+                            &joined_channel.message_index.load(),
+                            None,
+                        )
+                    {
+                        for packet in messages {
+                            data.extend(packet);
+                        }
+
+                        joined_channel.message_index.set(last_msg_id.into());
+                    }
+                },
+                None => invalid_channels.push(channel_id),
+            }
+        }
+
+        // remove invalid channels
+        if !invalid_channels.is_empty() {
+            let mut joined_channels =
+                session.extends.joined_channels.write().await;
+
+            for channel_id in invalid_channels {
+                joined_channels.remove(&channel_id);
+            }
+        }
+
+        // receive msg from session queue
+        data.extend(bancho_ext.packets_queue.dequeue_all_packets(None).await);
+
+        Ok(BanchoPackets { data })
     }
 
-    async fn load_public_channels(&self) -> Result<(), ChatServiceError> {
+    async fn load_public_channels(
+        &self,
+    ) -> Result<ExecSuccess, ChatServiceError> {
         const LOG_TARGET: &str = "chat::channel::initialize_public_channels";
 
         // todo: load public channels from database
@@ -209,7 +519,7 @@ impl ChatService for ChatServiceImpl {
 
         info!(target: LOG_TARGET, "Public channels successfully initialized.",);
 
-        Ok(())
+        Ok(ExecSuccess::default())
     }
 
     async fn get_public_channels(
@@ -341,8 +651,14 @@ impl ChatService for ChatServiceRemote {
             .map(|resp| resp.into_inner())
     }
 
-    async fn load_public_channels(&self) -> Result<(), ChatServiceError> {
-        todo!()
+    async fn load_public_channels(
+        &self,
+    ) -> Result<ExecSuccess, ChatServiceError> {
+        self.client()
+            .load_public_channels(LoadPublicChannelsRequest::default())
+            .await
+            .map_err(ChatServiceError::RpcError)
+            .map(|resp| resp.into_inner())
     }
 
     async fn get_public_channels(

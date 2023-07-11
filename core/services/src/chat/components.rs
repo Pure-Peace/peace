@@ -6,9 +6,9 @@ use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_pb::chat::ChannelQuery;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     ops::Deref,
-    sync::Arc,
+    sync::{Arc, Weak},
 };
 use tokio::sync::{Mutex, RwLock};
 use tools::{
@@ -16,9 +16,16 @@ use tools::{
     Ulid,
 };
 
-pub type ChatSession = Session<ChatExtend>;
+pub type ChatSession = Session<ChatSessionExtend>;
 pub type SessionIndexes = UserIndexes<ChatSession>;
 pub type UserSessions = UserStore<ChatSession>;
+
+#[derive(Debug, Default)]
+pub struct JoinedChannel {
+    pub ptr: Weak<Channel>,
+    pub message_index: Atomic<Ulid>,
+    pub joined_time: DateTime<Utc>,
+}
 
 #[derive(Debug, Default)]
 pub struct BanchoChatExt {
@@ -33,14 +40,28 @@ impl From<BanchoPacketsQueue> for BanchoChatExt {
 }
 
 #[derive(Debug, Default)]
-pub struct ChatExtend {
+pub struct ChatSessionExtend {
     pub platforms: Atomic<Platform>,
     pub bancho_ext: Option<BanchoChatExt>,
+    pub joined_channels: RwLock<HashMap<u64, Arc<JoinedChannel>>>,
+    pub channel_count: U32,
 }
 
-impl ChatExtend {
-    pub fn new(platforms: Platform, bancho_ext: Option<BanchoChatExt>) -> Self {
-        Self { platforms: platforms.into(), bancho_ext }
+impl ChatSessionExtend {
+    pub fn new(
+        platforms: Platform,
+        bancho_ext: Option<BanchoChatExt>,
+        joined_channels: Option<HashMap<u64, Arc<JoinedChannel>>>,
+    ) -> Self {
+        let joined_channels = joined_channels.unwrap_or_default();
+        let channel_count = joined_channels.len();
+
+        Self {
+            platforms: platforms.into(),
+            bancho_ext,
+            joined_channels: RwLock::new(joined_channels.into()),
+            channel_count: U32::from(channel_count as u32),
+        }
     }
 }
 
@@ -98,23 +119,6 @@ impl Deref for ChannelIndexes {
     }
 }
 
-/* #[derive(Debug, Default, Clone)]
-pub struct ChannelSessionIndexes {
-    pub unspecified: HashMap<i32, Arc<UnspecifiedChannelSession>>,
-    pub bancho: HashMap<i32, Arc<BanchoChannelSession>>,
-    pub lazer: HashMap<i32, Arc<LazerChannelSession>>,
-    pub web: HashMap<i32, Arc<WebChannelSession>>,
-}
-
-#[derive(Debug, Default)]
-pub struct ChannelMetadata {
-    pub id: u64,
-    pub name: Atomic<String>,
-    pub channel_type: ChannelType,
-    pub description: AtomicOption<String>,
-}
- */
-
 #[derive(Debug, Default)]
 pub struct Channel {
     pub id: u64,
@@ -122,7 +126,7 @@ pub struct Channel {
     pub channel_type: ChannelType,
     pub description: AtomicOption<String>,
 
-    pub users: Arc<RwLock<HashSet<i32>>>,
+    pub users: Arc<RwLock<HashMap<i32, Option<Weak<ChatSession>>>>>,
     pub user_count: U32,
 
     pub message_queue: Arc<Mutex<BanchoMessageQueue>>,
@@ -136,11 +140,14 @@ impl Channel {
         name: String,
         channel_type: ChannelType,
         description: Option<String>,
-        users: Option<HashSet<i32>>,
+        users: Option<Vec<i32>>,
     ) -> Self {
         let (user_count, users) = match users {
-            Some(users) => (users.len() as u32, users),
-            None => (0, HashSet::new()),
+            Some(users) => (
+                users.len() as u32,
+                users.into_iter().map(|user_id| (user_id, None)).collect(),
+            ),
+            None => (0, HashMap::new()),
         };
 
         Self {

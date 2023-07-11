@@ -13,6 +13,7 @@ service ChatRPC {
   rpc LeaveChannel(LeaveChannelRequest) returns (peace.base.ExecSuccess);
 
   rpc GetPublicChannels(GetPublicChannelsRequest) returns (GetPublicChannelsResponse);
+  rpc LoadPublicChannels(LoadPublicChannelsRequest) returns (peace.base.ExecSuccess);
 
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc PullChatPackets(peace.services.bancho_state.RawUserQuery) returns (peace.services.bancho_state.BanchoPackets);
@@ -85,19 +86,20 @@ message ChannelInfo {
 
 message JoinChannelRequest {
   RawChannelQuery channel_query = 1;
-  int32 user_id = 2;
+  peace.services.bancho_state.RawUserQuery user_query = 2;
 }
 
 message LeaveChannelRequest {
   RawChannelQuery channel_query = 1;
-  int32 user_id = 2;
+  peace.services.bancho_state.RawUserQuery user_query = 2;
 }
 
 message SendMessageRequest {
-  int32 sender_id = 1;
+  peace.services.bancho_state.RawUserQuery sender = 1;
   string message = 2;
   RawChatMessageTarget target = 3;
-  int32 platforms = 4;
 }
 
 message SendMessageResponse { uint64 message_id = 1; }
+
+message LoadPublicChannelsRequest {}

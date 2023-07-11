@@ -43,7 +43,9 @@ pub trait ChatService {
         query: UserQuery,
     ) -> Result<BanchoPackets, ChatServiceError>;
 
-    async fn load_public_channels(&self) -> Result<(), ChatServiceError>;
+    async fn load_public_channels(
+        &self,
+    ) -> Result<ExecSuccess, ChatServiceError>;
 
     async fn get_public_channels(
         &self,

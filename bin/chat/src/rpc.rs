@@ -57,6 +57,17 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
             .map(Response::new)
     }
 
+    async fn load_public_channels(
+        &self,
+        _: Request<LoadPublicChannelsRequest>,
+    ) -> Result<Response<ExecSuccess>, Status> {
+        self.chat_service
+            .load_public_channels()
+            .await
+            .map_err(|err| err.into())
+            .map(Response::new)
+    }
+
     async fn join_channel(
         &self,
         request: Request<JoinChannelRequest>,
