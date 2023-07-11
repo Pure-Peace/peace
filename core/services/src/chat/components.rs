@@ -59,7 +59,7 @@ impl ChatSessionExtend {
         Self {
             platforms: platforms.into(),
             bancho_ext,
-            joined_channels: RwLock::new(joined_channels.into()),
+            joined_channels: RwLock::new(joined_channels),
             channel_count: U32::from(channel_count as u32),
         }
     }

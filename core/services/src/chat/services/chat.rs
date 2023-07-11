@@ -495,16 +495,16 @@ impl ChatService for ChatServiceImpl {
         let public_channels = vec![
             Channel::new(
                 0,
-                "#osu".to_string().into(),
+                "#osu".to_string(),
                 ChannelType::Public,
-                Some("default channel".to_string()).into(),
+                Some("default channel".to_string()),
                 None,
             ),
             Channel::new(
                 1,
-                "#peace".to_string().into(),
+                "#peace".to_string(),
                 ChannelType::Public,
-                Some("peace channel".to_string()).into(),
+                Some("peace channel".to_string()),
                 None,
             ),
         ];

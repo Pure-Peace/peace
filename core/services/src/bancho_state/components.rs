@@ -274,7 +274,7 @@ impl From<Vec<u8>> for BanchoPacketsQueue {
 impl BanchoPacketsQueue {
     #[inline]
     pub fn new(packets: VecDeque<Packet>) -> Self {
-        Self { queue: Arc::new(Mutex::new(packets.into())) }
+        Self { queue: Arc::new(Mutex::new(packets)) }
     }
 
     #[inline]
