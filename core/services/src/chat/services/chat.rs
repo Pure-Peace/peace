@@ -7,7 +7,6 @@ use crate::{
 use async_trait::async_trait;
 use bancho_packets::server;
 use chat::traits::{ChatService, DynChatService};
-use chrono::Utc;
 use peace_db::{peace::Peace, DbConnection};
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
@@ -23,11 +22,7 @@ use peace_pb::{
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
-use tools::{
-    atomic::{AtomicOperation, AtomicValue},
-    message_queue::ReceivedMessages,
-    Ulid,
-};
+use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
 #[derive(Default, Clone)]
 pub struct ChatServiceImpl {
@@ -112,11 +107,6 @@ impl ChatService for ChatServiceImpl {
         query: UserQuery,
         remove_platforms: Platform,
     ) -> Result<ExecSuccess, ChatServiceError> {
-        if remove_platforms.is_all() || remove_platforms.is_none() {
-            self.user_sessions.delete(&query).await;
-            return Ok(ExecSuccess::default());
-        }
-
         let session = match self.user_sessions.get(&query).await {
             Some(session) => session,
             None => return Ok(ExecSuccess::default()),
@@ -128,7 +118,7 @@ impl ChatService for ChatServiceImpl {
         if curr_platforms.contains(Platform::Bancho)
             && remove_platforms.contains(Platform::Bancho)
         {
-            todo!("Logout from bancho")
+            session.extends.bancho_ext.set(None);
         }
 
         // TODO: part from other platforms
@@ -148,6 +138,22 @@ impl ChatService for ChatServiceImpl {
         let platforms = curr_platforms.and(remove_platforms.not());
 
         if platforms.is_none() {
+            // leave all channels
+            for channel in session.extends.joined_channels.read().await.values()
+            {
+                if let Some(channel) = channel.ptr.upgrade() {
+                    // remove user from channel
+                    Channel::remove(&session, &channel).await;
+
+                    // update channel info
+                    self.notify_queue.write().await.push_message(
+                        Packet::Ptr(channel.info_packets().into()),
+                        None,
+                    );
+                }
+            }
+
+            // delete user session
             self.user_sessions.delete(&query).await;
             return Ok(ExecSuccess::default());
         }
@@ -216,7 +222,7 @@ impl ChatService for ChatServiceImpl {
 
                 // push msg packet if target user's bancho packets queue is exists
                 if let Some(bancho_ext) =
-                    target_user.extends.bancho_ext.as_ref()
+                    target_user.extends.bancho_ext.load().as_ref()
                 {
                     bancho_ext
                         .packets_queue
@@ -266,60 +272,13 @@ impl ChatService for ChatServiceImpl {
         };
 
         // add user into channel
-        channel.users.write().await.entry(session.user_id).or_insert_with(
-            || {
-                channel.user_count.add(1);
-                Some(Arc::downgrade(&session))
-            },
-        );
-
-        session
-            .extends
-            .joined_channels
-            .write()
-            .await
-            .entry(channel.id)
-            .or_insert_with(|| {
-                session.extends.channel_count.add(1);
-                JoinedChannel {
-                    ptr: Arc::downgrade(&channel),
-                    message_index: Ulid::default().into(),
-                    joined_time: Utc::now(),
-                }
-                .into()
-            });
-
-        // notify to user's bancho client if possible
-        if let Some(bancho_ext) = session.extends.bancho_ext.as_ref() {
-            bancho_ext
-                .packets_queue
-                .push_packet(
-                    server::ChannelJoin::pack(
-                        channel.name.load().as_ref().into(),
-                    )
-                    .into(),
-                )
-                .await;
-        }
+        Channel::join(&session, &channel).await;
 
         // update channel info
-        self.notify_queue.write().await.push_message(
-            Packet::Ptr(
-                server::ChannelInfo::pack(
-                    channel.name.load().as_ref().into(),
-                    channel
-                        .description
-                        .load()
-                        .as_deref()
-                        .map(|s| s.to_owned())
-                        .unwrap_or_default()
-                        .into(),
-                    channel.user_count.val() as i16,
-                )
-                .into(),
-            ),
-            None,
-        );
+        self.notify_queue
+            .write()
+            .await
+            .push_message(Packet::Ptr(channel.info_packets().into()), None);
 
         Ok(ExecSuccess::default())
     }
@@ -353,52 +312,13 @@ impl ChatService for ChatServiceImpl {
         };
 
         // remove user from channel
-        if channel.users.write().await.remove(&session.user_id).is_some() {
-            channel.user_count.sub(1);
-        }
-
-        if session
-            .extends
-            .joined_channels
-            .write()
-            .await
-            .remove(&channel.id)
-            .is_some()
-        {
-            session.extends.channel_count.sub(1);
-        }
-
-        // notify to user's bancho client if possible
-        if let Some(bancho_ext) = session.extends.bancho_ext.as_ref() {
-            bancho_ext
-                .packets_queue
-                .push_packet(
-                    server::ChannelKick::pack(
-                        channel.name.load().as_ref().into(),
-                    )
-                    .into(),
-                )
-                .await;
-        }
+        Channel::remove(&session, &channel).await;
 
         // update channel info
-        self.notify_queue.write().await.push_message(
-            Packet::Ptr(
-                server::ChannelInfo::pack(
-                    channel.name.load().as_ref().into(),
-                    channel
-                        .description
-                        .load()
-                        .as_deref()
-                        .map(|s| s.to_owned())
-                        .unwrap_or_default()
-                        .into(),
-                    channel.user_count.val() as i16,
-                )
-                .into(),
-            ),
-            None,
-        );
+        self.notify_queue
+            .write()
+            .await
+            .push_message(Packet::Ptr(channel.info_packets().into()), None);
 
         Ok(ExecSuccess::default())
     }
@@ -414,7 +334,7 @@ impl ChatService for ChatServiceImpl {
             },
         };
 
-        let bancho_ext = match session.extends.bancho_ext.as_ref() {
+        let bancho_ext = match session.extends.bancho_ext.load_full() {
             Some(bancho_ext) => bancho_ext,
             None => todo!("invalid call"),
         };
@@ -471,6 +391,19 @@ impl ChatService for ChatServiceImpl {
                         for packet in messages {
                             data.extend(packet);
                         }
+
+                        match channel.min_msg_index.load().as_deref() {
+                            Some(prev_channel_min_msg_id) => {
+                                if &last_msg_id < prev_channel_min_msg_id {
+                                    channel
+                                        .min_msg_index
+                                        .set(Some(last_msg_id.into()))
+                                }
+                            },
+                            None => channel
+                                .min_msg_index
+                                .set(Some(last_msg_id.into())),
+                        };
 
                         joined_channel.message_index.set(last_msg_id.into());
                     }

@@ -163,6 +163,20 @@ where
     }
 
     #[inline]
+    pub fn collect_invalid_mesages(&self) -> Vec<I> {
+        self.messages
+            .iter()
+            .filter(|(_, v)| !v.is_valid())
+            .map(|(k, _)| k.clone())
+            .collect::<Vec<I>>()
+    }
+
+    #[inline]
+    pub fn remove_invalid_messages(&mut self) -> usize {
+        self.remove_messages(&self.collect_invalid_mesages())
+    }
+
+    #[inline]
     pub async fn receive_messages(
         &self,
         reader: &K,

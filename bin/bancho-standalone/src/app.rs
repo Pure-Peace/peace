@@ -47,6 +47,9 @@ pub struct BanchoStandaloneConfig {
     pub bancho_background_service_configs: CliBanchoBackgroundServiceConfigs,
 
     #[command(flatten)]
+    pub chat_background_service_configs: CliChatBackgroundServiceConfigs,
+
+    #[command(flatten)]
     pub geoip: GeoipRpcConfig,
 
     #[arg(long, short = 'P')]
@@ -95,21 +98,8 @@ impl WebApplication for App {
         )
         .await;
 
-        let bancho_state_background_service = Arc::new(
-            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
-        );
-
-        let bancho_state_background_service_config =
-            BanchoStateBackgroundServiceConfigs::with_cfg(
-                &self.cfg.bancho_state_background_service_configs,
-            );
-
-        bancho_state_background_service
-            .start_all(bancho_state_background_service_config);
-
         let bancho_state_service = BanchoStateServiceImpl::new(
-            user_session_service,
-            bancho_state_background_service,
+            user_session_service.clone(),
             signature_service,
         )
         .into_service();
@@ -128,7 +118,15 @@ impl WebApplication for App {
             .await;
 
         let chat_service =
-            ChatServiceImpl::new(peace_db_conn.clone()).into_service();
+            Arc::new(ChatServiceImpl::new(peace_db_conn.clone()));
+
+        let chat_background_service =
+            Arc::new(ChatBackgroundServiceImpl::new(chat_service.clone()));
+
+        let chat_background_service_config =
+            ChatBackgroundServiceConfigs::with_cfg(
+                &self.cfg.chat_background_service_configs,
+            );
 
         chat_service.load_public_channels().await.expect("debugging");
 
@@ -142,7 +140,19 @@ impl WebApplication for App {
             ),
         };
 
+        let bancho_state_background_service = Arc::new(
+            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
+        );
+
+        let bancho_state_background_service_config =
+            BanchoStateBackgroundServiceConfigs::with_cfg(
+                &self.cfg.bancho_state_background_service_configs,
+            );
+
+        chat_background_service.start_all(chat_background_service_config);
         bancho_background_service.start_all(bancho_background_service_config);
+        bancho_state_background_service
+            .start_all(bancho_state_background_service_config);
 
         let bancho_service = BanchoServiceImpl::new(
             users_repository,

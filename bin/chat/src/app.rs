@@ -4,7 +4,11 @@ use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::chat::ChatServiceImpl;
+use peace_services::chat::{
+    ChatBackgroundService, ChatBackgroundServiceConfigs,
+    ChatBackgroundServiceImpl, ChatService, ChatServiceImpl,
+    CliChatBackgroundServiceConfigs,
+};
 use std::sync::Arc;
 use tonic::{
     async_trait,
@@ -23,6 +27,9 @@ pub struct ChatServiceConfig {
 
     #[command(flatten)]
     pub peace_db: PeaceDbConfig,
+
+    #[command(flatten)]
+    pub chat_background_service_configs: CliChatBackgroundServiceConfigs,
 }
 
 #[derive(Clone)]
@@ -54,9 +61,19 @@ impl RpcApplication for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let chat_service = ChatServiceImpl::new(peace_db_conn).into_service();
+        let chat_service = Arc::new(ChatServiceImpl::new(peace_db_conn));
+
+        let chat_background_service =
+            Arc::new(ChatBackgroundServiceImpl::new(chat_service.clone()));
+
+        let chat_background_service_config =
+            ChatBackgroundServiceConfigs::with_cfg(
+                &self.cfg.chat_background_service_configs,
+            );
 
         chat_service.load_public_channels().await.expect("debugging");
+
+        chat_background_service.start_all(chat_background_service_config);
 
         let chat_rpc = ChatRpcImpl::new(chat_service);
 

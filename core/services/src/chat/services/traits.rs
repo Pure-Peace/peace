@@ -9,6 +9,8 @@ use tonic::async_trait;
 
 pub type DynChatService = Arc<dyn ChatService + Send + Sync>;
 pub type DynChannelService = Arc<dyn ChannelService + Send + Sync>;
+pub type DynChatBackgroundService =
+    Arc<dyn ChatBackgroundService + Send + Sync>;
 
 #[async_trait]
 pub trait ChatService {
@@ -54,3 +56,8 @@ pub trait ChatService {
 
 #[async_trait]
 pub trait ChannelService {}
+
+#[async_trait]
+pub trait ChatBackgroundService {
+    fn start_all(&self, configs: ChatBackgroundServiceConfigs);
+}
