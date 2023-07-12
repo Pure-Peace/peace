@@ -1,12 +1,13 @@
 use super::traits::{BanchoHandlerService, DynBanchoHandlerService};
 use crate::{
     bancho::DynBanchoService,
-    bancho_state::{BanchoStateError, DynBanchoStateService},
+    bancho_state::DynBanchoStateService,
     chat::DynChatService,
     gateway::bancho_endpoints::{
         components::BanchoClientToken, extractors::BanchoClientVersion, parser,
         BanchoHttpError, LoginError,
     },
+    signature::DynSignatureService,
 };
 use async_trait::async_trait;
 use bancho_packets::PacketReader;
@@ -21,6 +22,7 @@ pub struct BanchoHandlerServiceImpl {
     pub bancho_service: DynBanchoService,
     pub bancho_state_service: DynBanchoStateService,
     pub chat_service: DynChatService,
+    pub signature_service: DynSignatureService,
 }
 
 impl BanchoHandlerServiceImpl {
@@ -28,8 +30,14 @@ impl BanchoHandlerServiceImpl {
         bancho_service: DynBanchoService,
         bancho_state_service: DynBanchoStateService,
         chat_service: DynChatService,
+        signature_service: DynSignatureService,
     ) -> Self {
-        Self { bancho_service, bancho_state_service, chat_service }
+        Self {
+            bancho_service,
+            bancho_state_service,
+            chat_service,
+            signature_service,
+        }
     }
 
     pub fn into_service(self) -> DynBanchoHandlerService {
@@ -110,14 +118,14 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         &self,
         token: BanchoClientToken,
     ) -> Result<(), BanchoHttpError> {
-        self.bancho_state_service.check_user_token(token).await.map_err(
-            |err| match err {
-                BanchoStateError::SessionNotExists => {
-                    BanchoHttpError::SessionNotExists(err)
-                },
-                _ => BanchoHttpError::BanchoStateError(err),
-            },
-        )?;
+        if !self
+            .signature_service
+            .verify(token.content().into(), token.signature.into())
+            .await
+            .map_err(|_| BanchoHttpError::InvalidToken)?
+        {
+            return Err(BanchoHttpError::InvalidToken);
+        }
 
         Ok(())
     }

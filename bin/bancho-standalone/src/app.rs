@@ -100,7 +100,7 @@ impl WebApplication for App {
 
         let bancho_state_service = BanchoStateServiceImpl::new(
             user_session_service.clone(),
-            signature_service,
+            signature_service.clone(),
         )
         .into_service();
 
@@ -168,6 +168,7 @@ impl WebApplication for App {
             bancho_service,
             bancho_state_service.clone(),
             chat_service,
+            signature_service.clone(),
         )
         .into_service();
 
