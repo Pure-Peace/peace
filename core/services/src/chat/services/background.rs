@@ -299,15 +299,15 @@ impl ChatBackgroundServiceImpl {
 pub struct CliChatBackgroundServiceConfigs {
     #[default(180)]
     #[arg(long, default_value = "180")]
-    pub user_sessions_recycle_deactive_secs: u64,
+    pub chat_user_sessions_recycle_deactive_secs: u64,
 
     #[default(180)]
     #[arg(long, default_value = "180")]
-    pub user_sessions_recycle_interval_secs: u64,
+    pub chat_user_sessions_recycle_interval_secs: u64,
 
     #[default(300)]
     #[arg(long, default_value = "300")]
-    pub notify_messages_recycle_interval_secs: u64,
+    pub chat_notify_messages_recycle_interval_secs: u64,
 
     #[default(300)]
     #[arg(long, default_value = "300")]
@@ -334,8 +334,8 @@ impl UserSessionsRecycleConfig {
         cfg: &CliChatBackgroundServiceConfigs,
     ) -> Arc<CommonRecycleBackgroundTaskConfig> {
         Self::build(
-            cfg.user_sessions_recycle_deactive_secs,
-            cfg.user_sessions_recycle_interval_secs,
+            cfg.chat_user_sessions_recycle_deactive_secs,
+            cfg.chat_user_sessions_recycle_interval_secs,
         )
     }
 }
@@ -355,7 +355,7 @@ impl NotifyMessagesRecycleConfig {
     pub fn buid_with_cfg(
         cfg: &CliChatBackgroundServiceConfigs,
     ) -> Arc<LoopBackgroundTaskConfig> {
-        Self::build(cfg.notify_messages_recycle_interval_secs)
+        Self::build(cfg.chat_notify_messages_recycle_interval_secs)
     }
 }
 
@@ -374,7 +374,7 @@ impl ChannelMessagesRecycleConfig {
     pub fn buid_with_cfg(
         cfg: &CliChatBackgroundServiceConfigs,
     ) -> Arc<LoopBackgroundTaskConfig> {
-        Self::build(cfg.notify_messages_recycle_interval_secs)
+        Self::build(cfg.chat_notify_messages_recycle_interval_secs)
     }
 }
 

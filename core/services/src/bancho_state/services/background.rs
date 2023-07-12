@@ -233,15 +233,15 @@ impl BanchoStateBackgroundServiceImpl {
 pub struct CliBanchoStateBackgroundServiceConfigs {
     #[default(180)]
     #[arg(long, default_value = "180")]
-    pub user_sessions_recycle_deactive_secs: u64,
+    pub bancho_user_sessions_recycle_deactive_secs: u64,
 
     #[default(180)]
     #[arg(long, default_value = "180")]
-    pub user_sessions_recycle_interval_secs: u64,
+    pub bancho_user_sessions_recycle_interval_secs: u64,
 
     #[default(300)]
     #[arg(long, default_value = "300")]
-    pub notify_messages_recycle_interval_secs: u64,
+    pub bancho_notify_messages_recycle_interval_secs: u64,
 }
 
 pub struct UserSessionsRecycleConfig;
@@ -264,8 +264,8 @@ impl UserSessionsRecycleConfig {
         cfg: &CliBanchoStateBackgroundServiceConfigs,
     ) -> Arc<CommonRecycleBackgroundTaskConfig> {
         Self::build(
-            cfg.user_sessions_recycle_deactive_secs,
-            cfg.user_sessions_recycle_interval_secs,
+            cfg.bancho_user_sessions_recycle_deactive_secs,
+            cfg.bancho_user_sessions_recycle_interval_secs,
         )
     }
 }
@@ -285,7 +285,7 @@ impl NotifyMessagesRecycleConfig {
     pub fn buid_with_cfg(
         cfg: &CliBanchoStateBackgroundServiceConfigs,
     ) -> Arc<LoopBackgroundTaskConfig> {
-        Self::build(cfg.notify_messages_recycle_interval_secs)
+        Self::build(cfg.bancho_notify_messages_recycle_interval_secs)
     }
 }
 
