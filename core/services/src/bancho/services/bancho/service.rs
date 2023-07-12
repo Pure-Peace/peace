@@ -115,13 +115,13 @@ impl Login for BanchoServiceImpl {
                 peace_db::peace::entity::users::Model {
                     id: MOCK_COUNT.add(1) as i32,
                     name: username.to_owned(),
-                    name_safe: UsernameAscii::from_str(username.as_str())
+                    name_safe: UsernameAscii::new(username.as_str())
                         .unwrap()
                         .safe_name()
                         .to_string(),
                     name_unicode: Some(username.to_owned()),
                     name_unicode_safe: Some(
-                        UsernameUnicode::from_str(username.as_str())
+                        UsernameUnicode::new(username.as_str())
                             .unwrap()
                             .safe_name()
                             .to_string(),
