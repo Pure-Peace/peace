@@ -1,5 +1,5 @@
 use bancho_packets::{Packet, PacketId};
-use peace_pb::bancho::*;
+use peace_pb::{bancho::*, bancho_state::RawUserQuery};
 use peace_rpc::extensions::ClientIp;
 use peace_services::bancho::DynBanchoService;
 use tonic::{Request, Response, Status};
@@ -32,16 +32,11 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         &self,
         request: Request<ProcessBanchoPacketRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
-        let ProcessBanchoPacketRequest {
-            session_id,
-            user_id,
-            packet_id,
-            payload,
-        } = request.into_inner();
+        let ProcessBanchoPacketRequest { user_id, packet_id, payload } =
+            request.into_inner();
 
         self.bancho_service
             .process_bancho_packet(
-                &session_id,
                 user_id,
                 Packet {
                     id: PacketId::try_from(packet_id)
@@ -56,10 +51,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn ping(
         &self,
-        request: Request<PingRequest>,
+        _: Request<PingRequest>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .ping(request.into_inner())
+            .ping()
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -79,10 +74,12 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn request_status_update(
         &self,
-        request: Request<RequestStatusUpdateRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .request_status_update(request.into_inner())
+            .request_status_update(
+                raw_user_query.into_inner().into_user_query()?,
+            )
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -90,10 +87,12 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn presence_request_all(
         &self,
-        request: Request<PresenceRequestAllRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .presence_request_all(request.into_inner())
+            .presence_request_all(
+                raw_user_query.into_inner().into_user_query()?,
+            )
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -145,10 +144,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn user_logout(
         &self,
-        request: Request<UserLogoutRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .user_logout(request.into_inner())
+            .user_logout(raw_user_query.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -167,10 +166,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn spectate_stop(
         &self,
-        request: Request<SpectateStopRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .spectate_stop(request.into_inner())
+            .spectate_stop(raw_user_query.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -178,10 +177,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn spectate_cant(
         &self,
-        request: Request<SpectateCantRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .spectate_cant(request.into_inner())
+            .spectate_cant(raw_user_query.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -189,10 +188,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn lobby_part(
         &self,
-        request: Request<LobbyPartRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .lobby_part(request.into_inner())
+            .lobby_part(raw_user_query.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)
@@ -200,10 +199,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
 
     async fn lobby_join(
         &self,
-        request: Request<LobbyJoinRequest>,
+        raw_user_query: Request<RawUserQuery>,
     ) -> Result<Response<HandleCompleted>, Status> {
         self.bancho_service
-            .lobby_join(request.into_inner())
+            .lobby_join(raw_user_query.into_inner().into_user_query()?)
             .await
             .map_err(|err| err.into())
             .map(Response::new)

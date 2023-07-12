@@ -104,7 +104,6 @@ impl RpcApplication for App {
 
         let bancho_state_service = BanchoStateServiceImpl::new(
             user_session_service,
-            bancho_state_background_service,
             signature_service,
         )
         .into_service();

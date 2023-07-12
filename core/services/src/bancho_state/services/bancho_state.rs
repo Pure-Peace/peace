@@ -19,7 +19,6 @@ use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 #[derive(Clone)]
 pub struct BanchoStateServiceImpl {
     pub user_sessions_service: DynUserSessionsService,
-    pub bancho_state_background_service: DynBanchoStateBackgroundService,
     pub signature_service: DynSignatureService,
 }
 
@@ -27,14 +26,9 @@ impl BanchoStateServiceImpl {
     #[inline]
     pub fn new(
         user_sessions_service: DynUserSessionsService,
-        bancho_state_background_service: DynBanchoStateBackgroundService,
         signature_service: DynSignatureService,
     ) -> Self {
-        Self {
-            user_sessions_service,
-            bancho_state_background_service,
-            signature_service,
-        }
+        Self { user_sessions_service, signature_service }
     }
 }
 

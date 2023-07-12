@@ -42,7 +42,7 @@ impl From<BanchoPacketsQueue> for BanchoChatExt {
 #[derive(Debug, Default)]
 pub struct ChatSessionExtend {
     pub platforms: Atomic<Platform>,
-    pub bancho_ext: Option<BanchoChatExt>,
+    pub bancho_ext: AtomicOption<BanchoChatExt>,
     pub joined_channels: RwLock<HashMap<u64, Arc<JoinedChannel>>>,
     pub channel_count: U32,
 }
@@ -58,7 +58,7 @@ impl ChatSessionExtend {
 
         Self {
             platforms: platforms.into(),
-            bancho_ext,
+            bancho_ext: bancho_ext.into(),
             joined_channels: RwLock::new(joined_channels),
             channel_count: U32::from(channel_count as u32),
         }
@@ -129,6 +129,7 @@ pub struct Channel {
     pub users: Arc<RwLock<HashMap<i32, Option<Weak<ChatSession>>>>>,
     pub user_count: U32,
 
+    pub min_msg_index: AtomicOption<Ulid>,
     pub message_queue: Arc<RwLock<BanchoMessageQueue>>,
     pub created_at: DateTime<Utc>,
 }
@@ -157,9 +158,102 @@ impl Channel {
             description: description.into(),
             users: Arc::new(users.into()),
             user_count: user_count.into(),
+            min_msg_index: None.into(),
             message_queue: Arc::new(RwLock::new(BanchoMessageQueue::default())),
             created_at: Utc::now(),
         }
+    }
+
+    pub async fn join(
+        session: &Arc<Session<ChatSessionExtend>>,
+        channel: &Arc<Channel>,
+    ) {
+        channel.users.write().await.entry(session.user_id).or_insert_with(
+            || {
+                channel.user_count.add(1);
+                Some(Arc::downgrade(&session))
+            },
+        );
+
+        session
+            .extends
+            .joined_channels
+            .write()
+            .await
+            .entry(channel.id)
+            .or_insert_with(|| {
+                session.extends.channel_count.add(1);
+                JoinedChannel {
+                    ptr: Arc::downgrade(&channel),
+                    message_index: Ulid::default().into(),
+                    joined_time: Utc::now(),
+                }
+                .into()
+            });
+
+        // notify to user's bancho client if possible
+        if let Some(bancho_ext) = session.extends.bancho_ext.load().as_ref() {
+            bancho_ext
+                .packets_queue
+                .push_packet(channel.join_packets().into())
+                .await;
+        }
+    }
+
+    pub async fn remove(
+        session: &Arc<Session<ChatSessionExtend>>,
+        channel: &Arc<Channel>,
+    ) {
+        if channel.users.write().await.remove(&session.user_id).is_some() {
+            channel.user_count.sub(1);
+        }
+
+        if session
+            .extends
+            .joined_channels
+            .write()
+            .await
+            .remove(&channel.id)
+            .is_some()
+        {
+            session.extends.channel_count.sub(1);
+        }
+
+        // notify to user's bancho client if possible
+        if let Some(bancho_ext) = session.extends.bancho_ext.load().as_ref() {
+            bancho_ext
+                .packets_queue
+                .push_packet(channel.kick_packets().into())
+                .await;
+        }
+    }
+
+    #[inline]
+    pub fn info_packets(&self) -> Vec<u8> {
+        bancho_packets::server::ChannelInfo::pack(
+            self.name.load().as_ref().into(),
+            self.description
+                .load()
+                .as_deref()
+                .map(|s| s.to_owned())
+                .unwrap_or_default()
+                .into(),
+            self.user_count.val() as i16,
+        )
+    }
+
+    #[inline]
+    pub fn join_packets(&self) -> Vec<u8> {
+        bancho_packets::server::ChannelJoin::pack(
+            self.name.load().as_ref().into(),
+        )
+    }
+
+    #[inline]
+    pub fn kick_packets(&self) -> Vec<u8> {
+        bancho_packets::server::ChannelKick::pack(
+            self.name.load().as_ref().into(),
+        )
     }
 }
 

@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package peace.services.bancho;
+import "peace/services/bancho_state.proto";
 
 service BanchoRPC {
   rpc BatchProcessBanchoPackets(BatchProcessBanchoPacketsRequest)
@@ -9,28 +10,24 @@ service BanchoRPC {
 
   rpc Login(LoginRequest) returns (LoginSuccess);
   rpc Ping(PingRequest) returns (HandleCompleted);
-  rpc RequestStatusUpdate(RequestStatusUpdateRequest) returns (HandleCompleted);
-  rpc PresenceRequestAll(PresenceRequestAllRequest) returns (HandleCompleted);
+  rpc RequestStatusUpdate(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
+  rpc PresenceRequestAll(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
   rpc RequestStats(StatsRequest) returns (HandleCompleted);
   rpc ChangeAction(ChangeActionRequest) returns (HandleCompleted);
   rpc ReceiveUpdates(ReceiveUpdatesRequest) returns (HandleCompleted);
   rpc ToggleBlockNonFriendDms(ToggleBlockNonFriendDmsRequest)
       returns (HandleCompleted);
-  rpc UserLogout(UserLogoutRequest) returns (HandleCompleted);
+  rpc UserLogout(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
   rpc RequestPresence(PresenceRequest) returns (HandleCompleted);
-  rpc SpectateStop(SpectateStopRequest) returns (HandleCompleted);
-  rpc SpectateCant(SpectateCantRequest) returns (HandleCompleted);
-  rpc LobbyPart(LobbyPartRequest) returns (HandleCompleted);
-  rpc LobbyJoin(LobbyJoinRequest) returns (HandleCompleted);
+  rpc SpectateStop(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
+  rpc SpectateCant(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
+  rpc LobbyPart(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
+  rpc LobbyJoin(peace.services.bancho_state.RawUserQuery) returns (HandleCompleted);
 }
 
 message HandleCompleted { optional bytes packets = 1; }
 
-message PingRequest {
-  int32 user_id = 1;
-  string session_id = 2;
-  string signature = 3;
-}
+message PingRequest {}
 
 message ClientHashes {
   string path_hash = 1;
@@ -57,25 +54,13 @@ message LoginSuccess {
   bytes packets = 4;
 }
 
-message RequestStatusUpdateRequest { string session_id = 1; }
-
-message PresenceRequestAllRequest { string session_id = 1; }
-
-message SpectateStopRequest { string session_id = 1; }
-
-message SpectateCantRequest { string session_id = 1; }
-
-message LobbyPartRequest { string session_id = 1; }
-
-message LobbyJoinRequest { string session_id = 1; }
-
 message StatsRequest {
-  string session_id = 1;
+  int32 user_id = 1;
   repeated int32 request_users = 2;
 }
 
 message ChangeActionRequest {
-  string session_id = 1;
+  int32 user_id = 1;
   int32 online_status = 2;
   string description = 3;
   string beatmap_md5 = 4;
@@ -85,31 +70,27 @@ message ChangeActionRequest {
 }
 
 message ReceiveUpdatesRequest {
-  string session_id = 1;
+  int32 user_id = 1;
   int32 presence_filter = 2;
 }
 
 message ToggleBlockNonFriendDmsRequest {
-  string session_id = 1;
+  int32 user_id = 1;
   bool toggle = 2;
 }
 
-message UserLogoutRequest { string session_id = 1; }
-
 message PresenceRequest {
-  string session_id = 1;
+  int32 user_id = 1;
   repeated int32 request_users = 2;
 }
 
 message BatchProcessBanchoPacketsRequest {
-  string session_id = 1;
-  int32 user_id = 2;
+  int32 user_id = 1;
   bytes packets = 3;
 }
 
 message ProcessBanchoPacketRequest {
-  string session_id = 1;
-  int32 user_id = 2;
+  int32 user_id = 1;
   int32 packet_id = 3;
   optional bytes payload = 4;
 }

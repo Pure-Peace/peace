@@ -56,6 +56,8 @@ pub enum BanchoHttpError {
     ParseRequestError,
     #[error("invalid bancho packet")]
     InvalidBanchoPacket,
+    #[error("invalid token")]
+    InvalidToken,
     #[error("failed to process bancho packets")]
     FailedToProcessBanchoPackets(#[from] ProcessBanchoPacketError),
     #[error(transparent)]
