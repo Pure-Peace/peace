@@ -2,7 +2,7 @@ use super::{BanchoBackgroundServiceConfigs, PasswordCacheStore};
 use crate::bancho::{BanchoServiceError, ProcessBanchoPacketError};
 use bancho_packets::Packet;
 use peace_domain::users::PasswordError;
-use peace_pb::bancho::*;
+use peace_pb::{bancho::*, bancho_state::UserQuery};
 use std::{net::IpAddr, sync::Arc};
 use tonic::async_trait;
 use tools::async_collections::{
@@ -84,7 +84,6 @@ pub trait BatchProcessPackets {
 pub trait ProcessPackets {
     async fn process_bancho_packet(
         &self,
-        session_id: &str,
         user_id: i32,
         packet: Packet<'_>,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError>;
@@ -92,17 +91,14 @@ pub trait ProcessPackets {
 
 #[async_trait]
 pub trait ClientPing {
-    async fn ping(
-        &self,
-        request: PingRequest,
-    ) -> Result<HandleCompleted, BanchoServiceError>;
+    async fn ping(&self) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
 #[async_trait]
 pub trait RequestStatusUpdate {
     async fn request_status_update(
         &self,
-        request: RequestStatusUpdateRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
@@ -110,7 +106,7 @@ pub trait RequestStatusUpdate {
 pub trait PresenceRequestAll {
     async fn presence_request_all(
         &self,
-        request: PresenceRequestAllRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
@@ -150,7 +146,7 @@ pub trait ToggleBlockNonFriendDms {
 pub trait UserLogout {
     async fn user_logout(
         &self,
-        request: UserLogoutRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
@@ -166,7 +162,7 @@ pub trait RequestPresence {
 pub trait SpectateStop {
     async fn spectate_stop(
         &self,
-        request: SpectateStopRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
@@ -174,7 +170,7 @@ pub trait SpectateStop {
 pub trait SpectateCant {
     async fn spectate_cant(
         &self,
-        request: SpectateCantRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
@@ -182,7 +178,7 @@ pub trait SpectateCant {
 pub trait LobbyPart {
     async fn lobby_part(
         &self,
-        request: LobbyPartRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 
@@ -190,7 +186,7 @@ pub trait LobbyPart {
 pub trait LobbyJoin {
     async fn lobby_join(
         &self,
-        request: LobbyJoinRequest,
+        user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError>;
 }
 

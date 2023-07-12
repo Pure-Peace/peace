@@ -20,7 +20,6 @@ use std::{error::Error, fmt::Debug};
 
 #[derive(Clone)]
 pub struct PacketProcessor<'a> {
-    pub session_id: &'a str,
     pub user_id: i32,
     pub packet: Packet<'a>,
     pub bancho_service: &'a (dyn BanchoService + Send + Sync),
@@ -31,7 +30,6 @@ pub struct PacketProcessor<'a> {
 impl<'a> Debug for PacketProcessor<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PacketProcessor")
-            .field("session_id", &self.session_id)
             .field("user_id", &self.user_id)
             .field("packet", &self.packet)
             .finish()
@@ -183,9 +181,7 @@ impl<'a> ProcessUserRequestStatusUpdate for PacketProcessor<'a> {
         &self,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         self.bancho_service
-            .request_status_update(RequestStatusUpdateRequest {
-                session_id: self.session_id.to_owned(),
-            })
+            .request_status_update(UserQuery::UserId(self.user_id))
             .await
             .map_err(handing_err)?;
 
@@ -200,9 +196,7 @@ impl<'a> ProcessUserPresenceRequestAll for PacketProcessor<'a> {
         &self,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         self.bancho_service
-            .presence_request_all(PresenceRequestAllRequest {
-                session_id: self.session_id.to_owned(),
-            })
+            .presence_request_all(UserQuery::UserId(self.user_id))
             .await
             .map_err(handing_err)?;
 
@@ -226,7 +220,7 @@ impl<'a> ProcessUserStatsRequest for PacketProcessor<'a> {
 
         self.bancho_service
             .request_stats(StatsRequest {
-                session_id: self.session_id.to_owned(),
+                user_id: self.user_id,
                 request_users,
             })
             .await
@@ -259,7 +253,7 @@ impl<'a> ProcessUserChangeAction for PacketProcessor<'a> {
 
         self.bancho_service
             .change_action(ChangeActionRequest {
-                session_id: self.session_id.to_owned(),
+                user_id: self.user_id,
                 online_status: online_status as i32,
                 description,
                 beatmap_md5,
@@ -293,7 +287,7 @@ impl<'a> ProcessUserReceiveUpdates for PacketProcessor<'a> {
 
         self.bancho_service
             .receive_updates(ReceiveUpdatesRequest {
-                session_id: self.session_id.to_owned(),
+                user_id: self.user_id,
                 presence_filter: presence_filter.val(),
             })
             .await
@@ -320,7 +314,7 @@ impl<'a> ProcessUserToggleBlockNonFriendDms for PacketProcessor<'a> {
 
         self.bancho_service
             .toggle_block_non_friend_dms(ToggleBlockNonFriendDmsRequest {
-                session_id: self.session_id.to_owned(),
+                user_id: self.user_id,
                 toggle,
             })
             .await
@@ -337,9 +331,7 @@ impl<'a> ProcessUserLogout for PacketProcessor<'a> {
         &self,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         self.bancho_service
-            .user_logout(UserLogoutRequest {
-                session_id: self.session_id.to_owned(),
-            })
+            .user_logout(UserQuery::UserId(self.user_id))
             .await
             .map_err(handing_err)?;
 
@@ -363,7 +355,7 @@ impl<'a> ProcessUserPresenceRequest for PacketProcessor<'a> {
 
         self.bancho_service
             .request_presence(PresenceRequest {
-                session_id: self.session_id.to_owned(),
+                user_id: self.user_id,
                 request_users,
             })
             .await

@@ -45,13 +45,13 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
 
             self.bancho_handler_service.check_user_token(token.clone()).await?;
 
-            let BanchoClientToken { user_id, session_id, .. } = token;
+            let BanchoClientToken { user_id, .. } = token;
 
             let mut builder = None::<PacketBuilder>;
 
             if let Some(extra_packets) = self
                 .bancho_handler_service
-                .process_bancho_packets(user_id, session_id, body)
+                .process_bancho_packets(user_id, body)
                 .await?
             {
                 lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
