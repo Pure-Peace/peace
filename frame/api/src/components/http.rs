@@ -1,18 +1,40 @@
-use crate::{components::router, ApiFrameConfig, WebApplication};
+use crate::{components::router, WebApplication};
 use axum::Router;
 use axum_server::{AddrIncomingConfig, Handle};
 use once_cell::sync::OnceCell;
-use std::{net::SocketAddr, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::Duration,
+};
 use tools::async_collections::shutdown_signal;
+
+pub const DEFAULT_BINDING_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+
+pub const DEFAULT_HTTP_PORT: u16 = 8000;
+pub const DEFAULT_HTTPS_PORT: u16 = 443;
+
+pub const DEFAULT_HTTP_ADDR: SocketAddr =
+    SocketAddr::new(DEFAULT_BINDING_IP, DEFAULT_HTTP_PORT);
+pub const DEFAULT_HTTPS_ADDR: SocketAddr =
+    SocketAddr::new(DEFAULT_BINDING_IP, DEFAULT_HTTPS_PORT);
 
 /// Start service.
 pub async fn serve(app_cfg: impl WebApplication) {
     tools::framework_info!();
 
     let cfg = app_cfg.frame_cfg_arc();
+
+    let http_addr = cfg
+        .http_addr
+        .unwrap_or(app_cfg.default_http_addr().unwrap_or(DEFAULT_HTTP_ADDR));
+
+    let https_addr = cfg
+        .https_addr
+        .unwrap_or(app_cfg.default_https_addr().unwrap_or(DEFAULT_HTTPS_ADDR));
+
     let app = router::app(app_cfg).await;
 
-    let config = AddrIncomingConfig::new()
+    let incoming_config = AddrIncomingConfig::new()
         .tcp_nodelay(cfg.tcp_nodelay)
         .tcp_sleep_on_accept_errors(cfg.tcp_sleep_on_accept_errors)
         .tcp_keepalive(cfg.tcp_keepalive.map(Duration::from_secs))
@@ -22,33 +44,47 @@ pub async fn serve(app_cfg: impl WebApplication) {
         .tcp_keepalive_retries(cfg.tcp_keepalive_retries)
         .build();
 
-    print_api_docs(&cfg);
+    print_api_docs(
+        cfg.tls_config.tls,
+        http_addr,
+        https_addr,
+        cfg.swagger_path.as_str(),
+        cfg.openapi_json.as_str(),
+    );
+
     #[cfg(feature = "tls")]
     if cfg.tls_config.tls {
-        let https = tls::launch_https_server(app.clone(), &cfg, config.clone());
+        let https = tls::launch_https_server(
+            app.clone(),
+            https_addr,
+            cfg.tls_config.ssl_cert.as_ref(),
+            cfg.tls_config.ssl_key.as_ref(),
+            incoming_config.clone(),
+        );
+
         if cfg.force_https {
             tokio::join!(
-                tls::launch_ssl_redirect_server(&cfg),
+                tls::launch_ssl_redirect_server(http_addr, https_addr),
                 https,
                 shutdown_signal(shutdown)
             );
         } else {
             tokio::join!(
-                launch_http_server(app, &cfg, config),
+                launch_http_server(app, http_addr, incoming_config),
                 https,
                 shutdown_signal(shutdown)
             );
         }
     } else {
         tokio::join!(
-            launch_http_server(app, &cfg, config),
+            launch_http_server(app, http_addr, incoming_config),
             shutdown_signal(shutdown)
         );
     }
 
     #[cfg(not(feature = "tls"))]
     tokio::join!(
-        launch_http_server(app, &cfg, config),
+        launch_http_server(app, http_addr, incoming_config),
         shutdown_signal(shutdown)
     );
     warn!("!!! SERVER STOPPED !!!")
@@ -61,11 +97,11 @@ pub fn server_handle() -> Handle {
 
 pub async fn launch_http_server(
     app: Router,
-    cfg: &ApiFrameConfig,
+    http_addr: SocketAddr,
     incoming_config: AddrIncomingConfig,
 ) {
-    info!(">> [HTTP SERVER] listening on: http://{}", cfg.http_addr);
-    axum_server::bind(cfg.http_addr)
+    info!(">> [HTTP SERVER] listening on: http://{}", http_addr);
+    axum_server::bind(http_addr)
         .handle(server_handle())
         .addr_incoming_config(incoming_config)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
@@ -73,27 +109,37 @@ pub async fn launch_http_server(
         .unwrap();
 }
 
-pub fn print_api_docs(cfg: &ApiFrameConfig) {
-    let addr = addr(cfg);
-    info!(">> [Swagger UI]: {}{}", addr, cfg.swagger_path);
-    info!(">> [openapi.json]: {}{}", addr, cfg.openapi_json);
+pub fn print_api_docs(
+    tls: bool,
+    http_addr: SocketAddr,
+    https_addr: SocketAddr,
+    swagger_path: &str,
+    openapi_json: &str,
+) {
+    let addr = addr(tls, http_addr, https_addr);
+    info!(">> [Swagger UI]: {}{}", addr, swagger_path);
+    info!(">> [openapi.json]: {}{}", addr, openapi_json);
 }
 
-pub fn addr(cfg: &ApiFrameConfig) -> String {
+pub fn addr(
+    tls: bool,
+    http_addr: SocketAddr,
+    https_addr: SocketAddr,
+) -> String {
     #[cfg(feature = "tls")]
-    if cfg.tls_config.tls {
-        format!("https://{}", cfg.https_addr)
+    if tls {
+        format!("https://{}", https_addr)
     } else {
-        format!("http://{}", cfg.http_addr)
+        format!("http://{}", http_addr)
     }
 
     #[cfg(not(feature = "tls"))]
-    format!("http://{}", cfg.http_addr)
+    format!("http://{}", http_addr)
 }
 
 #[cfg(feature = "tls")]
 pub mod tls {
-    use crate::{http::server_handle, ApiFrameConfig};
+    use crate::http::server_handle;
     use axum::{
         extract::Host,
         handler::HandlerWithoutStateExt,
@@ -102,7 +148,7 @@ pub mod tls {
         BoxError, Router,
     };
     use axum_server::{tls_rustls::RustlsConfig, AddrIncomingConfig};
-    use std::net::SocketAddr;
+    use std::{net::SocketAddr, path::PathBuf};
 
     /// Redirect `http` to `https`.
     pub fn redirect_replace(
@@ -126,9 +172,12 @@ pub mod tls {
     }
 
     /// Start server that redirects `http` to `https`.
-    pub async fn launch_ssl_redirect_server(cfg: &ApiFrameConfig) {
-        let http_port = cfg.http_addr.port().to_string();
-        let https_port = cfg.https_addr.port().to_string();
+    pub async fn launch_ssl_redirect_server(
+        http_addr: SocketAddr,
+        https_addr: SocketAddr,
+    ) {
+        let http_port = http_addr.port().to_string();
+        let https_port = https_addr.port().to_string();
 
         let redirect = move |Host(host): Host, uri: Uri| async move {
             match redirect_replace(host, uri, &http_port, &https_port) {
@@ -143,9 +192,9 @@ pub mod tls {
         info!(">> Force https enabled");
         info!(
             ">> [HTTP SERVER] (only redirect http to https) listening on: http://{}",
-            cfg.http_addr
+            http_addr
         );
-        axum_server::bind(cfg.http_addr)
+        axum_server::bind(http_addr)
             .handle(server_handle())
             .serve(redirect.into_make_service())
             .await
@@ -154,22 +203,24 @@ pub mod tls {
 
     pub async fn launch_https_server(
         app: Router,
-        cfg: &ApiFrameConfig,
+        https_addr: SocketAddr,
+        ssl_cert: Option<&PathBuf>,
+        ssl_key: Option<&PathBuf>,
         incoming_config: AddrIncomingConfig,
     ) {
         let tls_config = RustlsConfig::from_pem_file(
-            cfg.tls_config.ssl_cert.as_ref().expect(
+            ssl_cert.expect(
                 "ERROR: tls: Please make sure `--ssl-cert` are passed in.",
             ),
-            cfg.tls_config.ssl_key.as_ref().expect(
+            ssl_key.expect(
                 "ERROR: tls: Please make sure `--ssl-key` are passed in.",
             ),
         )
         .await
         .unwrap();
 
-        info!(">> [HTTPS SERVER] listening on: https://{}", cfg.https_addr);
-        axum_server::bind_rustls(cfg.https_addr, tls_config)
+        info!(">> [HTTPS SERVER] listening on: https://{}", https_addr);
+        axum_server::bind_rustls(https_addr, tls_config)
             .handle(server_handle())
             .addr_incoming_config(incoming_config)
             .serve(app.into_make_service_with_connect_info::<SocketAddr>())

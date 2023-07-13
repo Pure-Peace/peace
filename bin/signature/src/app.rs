@@ -8,7 +8,7 @@ use peace_runtime::cfg::RuntimeConfig;
 use peace_services::signature::{
     SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
 };
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -43,6 +43,10 @@ impl App {
 impl RpcApplication for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
+    }
+
+    fn default_listen_addr(&self) -> Option<SocketAddr> {
+        Some("127.0.0.1:5014".parse().unwrap())
     }
 
     fn service_descriptors(&self) -> Option<&[&[u8]]> {

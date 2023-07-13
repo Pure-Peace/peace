@@ -14,7 +14,7 @@ use peace_services::{
     signature::*,
     IntoService,
 };
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use utoipa::OpenApi;
 
 /// PEACE Bancho standalone (web) service
@@ -77,6 +77,14 @@ impl App {
 impl WebApplication for App {
     fn frame_cfg(&self) -> &ApiFrameConfig {
         &self.cfg.frame_cfg
+    }
+
+    fn default_http_addr(&self) -> Option<SocketAddr> {
+        Some("127.0.0.1:8000".parse().unwrap())
+    }
+
+    fn default_https_addr(&self) -> Option<SocketAddr> {
+        Some("127.0.0.1:443".parse().unwrap())
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {

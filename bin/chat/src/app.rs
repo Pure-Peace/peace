@@ -10,7 +10,7 @@ use peace_services::chat::{
     ChatBackgroundServiceImpl, ChatService, ChatServiceImpl,
     CliChatBackgroundServiceConfigs,
 };
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -48,6 +48,10 @@ impl App {
 impl RpcApplication for App {
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
+    }
+
+    fn default_listen_addr(&self) -> Option<SocketAddr> {
+        Some("127.0.0.1:5012".parse().unwrap())
     }
 
     fn service_descriptors(&self) -> Option<&[&[u8]]> {

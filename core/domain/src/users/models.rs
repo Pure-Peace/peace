@@ -144,12 +144,12 @@ impl AsRef<String> for UsernameSafe {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Username<T>(String, PhantomData<T>);
 
-impl<T> Username<T>
-where
-    T: Checker,
-{
+impl<T> Username<T> {
     #[inline]
-    pub fn new(s: &str) -> Result<Self, UsernameError> {
+    pub fn new(s: &str) -> Result<Self, UsernameError>
+    where
+        T: Checker,
+    {
         let s = s.trim();
         T::check(s)?;
         if s.contains(' ') && s.contains('_') {

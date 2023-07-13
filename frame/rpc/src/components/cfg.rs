@@ -27,9 +27,8 @@ impl_logging_config!(RpcFrameConfig);
 #[peace_config]
 pub struct RpcServiceConfig {
     /// The address and port the `gRPC` server listens on.
-    #[default("127.0.0.1:5010".parse().unwrap())]
-    #[arg(short = 'H', long, default_value = "127.0.0.1:5010")]
-    pub rpc_addr: SocketAddr,
+    #[arg(short = 'H', long)]
+    pub rpc_addr: Option<SocketAddr>,
 
     /// Using unix domain socket instead of TCP/IP socket.
     /// Only for unix systems.

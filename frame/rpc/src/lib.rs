@@ -11,7 +11,7 @@ pub use peace_cfg::{
 };
 
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -37,6 +37,10 @@ pub trait RpcApplication: Clone + Send + Sync + 'static {
     /// this method.
     #[cfg(feature = "reflection")]
     fn service_descriptors(&self) -> Option<&[DescriptorBuf]>;
+
+    fn default_listen_addr(&self) -> Option<SocketAddr> {
+        None
+    }
 
     async fn service(&self, configured_server: Server) -> Router<Identity>;
 }

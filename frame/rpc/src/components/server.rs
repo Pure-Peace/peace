@@ -1,7 +1,10 @@
-use std::time::Duration;
-
 use crate::{RpcApplication, RpcFrameConfig};
 use once_cell::sync::OnceCell;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+    time::Duration,
+};
 use tonic::{
     metadata::MetadataValue,
     transport::{server::Router, Server},
@@ -10,6 +13,13 @@ use tools::async_collections::{shutdown_signal, SignalHandle};
 
 #[cfg(feature = "admin_endpoints")]
 use peace_pb::logs::logs_rpc_server::LogsRpcServer;
+
+pub const DEFAULT_BINDING_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+
+pub const DEFAULT_RPC_PORT: u16 = 5010;
+
+pub const DEFAULT_RPC_ADDR: SocketAddr =
+    SocketAddr::new(DEFAULT_BINDING_IP, DEFAULT_RPC_PORT);
 
 /// Start service.
 pub async fn serve(app_cfg: impl RpcApplication) {
@@ -53,7 +63,18 @@ pub async fn serve(app_cfg: impl RpcApplication) {
     };
 
     // Launch the server and wait for the shutdown signal.
-    let _ = tokio::join!(launch_server(svr, &cfg), shutdown_signal(shutdown));
+    let _ = tokio::join!(
+        launch_server(
+            svr,
+            cfg.rpc_tls_config.tls,
+            cfg.rpc_addr.unwrap_or(
+                app_cfg.default_listen_addr().unwrap_or(DEFAULT_RPC_ADDR)
+            ),
+            #[cfg(unix)]
+            cfg.rpc_uds.as_ref()
+        ),
+        shutdown_signal(shutdown)
+    );
 
     // Log that the server has stopped.
     warn!("!!! SERVER STOPPED !!!")
@@ -61,20 +82,29 @@ pub async fn serve(app_cfg: impl RpcApplication) {
 
 /// Launches the gRPC server and serves incoming requests.
 ///
-/// # Arguments
-///
 /// * svr - The Router instance that contains the gRPC services to be served.
-/// * cfg - A reference to the RpcFrameConfig object that contains configuration
-///   options for the gRPC server.
-pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
+pub async fn launch_server(
+    svr: Router,
+    tls: bool,
+    rpc_addr: SocketAddr,
+    #[cfg(unix)] rpc_uds: Option<&PathBuf>,
+) {
     // Create a server handle for handling graceful shutdown.
     let handle = server_handle();
     // Log the address that the server is listening on.
-    info!(">> [gRPC SERVER] listening on: {}", addr(cfg));
+    info!(
+        ">> [gRPC SERVER] listening on: {}",
+        addr(
+            tls,
+            rpc_addr,
+            #[cfg(unix)]
+            rpc_uds
+        )
+    );
 
     // Check if the Unix Domain Socket option is enabled.
     #[cfg(unix)]
-    if let Some(path) = &cfg.rpc_uds {
+    if let Some(path) = rpc_uds {
         // Create the parent directory of the UDS if it doesn't exist.
         tokio::fs::create_dir_all(std::path::Path::new(path).parent().unwrap())
             .await
@@ -92,43 +122,37 @@ pub async fn launch_server(svr: Router, cfg: &RpcFrameConfig) {
     } else {
         // Serve incoming requests with the specified address and wait for a
         // shutdown signal.
-        svr.serve_with_shutdown(cfg.rpc_addr, handle.wait_signal())
-            .await
-            .unwrap();
+        svr.serve_with_shutdown(rpc_addr, handle.wait_signal()).await.unwrap();
     }
 
     // If the Unix Domain Socket option is not enabled, serve incoming requests
     // with the specified address and wait for a shutdown signal.
     #[cfg(not(unix))]
-    svr.serve_with_shutdown(cfg.rpc_addr, handle.wait_signal()).await.unwrap();
+    svr.serve_with_shutdown(rpc_addr, handle.wait_signal()).await.unwrap();
 }
 
 /// This function generates the address string for the gRPC server
 ///
-/// # Arguments
-///
-/// * cfg - A reference to the RpcFrameConfig object containing configuration
-///   for the gRPC server
 ///
 /// # Returns
 ///
 /// A string containing the address of the gRPC server, formatted as
 /// protocol://address:port or path for Unix Domain Sockets
-pub fn addr(cfg: &RpcFrameConfig) -> String {
+pub fn addr(
+    tls: bool,
+    rpc_addr: SocketAddr,
+    #[cfg(unix)] rpc_uds: Option<&PathBuf>,
+) -> String {
     #[cfg(unix)]
     // If the server is using Unix Domain Sockets, return the path as the
     // address
-    if let Some(path) = &cfg.rpc_uds {
+    if let Some(path) = &rpc_uds {
         return format!("{}", path.to_string_lossy());
     }
 
     // If the server is not using Unix Domain Sockets, return the address and
     // protocol as the address
-    format!(
-        "{}://{}",
-        if cfg.rpc_tls_config.tls { "https" } else { "http" },
-        cfg.rpc_addr
-    )
+    format!("{}://{}", if tls { "https" } else { "http" }, rpc_addr)
 }
 
 /// Returns a `Server` based on the provided `RpcFrameConfig` configuration.
@@ -139,7 +163,10 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
     #[cfg(feature = "tls")] // check if the feature "tls" is enabled
     let svr = if cfg.rpc_tls_config.tls {
         // if the config specifies to use tls
-        tls_server(cfg) // create a tls server
+        tls_server(
+            cfg.rpc_tls_config.ssl_cert.as_ref(),
+            cfg.rpc_tls_config.ssl_key.as_ref(),
+        ) // create a tls server
     } else {
         Server::builder() // create a new server builder
     };
@@ -187,19 +214,20 @@ pub fn server(cfg: &RpcFrameConfig) -> Server {
 /// This function will panic if `--ssl-cert` or `--ssl-key` options are not
 /// passed in.
 #[cfg(feature = "tls")]
-pub fn tls_server(cfg: &RpcFrameConfig) -> Server {
+pub fn tls_server(
+    ssl_cert: Option<&PathBuf>,
+    ssl_key: Option<&PathBuf>,
+) -> Server {
     // Read the SSL certificate file into a byte buffer.
-    let cert =
-        std::fs::read(cfg.rpc_tls_config.ssl_cert.as_ref().expect(
-            "ERROR: tls: Please make sure `--ssl-cert` are passed in.",
-        ))
-        .unwrap();
+    let cert = std::fs::read(
+        ssl_cert
+            .expect("ERROR: tls: Please make sure `--ssl-cert` are passed in."),
+    )
+    .unwrap();
 
     // Read the SSL key file into a byte buffer.
     let key = std::fs::read(
-        cfg.rpc_tls_config
-            .ssl_key
-            .as_ref()
+        ssl_key
             .expect("ERROR: tls: Please make sure `--ssl-key` are passed in."),
     )
     .unwrap();

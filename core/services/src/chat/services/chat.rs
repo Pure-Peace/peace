@@ -141,7 +141,7 @@ impl ChatServiceImpl {
                     )
                     .await
                 } else {
-                    return Err(ChatServiceError::SessionNotExists);
+                    Err(ChatServiceError::SessionNotExists)
                 }
             },
         }

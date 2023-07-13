@@ -27,14 +27,12 @@ impl_logging_config!(ApiFrameConfig);
 #[peace_config]
 pub struct ApiServiceConfig {
     /// The address and port the `http` server listens on.
-    #[default("127.0.0.1:8000".parse().unwrap())]
-    #[arg(short = 'H', long, default_value = "127.0.0.1:8000")]
-    pub http_addr: SocketAddr,
+    #[arg(short = 'H', long)]
+    pub http_addr: Option<SocketAddr>,
 
     /// The address and port the `https` server listens on.
-    #[default("127.0.0.1:443".parse().unwrap())]
-    #[arg(short = 'S', long, default_value = "127.0.0.1:443")]
-    pub https_addr: SocketAddr,
+    #[arg(short = 'S', long)]
+    pub https_addr: Option<SocketAddr>,
 
     /// TLS configurations.
     #[clap(flatten)]

@@ -17,7 +17,7 @@ use peace_services::{
     },
     IntoService,
 };
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,
     transport::{server::Router, Server},
@@ -70,6 +70,10 @@ impl RpcApplication for App {
     /// Get the RPC frame configuration for the BanchoState application.
     fn frame_cfg(&self) -> &RpcFrameConfig {
         &self.cfg.frame_cfg
+    }
+
+    fn default_listen_addr(&self) -> Option<SocketAddr> {
+        Some("127.0.0.1:5011".parse().unwrap())
     }
 
     /// Get the service descriptors for the BanchoState application.

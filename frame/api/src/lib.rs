@@ -15,7 +15,7 @@ pub use peace_cfg::{
 
 use axum::{async_trait, body::Body, extract::Host, http::Request, Router};
 use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use utoipa::openapi::OpenApi;
 
 /// We can build app using `peace_api`,
@@ -29,6 +29,14 @@ pub trait WebApplication: Clone + Send + Sync + 'static {
     fn frame_cfg_arc(&self) -> Arc<ApiFrameConfig> {
         static FRAME_CFG: OnceCell<Arc<ApiFrameConfig>> = OnceCell::new();
         FRAME_CFG.get_or_init(|| Arc::new(self.frame_cfg().clone())).clone()
+    }
+
+    fn default_http_addr(&self) -> Option<SocketAddr> {
+        None
+    }
+
+    fn default_https_addr(&self) -> Option<SocketAddr> {
+        None
     }
 
     /// Returns the [`Router`] for this app
