@@ -4,12 +4,17 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use peace_pb::ConvertError;
+use peace_repositories::GetUserError;
 use tonic::{Code, Status};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ChatServiceError {
+    #[error(transparent)]
+    GetUserError(#[from] GetUserError),
     #[error("invalid argument")]
     InvalidArgument,
+    #[error("session not exists")]
+    SessionNotExists,
     #[error("channel not exists")]
     ChannelNotExists,
     #[error(transparent)]

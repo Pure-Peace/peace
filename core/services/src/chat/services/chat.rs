@@ -47,24 +47,16 @@ impl ChatServiceImpl {
     pub fn into_service(self) -> DynChatService {
         Arc::new(self) as DynChatService
     }
-}
 
-#[async_trait]
-impl ChatService for ChatServiceImpl {
-    async fn login(
+    #[inline]
+    pub async fn login_inner(
         &self,
-        request: LoginRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        let LoginRequest {
-            user_id,
-            username,
-            username_unicode,
-            privileges,
-            platforms,
-        } = request;
-
-        let platforms = Platform::from(platforms);
-
+        user_id: i32,
+        username: String,
+        username_unicode: Option<String>,
+        privileges: i32,
+        platforms: Platform,
+    ) -> Result<Arc<ChatSession>, ChatServiceError> {
         let bancho_chat_ext = if platforms.contains(Platform::Bancho) {
             // prepare bancho packets
             let mut channel_packets = VecDeque::new();
@@ -102,7 +94,84 @@ impl ChatService for ChatServiceImpl {
             extends,
         });
 
-        let _session = self.user_sessions.create(session).await;
+        let session = self.user_sessions.create(session).await;
+
+        Ok(session)
+    }
+
+    pub async fn get_session(
+        &self,
+        query: &UserQuery,
+        create_if_not_exists: Option<Platform>,
+    ) -> Result<Arc<ChatSession>, ChatServiceError> {
+        match self.user_sessions.get(query).await {
+            Some(session) => {
+                session.update_active();
+                Ok(session)
+            },
+            None => {
+                if let Some(platforms) = create_if_not_exists {
+                    let user = match query {
+                        UserQuery::SessionId(_) => {
+                            return Err(ChatServiceError::InvalidArgument)
+                        },
+                        UserQuery::UserId(user_id) => {
+                            self.users_repository.get_user_by_id(*user_id).await
+                        },
+                        UserQuery::Username(username) => {
+                            self.users_repository
+                                .get_user_by_username(username.as_str())
+                                .await
+                        },
+                        UserQuery::UsernameUnicode(username_unicode) => {
+                            self.users_repository
+                                .get_user_by_username_unicode(
+                                    username_unicode.as_str(),
+                                )
+                                .await
+                        },
+                    }?;
+
+                    self.login_inner(
+                        user.id,
+                        user.name,
+                        user.name_unicode,
+                        1, // todo
+                        platforms,
+                    )
+                    .await
+                } else {
+                    return Err(ChatServiceError::SessionNotExists);
+                }
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl ChatService for ChatServiceImpl {
+    async fn login(
+        &self,
+        request: LoginRequest,
+    ) -> Result<ExecSuccess, ChatServiceError> {
+        let LoginRequest {
+            user_id,
+            username,
+            username_unicode,
+            privileges,
+            platforms,
+        } = request;
+
+        let platforms = Platform::from(platforms);
+
+        self.login_inner(
+            user_id,
+            username,
+            username_unicode,
+            privileges,
+            platforms,
+        )
+        .await?;
 
         Ok(ExecSuccess::default())
     }
@@ -178,16 +247,12 @@ impl ChatService for ChatServiceImpl {
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_user_query()?;
 
-        let sender = match self.user_sessions.get(&sender_query).await {
-            Some(sender) => sender,
-            None => {
-                todo!("sender not login")
-            },
-        };
-
         let target = target
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_message_target()?;
+
+        let sender =
+            self.get_session(&sender_query, Some(Platform::all())).await?;
 
         match target {
             ChatMessageTarget::Channel(channel_query) => {
@@ -215,33 +280,36 @@ impl ChatService for ChatServiceImpl {
                     None,
                 );
             },
-            ChatMessageTarget::User(user_query) => {
+            ChatMessageTarget::User(target_query) => {
                 // get target user session
-                let target_user =
-                    match self.user_sessions.get(&user_query).await {
-                        Some(target_user) => target_user,
-                        None => {
-                            todo!("target not login")
-                        },
-                    };
-
-                // push msg packet if target user's bancho packets queue is exists
-                if let Some(bancho_ext) =
-                    target_user.extends.bancho_ext.load().as_ref()
-                {
-                    bancho_ext
-                        .packets_queue
-                        .push_packet(
-                            server::SendMessage::pack(
-                                sender.username.load().as_ref().into(),
-                                message.into(),
-                                target_user.username.load().as_ref().into(),
-                                sender.user_id,
-                            )
-                            .into(),
-                        )
-                        .await;
-                }
+                match self.get_session(&target_query, None).await.ok() {
+                    Some(target_user) => {
+                        // push msg packet if target user's bancho packets queue is exists
+                        if let Some(bancho_ext) =
+                            target_user.extends.bancho_ext.load().as_ref()
+                        {
+                            bancho_ext
+                                .packets_queue
+                                .push_packet(
+                                    server::SendMessage::pack(
+                                        sender.username.load().as_ref().into(),
+                                        message.into(),
+                                        target_user
+                                            .username
+                                            .load()
+                                            .as_ref()
+                                            .into(),
+                                        sender.user_id,
+                                    )
+                                    .into(),
+                                )
+                                .await;
+                        }
+                    },
+                    None => {
+                        todo!("offline msg handle")
+                    },
+                };
             },
         }
 
@@ -262,12 +330,8 @@ impl ChatService for ChatServiceImpl {
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_channel_query()?;
 
-        let session = match self.user_sessions.get(&user_query).await {
-            Some(session) => session,
-            None => {
-                todo!("not login")
-            },
-        };
+        let session =
+            self.get_session(&user_query, Some(Platform::all())).await?;
 
         let channel = match self.channels.get_channel(&channel_query).await {
             Some(channel) => channel,
@@ -298,16 +362,12 @@ impl ChatService for ChatServiceImpl {
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_user_query()?;
 
-        let session = match self.user_sessions.get(&user_query).await {
-            Some(session) => session,
-            None => {
-                todo!("not login")
-            },
-        };
-
         let channel_query = channel_query
             .ok_or(ChatServiceError::InvalidArgument)?
             .into_channel_query()?;
+
+        let session =
+            self.get_session(&user_query, Some(Platform::all())).await?;
 
         let channel = match self.channels.get_channel(&channel_query).await {
             Some(channel) => channel,
@@ -332,12 +392,7 @@ impl ChatService for ChatServiceImpl {
         &self,
         query: UserQuery,
     ) -> Result<BanchoPackets, ChatServiceError> {
-        let session = match self.user_sessions.get(&query).await {
-            Some(session) => session,
-            None => {
-                todo!("not login")
-            },
-        };
+        let session = self.get_session(&query, Some(Platform::Bancho)).await?;
 
         let bancho_ext = match session.extends.bancho_ext.load_full() {
             Some(bancho_ext) => bancho_ext,

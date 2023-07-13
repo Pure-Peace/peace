@@ -12,17 +12,27 @@ pub type DynUsersRepository = Arc<dyn UsersRepository + Send + Sync>;
 
 #[async_trait]
 pub trait UsersRepository {
-    async fn get_user_by_username(
+    async fn get_user(
         &self,
+        user_id: Option<i32>,
         username: Option<&str>,
         username_unicode: Option<&str>,
     ) -> Result<users::Model, GetUserError>;
 
-    async fn find_user_by_username(
+    async fn get_user_by_id(
         &self,
-        username: Option<UsernameSafe>,
-        username_unicode: Option<UsernameSafe>,
-    ) -> Result<Option<users::Model>, DbErr>;
+        user_id: i32,
+    ) -> Result<users::Model, GetUserError>;
+
+    async fn get_user_by_username(
+        &self,
+        username: &str,
+    ) -> Result<users::Model, GetUserError>;
+
+    async fn get_user_by_username_unicode(
+        &self,
+        username_unicode: &str,
+    ) -> Result<users::Model, GetUserError>;
 
     async fn create_user(
         &self,
@@ -55,41 +65,76 @@ impl UsersRepositoryImpl {
 
 #[async_trait]
 impl UsersRepository for UsersRepositoryImpl {
-    async fn get_user_by_username(
+    async fn get_user(
         &self,
+        user_id: Option<i32>,
         username: Option<&str>,
         username_unicode: Option<&str>,
     ) -> Result<users::Model, GetUserError> {
-        let username = username
-            .and_then(|n| UsernameAscii::new(n).ok().map(|n| n.safe_name()));
-        let username_unicode = username_unicode
-            .and_then(|n| UsernameUnicode::new(n).ok().map(|n| n.safe_name()));
-
-        self.find_user_by_username(username, username_unicode)
+        users::Entity::find()
+            .filter(
+                Condition::any()
+                    .add_option(
+                        user_id.map(|user_id| users::Column::Id.eq(user_id)),
+                    )
+                    .add_option(username.map(|name| {
+                        users::Column::NameSafe
+                            .eq(UsernameAscii::to_safe_name(name))
+                    }))
+                    .add_option(username_unicode.map(|name_unicode| {
+                        users::Column::NameUnicodeSafe
+                            .eq(UsernameUnicode::to_safe_name(name_unicode))
+                    })),
+            )
+            .one(self.conn.as_ref())
             .await
             .map_err(GetUserError::DbErr)?
             .ok_or(GetUserError::UserNotExists)
     }
 
-    async fn find_user_by_username(
+    async fn get_user_by_id(
         &self,
-        username: Option<UsernameSafe>,
-        username_unicode: Option<UsernameSafe>,
-    ) -> Result<Option<users::Model>, DbErr> {
+        user_id: i32,
+    ) -> Result<users::Model, GetUserError> {
+        users::Entity::find_by_id(user_id)
+            .one(self.conn.as_ref())
+            .await
+            .map_err(GetUserError::DbErr)?
+            .ok_or(GetUserError::UserNotExists)
+    }
+
+    async fn get_user_by_username(
+        &self,
+        username: &str,
+    ) -> Result<users::Model, GetUserError> {
         users::Entity::find()
             .filter(
-                Condition::any()
-                    .add_option(
-                        username.map(|name| {
-                            users::Column::NameSafe.eq(name.as_ref())
-                        }),
-                    )
-                    .add_option(username_unicode.map(|name_unicode| {
-                        users::Column::NameUnicodeSafe.eq(name_unicode.as_ref())
-                    })),
+                Condition::any().add(
+                    users::Column::NameSafe
+                        .eq(UsernameAscii::to_safe_name(username)),
+                ),
             )
             .one(self.conn.as_ref())
             .await
+            .map_err(GetUserError::DbErr)?
+            .ok_or(GetUserError::UserNotExists)
+    }
+
+    async fn get_user_by_username_unicode(
+        &self,
+        username_unicode: &str,
+    ) -> Result<users::Model, GetUserError> {
+        users::Entity::find()
+            .filter(
+                Condition::any().add(
+                    users::Column::NameUnicodeSafe
+                        .eq(UsernameUnicode::to_safe_name(username_unicode)),
+                ),
+            )
+            .one(self.conn.as_ref())
+            .await
+            .map_err(GetUserError::DbErr)?
+            .ok_or(GetUserError::UserNotExists)
     }
 
     async fn create_user(
@@ -176,8 +221,9 @@ mod test {
         println!(
             "{:?}",
             UsersRepositoryImpl::new(DbConnection::from(db.clone()))
-                .find_user_by_username(
-                    Some(UsernameAscii::new("test").unwrap().safe_name()),
+                .get_user(
+                    None,
+                    Some(&UsernameAscii::to_safe_name("test")),
                     None
                 )
                 .await

@@ -167,6 +167,11 @@ where
     pub fn safe_name(&self) -> UsernameSafe {
         UsernameSafe(self.0.to_ascii_lowercase().replace(' ', "_"))
     }
+
+    #[inline]
+    pub fn to_safe_name(s: &str) -> String {
+        s.to_ascii_lowercase().replace(' ', "_")
+    }
 }
 
 impl<T> From<Username<T>> for String {

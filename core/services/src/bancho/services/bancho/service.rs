@@ -137,10 +137,7 @@ impl Login for BanchoServiceImpl {
         #[cfg(not(feature = "bancho-mock-test"))]
         let user = self
             .users_repository
-            .get_user_by_username(
-                Some(username.as_str()),
-                Some(username.as_str()),
-            )
+            .get_user(None, Some(username.as_str()), Some(username.as_str()))
             .await
             .map_err(LoginError::UserNotExists)?;
 
