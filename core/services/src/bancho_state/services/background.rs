@@ -96,7 +96,7 @@ impl BanchoStateBackgroundServiceImpl {
                                 &user_sessions_service.user_sessions;
 
                             // remove deactive sessions
-                            let () = {
+                            {
                                 let mut indexes = user_sessions.write().await;
                                 for session in sessions_deactive.iter() {
                                     user_sessions.delete_inner(

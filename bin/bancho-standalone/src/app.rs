@@ -118,7 +118,7 @@ impl WebApplication for App {
             .await;
 
         let chat_service =
-            Arc::new(ChatServiceImpl::new(peace_db_conn.clone()));
+            Arc::new(ChatServiceImpl::new(users_repository.clone()));
 
         let chat_background_service =
             Arc::new(ChatBackgroundServiceImpl::new(chat_service.clone()));
@@ -168,7 +168,6 @@ impl WebApplication for App {
             bancho_service,
             bancho_state_service.clone(),
             chat_service,
-            signature_service.clone(),
         )
         .into_service();
 

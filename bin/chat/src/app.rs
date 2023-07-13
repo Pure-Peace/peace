@@ -2,6 +2,7 @@ use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use peace_db::{peace::PeaceDbConfig, DbConfig};
 use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
+use peace_repositories::users::UsersRepositoryImpl;
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::chat::{
@@ -61,7 +62,10 @@ impl RpcApplication for App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let chat_service = Arc::new(ChatServiceImpl::new(peace_db_conn));
+        let users_repository =
+            UsersRepositoryImpl::new(peace_db_conn).into_service();
+
+        let chat_service = Arc::new(ChatServiceImpl::new(users_repository));
 
         let chat_background_service =
             Arc::new(ChatBackgroundServiceImpl::new(chat_service.clone()));

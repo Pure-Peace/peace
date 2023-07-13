@@ -196,8 +196,7 @@ impl Login for BanchoServiceImpl {
             )))
             .add(server::BanchoPrivileges::new(1))
             .add(server::SilenceEnd::new(0)) // todo
-            .add(server::FriendsList::new(&[])) // todo
-            .add(server::Notification::new("welcome to peace!".into()));
+            .add(server::FriendsList::new(&[]));
 
         info!(
             target: LOG_TARGET,

@@ -171,7 +171,7 @@ impl Channel {
         channel.users.write().await.entry(session.user_id).or_insert_with(
             || {
                 channel.user_count.add(1);
-                Some(Arc::downgrade(&session))
+                Some(Arc::downgrade(session))
             },
         );
 
@@ -184,7 +184,7 @@ impl Channel {
             .or_insert_with(|| {
                 session.extends.channel_count.add(1);
                 JoinedChannel {
-                    ptr: Arc::downgrade(&channel),
+                    ptr: Arc::downgrade(channel),
                     message_index: Ulid::default().into(),
                     joined_time: Utc::now(),
                 }

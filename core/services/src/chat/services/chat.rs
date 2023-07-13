@@ -7,7 +7,6 @@ use crate::{
 use async_trait::async_trait;
 use bancho_packets::server;
 use chat::traits::{ChatService, DynChatService};
-use peace_db::{peace::Peace, DbConnection};
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
@@ -19,23 +18,29 @@ use peace_pb::{
         LoginRequest, LogoutRequest, SendMessageRequest, SendMessageResponse,
     },
 };
+use peace_repositories::users::DynUsersRepository;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct ChatServiceImpl {
-    pub conn: DbConnection<Peace>,
     pub user_sessions: Arc<UserSessions>,
     pub notify_queue: Arc<RwLock<BanchoMessageQueue>>,
     pub channels: Arc<Channels>,
+    pub users_repository: DynUsersRepository,
 }
 
 impl ChatServiceImpl {
     #[inline]
-    pub fn new(conn: DbConnection<Peace>) -> Self {
-        Self { conn, ..Default::default() }
+    pub fn new(users_repository: DynUsersRepository) -> Self {
+        Self {
+            user_sessions: UserSessions::default().into(),
+            notify_queue: RwLock::new(BanchoMessageQueue::default()).into(),
+            channels: Channels::default().into(),
+            users_repository,
+        }
     }
 
     #[inline]

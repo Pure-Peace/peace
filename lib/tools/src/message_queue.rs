@@ -53,7 +53,7 @@ where
 {
     #[inline]
     pub async fn is_readed(&self, reader: &K) -> bool {
-        self.has_read.read().await.contains(&reader)
+        self.has_read.read().await.contains(reader)
     }
 
     #[inline]
@@ -194,7 +194,7 @@ where
             }
 
             // check read state
-            if msg.is_readed(&reader).await {
+            if msg.is_readed(reader).await {
                 continue;
             }
 

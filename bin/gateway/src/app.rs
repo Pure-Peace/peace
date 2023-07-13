@@ -13,13 +13,7 @@ use peace_services::{
         },
         docs::GatewayApiDocs,
     },
-    rpc_config::{
-        BanchoRpcConfig, BanchoStateRpcConfig, ChatRpcConfig,
-        SignatureRpcConfig,
-    },
-    signature::{
-        SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
-    },
+    rpc_config::{BanchoRpcConfig, BanchoStateRpcConfig, ChatRpcConfig},
     FromRpcClient, IntoService,
 };
 use std::sync::Arc;
@@ -43,12 +37,6 @@ pub struct GatewayConfig {
     #[command(flatten)]
     pub chat: ChatRpcConfig,
 
-    #[command(flatten)]
-    pub signature_rpc_cfg: SignatureRpcConfig,
-
-    #[arg(long)]
-    pub ed25519_private_key_path: Option<String>,
-
     #[arg(long)]
     pub debug_endpoints: bool,
 }
@@ -71,15 +59,6 @@ impl WebApplication for App {
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
-        let signature_service = SignatureServiceBuilder::build::<
-            SignatureServiceImpl,
-            SignatureServiceRemote,
-        >(
-            self.cfg.ed25519_private_key_path.as_deref(),
-            Some(&self.cfg.signature_rpc_cfg),
-        )
-        .await;
-
         let bancho_rpc_client = self.cfg.bancho.connect().await;
 
         let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
@@ -100,7 +79,6 @@ impl WebApplication for App {
             bancho_service,
             bancho_state_service.clone(),
             chat_service,
-            signature_service,
         )
         .into_service();
 
