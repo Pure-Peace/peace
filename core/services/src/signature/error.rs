@@ -1,17 +1,16 @@
 use axum::response::{IntoResponse, Response};
 use hex::FromHexError;
 use hyper::StatusCode;
-use tonic::{Code, Status};
+use peace_rpc::RpcError;
+use tonic::Code;
 use tools::crypto::Ed25519Error;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
 pub enum SignatureError {
     #[error(transparent)]
     Ed25519Error(#[from] Ed25519Error),
-    #[error(transparent)]
-    DecodeHexError(#[from] FromHexError),
-    #[error("{}", .0.message())]
-    RpcError(#[from] Status),
+    #[error("DecodeHexError: {0}")]
+    DecodeHexError(String),
 }
 
 impl SignatureError {
@@ -30,8 +29,16 @@ impl IntoResponse for SignatureError {
     }
 }
 
-impl From<SignatureError> for Status {
-    fn from(err: SignatureError) -> Self {
-        Status::new(err.tonic_code(), err.to_string())
+impl From<FromHexError> for SignatureError {
+    fn from(err: FromHexError) -> Self {
+        Self::DecodeHexError(err.to_string())
     }
 }
+
+/* impl TryFrom<Status> for SignatureError {
+    type Error;
+
+    fn try_from(value: Status) -> Result<Self, Self::Error> {
+        todo!()
+    }
+} */

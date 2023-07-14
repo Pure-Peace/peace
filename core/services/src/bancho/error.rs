@@ -17,7 +17,7 @@ pub enum LoginError {
     UserNotExists(#[from] GetUserError),
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum ProcessBanchoPacketError {
     #[error("failed to process all bancho packets")]
     FailedToProcessAll,
@@ -29,10 +29,8 @@ pub enum ProcessBanchoPacketError {
     InvalidPacketPayload,
     #[error("unhandled packet: {0:?}")]
     UnhandledPacket(PacketId),
-    #[error("{}", .0.message())]
-    RpcError(#[from] Status),
     #[error(transparent)]
-    Anyhow(#[from] anyhow::Error),
+    ChatServiceError(#[from] ChatServiceError),
 }
 
 impl ProcessBanchoPacketError {

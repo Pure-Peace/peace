@@ -12,7 +12,7 @@ authors.workspace = true
 tonic = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-
+serde = { workspace = true, features = ["derive"] }
 
 peace_logs = { workspace = true }
 peace_db = { workspace = true }

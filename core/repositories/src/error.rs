@@ -1,9 +1,15 @@
 use peace_db::DbErr;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum GetUserError {
     #[error("user not exists")]
     UserNotExists,
-    #[error("invalid login data")]
-    DbErr(#[from] DbErr),
+    #[error("database err: {0}")]
+    DbErr(String),
+}
+
+impl From<DbErr> for GetUserError {
+    fn from(err: DbErr) -> Self {
+        Self::DbErr(err.to_string())
+    }
 }

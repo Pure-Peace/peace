@@ -88,7 +88,7 @@ impl UsersRepository for UsersRepositoryImpl {
             )
             .one(self.conn.as_ref())
             .await
-            .map_err(GetUserError::DbErr)?
+            .map_err(GetUserError::from)?
             .ok_or(GetUserError::UserNotExists)
     }
 
@@ -99,7 +99,7 @@ impl UsersRepository for UsersRepositoryImpl {
         users::Entity::find_by_id(user_id)
             .one(self.conn.as_ref())
             .await
-            .map_err(GetUserError::DbErr)?
+            .map_err(GetUserError::from)?
             .ok_or(GetUserError::UserNotExists)
     }
 
@@ -116,7 +116,7 @@ impl UsersRepository for UsersRepositoryImpl {
             )
             .one(self.conn.as_ref())
             .await
-            .map_err(GetUserError::DbErr)?
+            .map_err(GetUserError::from)?
             .ok_or(GetUserError::UserNotExists)
     }
 
@@ -133,7 +133,7 @@ impl UsersRepository for UsersRepositoryImpl {
             )
             .one(self.conn.as_ref())
             .await
-            .map_err(GetUserError::DbErr)?
+            .map_err(GetUserError::from)?
             .ok_or(GetUserError::UserNotExists)
     }
 

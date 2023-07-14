@@ -7,7 +7,7 @@ use peace_pb::ConvertError;
 use peace_repositories::GetUserError;
 use tonic::{Code, Status};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum ChatServiceError {
     #[error(transparent)]
     GetUserError(#[from] GetUserError),
@@ -21,8 +21,6 @@ pub enum ChatServiceError {
     ConvertError(#[from] ConvertError),
     #[error("bancho state error: {0}")]
     BanchoStateError(#[from] BanchoStateError),
-    #[error("{}", .0.message())]
-    RpcError(#[from] Status),
 }
 
 impl ChatServiceError {

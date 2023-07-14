@@ -12,7 +12,7 @@ pub enum CreateSessionError {
     InvalidConnectionInfo,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum BanchoStateError {
     #[error("invalid argument")]
     InvalidArgument,
@@ -26,8 +26,6 @@ pub enum BanchoStateError {
     CreateSessionError(#[from] CreateSessionError),
     #[error(transparent)]
     ConvertError(#[from] ConvertError),
-    #[error("{}", .0.message())]
-    RpcError(#[from] Status),
 }
 
 impl BanchoStateError {

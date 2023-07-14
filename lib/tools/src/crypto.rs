@@ -1,6 +1,3 @@
-use std::{fs, sync::Arc};
-
-use anyhow::anyhow;
 use ed25519::{
     pkcs8::{
         spki::der::pem::LineEnding, DecodePrivateKey, DecodePublicKey,
@@ -10,6 +7,8 @@ use ed25519::{
 };
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
+use serde::{Deserialize, Serialize};
+use std::{fs, sync::Arc};
 
 use crate::atomic::Atomic;
 
@@ -17,22 +16,22 @@ pub trait ToPublicKeyPem {
     fn public_key(&self) -> Result<String, Ed25519Error>;
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum Ed25519Error {
-    #[error(transparent)]
-    FromPemError(anyhow::Error),
-    #[error(transparent)]
-    ReadFileError(anyhow::Error),
-    #[error(transparent)]
-    WriteFileError(anyhow::Error),
-    #[error(transparent)]
-    ToPkcs8PemError(anyhow::Error),
-    #[error(transparent)]
-    SigningError(ed25519::Error),
-    #[error(transparent)]
-    VerifyError(ed25519::Error),
-    #[error(transparent)]
-    ToPublickeyPemError(anyhow::Error),
+    #[error("FromPemError: {0}")]
+    FromPemError(String),
+    #[error("ReadFileError: {0}")]
+    ReadFileError(String),
+    #[error("WriteFileError: {0}")]
+    WriteFileError(String),
+    #[error("ToPkcs8PemError: {0}")]
+    ToPkcs8PemError(String),
+    #[error("SigningError: {0}")]
+    SigningError(String),
+    #[error("VerifyError: {0}")]
+    VerifyError(String),
+    #[error("ToPublickeyPemError: {0}")]
+    ToPublickeyPemError(String),
 }
 
 pub struct KeyGenerator;
@@ -142,17 +141,17 @@ impl MessageSigner {
         let contents = self
             .signing_key
             .to_pkcs8_pem(LineEnding::LF)
-            .map_err(|err| Ed25519Error::ToPkcs8PemError(anyhow!(err)))?;
+            .map_err(|err| Ed25519Error::ToPkcs8PemError(err.to_string()))?;
 
         fs::write(path, contents)
-            .map_err(|err| Ed25519Error::WriteFileError(anyhow!(err)))
+            .map_err(|err| Ed25519Error::WriteFileError(err.to_string()))
     }
 
     #[inline]
     pub fn from_pem(pem: &str) -> Result<Self, Ed25519Error> {
         Ok(Self {
             signing_key: SigningKey::from_pkcs8_pem(pem)
-                .map_err(|err| Ed25519Error::FromPemError(anyhow!(err)))?,
+                .map_err(|err| Ed25519Error::FromPemError(err.to_string()))?,
         })
     }
 
@@ -160,7 +159,7 @@ impl MessageSigner {
     pub fn from_pem_file(path: &str) -> Result<Self, Ed25519Error> {
         Self::from_pem(
             fs::read_to_string(path)
-                .map_err(|err| Ed25519Error::ReadFileError(anyhow!(err)))?
+                .map_err(|err| Ed25519Error::ReadFileError(err.to_string()))?
                 .as_str(),
         )
     }
@@ -170,7 +169,9 @@ impl MessageSigner {
         &self,
         message: &[u8],
     ) -> Result<ed25519::Signature, Ed25519Error> {
-        self.signing_key.try_sign(message).map_err(Ed25519Error::SigningError)
+        self.signing_key
+            .try_sign(message)
+            .map_err(|err| Ed25519Error::SigningError(err.to_string()))
     }
 
     #[inline]
@@ -181,7 +182,7 @@ impl MessageSigner {
     ) -> Result<(), Ed25519Error> {
         self.signing_key
             .verify(message, signature)
-            .map_err(Ed25519Error::VerifyError)
+            .map_err(|err| Ed25519Error::VerifyError(err.to_string()))
     }
 }
 
@@ -210,14 +211,14 @@ impl MessageVerifier {
     ) -> Result<(), Ed25519Error> {
         self.verifying_key
             .verify(message, signature)
-            .map_err(Ed25519Error::VerifyError)
+            .map_err(|err| Ed25519Error::VerifyError(err.to_string()))
     }
 
     #[inline]
     pub fn from_pem(pem: &str) -> Result<Self, Ed25519Error> {
         Ok(Self {
             verifying_key: VerifyingKey::from_public_key_pem(pem)
-                .map_err(|err| Ed25519Error::FromPemError(anyhow!(err)))?,
+                .map_err(|err| Ed25519Error::FromPemError(err.to_string()))?,
         })
     }
 
@@ -225,7 +226,7 @@ impl MessageVerifier {
     pub fn from_pem_file(path: &str) -> Result<Self, Ed25519Error> {
         Self::from_pem(
             fs::read_to_string(path)
-                .map_err(|err| Ed25519Error::ReadFileError(anyhow!(err)))?
+                .map_err(|err| Ed25519Error::ReadFileError(err.to_string()))?
                 .as_str(),
         )
     }
@@ -243,7 +244,7 @@ impl ToPublicKeyPem for MessageSigner {
         self.signing_key
             .verifying_key()
             .to_public_key_pem(LineEnding::LF)
-            .map_err(|err| Ed25519Error::ToPublickeyPemError(anyhow!(err)))
+            .map_err(|err| Ed25519Error::ToPublickeyPemError(err.to_string()))
     }
 }
 
@@ -252,6 +253,6 @@ impl ToPublicKeyPem for MessageVerifier {
     fn public_key(&self) -> Result<String, Ed25519Error> {
         self.verifying_key
             .to_public_key_pem(LineEnding::LF)
-            .map_err(|err| Ed25519Error::ToPublickeyPemError(anyhow!(err)))
+            .map_err(|err| Ed25519Error::ToPublickeyPemError(err.to_string()))
     }
 }

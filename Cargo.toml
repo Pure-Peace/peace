@@ -17,6 +17,7 @@ members = [
     "frame/logs",
     "frame/api",
     "frame/rpc",
+    "frame/rpc/error-derive",
     "frame/cfg",
     "frame/cfg/derive",
     "frame/runtime",
@@ -39,6 +40,7 @@ tonic = "0.8"
 tonic-reflection = "0.6"
 tonic-build = "0.8"
 prost = "0.11"
+prost-types = "0.11"
 
 # async programming
 tokio = "1"

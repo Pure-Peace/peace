@@ -115,7 +115,7 @@ impl VerifyMessage for SignatureServiceImpl {
     ) -> Result<bool, SignatureError> {
         let signature = match Signature::from_slice(
             &hex::decode(signature_hex.as_bytes())
-                .map_err(SignatureError::DecodeHexError)?,
+                .map_err(SignatureError::from)?,
         ) {
             Ok(sig) => sig,
             _ => return Ok(false),
@@ -190,7 +190,7 @@ impl SignMessage for SignatureServiceRemote {
         self.client()
             .sign_message(SignMessageRequest { message: message.into_owned() })
             .await
-            .map_err(SignatureError::RpcError)
+            .map_err(SignatureError::try_from)
             .map(|resp| resp.into_inner().signature)
     }
 }

@@ -37,11 +37,6 @@ impl<'a> Debug for PacketProcessor<'a> {
 }
 
 #[inline]
-pub fn handing_err(err: impl Error) -> ProcessBanchoPacketError {
-    ProcessBanchoPacketError::Anyhow(anyhow!("{err:?}"))
-}
-
-#[inline]
 pub fn read_channel_name(
     payload: Option<&[u8]>,
 ) -> Result<String, ProcessBanchoPacketError> {
@@ -99,7 +94,7 @@ impl<'a> ProcessSendPublicMessage for PacketProcessor<'a> {
             ),
         };
 
-        self.chat_service.send_message(request).await.map_err(handing_err)?;
+        self.chat_service.send_message(request).await?;
 
         Ok(HandleCompleted::default())
     }
