@@ -43,6 +43,7 @@ tools = { workspace = true, features = ["all"] }
 
 peace_api = { workspace = true }
 peace_rpc = { workspace = true }
+peace_rpc_error = { workspace = true }
 peace_logs = { workspace = true }
 peace_db = { workspace = true }
 peace_pb = { workspace = true }

@@ -16,7 +16,7 @@ use peace_pb::{
         LeaveChannelRequest, SendMessageRequest,
     },
 };
-use std::{error::Error, fmt::Debug};
+use std::fmt::Debug;
 
 #[derive(Clone)]
 pub struct PacketProcessor<'a> {
@@ -119,7 +119,7 @@ impl<'a> ProcessSendPrivateMessage for PacketProcessor<'a> {
             ),
         };
 
-        self.chat_service.send_message(request).await.map_err(handing_err)?;
+        self.chat_service.send_message(request).await?;
 
         Ok(HandleCompleted::default())
     }
@@ -140,8 +140,7 @@ impl<'a> ProcessUserChannelJoin for PacketProcessor<'a> {
                 ),
                 user_query: Some(UserQuery::UserId(self.user_id).into()),
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted { packets: None })
     }
@@ -162,8 +161,7 @@ impl<'a> ProcessUserChannelPart for PacketProcessor<'a> {
                 ),
                 user_query: Some(UserQuery::UserId(self.user_id).into()),
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted { packets: None })
     }
@@ -177,8 +175,7 @@ impl<'a> ProcessUserRequestStatusUpdate for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         self.bancho_service
             .request_status_update(UserQuery::UserId(self.user_id))
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -192,8 +189,7 @@ impl<'a> ProcessUserPresenceRequestAll for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         self.bancho_service
             .presence_request_all(UserQuery::UserId(self.user_id))
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -218,8 +214,7 @@ impl<'a> ProcessUserStatsRequest for PacketProcessor<'a> {
                 user_id: self.user_id,
                 request_users,
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -256,8 +251,7 @@ impl<'a> ProcessUserChangeAction for PacketProcessor<'a> {
                 mode: mode as i32,
                 beatmap_id,
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -285,8 +279,7 @@ impl<'a> ProcessUserReceiveUpdates for PacketProcessor<'a> {
                 user_id: self.user_id,
                 presence_filter: presence_filter.val(),
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -312,8 +305,7 @@ impl<'a> ProcessUserToggleBlockNonFriendDms for PacketProcessor<'a> {
                 user_id: self.user_id,
                 toggle,
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -327,8 +319,7 @@ impl<'a> ProcessUserLogout for PacketProcessor<'a> {
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
         self.bancho_service
             .user_logout(UserQuery::UserId(self.user_id))
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }
@@ -353,8 +344,7 @@ impl<'a> ProcessUserPresenceRequest for PacketProcessor<'a> {
                 user_id: self.user_id,
                 request_users,
             })
-            .await
-            .map_err(handing_err)?;
+            .await?;
 
         Ok(HandleCompleted::default())
     }

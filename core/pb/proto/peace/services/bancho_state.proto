@@ -120,7 +120,7 @@ message CheckUserTokenRequest {
   string signature = 3;
 }
 
-message CheckUserTokenResponse {}
+message CheckUserTokenResponse { bool is_valid = 1; }
 
 message GetUserSessionResponse {
   optional string session_id = 1;

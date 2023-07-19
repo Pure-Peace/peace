@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use maxminddb::Reader;
 use memmap2::Mmap;
 use peace_domain::geoip::GeoipData;
+use peace_pb::base::ExecSuccess;
 use std::{net::IpAddr, sync::Arc};
 
 pub type DynGeoipService = Arc<dyn GeoipService + Send + Sync>;
@@ -22,7 +23,7 @@ pub trait LookupIpAddress {
 
 #[async_trait]
 pub trait ReloadGeoDb {
-    async fn try_reload(&self, path: &str) -> Result<(), GeoipError>;
+    async fn try_reload(&self, path: &str) -> Result<ExecSuccess, GeoipError>;
 }
 
 pub trait FromGeoDb {

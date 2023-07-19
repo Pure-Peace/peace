@@ -2,19 +2,15 @@ use super::traits::{
     BanchoRoutingService, DynBanchoHandlerService, DynBanchoRoutingService,
 };
 use crate::gateway::bancho_endpoints::{
-    components::BanchoClientToken,
     extractors::{BanchoClientVersion, OsuTokenHeader},
-    BanchoHttpError, CHO_PROTOCOL, CHO_TOKEN,
+    BanchoHttpError,
 };
 use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
-use bancho_packets::PacketBuilder;
-use peace_pb::{bancho::LoginSuccess, bancho_state::UserQuery};
-use std::{net::IpAddr, str::FromStr, sync::Arc};
-use tools::lazy_init;
+use std::{net::IpAddr, sync::Arc};
 
 pub struct BanchoRoutingServiceImpl {
-    bancho_handler_service: DynBanchoHandlerService,
+    pub bancho_handler_service: DynBanchoHandlerService,
 }
 
 impl BanchoRoutingServiceImpl {
@@ -40,71 +36,16 @@ impl BanchoRoutingService for BanchoRoutingServiceImpl {
         ip: IpAddr,
         body: Vec<u8>,
     ) -> Result<Response, BanchoHttpError> {
-        if let Some(OsuTokenHeader(token)) = token {
-            let token = BanchoClientToken::from_str(&token)?;
-
-            self.bancho_handler_service.check_user_token(token.clone()).await?;
-
-            let BanchoClientToken { user_id, .. } = token;
-
-            let mut builder = None::<PacketBuilder>;
-
-            if let Some(extra_packets) = self
-                .bancho_handler_service
-                .process_bancho_packets(user_id, body)
-                .await?
-            {
-                lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
-            }
-
-            if let Some(extra_packets) = self
-                .bancho_handler_service
-                .pull_bancho_packets(UserQuery::UserId(user_id))
-                .await
-            {
-                lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
-            }
-
-            if let Some(extra_packets) = self
-                .bancho_handler_service
-                .pull_chat_packets(UserQuery::UserId(user_id))
-                .await
-            {
-                lazy_init!(builder => builder.extend(extra_packets), PacketBuilder::from(extra_packets))
-            }
-
-            return Ok(builder
-                .map(|b| b.build())
-                .unwrap_or_default()
-                .into_response());
-        };
-
-        let LoginSuccess { session_id, signature, user_id, mut packets } = self
-            .bancho_handler_service
-            .bancho_login(body, ip, version)
-            .await
-            .map_err(BanchoHttpError::LoginFailed)?;
-
-        if let Some(p) = self
-            .bancho_handler_service
-            .pull_bancho_packets(UserQuery::UserId(user_id))
-            .await
-        {
-            packets.extend(p);
+        match token {
+            Some(OsuTokenHeader(token)) => {
+                self.bancho_handler_service.handle_logged(token, body).await
+            },
+            None => {
+                self.bancho_handler_service
+                    .handle_not_logged(version, ip, body)
+                    .await
+            },
         }
-
-        Ok((
-            [
-                (
-                    CHO_TOKEN,
-                    BanchoClientToken::encode(user_id, &session_id, &signature)
-                        .as_str(),
-                ),
-                CHO_PROTOCOL,
-            ],
-            packets,
-        )
-            .into_response())
     }
 
     async fn get_screenshot(&self) -> Response {

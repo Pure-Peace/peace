@@ -24,27 +24,26 @@ impl geoip_rpc_server::GeoipRpc for GeoipRpcImpl {
         &self,
         request: Request<IpAddress>,
     ) -> Result<Response<RpcGeoipData>, Status> {
-        self.geoip_service
-            .lookup_with_ip_address(
-                request
-                    .into_inner()
-                    .ip
-                    .parse::<IpAddr>()
-                    .map_err(|err| Status::invalid_argument(err.to_string()))?,
-            )
-            .await
-            .map_err(|err| err.into())
-            .map(|data| Response::new(data.into()))
+        let ip_addr = request
+            .into_inner()
+            .ip
+            .parse::<IpAddr>()
+            .map_err(|err| Status::internal(err.to_string()))?;
+
+        let res = self.geoip_service.lookup_with_ip_address(ip_addr).await?;
+
+        Ok(Response::new(res.into()))
     }
 
     async fn try_reload(
         &self,
         request: Request<GeoDbPath>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.geoip_service
+        let res = self
+            .geoip_service
             .try_reload(&request.into_inner().geo_db_path)
-            .await
-            .map_err(|err| err.into())
-            .map(|()| Response::new(ExecSuccess::default()))
+            .await?;
+
+        Ok(Response::new(res))
     }
 }

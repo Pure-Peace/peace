@@ -17,41 +17,39 @@ pub trait ChatService {
     async fn login(
         &self,
         request: LoginRequest,
-    ) -> Result<ExecSuccess, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatError>;
 
     async fn logout(
         &self,
         query: UserQuery,
         remove_platforms: Platform,
-    ) -> Result<ExecSuccess, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatError>;
 
     async fn send_message(
         &self,
         request: SendMessageRequest,
-    ) -> Result<SendMessageResponse, ChatServiceError>;
+    ) -> Result<SendMessageResponse, ChatError>;
 
     async fn join_channel(
         &self,
         request: JoinChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatError>;
 
     async fn leave_channel(
         &self,
         request: LeaveChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError>;
+    ) -> Result<ExecSuccess, ChatError>;
 
     async fn dequeue_chat_packets(
         &self,
         query: UserQuery,
-    ) -> Result<BanchoPackets, ChatServiceError>;
+    ) -> Result<BanchoPackets, ChatError>;
 
-    async fn load_public_channels(
-        &self,
-    ) -> Result<ExecSuccess, ChatServiceError>;
+    async fn load_public_channels(&self) -> Result<ExecSuccess, ChatError>;
 
     async fn get_public_channels(
         &self,
-    ) -> Result<GetPublicChannelsResponse, ChatServiceError>;
+    ) -> Result<GetPublicChannelsResponse, ChatError>;
 }
 
 #[async_trait]

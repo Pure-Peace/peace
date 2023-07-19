@@ -1,5 +1,6 @@
 use super::error::SignatureError;
 use async_trait::async_trait;
+use peace_pb::base::ExecSuccess;
 use std::{borrow::Cow, sync::Arc};
 
 pub type DynSignatureService = Arc<dyn SignatureService + Send + Sync>;
@@ -31,12 +32,12 @@ pub trait ReloadSigner {
     async fn reload_from_pem<'a>(
         &self,
         pem: Cow<'a, str>,
-    ) -> Result<(), SignatureError>;
+    ) -> Result<ExecSuccess, SignatureError>;
 
     async fn reload_from_pem_file<'a>(
         &self,
         path: Cow<'a, str>,
-    ) -> Result<(), SignatureError>;
+    ) -> Result<ExecSuccess, SignatureError>;
 }
 
 #[async_trait]

@@ -17,6 +17,7 @@ members = [
     "frame/logs",
     "frame/api",
     "frame/rpc",
+    "frame/rpc/error",
     "frame/rpc/error-derive",
     "frame/cfg",
     "frame/cfg/derive",
@@ -126,6 +127,7 @@ proc-macro2 = "1"
 peace_api = { path = "./frame/api" }
 peace_logs = { path = "./frame/logs" }
 peace_rpc = { path = "./frame/rpc" }
+peace_rpc_error = { path = "./frame/rpc/error" }
 peace_cfg = { path = "./frame/cfg" }
 peace_runtime = { path = "./frame/runtime" }
 

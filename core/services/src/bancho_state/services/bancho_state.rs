@@ -447,8 +447,7 @@ impl CheckUserToken for BanchoStateServiceImpl {
         if !self
             .signature_service
             .verify(token.content().into(), token.signature.into())
-            .await
-            .map_err(|_| BanchoStateError::InvalidToken)?
+            .await?
         {
             return Err(BanchoStateError::InvalidToken);
         }

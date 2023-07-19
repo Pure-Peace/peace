@@ -9,10 +9,14 @@ use async_trait::async_trait;
 use derive_deref::Deref;
 use ed25519::{self, Signature};
 use peace_cfg::RpcClientConfig;
-use peace_pb::signature::{
-    signature_rpc_client::SignatureRpcClient, GetPublicKeyRequest,
-    ReloadFromPemFileRequest, ReloadFromPemRequest, SignMessageRequest,
-    VerifyMessageRequest,
+use peace_pb::{
+    base::ExecSuccess,
+    signature::{
+        signature_rpc_client::SignatureRpcClient, GetPublicKeyRequest,
+        GetPublicKeyResponse, ReloadFromPemFileRequest, ReloadFromPemRequest,
+        SignMessageRequest, SignMessageResponse, VerifyMessageRequest,
+        VerifyMessageResponse,
+    },
 };
 use std::{borrow::Cow, sync::Arc};
 use tonic::transport::Channel;
@@ -113,14 +117,15 @@ impl VerifyMessage for SignatureServiceImpl {
         message: Cow<'a, str>,
         signature_hex: Cow<'a, str>,
     ) -> Result<bool, SignatureError> {
-        let signature = match Signature::from_slice(
-            &hex::decode(signature_hex.as_bytes())
-                .map_err(SignatureError::from)?,
-        ) {
-            Ok(sig) => sig,
-            _ => return Ok(false),
+        let decoded = match hex::decode(signature_hex.as_bytes()) {
+            Ok(dec) => dec,
+            Err(_) => return Ok(false),
         };
-        Ok(self.signer.verify(message.as_bytes(), &signature).is_ok())
+
+        Ok(match Signature::from_slice(&decoded) {
+            Ok(sig) => self.signer.verify(message.as_bytes(), &sig).is_ok(),
+            Err(_) => false,
+        })
     }
 }
 
@@ -130,18 +135,21 @@ impl ReloadSigner for SignatureServiceImpl {
     async fn reload_from_pem<'a>(
         &self,
         ed25519_private_key: Cow<'a, str>,
-    ) -> Result<(), SignatureError> {
-        Ok(self.signer.reload_from_pem(ed25519_private_key.as_ref())?)
+    ) -> Result<ExecSuccess, SignatureError> {
+        self.signer.reload_from_pem(ed25519_private_key.as_ref())?;
+
+        Ok(ExecSuccess::default())
     }
 
     #[inline]
     async fn reload_from_pem_file<'a>(
         &self,
         ed25519_private_key_file_path: Cow<'a, str>,
-    ) -> Result<(), SignatureError> {
-        Ok(self
-            .signer
-            .reload_from_pem_file(ed25519_private_key_file_path.as_ref())?)
+    ) -> Result<ExecSuccess, SignatureError> {
+        self.signer
+            .reload_from_pem_file(ed25519_private_key_file_path.as_ref())?;
+
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -187,11 +195,13 @@ impl SignMessage for SignatureServiceRemote {
         &self,
         message: Cow<'a, str>,
     ) -> Result<String, SignatureError> {
-        self.client()
+        let SignMessageResponse { signature } = self
+            .client()
             .sign_message(SignMessageRequest { message: message.into_owned() })
-            .await
-            .map_err(SignatureError::try_from)
-            .map(|resp| resp.into_inner().signature)
+            .await?
+            .into_inner();
+
+        Ok(signature)
     }
 }
 
@@ -203,14 +213,15 @@ impl VerifyMessage for SignatureServiceRemote {
         message: Cow<'a, str>,
         signature: Cow<'a, str>,
     ) -> Result<bool, SignatureError> {
-        self.client()
-            .verify_message(VerifyMessageRequest {
-                message: message.into_owned(),
-                signature: signature.into_owned(),
-            })
-            .await
-            .map_err(SignatureError::RpcError)
-            .map(|resp| resp.into_inner().is_valid)
+        let req = VerifyMessageRequest {
+            message: message.into_owned(),
+            signature: signature.into_owned(),
+        };
+
+        let VerifyMessageResponse { is_valid } =
+            self.client().verify_message(req).await?.into_inner();
+
+        Ok(is_valid)
     }
 }
 
@@ -220,31 +231,29 @@ impl ReloadSigner for SignatureServiceRemote {
     async fn reload_from_pem<'a>(
         &self,
         ed25519_private_key: Cow<'a, str>,
-    ) -> Result<(), SignatureError> {
-        self.client()
+    ) -> Result<ExecSuccess, SignatureError> {
+        Ok(self
+            .client()
             .reload_from_pem(ReloadFromPemRequest {
                 ed25519_private_key: ed25519_private_key.into_owned(),
             })
-            .await
-            .map_err(SignatureError::RpcError)?;
-
-        Ok(())
+            .await?
+            .into_inner())
     }
 
     #[inline]
     async fn reload_from_pem_file<'a>(
         &self,
         ed25519_private_key_file_path: Cow<'a, str>,
-    ) -> Result<(), SignatureError> {
-        self.client()
+    ) -> Result<ExecSuccess, SignatureError> {
+        Ok(self
+            .client()
             .reload_from_pem_file(ReloadFromPemFileRequest {
                 ed25519_private_key_file_path: ed25519_private_key_file_path
                     .into_owned(),
             })
-            .await
-            .map_err(SignatureError::RpcError)?;
-
-        Ok(())
+            .await?
+            .into_inner())
     }
 }
 
@@ -252,10 +261,12 @@ impl ReloadSigner for SignatureServiceRemote {
 impl RequestPublicKey for SignatureServiceRemote {
     #[inline]
     async fn public_key(&self) -> Result<String, SignatureError> {
-        self.client()
-            .get_public_key(GetPublicKeyRequest {})
-            .await
-            .map_err(SignatureError::RpcError)
-            .map(|resp| resp.into_inner().public_key)
+        let GetPublicKeyResponse { public_key } = self
+            .client()
+            .get_public_key(GetPublicKeyRequest::default())
+            .await?
+            .into_inner();
+
+        Ok(public_key)
     }
 }

@@ -1,14 +1,11 @@
 use crate::bancho_state::BanchoStateError;
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
 use peace_pb::ConvertError;
 use peace_repositories::GetUserError;
-use tonic::{Code, Status};
+use peace_rpc_error::{RpcError, TonicError};
+use tonic::Status;
 
-#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
-pub enum ChatServiceError {
+#[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
+pub enum ChatError {
     #[error(transparent)]
     GetUserError(#[from] GetUserError),
     #[error("invalid argument")]
@@ -21,31 +18,12 @@ pub enum ChatServiceError {
     ConvertError(#[from] ConvertError),
     #[error("bancho state error: {0}")]
     BanchoStateError(#[from] BanchoStateError),
+    #[error("TonicError: {0}")]
+    TonicError(String),
 }
 
-impl ChatServiceError {
-    fn tonic_code(&self) -> Code {
-        match self {
-            Self::ChannelNotExists => Code::NotFound,
-            Self::InvalidArgument => Code::InvalidArgument,
-            Self::ConvertError(_) => Code::InvalidArgument,
-            _ => Code::Unknown,
-        }
-    }
-
-    fn status_code(&self) -> StatusCode {
-        StatusCode::OK
-    }
-}
-
-impl IntoResponse for ChatServiceError {
-    fn into_response(self) -> Response {
-        (self.status_code(), self.to_string()).into_response()
-    }
-}
-
-impl From<ChatServiceError> for Status {
-    fn from(err: ChatServiceError) -> Self {
-        Status::new(err.tonic_code(), err.to_string())
+impl TonicError for ChatError {
+    fn tonic_error(s: Status) -> Self {
+        Self::TonicError(s.message().to_owned())
     }
 }

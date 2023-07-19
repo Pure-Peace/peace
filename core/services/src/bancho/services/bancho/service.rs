@@ -1,8 +1,6 @@
 use super::packet_processor::PacketProcessor;
 use crate::{
-    bancho::{
-        traits::*, BanchoServiceError, LoginError, ProcessBanchoPacketError,
-    },
+    bancho::{traits::*, BanchoServiceError, ProcessBanchoPacketError},
     bancho_state::DynBanchoStateService,
     chat::{DynChatService, Platform},
     geoip::DynGeoipService,
@@ -100,14 +98,12 @@ impl Login for BanchoServiceImpl {
                         Some(username.as_str()),
                         Some(username.as_str()),
                     )
-                    .await
-                    .map_err(LoginError::UserNotExists)?;
+                    .await?;
 
                 let () = self
                     .password_service
                     .verify_password(user.password.as_str(), password.as_str())
-                    .await
-                    .map_err(LoginError::PasswordError)?;
+                    .await?;
 
                 user
             } else {
@@ -138,15 +134,13 @@ impl Login for BanchoServiceImpl {
         let user = self
             .users_repository
             .get_user(None, Some(username.as_str()), Some(username.as_str()))
-            .await
-            .map_err(LoginError::UserNotExists)?;
+            .await?;
 
         #[cfg(not(feature = "bancho-mock-test"))]
         let () = self
             .password_service
             .verify_password(user.password.as_str(), password.as_str())
-            .await
-            .map_err(LoginError::PasswordError)?;
+            .await?;
 
         let geoip_data =
             self.geoip_service.lookup_with_ip_address(client_ip).await.ok();
@@ -599,11 +593,11 @@ impl Login for BanchoServiceRemote {
         client_ip: IpAddr,
         request: LoginRequest,
     ) -> Result<LoginSuccess, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .login(RawRequest::add_client_ip(request, client_ip))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 #[async_trait]
@@ -612,11 +606,11 @@ impl BatchProcessPackets for BanchoServiceRemote {
         &self,
         request: BatchProcessBanchoPacketsRequest,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        self.client()
+        Ok(self
+            .client()
             .batch_process_bancho_packets(request)
-            .await
-            .map_err(ProcessBanchoPacketError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 #[async_trait]
@@ -627,25 +621,21 @@ impl ProcessPackets for BanchoServiceRemote {
         user_id: i32,
         packet: Packet<'_>,
     ) -> Result<HandleCompleted, ProcessBanchoPacketError> {
-        self.client()
+        Ok(self
+            .client()
             .process_bancho_packet(ProcessBanchoPacketRequest {
                 user_id,
                 packet_id: packet.id as i32,
                 payload: packet.payload.map(|p| p.to_vec()),
             })
-            .await
-            .map_err(ProcessBanchoPacketError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 #[async_trait]
 impl ClientPing for BanchoServiceRemote {
     async fn ping(&self) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
-            .ping(PingRequest::default())
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().ping(PingRequest::default()).await?.into_inner())
     }
 }
 #[async_trait]
@@ -654,11 +644,11 @@ impl RequestStatusUpdate for BanchoServiceRemote {
         &self,
         user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .request_status_update(Into::<RawUserQuery>::into(user_query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 #[async_trait]
@@ -667,11 +657,11 @@ impl PresenceRequestAll for BanchoServiceRemote {
         &self,
         user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .presence_request_all(Into::<RawUserQuery>::into(user_query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 #[async_trait]
@@ -680,11 +670,7 @@ impl RequestStats for BanchoServiceRemote {
         &self,
         request: StatsRequest,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
-            .request_stats(request)
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().request_stats(request).await?.into_inner())
     }
 }
 #[async_trait]
@@ -693,11 +679,7 @@ impl ChangeAction for BanchoServiceRemote {
         &self,
         request: ChangeActionRequest,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
-            .change_action(request)
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().change_action(request).await?.into_inner())
     }
 }
 
@@ -707,11 +689,7 @@ impl ReceiveUpdates for BanchoServiceRemote {
         &self,
         request: ReceiveUpdatesRequest,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
-            .receive_updates(request)
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().receive_updates(request).await?.into_inner())
     }
 }
 
@@ -721,11 +699,11 @@ impl ToggleBlockNonFriendDms for BanchoServiceRemote {
         &self,
         request: ToggleBlockNonFriendDmsRequest,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .toggle_block_non_friend_dms(request)
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -735,11 +713,11 @@ impl UserLogout for BanchoServiceRemote {
         &self,
         query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .user_logout(Into::<RawUserQuery>::into(query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -749,11 +727,7 @@ impl RequestPresence for BanchoServiceRemote {
         &self,
         request: PresenceRequest,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
-            .request_presence(request)
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().request_presence(request).await?.into_inner())
     }
 }
 
@@ -763,11 +737,11 @@ impl SpectateStop for BanchoServiceRemote {
         &self,
         user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .spectate_stop(Into::<RawUserQuery>::into(user_query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -777,11 +751,11 @@ impl SpectateCant for BanchoServiceRemote {
         &self,
         user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .spectate_cant(Into::<RawUserQuery>::into(user_query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -791,11 +765,11 @@ impl LobbyPart for BanchoServiceRemote {
         &self,
         user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .lobby_part(Into::<RawUserQuery>::into(user_query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -805,10 +779,10 @@ impl LobbyJoin for BanchoServiceRemote {
         &self,
         user_query: UserQuery,
     ) -> Result<HandleCompleted, BanchoServiceError> {
-        self.client()
+        Ok(self
+            .client()
             .lobby_join(Into::<RawUserQuery>::into(user_query))
-            .await
-            .map_err(BanchoServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }

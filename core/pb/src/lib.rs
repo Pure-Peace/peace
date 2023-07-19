@@ -1,13 +1,13 @@
 pub mod protobufs;
 pub use protobufs::*;
 
+use peace_rpc_error::RpcError;
 use serde::{Deserialize, Serialize};
-use tonic::{Code, Status};
 use tools::DecodingError;
 
 pub const OUT_DIR: &str = "generated";
 
-#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
 pub enum ConvertError {
     #[error("ulid decoding error: {0}")]
     DecodingError(String),
@@ -15,17 +15,13 @@ pub enum ConvertError {
     InvalidParams,
     #[error("from Channel target is not support")]
     FromChannelTarget,
+    #[error("TonicError: {0}")]
+    TonicError(String),
 }
 
-impl ConvertError {
-    fn tonic_code(&self) -> Code {
-        Code::InvalidArgument
-    }
-}
-
-impl From<ConvertError> for Status {
-    fn from(err: ConvertError) -> Self {
-        Status::new(err.tonic_code(), err.to_string())
+impl peace_rpc_error::TonicError for ConvertError {
+    fn tonic_error(s: tonic::Status) -> Self {
+        Self::TonicError(s.message().to_owned())
     }
 }
 

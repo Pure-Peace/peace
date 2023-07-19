@@ -10,7 +10,7 @@ use peace_pb::{
     base::ExecSuccess,
 };
 use std::sync::Arc;
-use tonic::{transport::Channel, Code};
+use tonic::transport::Channel;
 
 #[derive(Debug, Clone)]
 pub struct BanchoStateServiceRemote(BanchoStateRpcClient<Channel>);
@@ -46,11 +46,7 @@ impl BroadcastBanchoPackets for BanchoStateServiceRemote {
         &self,
         request: BroadcastBanchoPacketsRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .broadcast_bancho_packets(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().broadcast_bancho_packets(request).await?.into_inner())
     }
 }
 
@@ -60,11 +56,7 @@ impl EnqueueBanchoPackets for BanchoStateServiceRemote {
         &self,
         request: EnqueueBanchoPacketsRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .enqueue_bancho_packets(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().enqueue_bancho_packets(request).await?.into_inner())
     }
 }
 
@@ -74,11 +66,11 @@ impl BatchEnqueueBanchoPackets for BanchoStateServiceRemote {
         &self,
         request: BatchEnqueueBanchoPacketsRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .batch_enqueue_bancho_packets(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -88,11 +80,7 @@ impl DequeueBanchoPackets for BanchoStateServiceRemote {
         &self,
         request: DequeueBanchoPacketsRequest,
     ) -> Result<BanchoPackets, BanchoStateError> {
-        self.client()
-            .dequeue_bancho_packets(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().dequeue_bancho_packets(request).await?.into_inner())
     }
 }
 
@@ -102,11 +90,7 @@ impl CreateUserSession for BanchoStateServiceRemote {
         &self,
         request: CreateUserSessionRequest,
     ) -> Result<CreateUserSessionResponse, BanchoStateError> {
-        self.client()
-            .create_user_session(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().create_user_session(request).await?.into_inner())
     }
 }
 
@@ -116,11 +100,11 @@ impl DeleteUserSession for BanchoStateServiceRemote {
         &self,
         query: UserQuery,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .delete_user_session(Into::<RawUserQuery>::into(query))
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -130,17 +114,7 @@ impl CheckUserToken for BanchoStateServiceRemote {
         &self,
         token: BanchoClientToken,
     ) -> Result<CheckUserTokenResponse, BanchoStateError> {
-        self.client()
-            .check_user_token(token)
-            .await
-            .map_err(|status| {
-                if status.code() == Code::NotFound {
-                    BanchoStateError::SessionNotExists
-                } else {
-                    BanchoStateError::RpcError(status)
-                }
-            })
-            .map(|resp| resp.into_inner())
+        Ok(self.client().check_user_token(token).await?.into_inner())
     }
 }
 
@@ -150,17 +124,11 @@ impl IsUserOnline for BanchoStateServiceRemote {
         &self,
         query: UserQuery,
     ) -> Result<UserOnlineResponse, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .is_user_online(Into::<RawUserQuery>::into(query))
-            .await
-            .map_err(|status| {
-                if status.code() == Code::NotFound {
-                    BanchoStateError::SessionNotExists
-                } else {
-                    BanchoStateError::RpcError(status)
-                }
-            })
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -170,11 +138,11 @@ impl GetUserSession for BanchoStateServiceRemote {
         &self,
         query: UserQuery,
     ) -> Result<GetUserSessionResponse, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .get_user_session(Into::<RawUserQuery>::into(query))
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -184,11 +152,11 @@ impl GetUserSessionWithFields for BanchoStateServiceRemote {
         &self,
         request: RawUserQueryWithFields,
     ) -> Result<GetUserSessionResponse, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .get_user_session_with_fields(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -197,11 +165,11 @@ impl GetAllSessions for BanchoStateServiceRemote {
     async fn get_all_sessions(
         &self,
     ) -> Result<GetAllSessionsResponse, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .get_all_sessions(GetAllSessionsRequest {})
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -211,11 +179,7 @@ impl SendUserStatsPacket for BanchoStateServiceRemote {
         &self,
         request: SendUserStatsPacketRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .send_user_stats_packet(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().send_user_stats_packet(request).await?.into_inner())
     }
 }
 
@@ -225,11 +189,11 @@ impl BatchSendUserStatsPacket for BanchoStateServiceRemote {
         &self,
         request: BatchSendUserStatsPacketRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
+        Ok(self
+            .client()
             .batch_send_user_stats_packet(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }
 
@@ -239,11 +203,7 @@ impl SendAllPresences for BanchoStateServiceRemote {
         &self,
         request: SendAllPresencesRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .send_all_presences(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().send_all_presences(request).await?.into_inner())
     }
 }
 
@@ -253,11 +213,7 @@ impl BatchSendPresences for BanchoStateServiceRemote {
         &self,
         request: BatchSendPresencesRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .batch_send_presences(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().batch_send_presences(request).await?.into_inner())
     }
 }
 
@@ -267,11 +223,7 @@ impl UpdatePresenceFilter for BanchoStateServiceRemote {
         &self,
         request: UpdatePresenceFilterRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .update_presence_filter(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().update_presence_filter(request).await?.into_inner())
     }
 }
 
@@ -281,10 +233,6 @@ impl UpdateUserBanchoStatus for BanchoStateServiceRemote {
         &self,
         request: UpdateUserBanchoStatusRequest,
     ) -> Result<ExecSuccess, BanchoStateError> {
-        self.client()
-            .update_user_bancho_status(request)
-            .await
-            .map_err(BanchoStateError::RpcError)
-            .map(|resp| resp.into_inner())
+        Ok(self.client().update_user_bancho_status(request).await?.into_inner())
     }
 }

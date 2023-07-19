@@ -14,12 +14,15 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 
 
 bitmask-enum = { workspace = true }
 thiserror = { workspace = true }
 
 tools = { workspace = true }
+
+peace_rpc_error = { workspace = true }
 
 
 [build-dependencies]

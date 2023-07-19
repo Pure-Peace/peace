@@ -40,8 +40,6 @@ pub enum LoginError {
 pub enum BanchoHttpError {
     #[error(transparent)]
     LoginFailed(#[from] LoginError),
-    #[error(transparent)]
-    SessionNotExists(BanchoStateError),
     #[error("errors occured while handling packet: {0}")]
     PacketHandlingError(#[source] anyhow::Error),
     #[error("errors occured while dequeueing packets: {0}")]
@@ -62,20 +60,12 @@ pub enum BanchoHttpError {
     FailedToProcessBanchoPackets(#[from] ProcessBanchoPacketError),
     #[error(transparent)]
     BanchoStateError(#[from] BanchoStateError),
-    #[error(transparent)]
-    Anyhow(#[from] anyhow::Error),
 }
 
 impl BanchoHttpError {
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::ParseRequestError => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::FailedToProcessBanchoPackets(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            },
-            Self::SessionNotExists(_) => StatusCode::FORBIDDEN,
-            Self::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            _ => StatusCode::OK,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -89,23 +79,23 @@ impl From<BanchoHttpError> for Response {
 impl IntoResponse for BanchoHttpError {
     fn into_response(self) -> Response {
         match self {
-            Self::LoginFailed(_) => {
-                (
-                    [(CHO_TOKEN, "failed"), CHO_PROTOCOL],
-                    PacketBuilder::new()
-                        .add(server::LoginReply::new(
-                            bancho_packets::LoginResult::Failed(
-                                bancho_packets::LoginFailedResaon::InvalidCredentials,
-                            ),
-                        ))
-                        .add(server::Notification::new(self.to_string().into()))
-                        .build()
-                )
-                    .into_response()
+            Self::LoginFailed(err) => {
+                let login_reply = server::LoginReply::new(
+                    bancho_packets::LoginResult::Failed(
+                        bancho_packets::LoginFailedResaon::InvalidCredentials,
+                    ),
+                );
+
+                let packets = PacketBuilder::new()
+                    .add(login_reply)
+                    .add(server::Notification::new(err.to_string().into()))
+                    .build();
+
+                ([(CHO_TOKEN, "failed"), CHO_PROTOCOL], packets).into_response()
             },
 
-            Self::SessionNotExists(_) => {
-                (self.status_code(), "session not exists").into_response()
+            Self::InvalidToken => {
+                (self.status_code(), "invalid token").into_response()
             },
 
             _ => (self.status_code(), self.to_string()).into_response(),

@@ -10,7 +10,10 @@ use async_trait::async_trait;
 use maxminddb::{geoip2, Reader};
 use peace_api::RpcClientConfig;
 use peace_domain::geoip::*;
-use peace_pb::geoip::{geoip_rpc_client::GeoipRpcClient, GeoDbPath, IpAddress};
+use peace_pb::{
+    base::ExecSuccess,
+    geoip::{geoip_rpc_client::GeoipRpcClient, GeoDbPath, IpAddress},
+};
 use std::{net::IpAddr, path::Path, sync::Arc};
 use tonic::transport::Channel;
 
@@ -86,7 +89,7 @@ where
 {
     Reader::open_mmap(path)
         .map(Arc::new)
-        .map_err(GeoipError::FailedToLoadDatabase)
+        .map_err(|err| GeoipError::FailedToLoadDatabase(err.to_string()))
 }
 
 impl FromGeoDbPath for GeoipServiceImpl {}
@@ -116,7 +119,7 @@ impl LookupIpAddress for GeoipServiceImpl {
         let db = self.db.load_full().ok_or(GeoipError::NotInitialized)?;
         let data = db
             .lookup::<geoip2::City>(ip_addr)
-            .map_err(GeoipError::LookupError)?;
+            .map_err(|err| GeoipError::LookupError(err.to_string()))?;
 
         let location = data
             .location
@@ -198,9 +201,10 @@ impl LookupIpAddress for GeoipServiceImpl {
 
 #[async_trait]
 impl ReloadGeoDb for GeoipServiceImpl {
-    async fn try_reload(&self, path: &str) -> Result<(), GeoipError> {
+    async fn try_reload(&self, path: &str) -> Result<ExecSuccess, GeoipError> {
         self.db.store(Some(load_db(path)?));
-        Ok(())
+
+        Ok(ExecSuccess::default())
     }
 }
 
@@ -241,18 +245,18 @@ impl LookupIpAddress for GeoipServiceRemote {
         self.client()
             .lookup_with_ip_address(IpAddress { ip: ip_addr.to_string() })
             .await
-            .map_err(GeoipError::RpcError)
+            .map_err(GeoipError::from)
             .map(|resp| resp.into_inner().into())
     }
 }
 
 #[async_trait]
 impl ReloadGeoDb for GeoipServiceRemote {
-    async fn try_reload(&self, path: &str) -> Result<(), GeoipError> {
-        self.client()
+    async fn try_reload(&self, path: &str) -> Result<ExecSuccess, GeoipError> {
+        Ok(self
+            .client()
             .try_reload(GeoDbPath { geo_db_path: path.to_owned() })
-            .await
-            .map_err(GeoipError::RpcError)
-            .map(|_| ())
+            .await?
+            .into_inner())
     }
 }

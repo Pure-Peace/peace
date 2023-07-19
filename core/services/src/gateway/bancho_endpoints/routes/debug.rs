@@ -77,5 +77,8 @@ pub async fn get_all_sessions(
             .unwrap()
             .into_response()
         })
-        .unwrap_or_else(|err| err.into_response())
+        .unwrap_or_else(|err| {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+                .into_response()
+        })
 }

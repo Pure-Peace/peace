@@ -3,7 +3,7 @@ use peace_pb::{
     base::ExecSuccess,
     chat::*,
 };
-use peace_services::chat::{ChatServiceError, DynChatService};
+use peace_services::chat::{ChatError, DynChatService};
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
@@ -23,11 +23,9 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
         &self,
         request: Request<LoginRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.chat_service
-            .login(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res = self.chat_service.login(request.into_inner()).await?;
+
+        Ok(Response::new(res))
     }
 
     async fn logout(
@@ -35,80 +33,69 @@ impl chat_rpc_server::ChatRpc for ChatRpcImpl {
         request: Request<LogoutRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
         let LogoutRequest { user_query, platforms } = request.into_inner();
-        let user_query = user_query
-            .ok_or(ChatServiceError::InvalidArgument)?
-            .into_user_query()?;
+        let user_query =
+            user_query.ok_or(ChatError::InvalidArgument)?.into_user_query()?;
 
-        self.chat_service
-            .logout(user_query, platforms.into())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res =
+            self.chat_service.logout(user_query, platforms.into()).await?;
+
+        Ok(Response::new(res))
     }
 
     async fn get_public_channels(
         &self,
         _: Request<GetPublicChannelsRequest>,
     ) -> Result<Response<GetPublicChannelsResponse>, Status> {
-        self.chat_service
-            .get_public_channels()
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res = self.chat_service.get_public_channels().await?;
+
+        Ok(Response::new(res))
     }
 
     async fn load_public_channels(
         &self,
         _: Request<LoadPublicChannelsRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.chat_service
-            .load_public_channels()
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res = self.chat_service.load_public_channels().await?;
+
+        Ok(Response::new(res))
     }
 
     async fn join_channel(
         &self,
         request: Request<JoinChannelRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.chat_service
-            .join_channel(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res = self.chat_service.join_channel(request.into_inner()).await?;
+
+        Ok(Response::new(res))
     }
 
     async fn leave_channel(
         &self,
         request: Request<LeaveChannelRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.chat_service
-            .leave_channel(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res = self.chat_service.leave_channel(request.into_inner()).await?;
+
+        Ok(Response::new(res))
     }
 
     async fn send_message(
         &self,
         request: Request<SendMessageRequest>,
     ) -> Result<Response<SendMessageResponse>, Status> {
-        self.chat_service
-            .send_message(request.into_inner())
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+        let res = self.chat_service.send_message(request.into_inner()).await?;
+
+        Ok(Response::new(res))
     }
 
     async fn pull_chat_packets(
         &self,
         request: Request<RawUserQuery>,
     ) -> Result<Response<BanchoPackets>, Status> {
-        self.chat_service
+        let res = self
+            .chat_service
             .dequeue_chat_packets(request.into_inner().into_user_query()?)
-            .await
-            .map_err(|err| err.into())
-            .map(Response::new)
+            .await?;
+
+        Ok(Response::new(res))
     }
 }

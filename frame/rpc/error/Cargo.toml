@@ -1,5 +1,5 @@
 [package]
-name = "peace_rpc_error_derive"
+name = "peace_rpc_error"
 description = "Peace gRPC error derive macros"
 version = "0.1.0"
 edition.workspace = true
@@ -8,9 +8,9 @@ repository.workspace = true
 license.workspace = true
 authors.workspace = true
 
-[lib]
-proc-macro = true
 
 [dependencies]
-quote = { workspace = true }
-syn = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+tonic = { workspace = true }
+
+peace_rpc_error_derive = { path = "../error-derive" }

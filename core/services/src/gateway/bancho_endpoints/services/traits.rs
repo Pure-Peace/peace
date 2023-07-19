@@ -1,7 +1,11 @@
-use crate::gateway::bancho_endpoints::{
-    components::BanchoClientToken,
-    extractors::{BanchoClientVersion, OsuTokenHeader},
-    BanchoHttpError, LoginError,
+use crate::{
+    bancho_state::BanchoStateError,
+    chat::ChatError,
+    gateway::bancho_endpoints::{
+        components::BanchoClientToken,
+        extractors::{BanchoClientVersion, OsuTokenHeader},
+        *,
+    },
 };
 use async_trait::async_trait;
 use axum::response::Response;
@@ -107,18 +111,37 @@ pub trait BanchoHandlerService {
         version: Option<BanchoClientVersion>,
     ) -> Result<LoginSuccess, LoginError>;
 
+    async fn handle_logged(
+        &self,
+        token: String,
+        body: Vec<u8>,
+    ) -> Result<Response, BanchoHttpError>;
+
+    async fn handle_not_logged(
+        &self,
+        version: Option<BanchoClientVersion>,
+        ip: IpAddr,
+        body: Vec<u8>,
+    ) -> Result<Response, BanchoHttpError>;
+
     async fn process_bancho_packets(
         &self,
         user_id: i32,
         body: Vec<u8>,
     ) -> Result<Option<Vec<u8>>, BanchoHttpError>;
 
-    async fn pull_bancho_packets(&self, target: UserQuery) -> Option<Vec<u8>>;
+    async fn pull_bancho_packets(
+        &self,
+        target: UserQuery,
+    ) -> Result<Vec<u8>, BanchoStateError>;
 
-    async fn pull_chat_packets(&self, query: UserQuery) -> Option<Vec<u8>>;
+    async fn pull_chat_packets(
+        &self,
+        query: UserQuery,
+    ) -> Result<Vec<u8>, ChatError>;
 
     async fn check_user_token(
         &self,
         token: BanchoClientToken,
-    ) -> Result<(), BanchoHttpError>;
+    ) -> Result<bool, BanchoStateError>;
 }

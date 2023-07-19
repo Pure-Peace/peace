@@ -1,18 +1,15 @@
 use crate::signature::error::SignatureError;
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
 use peace_pb::ConvertError;
-use tonic::{Code, Status};
+use peace_rpc_error::{RpcError, TonicError};
+use tonic::Status;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
 pub enum CreateSessionError {
     #[error("invalid connection info")]
     InvalidConnectionInfo,
 }
 
-#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
+#[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
 pub enum BanchoStateError {
     #[error("invalid argument")]
     InvalidArgument,
@@ -26,32 +23,12 @@ pub enum BanchoStateError {
     CreateSessionError(#[from] CreateSessionError),
     #[error(transparent)]
     ConvertError(#[from] ConvertError),
+    #[error("TonicError: {0}")]
+    TonicError(String),
 }
 
-impl BanchoStateError {
-    fn tonic_code(&self) -> Code {
-        match self {
-            Self::SessionNotExists => Code::NotFound,
-            Self::InvalidToken => Code::Unauthenticated,
-            Self::InvalidArgument => Code::InvalidArgument,
-            Self::ConvertError(_) => Code::InvalidArgument,
-            _ => Code::Unknown,
-        }
-    }
-
-    fn status_code(&self) -> StatusCode {
-        StatusCode::OK
-    }
-}
-
-impl IntoResponse for BanchoStateError {
-    fn into_response(self) -> Response {
-        (self.status_code(), self.to_string()).into_response()
-    }
-}
-
-impl From<BanchoStateError> for Status {
-    fn from(err: BanchoStateError) -> Self {
-        Status::new(err.tonic_code(), err.to_string())
+impl TonicError for BanchoStateError {
+    fn tonic_error(s: Status) -> Self {
+        Self::TonicError(s.message().to_owned())
     }
 }

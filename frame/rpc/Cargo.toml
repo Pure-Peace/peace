@@ -26,8 +26,6 @@ tower-layer = { workspace = true }
 futures-util = { workspace = true }
 thiserror = { workspace = true }
 
-peace_rpc_error = { path = "./error-derive" }
-
 # reflection
 tonic-reflection = { workspace = true, optional = true }
 

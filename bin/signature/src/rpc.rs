@@ -26,11 +26,12 @@ impl signature_rpc_server::SignatureRpc for SignatureRpcImpl {
         &self,
         request: Request<SignMessageRequest>,
     ) -> Result<Response<SignMessageResponse>, Status> {
-        self.signature_service
+        let signature = self
+            .signature_service
             .sign(request.into_inner().message.into())
-            .await
-            .map_err(Status::from)
-            .map(|signature| Response::new(SignMessageResponse { signature }))
+            .await?;
+
+        Ok(Response::new(SignMessageResponse { signature }))
     }
 
     async fn verify_message(
@@ -39,45 +40,46 @@ impl signature_rpc_server::SignatureRpc for SignatureRpcImpl {
     ) -> Result<Response<VerifyMessageResponse>, Status> {
         let VerifyMessageRequest { message, signature } = request.into_inner();
 
-        self.signature_service
+        let is_valid = self
+            .signature_service
             .verify(message.into(), signature.into())
-            .await
-            .map_err(Status::from)
-            .map(|is_valid| Response::new(VerifyMessageResponse { is_valid }))
+            .await?;
+
+        Ok(Response::new(VerifyMessageResponse { is_valid }))
     }
 
     async fn reload_from_pem(
         &self,
         request: Request<ReloadFromPemRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.signature_service
+        let res = self
+            .signature_service
             .reload_from_pem(request.into_inner().ed25519_private_key.into())
-            .await
-            .map_err(Status::from)?;
+            .await?;
 
-        Ok(Response::new(ExecSuccess::default()))
+        Ok(Response::new(res))
     }
 
     async fn reload_from_pem_file(
         &self,
         request: Request<ReloadFromPemFileRequest>,
     ) -> Result<Response<ExecSuccess>, Status> {
-        self.signature_service
+        let res = self
+            .signature_service
             .reload_from_pem_file(
                 request.into_inner().ed25519_private_key_file_path.into(),
             )
-            .await
-            .map_err(Status::from)?;
+            .await?;
 
-        Ok(Response::new(ExecSuccess::default()))
+        Ok(Response::new(res))
     }
 
     async fn get_public_key(
         &self,
         _: Request<GetPublicKeyRequest>,
     ) -> Result<Response<GetPublicKeyResponse>, Status> {
-        self.signature_service.public_key().await.map_err(Status::from).map(
-            |public_key| Response::new(GetPublicKeyResponse { public_key }),
-        )
+        let public_key = self.signature_service.public_key().await?;
+
+        Ok(Response::new(GetPublicKeyResponse { public_key }))
     }
 }

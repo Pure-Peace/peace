@@ -56,7 +56,7 @@ impl ChatServiceImpl {
         username_unicode: Option<String>,
         privileges: i32,
         platforms: Platform,
-    ) -> Result<Arc<ChatSession>, ChatServiceError> {
+    ) -> Result<Arc<ChatSession>, ChatError> {
         let bancho_chat_ext = if platforms.contains(Platform::Bancho) {
             // prepare bancho packets
             let mut channel_packets = VecDeque::new();
@@ -103,7 +103,7 @@ impl ChatServiceImpl {
         &self,
         query: &UserQuery,
         create_if_not_exists: Option<Platform>,
-    ) -> Result<Arc<ChatSession>, ChatServiceError> {
+    ) -> Result<Arc<ChatSession>, ChatError> {
         match self.user_sessions.get(query).await {
             Some(session) => {
                 session.update_active();
@@ -113,7 +113,7 @@ impl ChatServiceImpl {
                 if let Some(platforms) = create_if_not_exists {
                     let user = match query {
                         UserQuery::SessionId(_) => {
-                            return Err(ChatServiceError::InvalidArgument)
+                            return Err(ChatError::InvalidArgument)
                         },
                         UserQuery::UserId(user_id) => {
                             self.users_repository.get_user_by_id(*user_id).await
@@ -141,7 +141,7 @@ impl ChatServiceImpl {
                     )
                     .await
                 } else {
-                    Err(ChatServiceError::SessionNotExists)
+                    Err(ChatError::SessionNotExists)
                 }
             },
         }
@@ -153,7 +153,7 @@ impl ChatService for ChatServiceImpl {
     async fn login(
         &self,
         request: LoginRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
+    ) -> Result<ExecSuccess, ChatError> {
         let LoginRequest {
             user_id,
             username,
@@ -180,7 +180,7 @@ impl ChatService for ChatServiceImpl {
         &self,
         query: UserQuery,
         remove_platforms: Platform,
-    ) -> Result<ExecSuccess, ChatServiceError> {
+    ) -> Result<ExecSuccess, ChatError> {
         let session = match self.user_sessions.get(&query).await {
             Some(session) => session,
             None => return Ok(ExecSuccess::default()),
@@ -240,16 +240,14 @@ impl ChatService for ChatServiceImpl {
     async fn send_message(
         &self,
         request: SendMessageRequest,
-    ) -> Result<SendMessageResponse, ChatServiceError> {
+    ) -> Result<SendMessageResponse, ChatError> {
         let SendMessageRequest { sender, message, target } = request;
 
-        let sender_query = sender
-            .ok_or(ChatServiceError::InvalidArgument)?
-            .into_user_query()?;
+        let sender_query =
+            sender.ok_or(ChatError::InvalidArgument)?.into_user_query()?;
 
-        let target = target
-            .ok_or(ChatServiceError::InvalidArgument)?
-            .into_message_target()?;
+        let target =
+            target.ok_or(ChatError::InvalidArgument)?.into_message_target()?;
 
         let sender =
             self.get_session(&sender_query, Some(Platform::all())).await?;
@@ -319,15 +317,14 @@ impl ChatService for ChatServiceImpl {
     async fn join_channel(
         &self,
         request: JoinChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
+    ) -> Result<ExecSuccess, ChatError> {
         let JoinChannelRequest { channel_query, user_query } = request;
 
-        let user_query = user_query
-            .ok_or(ChatServiceError::InvalidArgument)?
-            .into_user_query()?;
+        let user_query =
+            user_query.ok_or(ChatError::InvalidArgument)?.into_user_query()?;
 
         let channel_query = channel_query
-            .ok_or(ChatServiceError::InvalidArgument)?
+            .ok_or(ChatError::InvalidArgument)?
             .into_channel_query()?;
 
         let session =
@@ -355,15 +352,14 @@ impl ChatService for ChatServiceImpl {
     async fn leave_channel(
         &self,
         request: LeaveChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
+    ) -> Result<ExecSuccess, ChatError> {
         let LeaveChannelRequest { channel_query, user_query } = request;
 
-        let user_query = user_query
-            .ok_or(ChatServiceError::InvalidArgument)?
-            .into_user_query()?;
+        let user_query =
+            user_query.ok_or(ChatError::InvalidArgument)?.into_user_query()?;
 
         let channel_query = channel_query
-            .ok_or(ChatServiceError::InvalidArgument)?
+            .ok_or(ChatError::InvalidArgument)?
             .into_channel_query()?;
 
         let session =
@@ -391,7 +387,7 @@ impl ChatService for ChatServiceImpl {
     async fn dequeue_chat_packets(
         &self,
         query: UserQuery,
-    ) -> Result<BanchoPackets, ChatServiceError> {
+    ) -> Result<BanchoPackets, ChatError> {
         let session = self.get_session(&query, Some(Platform::Bancho)).await?;
 
         let bancho_ext = match session.extends.bancho_ext.load_full() {
@@ -488,9 +484,7 @@ impl ChatService for ChatServiceImpl {
         Ok(BanchoPackets { data })
     }
 
-    async fn load_public_channels(
-        &self,
-    ) -> Result<ExecSuccess, ChatServiceError> {
+    async fn load_public_channels(&self) -> Result<ExecSuccess, ChatError> {
         const LOG_TARGET: &str = "chat::channel::initialize_public_channels";
 
         // todo: load public channels from database
@@ -526,27 +520,33 @@ impl ChatService for ChatServiceImpl {
 
     async fn get_public_channels(
         &self,
-    ) -> Result<GetPublicChannelsResponse, ChatServiceError> {
+    ) -> Result<GetPublicChannelsResponse, ChatError> {
+        fn to_channel_info(ch: &Arc<Channel>) -> ChannelInfo {
+            ChannelInfo {
+                id: ch.id,
+                name: ch.name.to_string(),
+                channel_type: ch.channel_type as i32,
+                description: ch
+                    .description
+                    .load()
+                    .as_ref()
+                    .map(|s| s.to_string()),
+                online_users: ch.user_count.val(),
+                users: None,
+            }
+        }
+
         let channel_indexes = self.channels.read().await;
 
-        Ok(GetPublicChannelsResponse {
+        let res = GetPublicChannelsResponse {
             channels: channel_indexes
                 .public_channels
                 .values()
-                .map(|channel| ChannelInfo {
-                    id: channel.id,
-                    name: channel.name.to_string(),
-                    channel_type: channel.channel_type as i32,
-                    description: channel
-                        .description
-                        .load()
-                        .as_ref()
-                        .map(|s| s.to_string()),
-                    online_users: channel.user_count.val(),
-                    users: None,
-                })
+                .map(to_channel_info)
                 .collect(),
-        })
+        };
+
+        Ok(res)
     }
 }
 
@@ -583,93 +583,83 @@ impl ChatService for ChatServiceRemote {
     async fn login(
         &self,
         request: LoginRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        self.client()
-            .login(request.into_request())
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+    ) -> Result<ExecSuccess, ChatError> {
+        Ok(self.client().login(request.into_request()).await?.into_inner())
     }
 
     async fn logout(
         &self,
         query: UserQuery,
         platforms: Platform,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        self.client()
-            .logout(
-                LogoutRequest {
-                    user_query: Some(query.into()),
-                    platforms: platforms.bits(),
-                }
-                .into_request(),
-            )
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+    ) -> Result<ExecSuccess, ChatError> {
+        let req = LogoutRequest {
+            user_query: Some(query.into()),
+            platforms: platforms.bits(),
+        }
+        .into_request();
+
+        Ok(self.client().logout(req).await?.into_inner())
     }
 
     async fn send_message(
         &self,
         request: SendMessageRequest,
-    ) -> Result<SendMessageResponse, ChatServiceError> {
-        self.client()
+    ) -> Result<SendMessageResponse, ChatError> {
+        Ok(self
+            .client()
             .send_message(request.into_request())
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 
     async fn join_channel(
         &self,
         request: JoinChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        self.client()
+    ) -> Result<ExecSuccess, ChatError> {
+        Ok(self
+            .client()
             .join_channel(request.into_request())
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 
     async fn leave_channel(
         &self,
         request: LeaveChannelRequest,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        self.client()
+    ) -> Result<ExecSuccess, ChatError> {
+        Ok(self
+            .client()
             .leave_channel(request.into_request())
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 
     async fn dequeue_chat_packets(
         &self,
         query: UserQuery,
-    ) -> Result<BanchoPackets, ChatServiceError> {
-        self.client()
+    ) -> Result<BanchoPackets, ChatError> {
+        Ok(self
+            .client()
             .pull_chat_packets(Into::<RawUserQuery>::into(query))
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 
-    async fn load_public_channels(
-        &self,
-    ) -> Result<ExecSuccess, ChatServiceError> {
-        self.client()
+    async fn load_public_channels(&self) -> Result<ExecSuccess, ChatError> {
+        Ok(self
+            .client()
             .load_public_channels(LoadPublicChannelsRequest::default())
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 
     async fn get_public_channels(
         &self,
-    ) -> Result<GetPublicChannelsResponse, ChatServiceError> {
-        self.client()
+    ) -> Result<GetPublicChannelsResponse, ChatError> {
+        Ok(self
+            .client()
             .get_public_channels(GetPublicChannelsRequest::default())
-            .await
-            .map_err(ChatServiceError::RpcError)
-            .map(|resp| resp.into_inner())
+            .await?
+            .into_inner())
     }
 }

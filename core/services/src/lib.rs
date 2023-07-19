@@ -1,5 +1,3 @@
-use peace_rpc::ParseError;
-
 #[macro_use]
 extern crate peace_logs;
 
@@ -416,9 +414,4 @@ pub mod users {
             }
         }
     }
-}
-
-pub enum ServiceError<T> {
-    Err(T),
-    ParseError(ParseError),
 }
