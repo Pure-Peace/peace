@@ -1,4 +1,4 @@
-use crate::users::{Session, UserIndexes, UserStore};
+use crate::users::{Session, SessionData, UserIndexes, UserStore};
 use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use peace_domain::bancho_state::ConnectionInfo;
@@ -13,10 +13,12 @@ pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
 
 pub type BanchoSession = Session<BanchoExtend>;
+pub type BanchoSessionData = SessionData<BanchoExtendData>;
+
 pub type SessionIndexes = UserIndexes<BanchoSession>;
 pub type UserSessions = UserStore<BanchoSession>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Packet {
     Data(PacketData),
     Ptr(PacketDataPtr),
@@ -334,6 +336,11 @@ impl BanchoPacketsQueue {
 
         buf
     }
+
+    pub async fn dump_packets(&self) -> Vec<Packet> {
+        let queue = self.queue.lock().await;
+        Vec::from_iter(queue.iter().cloned())
+    }
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -435,4 +442,18 @@ impl Session<BanchoExtend> {
             self.mode_stats().map(|s| s.rank.val()).unwrap_or_default() as i32,
         )
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BanchoExtendData {
+    pub client_version: String,
+    pub utc_offset: u8,
+    pub presence_filter: Atomic<PresenceFilter>,
+    pub display_city: bool,
+    pub only_friend_pm_allowed: Bool,
+    pub bancho_status: BanchoStatus,
+    pub mode_stat_sets: UserModeStatSets,
+    pub packets_queue: Vec<Packet>,
+    pub connection_info: ConnectionInfo,
+    pub notify_index: Ulid,
 }

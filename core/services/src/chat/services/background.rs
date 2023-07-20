@@ -121,10 +121,11 @@ impl ChatBackgroundServiceImpl {
                     // remove messages that all users has readed
                     let removed_notify_msg =
                         match min_notify_msg_id_in_all_users {
-                            Some(min_msg_id) => notify_queue
-                                .write()
-                                .await
-                                .remove_messages_before_id(&min_msg_id),
+                            Some(min_msg_id) => {
+                                notify_queue
+                                    .remove_messages_before_id(&min_msg_id)
+                                    .await
+                            },
                             None => 0,
                         };
 

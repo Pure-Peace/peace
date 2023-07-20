@@ -1,7 +1,11 @@
 use crate::{
-    bancho_state::{BanchoMessageQueue, BanchoPacketsQueue},
-    users::{Session, UserIndexes, UserStore},
+    bancho_state::{
+        BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
+    },
+    users::{Session, SessionData, UserIndexes, UserStore},
+    DumpData,
 };
+use async_trait::async_trait;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use peace_pb::chat::ChannelQuery;
@@ -17,56 +21,24 @@ use tools::{
 };
 
 pub type ChatSession = Session<ChatSessionExtend>;
+pub type ChatSessionData = SessionData<ChatSessionExtendData>;
+
 pub type SessionIndexes = UserIndexes<ChatSession>;
 pub type UserSessions = UserStore<ChatSession>;
 
-#[derive(Debug, Default)]
-pub struct JoinedChannel {
-    pub ptr: Weak<Channel>,
-    pub message_index: Atomic<Ulid>,
-    pub joined_time: DateTime<Utc>,
-}
-
-#[derive(Debug, Default)]
-pub struct BanchoChatExt {
-    pub packets_queue: BanchoPacketsQueue,
-    pub notify_index: Atomic<Ulid>,
-}
-
-impl From<BanchoPacketsQueue> for BanchoChatExt {
-    fn from(packets_queue: BanchoPacketsQueue) -> Self {
-        Self { packets_queue, ..Default::default() }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct ChatSessionExtend {
-    pub platforms: Atomic<Platform>,
-    pub bancho_ext: AtomicOption<BanchoChatExt>,
-    pub joined_channels: RwLock<HashMap<u64, Arc<JoinedChannel>>>,
-    pub channel_count: U32,
-}
-
-impl ChatSessionExtend {
-    pub fn new(
-        platforms: Platform,
-        bancho_ext: Option<BanchoChatExt>,
-        joined_channels: Option<HashMap<u64, Arc<JoinedChannel>>>,
-    ) -> Self {
-        let joined_channels = joined_channels.unwrap_or_default();
-        let channel_count = joined_channels.len();
-
-        Self {
-            platforms: platforms.into(),
-            bancho_ext: bancho_ext.into(),
-            joined_channels: RwLock::new(joined_channels),
-            channel_count: U32::from(channel_count as u32),
-        }
-    }
-}
-
 #[derive(
-    Debug, Copy, Clone, Default, Primitive, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    Primitive,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
 )]
 pub enum ChannelType {
     #[default]
@@ -104,6 +76,110 @@ impl Platform {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct JoinedChannel {
+    pub ptr: Weak<Channel>,
+    pub message_index: Atomic<Ulid>,
+    pub joined_time: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JoinedChannelData {
+    pub channel_id: u64,
+    pub message_index: Ulid,
+    pub joined_time: DateTime<Utc>,
+}
+
+#[derive(Debug, Default)]
+pub struct BanchoChatExt {
+    pub packets_queue: BanchoPacketsQueue,
+    pub notify_index: Atomic<Ulid>,
+}
+
+impl From<BanchoPacketsQueue> for BanchoChatExt {
+    fn from(packets_queue: BanchoPacketsQueue) -> Self {
+        Self { packets_queue, ..Default::default() }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BanchoChatExtData {
+    pub packets_queue: Vec<Packet>,
+    pub notify_index: Ulid,
+}
+
+#[async_trait]
+impl DumpData<BanchoChatExtData> for BanchoChatExt {
+    async fn dump_data(&self) -> BanchoChatExtData {
+        BanchoChatExtData {
+            packets_queue: self.packets_queue.dump_packets().await,
+            notify_index: self.notify_index.load().as_ref().clone(),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ChatSessionExtend {
+    pub platforms: Atomic<Platform>,
+    pub bancho_ext: AtomicOption<BanchoChatExt>,
+    pub joined_channels: RwLock<HashMap<u64, Arc<JoinedChannel>>>,
+    pub channel_count: U32,
+}
+
+impl ChatSessionExtend {
+    pub fn new(
+        platforms: Platform,
+        bancho_ext: Option<BanchoChatExt>,
+        joined_channels: Option<HashMap<u64, Arc<JoinedChannel>>>,
+    ) -> Self {
+        let joined_channels = joined_channels.unwrap_or_default();
+        let channel_count = joined_channels.len();
+
+        Self {
+            platforms: platforms.into(),
+            bancho_ext: bancho_ext.into(),
+            joined_channels: RwLock::new(joined_channels),
+            channel_count: U32::from(channel_count as u32),
+        }
+    }
+
+    pub async fn collect_joined_channels(&self) -> Vec<JoinedChannelData> {
+        let mut channels =
+            Vec::with_capacity(self.channel_count.val() as usize);
+
+        for (channel_id, channel) in self.joined_channels.read().await.iter() {
+            channels.push(JoinedChannelData {
+                channel_id: *channel_id,
+                message_index: channel.message_index.load().as_ref().clone(),
+                joined_time: channel.joined_time.clone(),
+            });
+        }
+
+        channels
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatSessionExtendData {
+    pub platforms: i32,
+    pub bancho_ext: Option<BanchoChatExtData>,
+    pub joined_channels: Vec<JoinedChannelData>,
+}
+
+#[async_trait]
+impl DumpData<ChatSessionExtendData> for ChatSessionExtend {
+    async fn dump_data(&self) -> ChatSessionExtendData {
+        ChatSessionExtendData {
+            platforms: self.platforms.load().bits(),
+            bancho_ext: match self.bancho_ext.load().as_deref() {
+                Some(ext) => Some(ext.dump_data().await),
+                None => None,
+            },
+            joined_channels: self.collect_joined_channels().await,
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ChannelIndexes {
     pub channel_id: HashMap<u64, Arc<Channel>>,
@@ -130,7 +206,7 @@ pub struct Channel {
     pub user_count: U32,
 
     pub min_msg_index: AtomicOption<Ulid>,
-    pub message_queue: Arc<RwLock<BanchoMessageQueue>>,
+    pub message_queue: Arc<BanchoMessageQueue>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -159,7 +235,7 @@ impl Channel {
             users: Arc::new(users.into()),
             user_count: user_count.into(),
             min_msg_index: None.into(),
-            message_queue: Arc::new(RwLock::new(BanchoMessageQueue::default())),
+            message_queue: Arc::new(BanchoMessageQueue::default()),
             created_at: Utc::now(),
         }
     }
@@ -254,6 +330,37 @@ impl Channel {
         bancho_packets::server::ChannelKick::pack(
             self.name.load().as_ref().into(),
         )
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelData {
+    pub id: u64,
+    pub name: String,
+    pub channel_type: ChannelType,
+    pub description: Option<String>,
+    pub users: Vec<i32>,
+    pub min_msg_index: Option<Ulid>,
+    pub message_queue: Vec<BanchoMessageData>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl ChannelData {
+    pub async fn from_channel(ch: &Channel) -> Self {
+        ChannelData {
+            id: ch.id,
+            name: ch.name.to_string(),
+            channel_type: ch.channel_type,
+            description: ch
+                .description
+                .load()
+                .as_deref()
+                .map(|s| s.to_string()),
+            users: ch.users.read().await.keys().map(|k| *k).collect(),
+            min_msg_index: ch.min_msg_index.load().as_deref().copied(),
+            message_queue: ch.message_queue.read().await.dump_messages().await,
+            created_at: ch.created_at.clone(),
+        }
     }
 }
 
@@ -400,5 +507,15 @@ impl Channels {
     #[inline]
     pub fn channel_count(&self) -> usize {
         self.len.val()
+    }
+
+    pub async fn dump_channels(&self) -> Vec<ChannelData> {
+        let mut channel_data = Vec::with_capacity(self.len.val());
+        for channel in self.read().await.values() {
+            channel_data
+                .push(ChannelData::from_channel(channel.as_ref()).await);
+        }
+
+        channel_data
     }
 }

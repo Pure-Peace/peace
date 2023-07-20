@@ -1,3 +1,8 @@
+use async_trait::async_trait;
+use peace_rpc_error::{RpcError, TonicError};
+use std::path::Path;
+use tonic::Status;
+
 #[macro_use]
 extern crate peace_logs;
 
@@ -66,7 +71,55 @@ pub trait IntoService<T>: Sized + Sync + Send + 'static {
     fn into_service(self) -> T;
 }
 
+#[async_trait]
+pub trait DumpData<D> {
+    async fn dump_data(&self) -> D;
+}
+
+#[async_trait]
+pub trait DumpToDisk<D> {
+    async fn dump_to_disk(&self, path: &Path) -> Result<usize, DumpError>;
+}
+
+#[async_trait]
+impl<T, D> DumpToDisk<D> for T
+where
+    T: DumpData<D> + Sync + Send,
+    D: serde::Serialize + Send,
+{
+    async fn dump_to_disk(&self, path: &Path) -> Result<usize, DumpError> {
+        let dump_data = self.dump_data().await;
+
+        let bytes_data = bincode::serialize(&dump_data)
+            .map_err(|err| DumpError::SerializeError(err.to_string()))?;
+
+        tokio::fs::write(path, &bytes_data)
+            .await
+            .map_err(|err| DumpError::WriteFileError(err.to_string()))?;
+
+        Ok(bytes_data.len())
+    }
+}
+
+#[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
+pub enum DumpError {
+    #[error("SerializeError: {0}")]
+    SerializeError(String),
+    #[error("WriteFileError: {0}")]
+    WriteFileError(String),
+    #[error("TonicError: {0}")]
+    TonicError(String),
+}
+
+impl TonicError for DumpError {
+    fn tonic_error(s: Status) -> Self {
+        Self::TonicError(s.message().to_owned())
+    }
+}
+
 pub mod users {
+    use crate::DumpData;
+    use async_trait::async_trait;
     use chrono::{DateTime, Utc};
     use peace_domain::bancho_state::CreateSessionDto;
     use peace_pb::bancho_state::UserQuery;
@@ -82,6 +135,11 @@ pub mod users {
         },
         Timestamp, Ulid,
     };
+
+    #[async_trait]
+    pub trait FromSession<E> {
+        async fn from_session(s: &Session<E>) -> Self;
+    }
 
     #[derive(Debug, Serialize)]
     pub struct Session<T> {
@@ -168,6 +226,48 @@ pub mod users {
         #[inline]
         pub fn update_active(&self) {
             self.last_active.set(Timestamp::now());
+        }
+    }
+
+    #[async_trait]
+    impl<T, D> DumpData<D> for Session<T>
+    where
+        T: Sync + Send,
+        D: FromSession<T>,
+    {
+        async fn dump_data(&self) -> D {
+            D::from_session(self).await
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct SessionData<D> {
+        pub id: Ulid,
+        pub user_id: i32,
+        pub username: String,
+        pub username_unicode: Option<String>,
+        pub privileges: i32,
+        pub created_at: DateTime<Utc>,
+        pub last_active: u64,
+        pub extends: D,
+    }
+
+    #[async_trait]
+    impl<T, D> FromSession<T> for SessionData<D>
+    where
+        T: DumpData<D> + Sync + Send,
+    {
+        async fn from_session(s: &Session<T>) -> Self {
+            Self {
+                id: s.id,
+                user_id: s.user_id,
+                username: s.username(),
+                username_unicode: s.username_unicode(),
+                privileges: s.privileges.val(),
+                created_at: s.created_at.clone(),
+                last_active: s.last_active.val(),
+                extends: s.extends.dump_data().await,
+            }
         }
     }
 
@@ -373,6 +473,20 @@ pub mod users {
         #[inline]
         pub fn length(&self) -> usize {
             self.len.val()
+        }
+    }
+
+    impl<T> UserStore<Session<T>> {
+        pub async fn dump_sessions<D>(&self) -> Vec<D>
+        where
+            D: FromSession<T>,
+        {
+            let mut sessions = Vec::with_capacity(self.length());
+            for session in self.read().await.values() {
+                sessions.push(D::from_session(session.as_ref()).await);
+            }
+
+            sessions
         }
     }
 

@@ -10,17 +10,17 @@ use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tools::{
     async_collections::{
         BackgroundTask, BackgroundTaskError, CommonRecycleBackgroundTaskConfig,
         LoopBackgroundTaskConfig,
     },
-    message_queue::MessageQueue as RawMessageQueue,
+    message_queue::{MessageData, MessageQueue},
     Ulid,
 };
 
-pub type BanchoMessageQueue = RawMessageQueue<Packet, i32, Ulid>;
+pub type BanchoMessageQueue = MessageQueue<Packet, i32, Ulid>;
+pub type BanchoMessageData = MessageData<Packet, i32, Ulid>;
 
 pub type DynBanchoStateService = Arc<dyn BanchoStateService + Send + Sync>;
 
@@ -64,7 +64,7 @@ pub trait UserSessionsStore {
 }
 
 pub trait NotifyMessagesQueue {
-    fn notify_queue(&self) -> &Arc<RwLock<BanchoMessageQueue>>;
+    fn notify_queue(&self) -> &Arc<BanchoMessageQueue>;
 }
 
 #[async_trait]

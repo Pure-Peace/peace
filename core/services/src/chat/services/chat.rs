@@ -1,8 +1,10 @@
 use crate::{
-    bancho_state::{BanchoMessageQueue, BanchoPacketsQueue, Packet},
+    bancho_state::{
+        BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
+    },
     chat::*,
     users::Session,
-    FromRpcClient, IntoService, RpcClient,
+    DumpData, FromRpcClient, IntoService, RpcClient,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
@@ -20,14 +22,13 @@ use peace_pb::{
 };
 use peace_repositories::users::DynUsersRepository;
 use std::{collections::VecDeque, sync::Arc};
-use tokio::sync::RwLock;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
 #[derive(Clone)]
 pub struct ChatServiceImpl {
     pub user_sessions: Arc<UserSessions>,
-    pub notify_queue: Arc<RwLock<BanchoMessageQueue>>,
+    pub notify_queue: Arc<BanchoMessageQueue>,
     pub channels: Arc<Channels>,
     pub users_repository: DynUsersRepository,
 }
@@ -37,7 +38,7 @@ impl ChatServiceImpl {
     pub fn new(users_repository: DynUsersRepository) -> Self {
         Self {
             user_sessions: UserSessions::default().into(),
-            notify_queue: RwLock::new(BanchoMessageQueue::default()).into(),
+            notify_queue: Arc::new(BanchoMessageQueue::default()),
             channels: Channels::default().into(),
             users_repository,
         }
@@ -144,6 +145,24 @@ impl ChatServiceImpl {
                     Err(ChatError::SessionNotExists)
                 }
             },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatServiceDump {
+    pub user_sessions: Vec<ChatSessionData>,
+    pub notify_queue: Vec<BanchoMessageData>,
+    pub channels: Vec<ChannelData>,
+}
+
+#[async_trait]
+impl DumpData<ChatServiceDump> for ChatServiceImpl {
+    async fn dump_data(&self) -> ChatServiceDump {
+        ChatServiceDump {
+            user_sessions: self.user_sessions.dump_sessions().await,
+            notify_queue: self.notify_queue.dump_messages().await,
+            channels: self.channels.dump_channels().await,
         }
     }
 }
@@ -529,7 +548,7 @@ impl ChatService for ChatServiceImpl {
                 description: ch
                     .description
                     .load()
-                    .as_ref()
+                    .as_deref()
                     .map(|s| s.to_string()),
                 online_users: ch.user_count.val(),
                 users: None,

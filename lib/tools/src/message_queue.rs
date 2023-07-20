@@ -1,9 +1,10 @@
 use crate::lazy_init;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashSet},
     fmt::Debug,
     hash::Hash,
-    ops::RangeBounds,
+    ops::{Deref, RangeBounds},
     sync::Arc,
 };
 use tokio::sync::RwLock;
@@ -62,31 +63,150 @@ where
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageData<T, K, I> {
+    pub msg_id: I,
+    pub content: T,
+    pub has_read: Vec<K>,
+    pub has_validator: bool,
+}
+
+impl<T, K, I> MessageData<T, K, I>
+where
+    T: Clone,
+    K: Clone + Eq + Hash,
+    I: MessageId,
+{
+    pub async fn from_message(msg_id: &I, message: &Message<T, K>) -> Self {
+        Self {
+            msg_id: msg_id.clone(),
+            content: message.content.clone(),
+            has_read: message
+                .has_read
+                .read()
+                .await
+                .iter()
+                .map(|k| k.clone())
+                .collect(),
+            has_validator: message.validator.is_some(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ReceivedMessages<T, I> {
     pub messages: Vec<T>,
     pub last_msg_id: I,
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Default)]
 pub struct MessageQueue<T, K, I> {
+    pub raw: RwLock<RawMessageQueue<T, K, I>>,
+}
+
+impl<T, K, I> Deref for MessageQueue<T, K, I> {
+    type Target = RwLock<RawMessageQueue<T, K, I>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.raw
+    }
+}
+
+impl<T, K, I> MessageQueue<T, K, I>
+where
+    T: Clone,
+    K: Clone + Eq + Hash,
+    I: MessageId,
+{
+    #[inline]
+    pub async fn push_message(
+        &self,
+        content: T,
+        validator: Option<MessageValidator<T, K>>,
+    ) {
+        self.write().await.push_message(content, validator)
+    }
+
+    #[inline]
+    pub async fn push_message_excludes(
+        &self,
+        content: T,
+        excludes: impl IntoIterator<Item = K>,
+        validator: Option<MessageValidator<T, K>>,
+    ) {
+        self.write().await.push_message_excludes(content, excludes, validator)
+    }
+
+    #[inline]
+    pub async fn remove_messages(&self, message_ids: &[I]) -> usize {
+        self.write().await.remove_messages(message_ids)
+    }
+
+    #[inline]
+    pub async fn remove_messages_in_range<R>(&self, range: R) -> usize
+    where
+        R: RangeBounds<I>,
+    {
+        self.write().await.remove_messages_in_range(range)
+    }
+
+    #[inline]
+    pub async fn remove_messages_before_id(&self, msg_id: &I) -> usize {
+        self.write().await.remove_messages_before_id(msg_id)
+    }
+
+    #[inline]
+    pub async fn remove_messages_after_id(&self, msg_id: &I) -> usize {
+        self.write().await.remove_messages_after_id(msg_id)
+    }
+
+    #[inline]
+    pub async fn collect_invalid_mesages(&self) -> Vec<I> {
+        self.read().await.collect_invalid_mesages()
+    }
+
+    #[inline]
+    pub async fn remove_invalid_messages(&self) -> usize {
+        self.write().await.remove_invalid_messages()
+    }
+
+    #[inline]
+    pub async fn receive_messages(
+        &self,
+        reader: &K,
+        from_msg_id: &I,
+        receive_count: Option<usize>,
+    ) -> Option<ReceivedMessages<T, I>> {
+        self.read()
+            .await
+            .receive_messages(reader, from_msg_id, receive_count)
+            .await
+    }
+
+    pub async fn dump_messages(&self) -> Vec<MessageData<T, K, I>> {
+        self.read().await.dump_messages().await
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct RawMessageQueue<T, K, I> {
     pub messages: BTreeMap<I, Message<T, K>>,
 }
 
-impl<T, K, I> Debug for MessageQueue<T, K, I>
+impl<T, K, I> Debug for RawMessageQueue<T, K, I>
 where
     T: Debug,
     K: Debug,
     I: Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MessageQueue")
+        f.debug_struct("RawMessageQueue")
             .field("messages", &self.messages)
             .finish()
     }
 }
 
-impl<T, K, I> MessageQueue<T, K, I>
+impl<T, K, I> RawMessageQueue<T, K, I>
 where
     T: Clone,
     K: Clone + Eq + Hash,
@@ -218,5 +338,15 @@ where
             messages,
             last_msg_id: last_msg_id.unwrap(),
         })
+    }
+
+    pub async fn dump_messages(&self) -> Vec<MessageData<T, K, I>> {
+        let mut messages = Vec::with_capacity(self.messages.len());
+
+        for (msg_id, msg) in self.messages.iter() {
+            messages.push(MessageData::from_message(msg_id, msg).await);
+        }
+
+        messages
     }
 }
