@@ -1,5 +1,8 @@
 use super::traits::*;
-use crate::{bancho_state::UserSessions, DumpData, IntoService};
+use crate::{
+    bancho_state::{BanchoSessionData, UserSessions},
+    DumpData, IntoService,
+};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -18,7 +21,7 @@ impl UserSessionsServiceImpl {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSessionsServiceDump {
-    pub user_sessions: Vec<UserSessionData>,
+    pub user_sessions: Vec<BanchoSessionData>,
     pub notify_queue: Vec<BanchoMessageData>,
 }
 

@@ -141,6 +141,15 @@ where
     }
 }
 
+impl<T> Clone for AtomicAny<T>
+where
+    T: RefCnt + Clone,
+{
+    fn clone(&self) -> Self {
+        Self(ArcSwapAny::new(self.0.load().clone()))
+    }
+}
+
 impl<T> Deref for AtomicAny<T>
 where
     T: RefCnt,
@@ -199,6 +208,12 @@ macro_rules! implAtomicValue {
                         [<$ty:camel>]::new(val)
                     }
                 }
+
+                impl Clone for [<$ty:camel>] {
+                    fn clone(&self) -> Self {
+                        Self::from(self.val())
+                    }
+                }
             )*
         }
     };
@@ -229,7 +244,16 @@ macro_rules! implAtomicValueSerde {
                     where
                         S: serde::Serializer,
                     {
-                        serializer.[<serialize_$ty:snake>](self.val())
+                        [<$ty:snake>]::serialize(&self.val(), serializer)
+                    }
+                }
+
+                impl<'de> Deserialize<'de> for [<$ty:camel>] {
+                    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                    where
+                        D: serde::Deserializer<'de>,
+                    {
+                        [<$ty:snake>]::deserialize(deserializer).map(Self::from)
                     }
                 }
             )*
@@ -237,7 +261,9 @@ macro_rules! implAtomicValueSerde {
     };
 }
 
-implAtomicValueSerde!(bool, i8, u8, i16, u16, i32, u32, i64, u64, f32, f64);
+implAtomicValueSerde!(
+    bool, i8, u8, i16, u16, i32, u32, i64, u64, isize, usize, f32, f64
+);
 
 macro_rules! implAtomicOperation {
     ($($ty: ty$(,)*)*) => {

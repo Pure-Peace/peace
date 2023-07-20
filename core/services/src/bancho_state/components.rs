@@ -1,11 +1,15 @@
-use crate::users::{Session, SessionData, UserIndexes, UserStore};
+use crate::{
+    users::{Session, SessionData, UserIndexes, UserStore},
+    DumpData,
+};
+use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use peace_domain::bancho_state::ConnectionInfo;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
-    atomic::{Atomic, AtomicValue, Bool, F32, U32, U64},
+    atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, U32, U64},
     Ulid,
 };
 
@@ -91,7 +95,7 @@ impl GameMode {
 }
 
 #[rustfmt::skip]
-#[derive(Default, Deserialize)]
+#[derive(Default)]
 #[bitmask(u32)]
 pub enum Mods {
     #[default]
@@ -163,6 +167,15 @@ impl serde::Serialize for Mods {
     }
 }
 
+impl<'de> serde::Deserialize<'de> for Mods {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        u32::deserialize(deserializer).map(Self::from)
+    }
+}
+
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Serialize, Deserialize)]
 pub enum UserOnlineStatus {
@@ -206,7 +219,7 @@ impl PresenceFilter {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ModeStats {
     pub rank: U32,
     pub pp_v2: F32,
@@ -219,7 +232,7 @@ pub struct ModeStats {
     pub max_combo: U32,
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BanchoStatus {
     pub online_status: Atomic<UserOnlineStatus>,
     pub description: Atomic<String>,
@@ -249,17 +262,17 @@ impl BanchoStatus {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UserModeStatSets {
-    pub standard: Option<ModeStats>,
-    pub taiko: Option<ModeStats>,
-    pub fruits: Option<ModeStats>,
-    pub mania: Option<ModeStats>,
-    pub standard_relax: Option<ModeStats>,
-    pub taiko_relax: Option<ModeStats>,
-    pub fruits_relax: Option<ModeStats>,
-    pub standard_autopilot: Option<ModeStats>,
-    pub standard_score_v2: Option<ModeStats>,
+    pub standard: AtomicOption<ModeStats>,
+    pub taiko: AtomicOption<ModeStats>,
+    pub fruits: AtomicOption<ModeStats>,
+    pub mania: AtomicOption<ModeStats>,
+    pub standard_relax: AtomicOption<ModeStats>,
+    pub taiko_relax: AtomicOption<ModeStats>,
+    pub fruits_relax: AtomicOption<ModeStats>,
+    pub standard_autopilot: AtomicOption<ModeStats>,
+    pub standard_score_v2: AtomicOption<ModeStats>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -343,7 +356,26 @@ impl BanchoPacketsQueue {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+impl serde::Serialize for BanchoPacketsQueue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let packets = self.queue.blocking_lock().clone();
+        packets.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BanchoPacketsQueue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self::new(VecDeque::deserialize(deserializer)?))
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct BanchoExtend {
     pub client_version: String,
     pub utc_offset: u8,
@@ -352,7 +384,6 @@ pub struct BanchoExtend {
     pub only_friend_pm_allowed: Bool,
     pub bancho_status: BanchoStatus,
     pub mode_stat_sets: UserModeStatSets,
-    #[serde(skip_serializing)]
     pub packets_queue: BanchoPacketsQueue,
     /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
@@ -385,18 +416,18 @@ impl BanchoExtend {
 
 impl Session<BanchoExtend> {
     #[inline]
-    pub fn mode_stats(&self) -> Option<&ModeStats> {
+    pub fn mode_stats(&self) -> Option<Arc<ModeStats>> {
         let stats = &self.extends.mode_stat_sets;
         match &self.extends.bancho_status.mode.load().as_ref() {
-            GameMode::Standard => stats.standard.as_ref(),
-            GameMode::Taiko => stats.taiko.as_ref(),
-            GameMode::Fruits => stats.fruits.as_ref(),
-            GameMode::Mania => stats.mania.as_ref(),
-            GameMode::StandardRelax => stats.standard_relax.as_ref(),
-            GameMode::TaikoRelax => stats.taiko_relax.as_ref(),
-            GameMode::FruitsRelax => stats.fruits_relax.as_ref(),
-            GameMode::StandardAutopilot => stats.standard_autopilot.as_ref(),
-            GameMode::StandardScoreV2 => stats.standard_score_v2.as_ref(),
+            GameMode::Standard => stats.standard.load_full(),
+            GameMode::Taiko => stats.taiko.load_full(),
+            GameMode::Fruits => stats.fruits.load_full(),
+            GameMode::Mania => stats.mania.load_full(),
+            GameMode::StandardRelax => stats.standard_relax.load_full(),
+            GameMode::TaikoRelax => stats.taiko_relax.load_full(),
+            GameMode::FruitsRelax => stats.fruits_relax.load_full(),
+            GameMode::StandardAutopilot => stats.standard_autopilot.load_full(),
+            GameMode::StandardScoreV2 => stats.standard_score_v2.load_full(),
         }
     }
 
@@ -411,6 +442,7 @@ impl Session<BanchoExtend> {
     pub fn user_stats_packet(&self) -> Vec<u8> {
         let status = &self.extends.bancho_status;
         let stats = self.mode_stats();
+        let stats = stats.as_deref();
 
         UserStats::pack(
             self.user_id,
@@ -448,12 +480,30 @@ impl Session<BanchoExtend> {
 pub struct BanchoExtendData {
     pub client_version: String,
     pub utc_offset: u8,
-    pub presence_filter: Atomic<PresenceFilter>,
+    pub presence_filter: PresenceFilter,
     pub display_city: bool,
-    pub only_friend_pm_allowed: Bool,
+    pub only_friend_pm_allowed: bool,
     pub bancho_status: BanchoStatus,
     pub mode_stat_sets: UserModeStatSets,
     pub packets_queue: Vec<Packet>,
     pub connection_info: ConnectionInfo,
     pub notify_index: Ulid,
+}
+
+#[async_trait]
+impl DumpData<BanchoExtendData> for BanchoExtend {
+    async fn dump_data(&self) -> BanchoExtendData {
+        BanchoExtendData {
+            client_version: self.client_version.clone(),
+            utc_offset: self.utc_offset,
+            presence_filter: *self.presence_filter.load().as_ref(),
+            display_city: self.display_city,
+            only_friend_pm_allowed: self.only_friend_pm_allowed.val(),
+            bancho_status: self.bancho_status.clone(),
+            mode_stat_sets: self.mode_stat_sets.clone(),
+            packets_queue: self.packets_queue.dump_packets().await,
+            connection_info: self.connection_info.clone(),
+            notify_index: *self.notify_index.load().as_ref(),
+        }
+    }
 }
