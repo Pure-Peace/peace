@@ -13,10 +13,8 @@ pub enum CreateSessionError {
 pub enum BanchoStateError {
     #[error("invalid argument")]
     InvalidArgument,
-    #[error("session not exists")]
+    #[error("bancho session not exists")]
     SessionNotExists,
-    #[error("invalid token")]
-    InvalidToken,
     #[error(transparent)]
     SignatureError(#[from] SignatureError),
     #[error(transparent)]

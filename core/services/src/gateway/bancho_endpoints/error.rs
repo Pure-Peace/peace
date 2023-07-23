@@ -54,8 +54,6 @@ pub enum BanchoHttpError {
     ParseRequestError,
     #[error("invalid bancho packet")]
     InvalidBanchoPacket,
-    #[error("invalid token")]
-    InvalidToken,
     #[error("failed to process bancho packets")]
     FailedToProcessBanchoPackets(#[from] ProcessBanchoPacketError),
     #[error(transparent)]
@@ -91,11 +89,17 @@ impl IntoResponse for BanchoHttpError {
                 ([(CHO_TOKEN, "failed"), CHO_PROTOCOL], packets).into_response()
             },
 
-            Self::InvalidToken => {
-                (self.status_code(), "invalid token").into_response()
+            Self::BanchoStateError(
+                BanchoStateError::SessionNotExists
+                | BanchoStateError::SignatureError(_),
+            ) => {
+                (StatusCode::OK, server::BanchoRestart::pack(0)).into_response()
             },
 
-            _ => (self.status_code(), self.to_string()).into_response(),
+            _ => {
+                warn!("[BanchoHttpError] Unhandled error: {self:?}");
+                (self.status_code(), self.to_string()).into_response()
+            },
         }
     }
 }

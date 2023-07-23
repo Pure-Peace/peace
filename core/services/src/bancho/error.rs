@@ -34,8 +34,6 @@ impl TonicError for ProcessBanchoPacketError {
 
 #[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
 pub enum BanchoServiceError {
-    #[error("session not exists")]
-    SessionNotExists,
     #[error(transparent)]
     PasswordError(#[from] PasswordError),
     #[error(transparent)]

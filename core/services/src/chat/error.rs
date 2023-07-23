@@ -10,7 +10,7 @@ pub enum ChatError {
     GetUserError(#[from] GetUserError),
     #[error("invalid argument")]
     InvalidArgument,
-    #[error("session not exists")]
+    #[error("chat session not exists")]
     SessionNotExists,
     #[error("channel not exists")]
     ChannelNotExists,

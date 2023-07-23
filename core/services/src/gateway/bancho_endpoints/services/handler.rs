@@ -71,7 +71,7 @@ impl BanchoHandlerService for BanchoHandlerServiceImpl {
         let token = BanchoClientToken::from_str(&token)?;
 
         if !self.check_user_token(token.clone()).await? {
-            return Err(BanchoHttpError::InvalidToken);
+            return Err(BanchoStateError::SessionNotExists)?;
         }
 
         let BanchoClientToken { user_id, .. } = token;

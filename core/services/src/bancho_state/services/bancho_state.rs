@@ -449,7 +449,7 @@ impl CheckUserToken for BanchoStateServiceImpl {
             .verify(token.content().into(), token.signature.into())
             .await?
         {
-            return Err(BanchoStateError::InvalidToken);
+            return Err(BanchoStateError::SessionNotExists);
         }
 
         let session = self
@@ -460,7 +460,7 @@ impl CheckUserToken for BanchoStateServiceImpl {
 
         session.update_active();
 
-        Ok(CheckUserTokenResponse::default())
+        Ok(CheckUserTokenResponse { is_valid: true })
     }
 }
 
