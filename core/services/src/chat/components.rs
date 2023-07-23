@@ -66,6 +66,15 @@ impl Platform {
     }
 
     #[inline]
+    pub fn platforms_array(&self) -> [Option<Self>; 3] {
+        [
+            self.contains(Self::Bancho).then_some(Self::Bancho),
+            self.contains(Self::Lazer).then_some(Self::Lazer),
+            self.contains(Self::Web).then_some(Self::Web),
+        ]
+    }
+
+    #[inline]
     pub fn add(&mut self, platforms: &Platform) {
         self.bits |= platforms.bits()
     }
@@ -244,6 +253,8 @@ impl Channel {
         session: &Arc<Session<ChatSessionExtend>>,
         channel: &Arc<Channel>,
     ) {
+        const LOG_TARGET: &str = "chat::channel::join";
+
         channel.users.write().await.entry(session.user_id).or_insert_with(
             || {
                 channel.user_count.add(1);
@@ -274,12 +285,23 @@ impl Channel {
                 .push_packet(channel.join_packets().into())
                 .await;
         }
+
+        info!(
+            target: LOG_TARGET,
+            "User {}({}) joined into channel: {}({}) ",
+            session.username.load(),
+            session.user_id,
+            channel.name.load(),
+            channel.id
+        );
     }
 
     pub async fn remove(
         session: &Arc<Session<ChatSessionExtend>>,
         channel: &Arc<Channel>,
     ) {
+        const LOG_TARGET: &str = "chat::channel::remove";
+
         if channel.users.write().await.remove(&session.user_id).is_some() {
             channel.user_count.sub(1);
         }
@@ -302,6 +324,15 @@ impl Channel {
                 .push_packet(channel.kick_packets().into())
                 .await;
         }
+
+        info!(
+            target: LOG_TARGET,
+            "User {}({}) leaved from channel: {}({}) ",
+            session.username.load(),
+            session.user_id,
+            channel.name.load(),
+            channel.id
+        );
     }
 
     #[inline]

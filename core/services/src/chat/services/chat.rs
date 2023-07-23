@@ -21,7 +21,7 @@ use peace_pb::{
     },
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{collections::VecDeque, sync::Arc};
+use std::{borrow::Cow, collections::VecDeque, sync::Arc};
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
@@ -194,6 +194,8 @@ impl ChatService for ChatServiceImpl {
         &self,
         request: LoginRequest,
     ) -> Result<ExecSuccess, ChatError> {
+        const LOG_TARGET: &str = "chat::login";
+
         let LoginRequest {
             user_id,
             username,
@@ -204,14 +206,22 @@ impl ChatService for ChatServiceImpl {
 
         let platforms = Platform::from(platforms);
 
-        self.login_inner(
-            user_id,
-            username,
-            username_unicode,
-            privileges,
-            platforms,
-        )
-        .await?;
+        let session = self
+            .login_inner(
+                user_id,
+                username,
+                username_unicode,
+                privileges,
+                platforms,
+            )
+            .await?;
+
+        info!(
+            target: LOG_TARGET,
+            "User {} [{}] logged in",
+            session.username.load(),
+            session.user_id,
+        );
 
         Ok(ExecSuccess::default())
     }
@@ -221,6 +231,8 @@ impl ChatService for ChatServiceImpl {
         query: UserQuery,
         remove_platforms: Platform,
     ) -> Result<ExecSuccess, ChatError> {
+        const LOG_TARGET: &str = "chat::logout";
+
         let session = match self.user_sessions.get(&query).await {
             Some(session) => session,
             None => return Ok(ExecSuccess::default()),
@@ -269,10 +281,26 @@ impl ChatService for ChatServiceImpl {
 
             // delete user session
             self.user_sessions.delete(&query).await;
+
+            info!(
+                target: LOG_TARGET,
+                "User {}({}) logged out",
+                session.username.load(),
+                session.user_id,
+            );
+
             return Ok(ExecSuccess::default());
         }
 
         session.extends.platforms.set(platforms.into());
+
+        info!(
+            target: LOG_TARGET,
+            "User {}({}) leaved from platforms: {:?} ",
+            session.username.load(),
+            session.user_id,
+            remove_platforms.platforms_array()
+        );
 
         Ok(ExecSuccess::default())
     }
@@ -281,6 +309,8 @@ impl ChatService for ChatServiceImpl {
         &self,
         request: SendMessageRequest,
     ) -> Result<SendMessageResponse, ChatError> {
+        const LOG_TARGET: &str = "chat::send_message";
+
         let SendMessageRequest { sender, message, target } = request;
 
         let sender_query =
@@ -303,19 +333,29 @@ impl ChatService for ChatServiceImpl {
                         },
                     };
 
+                let message_packet = server::SendMessage::pack(
+                    sender.username.load().as_ref().into(),
+                    Cow::Borrowed(message.as_ref()),
+                    channel.name.load().as_ref().into(),
+                    sender.user_id,
+                )
+                .into();
+
                 // push msg into channel packets queue
                 channel.message_queue.write().await.push_message_excludes(
-                    Packet::Ptr(
-                        server::SendMessage::pack(
-                            sender.username.load().as_ref().into(),
-                            message.into(),
-                            channel.name.load().as_ref().into(),
-                            sender.user_id,
-                        )
-                        .into(),
-                    ),
+                    Packet::Ptr(message_packet),
                     [sender.user_id],
                     None,
+                );
+
+                info!(
+                    target: LOG_TARGET,
+                    "{}({}) @ {}({}): {}",
+                    sender.username.load(),
+                    sender.user_id,
+                    channel.name.load(),
+                    channel.id,
+                    message
                 );
             },
             ChatMessageTarget::User(target_query) => {
@@ -331,7 +371,7 @@ impl ChatService for ChatServiceImpl {
                                 .push_packet(
                                     server::SendMessage::pack(
                                         sender.username.load().as_ref().into(),
-                                        message.into(),
+                                        Cow::Borrowed(message.as_ref()),
                                         target_user
                                             .username
                                             .load()
@@ -343,6 +383,16 @@ impl ChatService for ChatServiceImpl {
                                 )
                                 .await;
                         }
+
+                        info!(
+                            target: LOG_TARGET,
+                            "{}({}) @ {}({}): {}",
+                            sender.username.load(),
+                            sender.user_id,
+                            target_user.username.load(),
+                            target_user.user_id,
+                            message
+                        );
                     },
                     None => {
                         todo!("offline msg handle")
