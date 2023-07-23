@@ -6,6 +6,59 @@ packet_struct!(
     LoginReply { login_result: LoginResult }
 );
 
+impl From<LoginResult> for LoginReply {
+    fn from(login_result: LoginResult) -> Self {
+        Self { login_result }
+    }
+}
+
+impl LoginReply {
+    #[inline]
+    pub fn success(user_id: i32) -> Self {
+        Self::new(LoginResult::Success(user_id))
+    }
+
+    #[inline]
+    pub fn failed_invalid_credentials() -> Self {
+        Self::new(LoginFailedReason::InvalidCredentials.into())
+    }
+
+    #[inline]
+    pub fn failed_outdated_client() -> Self {
+        Self::new(LoginFailedReason::OutdatedClient.into())
+    }
+
+    #[inline]
+    pub fn failed_user_banned() -> Self {
+        Self::new(LoginFailedReason::UserBanned.into())
+    }
+
+    #[inline]
+    pub fn failed_multiaccount_detected() -> Self {
+        Self::new(LoginFailedReason::MultiaccountDetected.into())
+    }
+
+    #[inline]
+    pub fn failed_server_error() -> Self {
+        Self::new(LoginFailedReason::ServerError.into())
+    }
+
+    #[inline]
+    pub fn failed_cutting_edge_multiplayer() -> Self {
+        Self::new(LoginFailedReason::CuttingEdgeMultiplayer.into())
+    }
+
+    #[inline]
+    pub fn failed_account_password_rest() -> Self {
+        Self::new(LoginFailedReason::AccountPasswordRest.into())
+    }
+
+    #[inline]
+    pub fn failed_verification_required() -> Self {
+        Self::new(LoginFailedReason::VerificationRequired.into())
+    }
+}
+
 packet_struct!(
     PacketId::BANCHO_SEND_MESSAGE,
     /// #7: BANCHO_SEND_MESSAGE

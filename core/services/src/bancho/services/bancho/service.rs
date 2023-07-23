@@ -182,9 +182,7 @@ impl Login for BanchoServiceImpl {
 
         let packet_builder = PacketBuilder::new()
             .add(server::ProtocolVersion::new(19))
-            .add(server::LoginReply::new(bancho_packets::LoginResult::Success(
-                user.id,
-            )))
+            .add(server::LoginReply::success(user.id))
             .add(server::BanchoPrivileges::new(1))
             .add(server::SilenceEnd::new(0)) // todo
             .add(server::FriendsList::new(&[]));

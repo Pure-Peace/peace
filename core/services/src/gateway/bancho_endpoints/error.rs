@@ -80,11 +80,8 @@ impl IntoResponse for BanchoHttpError {
     fn into_response(self) -> Response {
         match self {
             Self::LoginFailed(err) => {
-                let login_reply = server::LoginReply::new(
-                    bancho_packets::LoginResult::Failed(
-                        bancho_packets::LoginFailedResaon::InvalidCredentials,
-                    ),
-                );
+                let login_reply =
+                    server::LoginReply::failed_invalid_credentials();
 
                 let packets = PacketBuilder::new()
                     .add(login_reply)

@@ -75,7 +75,7 @@ pub struct PacketHeader {
 /// Returns `Success(user_id)` if success.
 pub enum LoginResult {
     Success(i32),
-    Failed(LoginFailedResaon),
+    Failed(LoginFailedReason),
 }
 
 impl Default for LoginResult {
@@ -84,12 +84,24 @@ impl Default for LoginResult {
     }
 }
 
+impl From<i32> for LoginResult {
+    fn from(val: i32) -> Self {
+        Self::Success(val)
+    }
+}
+
+impl From<LoginFailedReason> for LoginResult {
+    fn from(val: LoginFailedReason) -> Self {
+        Self::Failed(val)
+    }
+}
+
 #[rustfmt::skip]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 #[repr(i32)]
 /// The bancho client will handle these failure reasons when the user login fails.
-pub enum LoginFailedResaon {
+pub enum LoginFailedReason {
     #[default]
     InvalidCredentials        = -1,
     OutdatedClient            = -2,

@@ -73,7 +73,7 @@ use bancho_packets::*;
 
 // Single packet
 let login_reply_from_server = server::LoginReply::pack(LoginResult::Failed(
-    LoginFailedResaon::InvalidCredentials,
+    LoginFailedReason::InvalidCredentials,
 ));
 let serverside_notification = server::Notification::pack("hello".into());
 

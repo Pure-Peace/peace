@@ -17,7 +17,7 @@ fn packets_write_benchmark(c: &mut Criterion) {
     group.bench_function("login_reply packet", |b| {
         b.iter(|| {
             server::LoginReply::pack(LoginResult::Failed(
-                LoginFailedResaon::InvalidCredentials,
+                LoginFailedReason::InvalidCredentials,
             ))
         })
     });

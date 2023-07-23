@@ -188,7 +188,7 @@ mod packets_writing {
     fn test_login_reply() {
         assert_eq!(
             server::LoginReply::pack(LoginResult::Failed(
-                LoginFailedResaon::InvalidCredentials
+                LoginFailedReason::InvalidCredentials
             )),
             vec![5, 0, 0, 4, 0, 0, 0, 255, 255, 255, 255]
         )
