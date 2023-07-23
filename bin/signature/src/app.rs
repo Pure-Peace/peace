@@ -6,7 +6,8 @@ use peace_pb::signature::{
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::signature::{
-    SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
+    DynSignatureService, SignatureServiceBuilder, SignatureServiceImpl,
+    SignatureServiceRemote,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
@@ -31,11 +32,22 @@ pub struct SignatureConfig {
 #[derive(Clone)]
 pub struct App {
     pub cfg: Arc<SignatureConfig>,
+    pub signature_service: DynSignatureService,
+    pub signature_rpc: SignatureRpcImpl,
 }
 
 impl App {
-    pub fn new(cfg: Arc<SignatureConfig>) -> Self {
-        Self { cfg }
+    pub async fn initialize(cfg: Arc<SignatureConfig>) -> Self {
+        let signature_service =
+            SignatureServiceBuilder::build::<
+                SignatureServiceImpl,
+                SignatureServiceRemote,
+            >(cfg.ed25519_private_key_path.as_deref(), None)
+            .await;
+
+        let signature_rpc = SignatureRpcImpl::new(signature_service.clone());
+
+        Self { cfg, signature_service, signature_rpc }
     }
 }
 
@@ -54,15 +66,7 @@ impl RpcApplication for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let signature_service =
-            SignatureServiceBuilder::build::<
-                SignatureServiceImpl,
-                SignatureServiceRemote,
-            >(self.cfg.ed25519_private_key_path.as_deref(), None)
-            .await;
-
-        let signature_rpc = SignatureRpcImpl::new(signature_service);
-
-        configured_server.add_service(SignatureRpcServer::new(signature_rpc))
+        configured_server
+            .add_service(SignatureRpcServer::new(self.signature_rpc.clone()))
     }
 }

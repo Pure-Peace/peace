@@ -1,4 +1,4 @@
-use super::{traits::*, UserSessionsServiceImpl};
+use super::traits::*;
 use crate::bancho_state::{
     BanchoSession, DynBanchoStateBackgroundService, NotifyMessagesCleaner,
     UserSessionsCleaner,
@@ -27,7 +27,7 @@ pub struct Tasks {
 
 #[derive(Clone)]
 pub struct BanchoStateBackgroundServiceImpl {
-    pub user_sessions_service: Arc<UserSessionsServiceImpl>,
+    pub user_sessions_service: DynUserSessionsService,
     pub tasks: Tasks,
 }
 
@@ -36,7 +36,7 @@ impl BanchoStateBackgroundServiceImpl {
         Arc::new(self) as DynBanchoStateBackgroundService
     }
 
-    pub fn new(user_sessions_service: Arc<UserSessionsServiceImpl>) -> Self {
+    pub fn new(user_sessions_service: DynUserSessionsService) -> Self {
         Self { user_sessions_service, tasks: Tasks::default() }
     }
 
@@ -72,7 +72,7 @@ impl BanchoStateBackgroundServiceImpl {
 
                     {
                         let user_sessions =
-                            user_sessions_service.user_sessions.read().await;
+                            user_sessions_service.user_sessions().read().await;
 
                         for session in user_sessions.values() {
                             if session.is_deactive(current_timestamp, deadline)
@@ -93,7 +93,7 @@ impl BanchoStateBackgroundServiceImpl {
                     let removed_deactive_sessions = match sessions_deactive {
                         Some(sessions_deactive) => {
                             let user_sessions =
-                                &user_sessions_service.user_sessions;
+                                &user_sessions_service.user_sessions();
 
                             // remove deactive sessions
                             {
@@ -122,7 +122,7 @@ impl BanchoStateBackgroundServiceImpl {
                     let removed_notify_msg =
                         match min_notify_msg_id_in_all_users {
                             Some(min_msg_id) => user_sessions_service
-                                .notify_queue
+                                .notify_queue()
                                 .write()
                                 .await
                                 .remove_messages_before_id(&min_msg_id),
@@ -182,7 +182,7 @@ impl BanchoStateBackgroundServiceImpl {
 
                     let removed_notify_msg = {
                         for (key, msg) in user_sessions_service
-                            .notify_queue
+                            .notify_queue()
                             .read()
                             .await
                             .messages
@@ -195,7 +195,7 @@ impl BanchoStateBackgroundServiceImpl {
 
                         match invalid_messages {
                             Some(invalid_messages) => user_sessions_service
-                                .notify_queue
+                                .notify_queue()
                                 .write()
                                 .await
                                 .remove_messages(&invalid_messages),

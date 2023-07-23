@@ -24,6 +24,7 @@ utoipa = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
+tonic = { workspace = true }
 
 
 peace_logs = { workspace = true, features = ["grpc", "cli"] }

@@ -1,6 +1,6 @@
-use super::ChatServiceImpl;
 use crate::chat::{
     Channel, ChatBackgroundService, ChatSession, DynChatBackgroundService,
+    DynChatService,
 };
 use async_trait::async_trait;
 use clap_serde_derive::ClapSerde;
@@ -27,7 +27,7 @@ pub struct Tasks {
 
 #[derive(Clone)]
 pub struct ChatBackgroundServiceImpl {
-    pub chat_service: Arc<ChatServiceImpl>,
+    pub chat_service: DynChatService,
     pub tasks: Tasks,
 }
 
@@ -36,7 +36,7 @@ impl ChatBackgroundServiceImpl {
         Arc::new(self) as DynChatBackgroundService
     }
 
-    pub fn new(chat_service: Arc<ChatServiceImpl>) -> Self {
+    pub fn new(chat_service: DynChatService) -> Self {
         Self { chat_service, tasks: Tasks::default() }
     }
 
@@ -47,8 +47,8 @@ impl ChatBackgroundServiceImpl {
         const LOG_TARGET: &str =
             "chat::background_tasks::user_sessions_recycling";
 
-        let user_sessions = self.chat_service.user_sessions.clone();
-        let notify_queue = self.chat_service.notify_queue.clone();
+        let user_sessions = self.chat_service.user_sessions().clone();
+        let notify_queue = self.chat_service.notify_queue().clone();
 
         BackgroundTaskFactory::new(Arc::new(move |stop: SignalHandle| {
             let user_sessions = user_sessions.clone();
@@ -162,7 +162,7 @@ impl ChatBackgroundServiceImpl {
         const LOG_TARGET: &str =
             "chat::background_tasks::notify_messages_recycling";
 
-        let notify_queue = self.chat_service.notify_queue.clone();
+        let notify_queue = self.chat_service.notify_queue().clone();
 
         BackgroundTaskFactory::new(Arc::new(move |stop: SignalHandle| {
             let notify_queue = notify_queue.clone();
@@ -230,7 +230,7 @@ impl ChatBackgroundServiceImpl {
         const LOG_TARGET: &str =
             "chat::background_tasks::channel_messages_recycling";
 
-        let channels = self.chat_service.channels.clone();
+        let channels = self.chat_service.channels().clone();
 
         BackgroundTaskFactory::new(Arc::new(move |stop: SignalHandle| {
             let channels = channels.clone();

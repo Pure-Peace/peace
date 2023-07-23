@@ -15,7 +15,7 @@ pub async fn run(
     cfg: std::sync::Arc<GeoipConfig>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Create a new instance of the `App.
-    let app = App::new(cfg);
+    let app = App::initialize(cfg).await;
 
     // Start serving the RPC server with the `App` instance.
     peace_rpc::server::serve(app).await;

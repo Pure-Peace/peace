@@ -167,6 +167,27 @@ impl DumpData<ChatServiceDump> for ChatServiceImpl {
     }
 }
 
+impl UserSessionsStore for ChatServiceImpl {
+    #[inline]
+    fn user_sessions(&self) -> &Arc<UserSessions> {
+        &self.user_sessions
+    }
+}
+
+impl NotifyMessagesQueue for ChatServiceImpl {
+    #[inline]
+    fn notify_queue(&self) -> &Arc<BanchoMessageQueue> {
+        &self.notify_queue
+    }
+}
+
+impl ChannelStore for ChatServiceImpl {
+    #[inline]
+    fn channels(&self) -> &Arc<Channels> {
+        &self.channels
+    }
+}
+
 #[async_trait]
 impl ChatService for ChatServiceImpl {
     async fn login(
@@ -596,6 +617,12 @@ impl IntoService<DynChatService> for ChatServiceRemote {
         Arc::new(self) as DynChatService
     }
 }
+
+impl UserSessionsStore for ChatServiceRemote {}
+
+impl NotifyMessagesQueue for ChatServiceRemote {}
+
+impl ChannelStore for ChatServiceRemote {}
 
 #[async_trait]
 impl ChatService for ChatServiceRemote {

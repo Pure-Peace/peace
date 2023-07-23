@@ -1,15 +1,21 @@
 use axum::{async_trait, Router};
 use clap_serde_derive::ClapSerde;
 use peace_api::{ApiFrameConfig, RpcClientConfig, WebApplication};
+use peace_pb::{
+    bancho::bancho_rpc_client::BanchoRpcClient,
+    bancho_state::bancho_state_rpc_client::BanchoStateRpcClient,
+    chat::chat_rpc_client::ChatRpcClient,
+};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
-    bancho::BanchoServiceRemote,
-    bancho_state::BanchoStateServiceRemote,
+    bancho::{BanchoServiceRemote, DynBanchoService},
+    bancho_state::{BanchoStateServiceRemote, DynBanchoStateService},
     chat::ChatServiceRemote,
     gateway::{
         bancho_endpoints::{
             routes::{BanchoDebugRouter, BanchoRouter},
             BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
+            DynBanchoHandlerService, DynBanchoRoutingService,
         },
         docs::GatewayApiDocs,
     },
@@ -17,6 +23,7 @@ use peace_services::{
     FromRpcClient, IntoService,
 };
 use std::{net::SocketAddr, sync::Arc};
+use tonic::transport::Channel;
 
 /// PEACE Gateway service
 #[peace_config]
@@ -44,11 +51,57 @@ pub struct GatewayConfig {
 #[derive(Clone)]
 pub struct App {
     pub cfg: Arc<GatewayConfig>,
+    pub bancho_rpc_client: BanchoRpcClient<Channel>,
+    pub bancho_state_rpc_client: BanchoStateRpcClient<Channel>,
+    pub chat_rpc_client: ChatRpcClient<Channel>,
+    pub bancho_state_service: DynBanchoStateService,
+    pub bancho_service: DynBanchoService,
+    pub bancho_handler_service: DynBanchoHandlerService,
+    pub bancho_routing_service: DynBanchoRoutingService,
 }
 
 impl App {
-    pub fn new(cfg: Arc<GatewayConfig>) -> Self {
-        Self { cfg }
+    pub async fn initialize(cfg: Arc<GatewayConfig>) -> Self {
+        let bancho_rpc_client = cfg.bancho.connect().await;
+
+        let bancho_state_rpc_client = cfg.bancho_state.connect().await;
+
+        let chat_rpc_client = cfg.chat.connect().await;
+
+        let bancho_state_service = BanchoStateServiceRemote::from_client(
+            bancho_state_rpc_client.clone(),
+        )
+        .into_service();
+
+        let bancho_service =
+            BanchoServiceRemote::from_client(bancho_rpc_client.clone())
+                .into_service();
+
+        let chat_service =
+            ChatServiceRemote::from_client(chat_rpc_client.clone())
+                .into_service();
+
+        let bancho_handler_service = BanchoHandlerServiceImpl::new(
+            bancho_service.clone(),
+            bancho_state_service.clone(),
+            chat_service.clone(),
+        )
+        .into_service();
+
+        let bancho_routing_service =
+            BanchoRoutingServiceImpl::new(bancho_handler_service.clone())
+                .into_service();
+
+        Self {
+            cfg,
+            bancho_rpc_client,
+            bancho_state_rpc_client,
+            chat_rpc_client,
+            bancho_state_service,
+            bancho_service,
+            bancho_handler_service,
+            bancho_routing_service,
+        }
     }
 }
 
@@ -67,38 +120,13 @@ impl WebApplication for App {
     }
 
     async fn router<T: Clone + Sync + Send + 'static>(&self) -> Router<T> {
-        let bancho_rpc_client = self.cfg.bancho.connect().await;
-
-        let bancho_state_rpc_client = self.cfg.bancho_state.connect().await;
-
-        let chat_rpc_client = self.cfg.chat.connect().await;
-
-        let bancho_state_service =
-            BanchoStateServiceRemote::from_client(bancho_state_rpc_client)
-                .into_service();
-
-        let bancho_service =
-            BanchoServiceRemote::from_client(bancho_rpc_client).into_service();
-
-        let chat_service =
-            ChatServiceRemote::from_client(chat_rpc_client).into_service();
-
-        let bancho_handler_service = BanchoHandlerServiceImpl::new(
-            bancho_service,
-            bancho_state_service.clone(),
-            chat_service,
-        )
-        .into_service();
-
-        let bancho_routing_service =
-            BanchoRoutingServiceImpl::new(bancho_handler_service)
-                .into_service();
-
-        let mut router = BanchoRouter::new_router(bancho_routing_service);
+        let mut router =
+            BanchoRouter::new_router(self.bancho_routing_service.clone());
 
         if self.cfg.debug_endpoints {
-            router = router
-                .merge(BanchoDebugRouter::new_router(bancho_state_service))
+            router = router.merge(BanchoDebugRouter::new_router(
+                self.bancho_state_service.clone(),
+            ))
         }
 
         router

@@ -22,20 +22,20 @@ pub const DEFAULT_RPC_ADDR: SocketAddr =
     SocketAddr::new(DEFAULT_BINDING_IP, DEFAULT_RPC_PORT);
 
 /// Start service.
-pub async fn serve(app_cfg: impl RpcApplication) {
+pub async fn serve(app: impl RpcApplication) {
     tools::framework_info!();
 
     // Get the configuration from the application.
-    let cfg = app_cfg.frame_cfg_arc();
+    let cfg = app.frame_cfg_arc();
 
     // Create a server with the given configuration.
-    let mut svr = app_cfg.service(server(&cfg)).await;
+    let mut svr = app.service(server(&cfg)).await;
 
     // If the 'reflection' feature is enabled and the configuration specifies
     // it, add reflection to the server.
     #[cfg(feature = "reflection")]
     if cfg.rpc_reflection {
-        svr = add_reflection(svr, &app_cfg)
+        svr = add_reflection(svr, &app)
     };
 
     // If the 'admin_endpoints' feature is enabled and the configuration
@@ -68,7 +68,7 @@ pub async fn serve(app_cfg: impl RpcApplication) {
             svr,
             cfg.rpc_tls_config.tls,
             cfg.rpc_addr.unwrap_or(
-                app_cfg.default_listen_addr().unwrap_or(DEFAULT_RPC_ADDR)
+                app.default_listen_addr().unwrap_or(DEFAULT_RPC_ADDR)
             ),
             #[cfg(unix)]
             cfg.rpc_uds.as_ref()
@@ -248,18 +248,18 @@ pub fn tls_server(
 /// # Arguments
 ///
 /// * `svr` - The `Router` to add the reflection to.
-/// * `app_cfg` - The `Application` configuration.
+/// * `app` - The `Application`.
 ///
 /// # Returns
 ///
 /// The `Router` with the reflection added.
-pub fn add_reflection(svr: Router, app_cfg: &impl RpcApplication) -> Router {
+pub fn add_reflection(svr: Router, app: &impl RpcApplication) -> Router {
     // Create a reflection builder
     let mut reflection = tonic_reflection::server::Builder::configure();
 
     // If admin endpoints are enabled, register the logs descriptor set
     #[cfg(feature = "admin_endpoints")]
-    if app_cfg.frame_cfg().rpc_admin_endpoints {
+    if app.frame_cfg().rpc_admin_endpoints {
         reflection = reflection.register_encoded_file_descriptor_set(
             peace_pb::logs::LOGS_DESCRIPTOR_SET,
         );
@@ -267,7 +267,7 @@ pub fn add_reflection(svr: Router, app_cfg: &impl RpcApplication) -> Router {
 
     // Register the encoded file descriptor sets for each service in the
     // application configuration
-    if let Some(descriptors) = app_cfg.service_descriptors() {
+    if let Some(descriptors) = app.service_descriptors() {
         for i in descriptors {
             reflection = reflection.register_encoded_file_descriptor_set(i);
         }

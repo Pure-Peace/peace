@@ -1,14 +1,16 @@
 use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
-use peace_db::{peace::PeaceDbConfig, DbConfig};
+use peace_db::{
+    peace::{Peace, PeaceDbConfig},
+    DbConfig, DbConnection,
+};
 use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
-use peace_repositories::users::UsersRepositoryImpl;
+use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::chat::{
-    ChatBackgroundService, ChatBackgroundServiceConfigs,
-    ChatBackgroundServiceImpl, ChatService, ChatServiceImpl,
-    CliChatBackgroundServiceConfigs,
+    ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl, ChatServiceImpl,
+    CliChatBackgroundServiceConfigs, DynChatBackgroundService, DynChatService,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
@@ -36,11 +38,52 @@ pub struct ChatServiceConfig {
 #[derive(Clone)]
 pub struct App {
     pub cfg: Arc<ChatServiceConfig>,
+    pub peace_db_conn: DbConnection<Peace>,
+    pub users_repository: DynUsersRepository,
+    pub chat_service: DynChatService,
+    pub chat_background_service: DynChatBackgroundService,
+    pub chat_background_service_config: ChatBackgroundServiceConfigs,
+    pub chat_rpc: ChatRpcImpl,
 }
 
 impl App {
-    pub fn new(cfg: Arc<ChatServiceConfig>) -> Self {
-        Self { cfg }
+    pub async fn initialize(cfg: Arc<ChatServiceConfig>) -> Self {
+        let peace_db_conn = cfg
+            .peace_db
+            .connect()
+            .await
+            .expect("failed to connect peace db, please check.");
+
+        let users_repository =
+            UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
+
+        let chat_service =
+            ChatServiceImpl::new(users_repository.clone()).into_service();
+
+        let chat_background_service =
+            ChatBackgroundServiceImpl::new(chat_service.clone()).into_service();
+
+        let chat_background_service_config =
+            ChatBackgroundServiceConfigs::with_cfg(
+                &cfg.chat_background_service_configs,
+            );
+
+        chat_service.load_public_channels().await.expect("debugging");
+
+        chat_background_service
+            .start_all(chat_background_service_config.clone());
+
+        let chat_rpc = ChatRpcImpl::new(chat_service.clone());
+
+        Self {
+            cfg,
+            peace_db_conn,
+            users_repository,
+            chat_service,
+            chat_background_service,
+            chat_background_service_config,
+            chat_rpc,
+        }
     }
 }
 
@@ -59,32 +102,6 @@ impl RpcApplication for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let peace_db_conn = self
-            .cfg
-            .peace_db
-            .connect()
-            .await
-            .expect("failed to connect peace db, please check.");
-
-        let users_repository =
-            UsersRepositoryImpl::new(peace_db_conn).into_service();
-
-        let chat_service = Arc::new(ChatServiceImpl::new(users_repository));
-
-        let chat_background_service =
-            Arc::new(ChatBackgroundServiceImpl::new(chat_service.clone()));
-
-        let chat_background_service_config =
-            ChatBackgroundServiceConfigs::with_cfg(
-                &self.cfg.chat_background_service_configs,
-            );
-
-        chat_service.load_public_channels().await.expect("debugging");
-
-        chat_background_service.start_all(chat_background_service_config);
-
-        let chat_rpc = ChatRpcImpl::new(chat_service);
-
-        configured_server.add_service(ChatRpcServer::new(chat_rpc))
+        configured_server.add_service(ChatRpcServer::new(self.chat_rpc.clone()))
     }
 }

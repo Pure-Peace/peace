@@ -11,7 +11,7 @@ pub use app::*;
 
 pub async fn run(cfg: std::sync::Arc<BanchoStandaloneConfig>) {
     // Create a new instance of the `App.
-    let app = App::new(cfg);
+    let app = App::initialize(cfg).await;
 
     // Start serving the HTTP(s) server with the `App` instance.
     peace_api::http::serve(app).await;

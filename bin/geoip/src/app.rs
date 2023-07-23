@@ -4,7 +4,7 @@ use peace_pb::geoip::{geoip_rpc_server::GeoipRpcServer, GEOIP_DESCRIPTOR_SET};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::{
-    geoip::{FromGeoDbPath, GeoipServiceImpl},
+    geoip::{DynGeoipService, FromGeoDbPath, GeoipServiceImpl},
     IntoService,
 };
 use std::{net::SocketAddr, sync::Arc};
@@ -30,11 +30,22 @@ pub struct GeoipConfig {
 #[derive(Clone)]
 pub struct App {
     pub cfg: Arc<GeoipConfig>,
+    pub geoip_service: DynGeoipService,
+    pub geoip_rpc: GeoipRpcImpl,
 }
 
 impl App {
-    pub fn new(cfg: Arc<GeoipConfig>) -> Self {
-        Self { cfg }
+    pub async fn initialize(cfg: Arc<GeoipConfig>) -> Self {
+        let geo_db_path =
+            cfg.geo_db_path.as_ref().expect("geo_db_path is required");
+
+        let geoip_service = GeoipServiceImpl::from_path(geo_db_path.as_str())
+            .unwrap()
+            .into_service();
+
+        let geoip_rpc = GeoipRpcImpl::new(geoip_service.clone());
+
+        Self { cfg, geoip_service, geoip_rpc }
     }
 }
 
@@ -53,15 +64,7 @@ impl RpcApplication for App {
     }
 
     async fn service(&self, mut configured_server: Server) -> Router {
-        let geo_db_path =
-            self.cfg.geo_db_path.as_ref().expect("geo_db_path is required");
-
-        let geoip_service = GeoipServiceImpl::from_path(geo_db_path.as_str())
-            .unwrap()
-            .into_service();
-
-        let geoip_rpc = GeoipRpcImpl::new(geoip_service);
-
-        configured_server.add_service(GeoipRpcServer::new(geoip_rpc))
+        configured_server
+            .add_service(GeoipRpcServer::new(self.geoip_rpc.clone()))
     }
 }

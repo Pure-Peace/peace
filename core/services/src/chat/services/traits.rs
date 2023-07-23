@@ -1,4 +1,4 @@
-use crate::chat::*;
+use crate::{bancho_state::BanchoMessageQueue, chat::*};
 use peace_pb::{
     bancho_state::{BanchoPackets, UserQuery},
     base::ExecSuccess,
@@ -12,8 +12,28 @@ pub type DynChannelService = Arc<dyn ChannelService + Send + Sync>;
 pub type DynChatBackgroundService =
     Arc<dyn ChatBackgroundService + Send + Sync>;
 
+pub trait ChannelStore {
+    fn channels(&self) -> &Arc<Channels> {
+        unimplemented!()
+    }
+}
+
+pub trait UserSessionsStore {
+    fn user_sessions(&self) -> &Arc<UserSessions> {
+        unimplemented!()
+    }
+}
+
+pub trait NotifyMessagesQueue {
+    fn notify_queue(&self) -> &Arc<BanchoMessageQueue> {
+        unimplemented!()
+    }
+}
+
 #[async_trait]
-pub trait ChatService {
+pub trait ChatService:
+    UserSessionsStore + NotifyMessagesQueue + ChannelStore
+{
     async fn login(
         &self,
         request: LoginRequest,

@@ -9,11 +9,14 @@ use peace_services::{
     bancho_state::{
         BanchoStateBackgroundService, BanchoStateBackgroundServiceConfigs,
         BanchoStateBackgroundServiceImpl, BanchoStateServiceImpl,
-        CliBanchoStateBackgroundServiceConfigs, UserSessionsServiceImpl,
+        CliBanchoStateBackgroundServiceConfigs,
+        DynBanchoStateBackgroundService, DynBanchoStateService,
+        DynUserSessionsService, UserSessionsServiceImpl,
     },
     rpc_config::SignatureRpcConfig,
     signature::{
-        SignatureServiceBuilder, SignatureServiceImpl, SignatureServiceRemote,
+        DynSignatureService, SignatureServiceBuilder, SignatureServiceImpl,
+        SignatureServiceRemote,
     },
     IntoService,
 };
@@ -55,13 +58,61 @@ pub struct BanchoStateConfig {
 pub struct App {
     /// The configuration for the BanchoState application.
     pub cfg: Arc<BanchoStateConfig>,
+    pub user_session_service: DynUserSessionsService,
+    pub signature_service: DynSignatureService,
+    pub bancho_state_background_service: DynBanchoStateBackgroundService,
+    pub bancho_state_background_service_config:
+        BanchoStateBackgroundServiceConfigs,
+    pub bancho_state_service: DynBanchoStateService,
+    pub bancho_state_rpc: BanchoStateRpcImpl,
 }
 
 impl App {
     /// Create a new BanchoState application instance with the provided
     /// configuration.
-    pub fn new(cfg: Arc<BanchoStateConfig>) -> Self {
-        Self { cfg }
+    pub async fn initialize(cfg: Arc<BanchoStateConfig>) -> Self {
+        let user_session_service = Arc::new(UserSessionsServiceImpl::default());
+
+        let signature_service = SignatureServiceBuilder::build::<
+            SignatureServiceImpl,
+            SignatureServiceRemote,
+        >(
+            cfg.ed25519_private_key_path.as_deref(),
+            Some(&cfg.signature_rpc_cfg),
+        )
+        .await;
+
+        let bancho_state_background_service = Arc::new(
+            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
+        );
+
+        let bancho_state_background_service_config =
+            BanchoStateBackgroundServiceConfigs::with_cfg(
+                &cfg.bancho_state_background_service_configs,
+            );
+
+        bancho_state_background_service
+            .start_all(bancho_state_background_service_config.clone());
+
+        let bancho_state_service = BanchoStateServiceImpl::new(
+            user_session_service.clone(),
+            signature_service.clone(),
+        )
+        .into_service();
+
+        // Create a new BanchoState instance.
+        let bancho_state_rpc =
+            BanchoStateRpcImpl::new(bancho_state_service.clone());
+
+        Self {
+            cfg,
+            user_session_service,
+            signature_service,
+            bancho_state_background_service,
+            bancho_state_background_service_config,
+            bancho_state_service,
+            bancho_state_rpc,
+        }
     }
 }
 
@@ -83,40 +134,9 @@ impl RpcApplication for App {
 
     /// Start the BanchoState application and return a Router.
     async fn service(&self, mut configured_server: Server) -> Router {
-        let user_session_service = Arc::new(UserSessionsServiceImpl::default());
-
-        let signature_service = SignatureServiceBuilder::build::<
-            SignatureServiceImpl,
-            SignatureServiceRemote,
-        >(
-            self.cfg.ed25519_private_key_path.as_deref(),
-            Some(&self.cfg.signature_rpc_cfg),
-        )
-        .await;
-
-        let bancho_state_background_service = Arc::new(
-            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
-        );
-
-        let bancho_state_background_service_config =
-            BanchoStateBackgroundServiceConfigs::with_cfg(
-                &self.cfg.bancho_state_background_service_configs,
-            );
-
-        bancho_state_background_service
-            .start_all(bancho_state_background_service_config);
-
-        let bancho_state_service = BanchoStateServiceImpl::new(
-            user_session_service,
-            signature_service,
-        )
-        .into_service();
-
-        // Create a new BanchoState instance.
-        let bancho_state_rpc = BanchoStateRpcImpl::new(bancho_state_service);
-
         // Add the BanchoState service to the server.
-        configured_server
-            .add_service(BanchoStateRpcServer::new(bancho_state_rpc))
+        configured_server.add_service(BanchoStateRpcServer::new(
+            self.bancho_state_rpc.clone(),
+        ))
     }
 }
