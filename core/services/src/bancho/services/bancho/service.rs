@@ -230,7 +230,7 @@ impl BatchProcessPackets for BanchoServiceImpl {
                 Err(err) => {
                     failed += 1;
 
-                    error!(target: LOG_TARGET, "{err:?} (<{user_id}>)")
+                    warn!(target: LOG_TARGET, "{err:?} (<{user_id}>)")
                 },
                 _ => {},
             }
