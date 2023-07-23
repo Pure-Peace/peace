@@ -78,8 +78,14 @@ impl IntoResponse for BanchoHttpError {
     fn into_response(self) -> Response {
         match self {
             Self::LoginFailed(err) => {
-                let login_reply =
-                    server::LoginReply::failed_invalid_credentials();
+                let login_reply = match err {
+                    LoginError::BanchoServiceError(
+                        BanchoServiceError::TonicError(..)
+                        | BanchoServiceError::ChatError(..)
+                        | BanchoServiceError::BanchoStateError(..),
+                    ) => server::LoginReply::failed_server_error(),
+                    _ => server::LoginReply::failed_invalid_credentials(),
+                };
 
                 let packets = PacketBuilder::new()
                     .add(login_reply)
@@ -91,9 +97,15 @@ impl IntoResponse for BanchoHttpError {
 
             Self::BanchoStateError(
                 BanchoStateError::SessionNotExists
-                | BanchoStateError::SignatureError(_),
+                | BanchoStateError::SignatureError(..),
             ) => {
                 (StatusCode::OK, server::BanchoRestart::pack(0)).into_response()
+            },
+
+            Self::BanchoStateError(BanchoStateError::TonicError(err)) => {
+                warn!("BanchoState tonic error: {err}");
+                (StatusCode::INTERNAL_SERVER_ERROR, server::Pong::pack())
+                    .into_response()
             },
 
             _ => {
