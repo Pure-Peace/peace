@@ -49,7 +49,7 @@ macro_rules! framework_info {
     ($($banner: expr)?) => {
         $(println!("\n{}", $banner))?;
         println!(
-            ">> Runs on framework {} v{}\n",
+            ">> Runs on framework {} v{}",
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
         );

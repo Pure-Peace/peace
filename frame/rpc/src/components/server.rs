@@ -21,9 +21,19 @@ pub const DEFAULT_RPC_PORT: u16 = 5010;
 pub const DEFAULT_RPC_ADDR: SocketAddr =
     SocketAddr::new(DEFAULT_BINDING_IP, DEFAULT_RPC_PORT);
 
+const BANNER: &str = r#"
+    ____  _________   ____________
+   / __ \/ ____/   | / ____/ ____/  _________  _____
+  / /_/ / __/ / /| |/ /   / __/    / ___/ __ \/ ___/
+ / ____/ /___/ ___ / /___/ /___   / /  / /_/ / /__
+/_/   /_____/_/  |_\____/_____/  /_/  / .___/\___/
+                                     /_/
+"#;
+
 /// Start service.
 pub async fn serve(app: impl RpcApplication) {
-    tools::framework_info!();
+    tools::framework_info!(BANNER);
+    println!(">> Starting service...");
 
     // Get the configuration from the application.
     let cfg = app.frame_cfg_arc();

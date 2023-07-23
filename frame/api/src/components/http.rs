@@ -18,21 +18,31 @@ pub const DEFAULT_HTTP_ADDR: SocketAddr =
 pub const DEFAULT_HTTPS_ADDR: SocketAddr =
     SocketAddr::new(DEFAULT_BINDING_IP, DEFAULT_HTTPS_PORT);
 
-/// Start service.
-pub async fn serve(app_cfg: impl WebApplication) {
-    tools::framework_info!();
+const BANNER: &str = r#"
+    ____  _________   ____________               _
+   / __ \/ ____/   | / ____/ ____/  ____ _____  (_)
+  / /_/ / __/ / /| |/ /   / __/    / __ `/ __ \/ /
+ / ____/ /___/ ___ / /___/ /___   / /_/ / /_/ / /
+/_/   /_____/_/  |_\____/_____/   \__,_/ .___/_/
+                                      /_/
+"#;
 
-    let cfg = app_cfg.frame_cfg_arc();
+/// Start service.
+pub async fn serve(app: impl WebApplication) {
+    tools::framework_info!(BANNER);
+    println!(">> Starting service...");
+
+    let cfg = app.frame_cfg_arc();
 
     let http_addr = cfg
         .http_addr
-        .unwrap_or(app_cfg.default_http_addr().unwrap_or(DEFAULT_HTTP_ADDR));
+        .unwrap_or(app.default_http_addr().unwrap_or(DEFAULT_HTTP_ADDR));
 
     let https_addr = cfg
         .https_addr
-        .unwrap_or(app_cfg.default_https_addr().unwrap_or(DEFAULT_HTTPS_ADDR));
+        .unwrap_or(app.default_https_addr().unwrap_or(DEFAULT_HTTPS_ADDR));
 
-    let app = router::app(app_cfg).await;
+    let app = router::app(app).await;
 
     let incoming_config = AddrIncomingConfig::new()
         .tcp_nodelay(cfg.tcp_nodelay)
