@@ -4,8 +4,8 @@ use crate::{
     },
     chat::*,
     users::Session,
-    DumpConfig, DumpData, DumpToDisk, FromRpcClient, IntoService, RpcClient,
-    TryDumpToDisk,
+    DumpConfig, DumpData, DumpToDisk, DumpType, FromRpcClient, IntoService,
+    RpcClient, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
@@ -244,7 +244,12 @@ impl ChatServiceDumpLoader {
         if cfg.load_dump() {
             let dump_path = Path::new(cfg.dump_path());
             if dump_path.is_file() {
-                match ChatServiceDump::from_dump_file(cfg.dump_path()).await {
+                match ChatServiceDump::from_dump_file(
+                    cfg.dump_type(),
+                    cfg.dump_path(),
+                )
+                .await
+                {
                     Ok(dump) => {
                         if !dump.is_expired(cfg.dump_expries()) {
                             info!(
@@ -285,9 +290,14 @@ pub struct ChatServiceDump {
 
 impl ChatServiceDump {
     pub async fn from_dump_file<P: AsRef<Path>>(
+        dump_type: DumpType,
         path: P,
     ) -> Result<Self, anyhow::Error> {
-        Ok(bincode::deserialize(&tokio::fs::read(path).await?)?)
+        let content = tokio::fs::read(path).await?;
+        Ok(match dump_type {
+            DumpType::Binary => bincode::deserialize(&content)?,
+            DumpType::Json => serde_json::from_slice(&content)?,
+        })
     }
 
     pub fn is_expired(&self, expires: u64) -> bool {
@@ -332,13 +342,15 @@ impl ChannelStore for ChatServiceImpl {
 impl TryDumpToDisk for ChatServiceImpl {
     async fn try_dump_to_disk(
         &self,
+        dump_type: DumpType,
         dump_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         info!("Saving chat dump file to path: \"{}\"...", dump_path);
-        let size = self.dump_to_disk(dump_path).await.map_err(|err| {
-            warn!("[Failed] Failed to create Chat dump, err: {err}");
-            err
-        })?;
+        let size =
+            self.dump_to_disk(dump_type, dump_path).await.map_err(|err| {
+                warn!("[Failed] Failed to create Chat dump, err: {err}");
+                err
+            })?;
         info!("[Success] Chat dump saved, size: {}", size);
 
         Ok(())
@@ -845,6 +857,7 @@ impl DumpData<ChatServiceDump> for ChatServiceRemote {
 impl TryDumpToDisk for ChatServiceRemote {
     async fn try_dump_to_disk(
         &self,
+        _: DumpType,
         _: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!()

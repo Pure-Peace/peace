@@ -2,7 +2,7 @@ use super::traits::*;
 use crate::{
     bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
     signature::DynSignatureService, users::SessionFilter, DumpConfig, DumpData,
-    DumpToDisk, IntoService, TryDumpToDisk,
+    DumpToDisk, DumpType, IntoService, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -22,8 +22,11 @@ impl BanchoStateServiceDumpLoader {
         if cfg.load_dump() {
             let dump_path = Path::new(cfg.dump_path());
             if dump_path.is_file() {
-                match BanchoStateServiceDump::from_dump_file(cfg.dump_path())
-                    .await
+                match BanchoStateServiceDump::from_dump_file(
+                    cfg.dump_type(),
+                    cfg.dump_path(),
+                )
+                .await
                 {
                     Ok(dump) => {
                         if !dump.is_expired(cfg.dump_expries()) {
@@ -67,9 +70,14 @@ pub struct BanchoStateServiceDump {
 
 impl BanchoStateServiceDump {
     pub async fn from_dump_file<P: AsRef<Path>>(
+        dump_type: DumpType,
         path: P,
     ) -> Result<Self, anyhow::Error> {
-        Ok(bincode::deserialize(&tokio::fs::read(path).await?)?)
+        let content = tokio::fs::read(path).await?;
+        Ok(match dump_type {
+            DumpType::Binary => bincode::deserialize(&content)?,
+            DumpType::Json => serde_json::from_slice(&content)?,
+        })
     }
 
     pub fn is_expired(&self, expires: u64) -> bool {
@@ -130,13 +138,17 @@ impl IntoService<DynBanchoStateService> for BanchoStateServiceImpl {
 impl TryDumpToDisk for BanchoStateServiceImpl {
     async fn try_dump_to_disk(
         &self,
+        dump_type: DumpType,
         dump_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         info!("Saving Bancho state dump file to path: \"{}\"...", dump_path);
-        let size = self.dump_to_disk(dump_path).await.map_err(|err| {
-            warn!("[Failed] Failed to create Bancho state dump, err: {err}");
-            err
-        })?;
+        let size =
+            self.dump_to_disk(dump_type, dump_path).await.map_err(|err| {
+                warn!(
+                    "[Failed] Failed to create Bancho state dump, err: {err}"
+                );
+                err
+            })?;
         info!("[Success] Bancho state dump saved, size: {}", size);
 
         Ok(())

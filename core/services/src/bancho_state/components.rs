@@ -1,6 +1,6 @@
 use crate::{
     users::{Session, SessionData, UserIndexes, UserStore},
-    DumpConfig, DumpData,
+    DumpConfig, DumpData, DumpType,
 };
 use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
@@ -542,6 +542,10 @@ pub struct CliBanchoStateServiceDumpConfigs {
     #[arg(long, default_value = "./.service_dump/bancho_state.dump")]
     pub bancho_state_dump_path: String,
 
+    #[default(DumpType::Binary)]
+    #[arg(long, value_enum, default_value = "binary")]
+    pub bancho_state_dump_type: DumpType,
+
     #[arg(long)]
     pub bancho_state_save_dump: bool,
 
@@ -556,6 +560,10 @@ pub struct CliBanchoStateServiceDumpConfigs {
 impl DumpConfig for CliBanchoStateServiceDumpConfigs {
     fn dump_path(&self) -> &str {
         &self.bancho_state_dump_path
+    }
+
+    fn dump_type(&self) -> DumpType {
+        self.bancho_state_dump_type
     }
 
     fn save_dump(&self) -> bool {

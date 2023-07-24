@@ -23,14 +23,20 @@ pub async fn run(
     if cfg.chat_service_dump_configs.save_dump() {
         let _ = app
             .chat_service
-            .try_dump_to_disk(cfg.chat_service_dump_configs.dump_path())
+            .try_dump_to_disk(
+                cfg.chat_service_dump_configs.dump_type(),
+                cfg.chat_service_dump_configs.dump_path(),
+            )
             .await;
     }
 
     if cfg.bancho_state_service_dump_configs.save_dump() {
         let _ = app
             .bancho_state_service
-            .try_dump_to_disk(cfg.bancho_state_service_dump_configs.dump_path())
+            .try_dump_to_disk(
+                cfg.bancho_state_service_dump_configs.dump_type(),
+                cfg.bancho_state_service_dump_configs.dump_path(),
+            )
             .await;
     }
 

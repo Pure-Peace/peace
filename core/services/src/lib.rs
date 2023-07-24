@@ -74,6 +74,7 @@ pub trait IntoService<T>: Sized + Sync + Send + 'static {
 
 pub trait DumpConfig {
     fn dump_path(&self) -> &str;
+    fn dump_type(&self) -> DumpType;
     fn save_dump(&self) -> bool;
     fn load_dump(&self) -> bool;
     fn dump_expries(&self) -> u64;
@@ -84,15 +85,29 @@ pub trait DumpData<D> {
     async fn dump_data(&self) -> D;
 }
 
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum DumpType {
+    Binary,
+    Json,
+}
+
 #[async_trait]
 pub trait DumpToDisk<D> {
-    async fn dump_to_disk(&self, path: &str) -> Result<usize, DumpError>;
+    async fn dump_to_disk(
+        &self,
+        dump_type: DumpType,
+        path: &str,
+    ) -> Result<usize, DumpError>;
 }
 
 #[async_trait]
 pub trait TryDumpToDisk {
     async fn try_dump_to_disk(
         &self,
+        dump_type: DumpType,
         dump_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
@@ -103,11 +118,21 @@ where
     T: DumpData<D> + Sync + Send,
     D: serde::Serialize + Send,
 {
-    async fn dump_to_disk(&self, path: &str) -> Result<usize, DumpError> {
+    async fn dump_to_disk(
+        &self,
+        dump_type: DumpType,
+        path: &str,
+    ) -> Result<usize, DumpError> {
         let dump_data = self.dump_data().await;
 
-        let bytes_data = bincode::serialize(&dump_data)
-            .map_err(|err| DumpError::SerializeError(err.to_string()))?;
+        let bytes_data =
+            match dump_type {
+                DumpType::Binary => bincode::serialize(&dump_data)
+                    .map_err(|err| err.to_string()),
+                DumpType::Json => serde_json::to_vec(&dump_data)
+                    .map_err(|err| err.to_string()),
+            }
+            .map_err(DumpError::SerializeError)?;
 
         let path = Path::new(path);
 

@@ -2,7 +2,7 @@ use super::{traits::*, BanchoStateServiceDump};
 use crate::{
     bancho_state::BanchoStateError,
     gateway::bancho_endpoints::components::BanchoClientToken, DumpData,
-    FromRpcClient, IntoService, RpcClient, TryDumpToDisk,
+    DumpType, FromRpcClient, IntoService, RpcClient, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use peace_pb::{
@@ -48,6 +48,7 @@ impl DumpData<BanchoStateServiceDump> for BanchoStateServiceRemote {
 impl TryDumpToDisk for BanchoStateServiceRemote {
     async fn try_dump_to_disk(
         &self,
+        _: DumpType,
         _: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!()
