@@ -103,7 +103,8 @@ where
     where
         D: serde::Deserializer<'de>,
     {
-        T::deserialize(deserializer).map(|t| AtomicOption::new(t))
+        Option::<T>::deserialize(deserializer)
+            .map(|t| t.map(AtomicOption::new).unwrap_or_default())
     }
 }
 
