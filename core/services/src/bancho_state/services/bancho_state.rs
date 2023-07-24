@@ -31,7 +31,7 @@ impl BanchoStateServiceDumpLoader {
                     Ok(dump) => {
                         if !dump.is_expired(cfg.dump_expries()) {
                             info!(
-                                "[BanchoStateDump] Load chat service from dump files!"
+                                "[BanchoStateDump] Load bancho state service from dump files!"
                             );
                             return BanchoStateServiceImpl::from_dump(
                                 dump,
