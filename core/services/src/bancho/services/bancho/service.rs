@@ -94,7 +94,8 @@ impl Login for BanchoServiceImpl {
             if EXCLUDE_USERS.contains(&username.as_str()) {
                 let user = self
                     .users_repository
-                    .get_user_by_username(
+                    .get_user(
+                        None,
                         Some(username.as_str()),
                         Some(username.as_str()),
                     )
