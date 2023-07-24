@@ -63,6 +63,9 @@ pub struct BanchoStandaloneConfig {
 
     #[arg(long)]
     pub ed25519_private_key_path: Option<String>,
+
+    #[command(flatten)]
+    pub chat_service_dump_configs: CliChatServiceDumpConfigs,
 }
 
 #[derive(Clone)]
@@ -128,8 +131,12 @@ impl App {
             )
             .await;
 
-        let chat_service =
-            Arc::new(ChatServiceImpl::new(users_repository.clone()));
+        let chat_service = ChatServiceDumpLoader::load(
+            &cfg.chat_service_dump_configs,
+            users_repository.clone(),
+        )
+        .await
+        .into_service();
 
         let chat_background_service =
             Arc::new(ChatBackgroundServiceImpl::new(chat_service.clone()));
