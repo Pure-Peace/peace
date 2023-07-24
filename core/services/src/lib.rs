@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use peace_rpc_error::{RpcError, TonicError};
-use std::path::Path;
 use tonic::Status;
 
 #[macro_use]
@@ -78,7 +77,7 @@ pub trait DumpData<D> {
 
 #[async_trait]
 pub trait DumpToDisk<D> {
-    async fn dump_to_disk(&self, path: &Path) -> Result<usize, DumpError>;
+    async fn dump_to_disk(&self, path: &str) -> Result<usize, DumpError>;
 }
 
 #[async_trait]
@@ -87,7 +86,7 @@ where
     T: DumpData<D> + Sync + Send,
     D: serde::Serialize + Send,
 {
-    async fn dump_to_disk(&self, path: &Path) -> Result<usize, DumpError> {
+    async fn dump_to_disk(&self, path: &str) -> Result<usize, DumpError> {
         let dump_data = self.dump_data().await;
 
         let bytes_data = bincode::serialize(&dump_data)

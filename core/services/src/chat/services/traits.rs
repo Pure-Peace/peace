@@ -31,12 +31,23 @@ pub trait NotifyMessagesQueue {
 }
 
 #[async_trait]
+pub trait TryDumpToDisk {
+    async fn try_dump_to_disk(
+        &self,
+        _chat_dump_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        unimplemented!()
+    }
+}
+
+#[async_trait]
 pub trait ChatService:
     UserSessionsStore
     + NotifyMessagesQueue
     + ChannelStore
     + DumpData<ChatServiceDump>
     + DumpToDisk<ChatServiceDump>
+    + TryDumpToDisk
 {
     async fn login(
         &self,

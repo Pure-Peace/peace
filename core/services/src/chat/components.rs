@@ -8,6 +8,7 @@ use crate::{
 use async_trait::async_trait;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
+use clap_serde_derive::ClapSerde;
 use peace_pb::chat::ChannelQuery;
 use std::{
     collections::HashMap,
@@ -635,4 +636,21 @@ impl Channels {
 
         channel_data
     }
+}
+
+#[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
+pub struct CliChatServiceDumpConfigs {
+    #[default("./chat.dump".to_owned())]
+    #[arg(long, default_value = "./chat.dump")]
+    pub chat_dump_path: String,
+
+    #[arg(long)]
+    pub chat_save_dump: bool,
+
+    #[arg(long)]
+    pub chat_load_dump: bool,
+
+    #[default(300)]
+    #[arg(long, default_value = "300")]
+    pub chat_dump_expries: u64,
 }

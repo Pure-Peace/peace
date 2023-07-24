@@ -4,7 +4,7 @@ use crate::{
     },
     chat::*,
     users::Session,
-    DumpData, FromRpcClient, IntoService, RpcClient,
+    DumpData, DumpToDisk, FromRpcClient, IntoService, RpcClient,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
@@ -77,12 +77,7 @@ impl ChatServiceImpl {
             let user_count = U32::new(ch.users.len() as u32);
             let users = Arc::new(RwLock::new(HashMap::from_iter(
                 ch.users.into_iter().map(|user_id| {
-                    (
-                        user_id,
-                        session_indexes
-                            .get(&user_id)
-                            .map(Arc::downgrade),
-                    )
+                    (user_id, session_indexes.get(&user_id).map(Arc::downgrade))
                 }),
             )));
 
@@ -242,15 +237,13 @@ pub struct ChatServiceDumpLoader;
 
 impl ChatServiceDumpLoader {
     pub async fn load(
-        load_dump: bool,
-        dump_path: &str,
-        dump_expries: u64,
+        cfg: &CliChatServiceDumpConfigs,
         users_repository: DynUsersRepository,
     ) -> ChatServiceImpl {
-        if load_dump {
-            match ChatServiceDump::from_dump_file(dump_path) {
+        if cfg.chat_load_dump {
+            match ChatServiceDump::from_dump_file(&cfg.chat_dump_path) {
                 Ok(dump) => {
-                    if dump.is_expired(dump_expries) {
+                    if dump.is_expired(cfg.chat_dump_expries) {
                         info!("[ChatDump] Dump file founded but already expired (create at: {})", dump.create_time);
                         ChatServiceImpl::new(users_repository)
                     } else {
@@ -259,7 +252,7 @@ impl ChatServiceDumpLoader {
                     }
                 },
                 Err(err) => {
-                    warn!("[ChatDump] Failed to load dump file from path \"{}\", err: {}", dump_path, err);
+                    warn!("[ChatDump] Failed to load dump file from path \"{}\", err: {}", cfg.chat_dump_path, err);
                     ChatServiceImpl::new(users_repository)
                 },
             }
@@ -319,6 +312,20 @@ impl ChannelStore for ChatServiceImpl {
     #[inline]
     fn channels(&self) -> &Arc<Channels> {
         &self.channels
+    }
+}
+
+#[async_trait]
+impl TryDumpToDisk for ChatServiceImpl {
+    async fn try_dump_to_disk(
+        &self,
+        chat_dump_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        info!("Saving chat dump file to path \"{}\"...", chat_dump_path);
+        let size = self.dump_to_disk(chat_dump_path).await?;
+        info!("Chat dump saved, size: {}", size);
+
+        Ok(())
     }
 }
 
@@ -817,6 +824,9 @@ impl DumpData<ChatServiceDump> for ChatServiceRemote {
         unimplemented!()
     }
 }
+
+#[async_trait]
+impl TryDumpToDisk for ChatServiceRemote {}
 
 #[async_trait]
 impl ChatService for ChatServiceRemote {

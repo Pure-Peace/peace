@@ -11,7 +11,7 @@ use peace_runtime::cfg::RuntimeConfig;
 use peace_services::chat::{
     ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl,
     ChatServiceDumpLoader, CliChatBackgroundServiceConfigs,
-    DynChatBackgroundService, DynChatService,
+    CliChatServiceDumpConfigs, DynChatBackgroundService, DynChatService,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
@@ -35,19 +35,8 @@ pub struct ChatServiceConfig {
     #[command(flatten)]
     pub chat_background_service_configs: CliChatBackgroundServiceConfigs,
 
-    #[default("./chat.dump".to_owned())]
-    #[arg(long, default_value = "./chat.dump")]
-    pub chat_dump_path: String,
-
-    #[arg(long)]
-    pub chat_save_dump: bool,
-
-    #[arg(long)]
-    pub chat_load_dump: bool,
-
-    #[default(300)]
-    #[arg(long, default_value = "300")]
-    pub chat_dump_expries: u64,
+    #[command(flatten)]
+    pub chat_service_dump_configs: CliChatServiceDumpConfigs,
 }
 
 #[derive(Clone)]
@@ -73,9 +62,7 @@ impl App {
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
         let chat_service = ChatServiceDumpLoader::load(
-            cfg.chat_load_dump,
-            &cfg.chat_dump_path,
-            cfg.chat_dump_expries,
+            &cfg.chat_service_dump_configs,
             users_repository.clone(),
         )
         .await
