@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use async_trait::async_trait;
 use peace_rpc_error::{RpcError, TonicError};
 use tonic::Status;
@@ -107,6 +109,14 @@ where
         let bytes_data = bincode::serialize(&dump_data)
             .map_err(|err| DumpError::SerializeError(err.to_string()))?;
 
+        let path = Path::new(path);
+
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|err| DumpError::CreateDirError(err.to_string()))?;
+        }
+
         tokio::fs::write(path, &bytes_data)
             .await
             .map_err(|err| DumpError::WriteFileError(err.to_string()))?;
@@ -119,6 +129,8 @@ where
 pub enum DumpError {
     #[error("SerializeError: {0}")]
     SerializeError(String),
+    #[error("CreateDirError: {0}")]
+    CreateDirError(String),
     #[error("WriteFileError: {0}")]
     WriteFileError(String),
     #[error("TonicError: {0}")]

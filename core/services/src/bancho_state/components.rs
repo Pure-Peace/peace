@@ -538,8 +538,8 @@ impl DumpData<BanchoExtendData> for BanchoExtend {
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
 pub struct CliBanchoStateServiceDumpConfigs {
-    #[default("./service_dump/bancho_state.dump".to_owned())]
-    #[arg(long, default_value = "./service_dump/bancho_state.dump")]
+    #[default("./.service_dump/bancho_state.dump".to_owned())]
+    #[arg(long, default_value = "./.service_dump/bancho_state.dump")]
     pub bancho_state_dump_path: String,
 
     #[arg(long)]

@@ -128,14 +128,14 @@ impl IntoService<DynBanchoStateService> for BanchoStateServiceImpl {
 impl TryDumpToDisk for BanchoStateServiceImpl {
     async fn try_dump_to_disk(
         &self,
-        chat_dump_path: &str,
+        dump_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        info!(
-            "Saving Bancho state dump file to path \"{}\"...",
-            chat_dump_path
-        );
-        let size = self.dump_to_disk(chat_dump_path).await?;
-        info!("Bancho state dump saved, size: {}", size);
+        info!("Saving Bancho state dump file to path: \"{}\"...", dump_path);
+        let size = self.dump_to_disk(dump_path).await.map_err(|err| {
+            warn!("[Failed] Failed to create Bancho state dump, err: {err}");
+            err
+        })?;
+        info!("[Success] Bancho state dump saved, size: {}", size);
 
         Ok(())
     }

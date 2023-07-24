@@ -638,8 +638,8 @@ impl Channels {
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
 pub struct CliChatServiceDumpConfigs {
-    #[default("./service_dump/chat.dump".to_owned())]
-    #[arg(long, default_value = "./service_dump/chat.dump")]
+    #[default("./.service_dump/chat.dump".to_owned())]
+    #[arg(long, default_value = "./.service_dump/chat.dump")]
     pub chat_dump_path: String,
 
     #[arg(long)]

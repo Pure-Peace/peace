@@ -320,11 +320,14 @@ impl ChannelStore for ChatServiceImpl {
 impl TryDumpToDisk for ChatServiceImpl {
     async fn try_dump_to_disk(
         &self,
-        chat_dump_path: &str,
+        dump_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Saving chat dump file to path \"{}\"...", chat_dump_path);
-        let size = self.dump_to_disk(chat_dump_path).await?;
-        info!("Chat dump saved, size: {}", size);
+        info!("Saving chat dump file to path: \"{}\"...", dump_path);
+        let size = self.dump_to_disk(dump_path).await.map_err(|err| {
+            warn!("[Failed] Failed to create Chat dump, err: {err}");
+            err
+        })?;
+        info!("[Success] Chat dump saved, size: {}", size);
 
         Ok(())
     }
