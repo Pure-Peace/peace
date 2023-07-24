@@ -159,6 +159,24 @@ pub mod users {
         pub extends: T,
     }
 
+    impl<T, D> From<SessionData<D>> for Session<T>
+    where
+        T: From<D>,
+    {
+        fn from(u: SessionData<D>) -> Self {
+            Self {
+                id: u.id,
+                user_id: u.user_id,
+                username: u.username.into(),
+                username_unicode: u.username_unicode.into(),
+                privileges: u.privileges.into(),
+                created_at: u.created_at,
+                last_active: u.last_active.into(),
+                extends: u.extends.into(),
+            }
+        }
+    }
+
     impl<T> UserKey for Session<T> {
         #[inline]
         fn session_id(&self) -> Ulid {
@@ -296,6 +314,58 @@ pub mod users {
                 username_unicode: HashMap::new(),
             }
         }
+
+        pub fn with_capacity(capacity: usize) -> Self {
+            Self {
+                session_id: BTreeMap::new(),
+                user_id: BTreeMap::new(),
+                username: HashMap::with_capacity(capacity),
+                username_unicode: HashMap::with_capacity(capacity),
+            }
+        }
+
+        pub fn add_session(&mut self, item: Arc<T>)
+        where
+            T: UserKey,
+        {
+            self.session_id.insert(item.session_id(), item.clone());
+            self.user_id.insert(item.user_id(), item.clone());
+            self.username.insert(item.username(), item.clone());
+            self.username_unicode.insert(
+                item.username_unicode().unwrap_or_else(|| item.username()),
+                item,
+            );
+        }
+
+        pub fn remove_session(
+            &mut self,
+            user_id: &i32,
+            username: &str,
+            session_id: &Ulid,
+            username_unicode: Option<&str>,
+        ) -> Option<Arc<T>> {
+            let mut removed = None;
+
+            if let Some(s) = self.user_id.remove(user_id) {
+                removed = Some(s);
+            }
+            if let Some(s) = self.username.remove(username) {
+                removed = Some(s);
+            }
+
+            if let Some(s) = self.session_id.remove(session_id) {
+                removed = Some(s);
+            }
+
+            if let Some(s) = username_unicode
+                .and_then(|s| self.username_unicode.remove(s))
+                .or_else(|| self.username_unicode.remove(username))
+            {
+                removed = Some(s);
+            }
+
+            removed
+        }
     }
 
     impl<T> Default for UserIndexes<T> {
@@ -330,6 +400,11 @@ pub mod users {
             }
         }
 
+        pub fn from_indexes(indexes: UserIndexes<T>) -> Self {
+            let len = Usize::new(indexes.len());
+            Self { indexes: RwLock::new(indexes), len }
+        }
+
         #[inline]
         pub async fn create(&self, item: T) -> Arc<T> {
             let item = Arc::new(item);
@@ -350,14 +425,7 @@ pub mod users {
                     );
                 }
 
-                // Insert the user data into the relevant hash maps
-                indexes.session_id.insert(item.session_id(), item.clone());
-                indexes.user_id.insert(item.user_id(), item.clone());
-                indexes.username.insert(item.username(), item.clone());
-                indexes.username_unicode.insert(
-                    item.username_unicode().unwrap_or_else(|| item.username()),
-                    item.clone(),
-                )
+                indexes.add_session(item.clone());
             };
 
             self.len.add(1);
@@ -389,25 +457,12 @@ pub mod users {
             session_id: &Ulid,
             username_unicode: Option<&str>,
         ) -> Option<Arc<T>> {
-            let mut removed = None;
-
-            if let Some(s) = indexes.user_id.remove(user_id) {
-                removed = Some(s);
-            }
-            if let Some(s) = indexes.username.remove(username) {
-                removed = Some(s);
-            }
-
-            if let Some(s) = indexes.session_id.remove(session_id) {
-                removed = Some(s);
-            }
-
-            if let Some(s) = username_unicode
-                .and_then(|s| indexes.username_unicode.remove(s))
-                .or_else(|| indexes.username_unicode.remove(username))
-            {
-                removed = Some(s);
-            }
+            let removed = indexes.remove_session(
+                user_id,
+                username,
+                session_id,
+                username_unicode,
+            );
 
             if removed.is_some() {
                 self.len.sub(1);

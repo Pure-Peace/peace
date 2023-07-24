@@ -23,6 +23,19 @@ pub struct Message<T, K> {
     pub validator: Option<MessageValidator<T, K>>,
 }
 
+impl<T, K, I> From<MessageData<T, K, I>> for Message<T, K>
+where
+    K: Eq + Hash,
+{
+    fn from(data: MessageData<T, K, I>) -> Self {
+        Self {
+            content: data.content,
+            has_read: Arc::new(RwLock::new(HashSet::from_iter(data.has_read))),
+            validator: None,
+        }
+    }
+}
+
 impl<T, K> Debug for Message<T, K>
 where
     T: Debug,
@@ -102,6 +115,16 @@ pub struct ReceivedMessages<T, I> {
 #[derive(Debug, Default)]
 pub struct MessageQueue<T, K, I> {
     pub raw: RwLock<RawMessageQueue<T, K, I>>,
+}
+
+impl<T, K, I> From<Vec<MessageData<T, K, I>>> for MessageQueue<T, K, I>
+where
+    I: Ord + Copy,
+    K: Eq + Hash,
+{
+    fn from(data: Vec<MessageData<T, K, I>>) -> Self {
+        Self { raw: RwLock::new(data.into()) }
+    }
 }
 
 impl<T, K, I> Deref for MessageQueue<T, K, I> {
@@ -191,6 +214,20 @@ where
 #[derive(Clone, Default)]
 pub struct RawMessageQueue<T, K, I> {
     pub messages: BTreeMap<I, Message<T, K>>,
+}
+
+impl<T, K, I> From<Vec<MessageData<T, K, I>>> for RawMessageQueue<T, K, I>
+where
+    I: Ord + Copy,
+    K: Eq + Hash,
+{
+    fn from(data: Vec<MessageData<T, K, I>>) -> Self {
+        Self {
+            messages: BTreeMap::from_iter(
+                data.into_iter().map(|d| (d.msg_id, d.into())),
+            ),
+        }
+    }
 }
 
 impl<T, K, I> Debug for RawMessageQueue<T, K, I>

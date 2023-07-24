@@ -139,7 +139,10 @@ impl App {
                 &cfg.chat_background_service_configs,
             );
 
-        chat_service.load_public_channels().await.expect("debugging");
+        chat_service
+            .load_public_channels()
+            .await
+            .expect("Failed to load public channels");
 
         let bancho_background_service =
             BanchoBackgroundServiceImpl::new(password_cache_store)

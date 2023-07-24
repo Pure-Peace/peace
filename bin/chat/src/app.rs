@@ -9,8 +9,9 @@ use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::chat::{
-    ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl, ChatServiceImpl,
-    CliChatBackgroundServiceConfigs, DynChatBackgroundService, DynChatService,
+    ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl,
+    ChatServiceDumpLoader, CliChatBackgroundServiceConfigs,
+    DynChatBackgroundService, DynChatService,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
@@ -33,6 +34,20 @@ pub struct ChatServiceConfig {
 
     #[command(flatten)]
     pub chat_background_service_configs: CliChatBackgroundServiceConfigs,
+
+    #[default("./chat.dump".to_owned())]
+    #[arg(long, default_value = "./chat.dump")]
+    pub chat_dump_path: String,
+
+    #[arg(long)]
+    pub chat_save_dump: bool,
+
+    #[arg(long)]
+    pub chat_load_dump: bool,
+
+    #[default(300)]
+    #[arg(long, default_value = "300")]
+    pub chat_dump_expries: u64,
 }
 
 #[derive(Clone)]
@@ -57,8 +72,14 @@ impl App {
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
-        let chat_service =
-            ChatServiceImpl::new(users_repository.clone()).into_service();
+        let chat_service = ChatServiceDumpLoader::load(
+            cfg.chat_load_dump,
+            &cfg.chat_dump_path,
+            cfg.chat_dump_expries,
+            users_repository.clone(),
+        )
+        .await
+        .into_service();
 
         let chat_background_service =
             ChatBackgroundServiceImpl::new(chat_service.clone()).into_service();
@@ -68,7 +89,10 @@ impl App {
                 &cfg.chat_background_service_configs,
             );
 
-        chat_service.load_public_channels().await.expect("debugging");
+        chat_service
+            .load_public_channels()
+            .await
+            .expect("Failed to load public channels");
 
         chat_background_service
             .start_all(chat_background_service_config.clone());

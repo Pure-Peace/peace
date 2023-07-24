@@ -87,9 +87,19 @@ impl Platform {
 
 #[derive(Debug, Default)]
 pub struct JoinedChannel {
-    pub ptr: Weak<Channel>,
+    pub ptr: Atomic<Weak<Channel>>,
     pub message_index: Atomic<Ulid>,
     pub joined_time: DateTime<Utc>,
+}
+
+impl From<Weak<Channel>> for JoinedChannel {
+    fn from(ptr: Weak<Channel>) -> Self {
+        Self {
+            ptr: ptr.into(),
+            message_index: Default::default(),
+            joined_time: Utc::now(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,6 +113,15 @@ pub struct JoinedChannelData {
 pub struct BanchoChatExt {
     pub packets_queue: BanchoPacketsQueue,
     pub notify_index: Atomic<Ulid>,
+}
+
+impl From<BanchoChatExtData> for BanchoChatExt {
+    fn from(data: BanchoChatExtData) -> Self {
+        Self {
+            packets_queue: BanchoPacketsQueue::from(data.packets_queue),
+            notify_index: data.notify_index.into(),
+        }
+    }
 }
 
 impl From<BanchoPacketsQueue> for BanchoChatExt {
@@ -133,6 +152,31 @@ pub struct ChatSessionExtend {
     pub bancho_ext: AtomicOption<BanchoChatExt>,
     pub joined_channels: RwLock<HashMap<u64, Arc<JoinedChannel>>>,
     pub channel_count: U32,
+}
+
+impl From<ChatSessionExtendData> for ChatSessionExtend {
+    fn from(data: ChatSessionExtendData) -> Self {
+        let channel_count = U32::new(data.joined_channels.len() as u32);
+        Self {
+            platforms: Platform::from(data.platforms).into(),
+            bancho_ext: data.bancho_ext.map(|d| d.into()).into(),
+            joined_channels: RwLock::new(
+                HashMap::new(), /* from_iter(
+                                    data.joined_channels.into_iter().map(|j| {
+                                        (
+                                            j.channel_id,
+                                            Arc::new(JoinedChannel {
+                                                ptr: Weak::new().into(),
+                                                message_index: j.message_index.into(),
+                                                joined_time: j.joined_time,
+                                            }),
+                                        )
+                                    }),
+                                ) */
+            ),
+            channel_count,
+        }
+    }
 }
 
 impl ChatSessionExtend {
@@ -204,6 +248,44 @@ impl Deref for ChannelIndexes {
     }
 }
 
+impl ChannelIndexes {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            channel_id: HashMap::with_capacity(capacity),
+            channel_name: HashMap::with_capacity(capacity),
+            public_channels: HashMap::with_capacity(capacity),
+        }
+    }
+
+    pub fn add_channel(&mut self, channel: Arc<Channel>) {
+        self.channel_id.insert(channel.id, channel.clone());
+        self.channel_name.insert(channel.name.to_string(), channel.clone());
+        if channel.channel_type == ChannelType::Public {
+            self.public_channels.insert(channel.id, channel);
+        }
+    }
+
+    pub fn remove_channel(
+        &mut self,
+        channel_id: &u64,
+        channel_name: &str,
+    ) -> Option<Arc<Channel>> {
+        let mut removed = None;
+
+        if let Some(s) = self.channel_id.remove(channel_id) {
+            removed = Some(s);
+        }
+        if let Some(s) = self.channel_name.remove(channel_name) {
+            removed = Some(s);
+        }
+        if let Some(s) = self.public_channels.remove(channel_id) {
+            removed = Some(s);
+        }
+
+        removed
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Channel {
     pub id: u64,
@@ -271,7 +353,7 @@ impl Channel {
             .or_insert_with(|| {
                 session.extends.channel_count.add(1);
                 JoinedChannel {
-                    ptr: Arc::downgrade(channel),
+                    ptr: Arc::downgrade(channel).into(),
                     message_index: Ulid::default().into(),
                     joined_time: Utc::now(),
                 }
@@ -410,11 +492,24 @@ impl Deref for Channels {
 }
 
 impl Channels {
+    pub fn from_indexes(indexes: ChannelIndexes) -> Self {
+        let len = Usize::new(indexes.len());
+        Self { indexes: RwLock::new(indexes), len }
+    }
+
     #[inline]
-    pub async fn create_channel(&self, channel: Channel) -> Arc<Channel> {
+    pub async fn create_channel(
+        &self,
+        channel: Channel,
+        replace_if_exists: bool,
+    ) -> Arc<Channel> {
         let channel = Arc::new(channel);
         let mut indexes = self.write().await;
-        self.create_channel_inner(&mut indexes, channel.clone());
+        self.create_channel_inner(
+            &mut indexes,
+            channel.clone(),
+            replace_if_exists,
+        );
 
         channel
     }
@@ -424,10 +519,15 @@ impl Channels {
         &self,
         indexes: &mut ChannelIndexes,
         channel: Arc<Channel>,
+        replace_if_exists: bool,
     ) {
         if let Some(old_channel) = self
             .get_channel_inner(indexes, &ChannelQuery::ChannelId(channel.id))
         {
+            if !replace_if_exists {
+                return;
+            }
+
             self.remove_channel_inner(
                 indexes,
                 &old_channel.id,
@@ -435,11 +535,7 @@ impl Channels {
             );
         }
 
-        indexes.channel_id.insert(channel.id, channel.clone());
-        indexes.channel_name.insert(channel.name.to_string(), channel.clone());
-        if channel.channel_type == ChannelType::Public {
-            indexes.public_channels.insert(channel.id, channel.clone());
-        }
+        indexes.add_channel(channel);
 
         self.len.add(1);
     }
@@ -467,17 +563,7 @@ impl Channels {
         channel_id: &u64,
         channel_name: &str,
     ) -> Option<Arc<Channel>> {
-        let mut removed = None;
-
-        if let Some(s) = indexes.channel_id.remove(channel_id) {
-            removed = Some(s);
-        }
-        if let Some(s) = indexes.channel_name.remove(channel_name) {
-            removed = Some(s);
-        }
-        if let Some(s) = indexes.public_channels.remove(channel_id) {
-            removed = Some(s);
-        }
+        let removed = indexes.remove_channel(channel_id, channel_name);
 
         if removed.is_some() {
             self.len.sub(1);

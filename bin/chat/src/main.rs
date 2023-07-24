@@ -11,14 +11,25 @@ pub mod rpc;
 pub use app::*;
 pub use rpc::*;
 
+use std::path::Path;
+
 pub async fn run(
     cfg: std::sync::Arc<ChatServiceConfig>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Create a new instance of the `App.
-    let app = App::initialize(cfg).await;
+    let app = App::initialize(cfg.clone()).await;
 
     // Start serving the RPC server with the `App` instance.
-    peace_rpc::server::serve(app).await;
+    peace_rpc::server::serve(app.clone()).await;
+
+    if cfg.chat_save_dump {
+        info!("Saving chat dump file to path \"{}\"...", &cfg.chat_dump_path);
+        let size = app
+            .chat_service
+            .dump_to_disk(Path::new(&cfg.chat_dump_path))
+            .await?;
+        info!("Chat dump saved, size: {}", size)
+    }
 
     Ok(())
 }

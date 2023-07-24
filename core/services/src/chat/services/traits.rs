@@ -1,4 +1,4 @@
-use crate::{bancho_state::BanchoMessageQueue, chat::*};
+use crate::{bancho_state::BanchoMessageQueue, chat::*, DumpData, DumpToDisk};
 use peace_pb::{
     bancho_state::{BanchoPackets, UserQuery},
     base::ExecSuccess,
@@ -32,7 +32,11 @@ pub trait NotifyMessagesQueue {
 
 #[async_trait]
 pub trait ChatService:
-    UserSessionsStore + NotifyMessagesQueue + ChannelStore
+    UserSessionsStore
+    + NotifyMessagesQueue
+    + ChannelStore
+    + DumpData<ChatServiceDump>
+    + DumpToDisk<ChatServiceDump>
 {
     async fn login(
         &self,

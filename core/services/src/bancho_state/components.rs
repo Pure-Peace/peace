@@ -280,6 +280,16 @@ pub struct BanchoPacketsQueue {
     pub queue: Arc<Mutex<VecDeque<Packet>>>,
 }
 
+impl From<Vec<Packet>> for BanchoPacketsQueue {
+    fn from(packets: Vec<Packet>) -> Self {
+        let mut queue = VecDeque::with_capacity(packets.len());
+        for p in packets {
+            queue.push_back(p);
+        }
+        Self::new(queue)
+    }
+}
+
 impl From<Vec<u8>> for BanchoPacketsQueue {
     fn from(packets: Vec<u8>) -> Self {
         Self::new(VecDeque::from([packets.into()]))

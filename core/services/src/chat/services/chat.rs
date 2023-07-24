@@ -9,6 +9,7 @@ use crate::{
 use async_trait::async_trait;
 use bancho_packets::server;
 use chat::traits::{ChatService, DynChatService};
+use chrono::{DateTime, Utc};
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
@@ -21,9 +22,18 @@ use peace_pb::{
     },
 };
 use peace_repositories::users::DynUsersRepository;
-use std::{borrow::Cow, collections::VecDeque, sync::Arc};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, VecDeque},
+    path::Path,
+    sync::Arc,
+};
+use tokio::sync::RwLock;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
-use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
+use tools::{
+    atomic::{AtomicValue, U32},
+    message_queue::ReceivedMessages,
+};
 
 #[derive(Clone)]
 pub struct ChatServiceImpl {
@@ -42,6 +52,86 @@ impl ChatServiceImpl {
             channels: Channels::default().into(),
             users_repository,
         }
+    }
+
+    #[inline]
+    pub async fn from_dump(
+        dump: ChatServiceDump,
+        users_repository: DynUsersRepository,
+    ) -> Self {
+        let mut session_indexes =
+            SessionIndexes::with_capacity(dump.user_sessions.len());
+
+        for u in dump.user_sessions {
+            let session = Arc::new(u.into());
+            session_indexes.add_session(session);
+        }
+
+        let notify_queue =
+            Arc::new(BanchoMessageQueue::from(dump.notify_queue));
+
+        let mut channel_indexes =
+            ChannelIndexes::with_capacity(dump.channels.len());
+
+        for ch in dump.channels {
+            let user_count = U32::new(ch.users.len() as u32);
+            let users = Arc::new(RwLock::new(HashMap::from_iter(
+                ch.users.into_iter().map(|user_id| {
+                    (
+                        user_id,
+                        session_indexes
+                            .get(&user_id)
+                            .map(|u| Arc::downgrade(u)),
+                    )
+                }),
+            )));
+
+            let channel = Arc::new(Channel {
+                id: ch.id,
+                name: ch.name.into(),
+                channel_type: ch.channel_type,
+                description: ch.description.into(),
+                users,
+                user_count,
+                min_msg_index: ch.min_msg_index.into(),
+                message_queue: Arc::new(ch.message_queue.into()),
+                created_at: ch.created_at,
+            });
+
+            // upgrade user's JoinedChannel to real channel's weak ptr
+            for user_id in channel.users.read().await.keys() {
+                if let Some(session) = session_indexes.get(user_id) {
+                    session
+                        .extends
+                        .joined_channels
+                        .write()
+                        .await
+                        .entry(channel.id)
+                        .and_modify(|j| {
+                            j.ptr.set(Arc::downgrade(&channel).into())
+                        })
+                        .or_insert_with(|| {
+                            Arc::new(JoinedChannel::from(Arc::downgrade(
+                                &channel,
+                            )))
+                        });
+                }
+            }
+
+            // Publish channel info update
+            notify_queue
+                .push_message(Packet::Ptr(channel.info_packets().into()), None)
+                .await;
+
+            channel_indexes.add_channel(channel);
+        }
+
+        let channels = Arc::new(Channels::from_indexes(channel_indexes));
+
+        let user_sessions =
+            Arc::new(UserSessions::from_indexes(session_indexes));
+
+        Self { user_sessions, notify_queue, channels, users_repository }
     }
 
     #[inline]
@@ -149,11 +239,55 @@ impl ChatServiceImpl {
     }
 }
 
+pub struct ChatServiceDumpLoader;
+
+impl ChatServiceDumpLoader {
+    pub async fn load(
+        load_dump: bool,
+        dump_path: &str,
+        dump_expries: u64,
+        users_repository: DynUsersRepository,
+    ) -> ChatServiceImpl {
+        if load_dump {
+            match ChatServiceDump::from_dump_file(dump_path) {
+                Ok(dump) => {
+                    if dump.is_expired(dump_expries) {
+                        info!("[ChatDump] Dump file founded but already expired (create at: {})", dump.create_time);
+                        ChatServiceImpl::new(users_repository)
+                    } else {
+                        info!("[ChatDump] Load chat service from dump files!");
+                        ChatServiceImpl::from_dump(dump, users_repository).await
+                    }
+                },
+                Err(err) => {
+                    warn!("[ChatDump] Failed to load dump file from path \"{}\", err: {}", dump_path, err);
+                    ChatServiceImpl::new(users_repository)
+                },
+            }
+        } else {
+            ChatServiceImpl::new(users_repository)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatServiceDump {
     pub user_sessions: Vec<ChatSessionData>,
     pub notify_queue: Vec<BanchoMessageData>,
     pub channels: Vec<ChannelData>,
+    pub create_time: DateTime<Utc>,
+}
+
+impl ChatServiceDump {
+    pub fn from_dump_file<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<Self, anyhow::Error> {
+        Ok(bincode::deserialize(&std::fs::read(path)?)?)
+    }
+
+    pub fn is_expired(&self, expires: u64) -> bool {
+        (self.create_time.timestamp() + expires as i64) < Utc::now().timestamp()
+    }
 }
 
 #[async_trait]
@@ -163,6 +297,7 @@ impl DumpData<ChatServiceDump> for ChatServiceImpl {
             user_sessions: self.user_sessions.dump_sessions().await,
             notify_queue: self.notify_queue.dump_messages().await,
             channels: self.channels.dump_channels().await,
+            create_time: Utc::now(),
         }
     }
 }
@@ -218,7 +353,7 @@ impl ChatService for ChatServiceImpl {
 
         info!(
             target: LOG_TARGET,
-            "User {} [{}] logged in",
+            "User {}({}) logged in",
             session.username.load(),
             session.user_id,
         );
@@ -267,7 +402,7 @@ impl ChatService for ChatServiceImpl {
             // leave all channels
             for channel in session.extends.joined_channels.read().await.values()
             {
-                if let Some(channel) = channel.ptr.upgrade() {
+                if let Some(channel) = channel.ptr.load().upgrade() {
                     // remove user from channel
                     Channel::remove(&session, &channel).await;
 
@@ -520,7 +655,7 @@ impl ChatService for ChatServiceImpl {
 
         // receive msg from each channels, and mark invalid channels ptr
         for (channel_id, joined_channel) in joined_channels {
-            match joined_channel.ptr.upgrade() {
+            match joined_channel.ptr.load().upgrade() {
                 Some(channel) => {
                     if let Some(ReceivedMessages { messages, last_msg_id }) =
                         channel
@@ -598,8 +733,11 @@ impl ChatService for ChatServiceImpl {
         let () = {
             let mut indexes = self.channels.write().await;
             for channel in public_channels {
-                self.channels
-                    .create_channel_inner(&mut indexes, channel.into());
+                self.channels.create_channel_inner(
+                    &mut indexes,
+                    channel.into(),
+                    false,
+                );
             }
         };
 
@@ -673,6 +811,13 @@ impl UserSessionsStore for ChatServiceRemote {}
 impl NotifyMessagesQueue for ChatServiceRemote {}
 
 impl ChannelStore for ChatServiceRemote {}
+
+#[async_trait]
+impl DumpData<ChatServiceDump> for ChatServiceRemote {
+    async fn dump_data(&self) -> ChatServiceDump {
+        unimplemented!()
+    }
+}
 
 #[async_trait]
 impl ChatService for ChatServiceRemote {
