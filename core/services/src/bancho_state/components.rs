@@ -5,6 +5,7 @@ use crate::{
 use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
+use clap_serde_derive::ClapSerde;
 use peace_domain::bancho_state::ConnectionInfo;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
@@ -400,6 +401,23 @@ pub struct BanchoExtend {
     pub notify_index: Atomic<Ulid>,
 }
 
+impl From<BanchoExtendData> for BanchoExtend {
+    fn from(data: BanchoExtendData) -> Self {
+        Self {
+            client_version: data.client_version,
+            utc_offset: data.utc_offset,
+            presence_filter: data.presence_filter.into(),
+            display_city: data.display_city,
+            only_friend_pm_allowed: data.only_friend_pm_allowed.into(),
+            bancho_status: data.bancho_status,
+            mode_stat_sets: data.mode_stat_sets,
+            packets_queue: data.packets_queue.into(),
+            connection_info: data.connection_info,
+            notify_index: data.notify_index.into(),
+        }
+    }
+}
+
 impl BanchoExtend {
     #[inline]
     pub fn new(
@@ -516,4 +534,21 @@ impl DumpData<BanchoExtendData> for BanchoExtend {
             notify_index: *self.notify_index.load().as_ref(),
         }
     }
+}
+
+#[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
+pub struct CliBanchoStateServiceDumpConfigs {
+    #[default("./bancho_state.dump".to_owned())]
+    #[arg(long, default_value = "./bancho_state.dump")]
+    pub bancho_state_dump_path: String,
+
+    #[arg(long)]
+    pub bancho_state_save_dump: bool,
+
+    #[arg(long)]
+    pub bancho_state_load_dump: bool,
+
+    #[default(300)]
+    #[arg(long, default_value = "300")]
+    pub bancho_state_dump_expries: u64,
 }

@@ -1,4 +1,7 @@
-use crate::{bancho_state::BanchoMessageQueue, chat::*, DumpData, DumpToDisk};
+use crate::{
+    bancho_state::BanchoMessageQueue, chat::*, DumpData, DumpToDisk,
+    TryDumpToDisk,
+};
 use peace_pb::{
     bancho_state::{BanchoPackets, UserQuery},
     base::ExecSuccess,
@@ -26,16 +29,6 @@ pub trait UserSessionsStore {
 
 pub trait NotifyMessagesQueue {
     fn notify_queue(&self) -> &Arc<BanchoMessageQueue> {
-        unimplemented!()
-    }
-}
-
-#[async_trait]
-pub trait TryDumpToDisk {
-    async fn try_dump_to_disk(
-        &self,
-        _chat_dump_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!()
     }
 }

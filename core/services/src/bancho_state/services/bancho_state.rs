@@ -1,20 +1,79 @@
 use super::traits::*;
 use crate::{
-    bancho_state::{
-        BanchoExtend, BanchoSession, BanchoStateError, CreateSessionError,
-        GameMode, Mods, Packet, PresenceFilter, UserOnlineStatus, UserSessions,
-    },
-    gateway::bancho_endpoints::components::BanchoClientToken,
-    signature::DynSignatureService,
-    users::SessionFilter,
-    IntoService,
+    bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
+    signature::DynSignatureService, users::SessionFilter, DumpData, DumpToDisk,
+    IntoService, TryDumpToDisk,
 };
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
+
+pub struct BanchoStateServiceDumpLoader;
+
+impl BanchoStateServiceDumpLoader {
+    pub async fn load(
+        cfg: &CliBanchoStateServiceDumpConfigs,
+        signature_service: DynSignatureService,
+    ) -> BanchoStateServiceImpl {
+        if cfg.bancho_state_load_dump {
+            match BanchoStateServiceDump::from_dump_file(
+                &cfg.bancho_state_dump_path,
+            ) {
+                Ok(dump) => {
+                    if dump.is_expired(cfg.bancho_state_dump_expries) {
+                        info!("[BanchoStateDump] Dump file founded but already expired (create at: {})", dump.create_time);
+                        BanchoStateServiceImpl::new(
+                            UserSessionsServiceImpl::new().into_service(),
+                            signature_service,
+                        )
+                    } else {
+                        info!("[BanchoStateDump] Load chat service from dump files!");
+                        BanchoStateServiceImpl::from_dump(
+                            dump,
+                            signature_service,
+                        )
+                        .await
+                    }
+                },
+                Err(err) => {
+                    warn!("[BanchoStateDump] Failed to load dump file from path \"{}\", err: {}", cfg.bancho_state_dump_path, err);
+                    BanchoStateServiceImpl::new(
+                        UserSessionsServiceImpl::new().into_service(),
+                        signature_service,
+                    )
+                },
+            }
+        } else {
+            BanchoStateServiceImpl::new(
+                UserSessionsServiceImpl::new().into_service(),
+                signature_service,
+            )
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BanchoStateServiceDump {
+    pub user_sessions: Vec<BanchoSessionData>,
+    pub notify_queue: Vec<BanchoMessageData>,
+    pub create_time: DateTime<Utc>,
+}
+
+impl BanchoStateServiceDump {
+    pub fn from_dump_file<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<Self, anyhow::Error> {
+        Ok(bincode::deserialize(&std::fs::read(path)?)?)
+    }
+
+    pub fn is_expired(&self, expires: u64) -> bool {
+        (self.create_time.timestamp() + expires as i64) < Utc::now().timestamp()
+    }
+}
 
 #[derive(Clone)]
 pub struct BanchoStateServiceImpl {
@@ -30,12 +89,74 @@ impl BanchoStateServiceImpl {
     ) -> Self {
         Self { user_sessions_service, signature_service }
     }
+
+    #[inline]
+    pub async fn from_dump(
+        dump: BanchoStateServiceDump,
+        signature_service: DynSignatureService,
+    ) -> Self {
+        let mut session_indexes =
+            SessionIndexes::with_capacity(dump.user_sessions.len());
+
+        for u in dump.user_sessions {
+            let session = Arc::new(u.into());
+            session_indexes.add_session(session);
+        }
+
+        let user_sessions =
+            Arc::new(UserSessions::from_indexes(session_indexes));
+
+        let notify_queue =
+            Arc::new(BanchoMessageQueue::from(dump.notify_queue));
+
+        let user_sessions_service =
+            UserSessionsServiceImpl { user_sessions, notify_queue }
+                .into_service();
+
+        Self { user_sessions_service, signature_service }
+    }
 }
 
 impl IntoService<DynBanchoStateService> for BanchoStateServiceImpl {
     #[inline]
     fn into_service(self) -> DynBanchoStateService {
         Arc::new(self) as DynBanchoStateService
+    }
+}
+
+#[async_trait]
+impl TryDumpToDisk for BanchoStateServiceImpl {
+    async fn try_dump_to_disk(
+        &self,
+        chat_dump_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        info!(
+            "Saving Bancho state dump file to path \"{}\"...",
+            chat_dump_path
+        );
+        let size = self.dump_to_disk(chat_dump_path).await?;
+        info!("Bancho state dump saved, size: {}", size);
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl DumpData<BanchoStateServiceDump> for BanchoStateServiceImpl {
+    async fn dump_data(&self) -> BanchoStateServiceDump {
+        BanchoStateServiceDump {
+            user_sessions: self
+                .user_sessions_service
+                .user_sessions()
+                .dump_sessions()
+                .await,
+            notify_queue: self
+                .user_sessions_service
+                .notify_queue()
+                .dump_messages()
+                .await,
+            create_time: Utc::now(),
+        }
     }
 }
 

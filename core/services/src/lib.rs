@@ -81,6 +81,16 @@ pub trait DumpToDisk<D> {
 }
 
 #[async_trait]
+pub trait TryDumpToDisk {
+    async fn try_dump_to_disk(
+        &self,
+        _chat_dump_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        unimplemented!()
+    }
+}
+
+#[async_trait]
 impl<T, D> DumpToDisk<D> for T
 where
     T: DumpData<D> + Sync + Send,

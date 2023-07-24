@@ -1,8 +1,8 @@
-use super::traits::*;
+use super::{traits::*, BanchoStateServiceDump};
 use crate::{
     bancho_state::BanchoStateError,
-    gateway::bancho_endpoints::components::BanchoClientToken, FromRpcClient,
-    IntoService, RpcClient,
+    gateway::bancho_endpoints::components::BanchoClientToken, DumpData,
+    FromRpcClient, IntoService, RpcClient, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use peace_pb::{
@@ -36,6 +36,16 @@ impl IntoService<DynBanchoStateService> for BanchoStateServiceRemote {
         Arc::new(self) as DynBanchoStateService
     }
 }
+
+#[async_trait]
+impl DumpData<BanchoStateServiceDump> for BanchoStateServiceRemote {
+    async fn dump_data(&self) -> BanchoStateServiceDump {
+        unimplemented!()
+    }
+}
+
+#[async_trait]
+impl TryDumpToDisk for BanchoStateServiceRemote {}
 
 #[async_trait]
 impl BanchoStateService for BanchoStateServiceRemote {}

@@ -1,10 +1,11 @@
-use super::BanchoStateBackgroundServiceConfigs;
+use super::{BanchoStateBackgroundServiceConfigs, BanchoStateServiceDump};
 use crate::{
     bancho_state::{
         BanchoExtend, BanchoSession, BanchoStateError, Packet, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
     users::Session,
+    DumpData, DumpToDisk, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
@@ -219,6 +220,9 @@ pub trait BanchoStateService:
     + BatchEnqueueBanchoPackets
     + EnqueueBanchoPackets
     + BroadcastBanchoPackets
+    + DumpData<BanchoStateServiceDump>
+    + DumpToDisk<BanchoStateServiceDump>
+    + TryDumpToDisk
 {
 }
 

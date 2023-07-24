@@ -66,13 +66,16 @@ pub struct BanchoStandaloneConfig {
 
     #[command(flatten)]
     pub chat_service_dump_configs: CliChatServiceDumpConfigs,
+
+    #[command(flatten)]
+    pub bancho_state_service_dump_configs: CliBanchoStateServiceDumpConfigs,
 }
 
 #[derive(Clone)]
 pub struct App {
     pub cfg: Arc<BanchoStandaloneConfig>,
     pub peace_db_conn: DbConnection<Peace>,
-    pub user_session_service: DynUserSessionsService,
+    pub user_sessions_service: DynUserSessionsService,
     pub signature_service: DynSignatureService,
     pub bancho_state_service: DynBanchoStateService,
     pub users_repository: DynUsersRepository,
@@ -99,9 +102,6 @@ impl App {
             .await
             .expect("failed to connect peace db, please check.");
 
-        let user_session_service =
-            UserSessionsServiceImpl::default().into_service();
-
         let signature_service = SignatureServiceBuilder::build::<
             SignatureServiceImpl,
             SignatureServiceRemote,
@@ -111,11 +111,16 @@ impl App {
         )
         .await;
 
-        let bancho_state_service = BanchoStateServiceImpl::new(
-            user_session_service.clone(),
+        let bancho_state_service = BanchoStateServiceDumpLoader::load(
+            &cfg.bancho_state_service_dump_configs,
             signature_service.clone(),
         )
-        .into_service();
+        .await;
+
+        let user_sessions_service =
+            bancho_state_service.user_sessions_service.clone();
+
+        let bancho_state_service = bancho_state_service.into_service();
 
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
@@ -161,9 +166,10 @@ impl App {
             ),
         };
 
-        let bancho_state_background_service = Arc::new(
-            BanchoStateBackgroundServiceImpl::new(user_session_service.clone()),
-        );
+        let bancho_state_background_service =
+            Arc::new(BanchoStateBackgroundServiceImpl::new(
+                user_sessions_service.clone(),
+            ));
 
         let bancho_state_background_service_config =
             BanchoStateBackgroundServiceConfigs::with_cfg(
@@ -201,7 +207,7 @@ impl App {
         Self {
             cfg,
             peace_db_conn,
-            user_session_service,
+            user_sessions_service,
             signature_service,
             bancho_state_service,
             users_repository,

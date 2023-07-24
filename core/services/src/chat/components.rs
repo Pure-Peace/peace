@@ -161,20 +161,18 @@ impl From<ChatSessionExtendData> for ChatSessionExtend {
         Self {
             platforms: Platform::from(data.platforms).into(),
             bancho_ext: data.bancho_ext.map(|d| d.into()).into(),
-            joined_channels: RwLock::new(
-                HashMap::new(), /* from_iter(
-                                    data.joined_channels.into_iter().map(|j| {
-                                        (
-                                            j.channel_id,
-                                            Arc::new(JoinedChannel {
-                                                ptr: Weak::new().into(),
-                                                message_index: j.message_index.into(),
-                                                joined_time: j.joined_time,
-                                            }),
-                                        )
-                                    }),
-                                ) */
-            ),
+            joined_channels: RwLock::new(HashMap::from_iter(
+                data.joined_channels.into_iter().map(|j| {
+                    (
+                        j.channel_id,
+                        Arc::new(JoinedChannel {
+                            ptr: Weak::new().into(),
+                            message_index: j.message_index.into(),
+                            joined_time: j.joined_time,
+                        }),
+                    )
+                }),
+            )),
             channel_count,
         }
     }

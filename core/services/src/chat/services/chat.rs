@@ -4,7 +4,7 @@ use crate::{
     },
     chat::*,
     users::Session,
-    DumpData, DumpToDisk, FromRpcClient, IntoService, RpcClient,
+    DumpData, DumpToDisk, FromRpcClient, IntoService, RpcClient, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
