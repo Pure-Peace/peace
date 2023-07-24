@@ -81,7 +81,7 @@ impl ChatServiceImpl {
                         user_id,
                         session_indexes
                             .get(&user_id)
-                            .map(|u| Arc::downgrade(u)),
+                            .map(Arc::downgrade),
                     )
                 }),
             )));
@@ -101,11 +101,10 @@ impl ChatServiceImpl {
             // upgrade user's JoinedChannel to real channel's weak ptr
             for user_id in channel.users.read().await.keys() {
                 if let Some(session) = session_indexes.get(user_id) {
-                    session
-                        .extends
-                        .joined_channels
-                        .write()
-                        .await
+                    let mut joined_channels =
+                        session.extends.joined_channels.write().await;
+
+                    joined_channels
                         .entry(channel.id)
                         .and_modify(|j| {
                             j.ptr.set(Arc::downgrade(&channel).into())

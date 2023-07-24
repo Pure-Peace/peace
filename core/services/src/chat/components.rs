@@ -141,7 +141,7 @@ impl DumpData<BanchoChatExtData> for BanchoChatExt {
     async fn dump_data(&self) -> BanchoChatExtData {
         BanchoChatExtData {
             packets_queue: self.packets_queue.dump_packets().await,
-            notify_index: self.notify_index.load().as_ref().clone(),
+            notify_index: *self.notify_index.load().as_ref(),
         }
     }
 }
@@ -203,8 +203,8 @@ impl ChatSessionExtend {
         for (channel_id, channel) in self.joined_channels.read().await.iter() {
             channels.push(JoinedChannelData {
                 channel_id: *channel_id,
-                message_index: channel.message_index.load().as_ref().clone(),
-                joined_time: channel.joined_time.clone(),
+                message_index: *channel.message_index.load().as_ref(),
+                joined_time: channel.joined_time,
             });
         }
 
@@ -469,10 +469,10 @@ impl ChannelData {
                 .load()
                 .as_deref()
                 .map(|s| s.to_string()),
-            users: ch.users.read().await.keys().map(|k| *k).collect(),
+            users: ch.users.read().await.keys().copied().collect(),
             min_msg_index: ch.min_msg_index.load().as_deref().copied(),
             message_queue: ch.message_queue.read().await.dump_messages().await,
-            created_at: ch.created_at.clone(),
+            created_at: ch.created_at,
         }
     }
 }

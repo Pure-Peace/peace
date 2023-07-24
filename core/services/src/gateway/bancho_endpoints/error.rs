@@ -62,9 +62,7 @@ pub enum BanchoHttpError {
 
 impl BanchoHttpError {
     fn status_code(&self) -> StatusCode {
-        match self {
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 }
 

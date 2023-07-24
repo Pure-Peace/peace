@@ -282,7 +282,7 @@ pub mod users {
                 username: s.username(),
                 username_unicode: s.username_unicode(),
                 privileges: s.privileges.val(),
-                created_at: s.created_at.clone(),
+                created_at: s.created_at,
                 last_active: s.last_active.val(),
                 extends: s.extends.dump_data().await,
             }

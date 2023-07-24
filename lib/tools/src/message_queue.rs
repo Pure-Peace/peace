@@ -98,8 +98,7 @@ where
                 .has_read
                 .read()
                 .await
-                .iter()
-                .map(|k| k.clone())
+                .iter().cloned()
                 .collect(),
             has_validator: message.validator.is_some(),
         }
