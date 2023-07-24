@@ -4,7 +4,8 @@ use crate::{
     },
     chat::*,
     users::Session,
-    DumpData, DumpToDisk, FromRpcClient, IntoService, RpcClient, TryDumpToDisk,
+    DumpConfig, DumpData, DumpToDisk, FromRpcClient, IntoService, RpcClient,
+    TryDumpToDisk,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
@@ -241,9 +242,9 @@ impl ChatServiceDumpLoader {
         users_repository: DynUsersRepository,
     ) -> ChatServiceImpl {
         if cfg.chat_load_dump {
-            match ChatServiceDump::from_dump_file(&cfg.chat_dump_path) {
+            match ChatServiceDump::from_dump_file(cfg.dump_path()) {
                 Ok(dump) => {
-                    if dump.is_expired(cfg.chat_dump_expries) {
+                    if dump.is_expired(cfg.dump_expries()) {
                         info!("[ChatDump] Dump file founded but already expired (create at: {})", dump.create_time);
                         ChatServiceImpl::new(users_repository)
                     } else {
@@ -252,7 +253,7 @@ impl ChatServiceDumpLoader {
                     }
                 },
                 Err(err) => {
-                    warn!("[ChatDump] Failed to load dump file from path \"{}\", err: {}", cfg.chat_dump_path, err);
+                    warn!("[ChatDump] Failed to load dump file from path \"{}\", err: {}", cfg.dump_path(), err);
                     ChatServiceImpl::new(users_repository)
                 },
             }
@@ -826,7 +827,14 @@ impl DumpData<ChatServiceDump> for ChatServiceRemote {
 }
 
 #[async_trait]
-impl TryDumpToDisk for ChatServiceRemote {}
+impl TryDumpToDisk for ChatServiceRemote {
+    async fn try_dump_to_disk(
+        &self,
+        _: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        unimplemented!()
+    }
+}
 
 #[async_trait]
 impl ChatService for ChatServiceRemote {

@@ -1,6 +1,6 @@
 use crate::{
     users::{Session, SessionData, UserIndexes, UserStore},
-    DumpData,
+    DumpConfig, DumpData,
 };
 use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
@@ -538,8 +538,8 @@ impl DumpData<BanchoExtendData> for BanchoExtend {
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
 pub struct CliBanchoStateServiceDumpConfigs {
-    #[default("./bancho_state.dump".to_owned())]
-    #[arg(long, default_value = "./bancho_state.dump")]
+    #[default("./service_dump/bancho_state.dump".to_owned())]
+    #[arg(long, default_value = "./service_dump/bancho_state.dump")]
     pub bancho_state_dump_path: String,
 
     #[arg(long)]
@@ -551,4 +551,22 @@ pub struct CliBanchoStateServiceDumpConfigs {
     #[default(300)]
     #[arg(long, default_value = "300")]
     pub bancho_state_dump_expries: u64,
+}
+
+impl DumpConfig for CliBanchoStateServiceDumpConfigs {
+    fn dump_path(&self) -> &str {
+        &self.bancho_state_dump_path
+    }
+
+    fn save_dump(&self) -> bool {
+        self.bancho_state_save_dump
+    }
+
+    fn load_dump(&self) -> bool {
+        self.bancho_state_load_dump
+    }
+
+    fn dump_expries(&self) -> u64 {
+        self.bancho_state_dump_expries
+    }
 }

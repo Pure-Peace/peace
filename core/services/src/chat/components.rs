@@ -3,7 +3,7 @@ use crate::{
         BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
     },
     users::{Session, SessionData, UserIndexes, UserStore},
-    DumpData,
+    DumpConfig, DumpData,
 };
 use async_trait::async_trait;
 use bitmask_enum::bitmask;
@@ -638,8 +638,8 @@ impl Channels {
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
 pub struct CliChatServiceDumpConfigs {
-    #[default("./chat.dump".to_owned())]
-    #[arg(long, default_value = "./chat.dump")]
+    #[default("./service_dump/chat.dump".to_owned())]
+    #[arg(long, default_value = "./service_dump/chat.dump")]
     pub chat_dump_path: String,
 
     #[arg(long)]
@@ -651,4 +651,22 @@ pub struct CliChatServiceDumpConfigs {
     #[default(300)]
     #[arg(long, default_value = "300")]
     pub chat_dump_expries: u64,
+}
+
+impl DumpConfig for CliChatServiceDumpConfigs {
+    fn dump_path(&self) -> &str {
+        &self.chat_dump_path
+    }
+
+    fn save_dump(&self) -> bool {
+        self.chat_save_dump
+    }
+
+    fn load_dump(&self) -> bool {
+        self.chat_load_dump
+    }
+
+    fn dump_expries(&self) -> u64 {
+        self.chat_dump_expries
+    }
 }

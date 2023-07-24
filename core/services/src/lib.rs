@@ -70,6 +70,13 @@ pub trait IntoService<T>: Sized + Sync + Send + 'static {
     fn into_service(self) -> T;
 }
 
+pub trait DumpConfig {
+    fn dump_path(&self) -> &str;
+    fn save_dump(&self) -> bool;
+    fn load_dump(&self) -> bool;
+    fn dump_expries(&self) -> u64;
+}
+
 #[async_trait]
 pub trait DumpData<D> {
     async fn dump_data(&self) -> D;
@@ -84,10 +91,8 @@ pub trait DumpToDisk<D> {
 pub trait TryDumpToDisk {
     async fn try_dump_to_disk(
         &self,
-        _chat_dump_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        unimplemented!()
-    }
+        dump_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[async_trait]

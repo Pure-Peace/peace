@@ -11,14 +11,23 @@ pub mod rpc;
 pub use app::*;
 pub use rpc::*;
 
+use peace_services::DumpConfig;
+
 pub async fn run(
     cfg: std::sync::Arc<BanchoStateConfig>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Create a new instance of the `App.
-    let app = App::initialize(cfg).await;
+    let app = App::initialize(cfg.clone()).await;
 
     // Start serving the RPC server with the `App` instance.
-    peace_rpc::server::serve(app).await;
+    peace_rpc::server::serve(app.clone()).await;
+
+    if cfg.bancho_state_service_dump_configs.save_dump() {
+        let _ = app
+            .bancho_state_service
+            .try_dump_to_disk(cfg.bancho_state_service_dump_configs.dump_path())
+            .await;
+    }
 
     Ok(())
 }

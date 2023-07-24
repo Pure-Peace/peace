@@ -45,7 +45,14 @@ impl DumpData<BanchoStateServiceDump> for BanchoStateServiceRemote {
 }
 
 #[async_trait]
-impl TryDumpToDisk for BanchoStateServiceRemote {}
+impl TryDumpToDisk for BanchoStateServiceRemote {
+    async fn try_dump_to_disk(
+        &self,
+        _: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        unimplemented!()
+    }
+}
 
 #[async_trait]
 impl BanchoStateService for BanchoStateServiceRemote {}

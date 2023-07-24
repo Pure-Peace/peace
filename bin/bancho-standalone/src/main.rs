@@ -9,6 +9,8 @@ pub mod app;
 
 pub use app::*;
 
+use peace_services::DumpConfig;
+
 pub async fn run(
     cfg: std::sync::Arc<BanchoStandaloneConfig>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -18,10 +20,18 @@ pub async fn run(
     // Start serving the HTTP(s) server with the `App` instance.
     peace_api::http::serve(app.clone()).await;
 
-    if cfg.chat_service_dump_configs.chat_save_dump {
-        app.chat_service
-            .try_dump_to_disk(&cfg.chat_service_dump_configs.chat_dump_path)
-            .await?
+    if cfg.chat_service_dump_configs.save_dump() {
+        let _ = app
+            .chat_service
+            .try_dump_to_disk(cfg.chat_service_dump_configs.dump_path())
+            .await;
+    }
+
+    if cfg.bancho_state_service_dump_configs.save_dump() {
+        let _ = app
+            .bancho_state_service
+            .try_dump_to_disk(cfg.bancho_state_service_dump_configs.dump_path())
+            .await;
     }
 
     Ok(())

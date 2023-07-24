@@ -94,12 +94,7 @@ where
         Self {
             msg_id: msg_id.clone(),
             content: message.content.clone(),
-            has_read: message
-                .has_read
-                .read()
-                .await
-                .iter().cloned()
-                .collect(),
+            has_read: message.has_read.read().await.iter().cloned().collect(),
             has_validator: message.validator.is_some(),
         }
     }
