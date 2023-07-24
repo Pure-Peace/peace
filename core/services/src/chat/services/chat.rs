@@ -241,25 +241,37 @@ impl ChatServiceDumpLoader {
         cfg: &CliChatServiceDumpConfigs,
         users_repository: DynUsersRepository,
     ) -> ChatServiceImpl {
-        if cfg.chat_load_dump {
-            match ChatServiceDump::from_dump_file(cfg.dump_path()) {
-                Ok(dump) => {
-                    if dump.is_expired(cfg.dump_expries()) {
+        if cfg.load_dump() {
+            let dump_path = Path::new(cfg.dump_path());
+            if dump_path.is_file() {
+                match ChatServiceDump::from_dump_file(cfg.dump_path()).await {
+                    Ok(dump) => {
+                        if !dump.is_expired(cfg.dump_expries()) {
+                            info!(
+                                "[ChatDump] Load chat service from dump files!"
+                            );
+                            return ChatServiceImpl::from_dump(
+                                dump,
+                                users_repository,
+                            )
+                            .await;
+                        }
+
                         info!("[ChatDump] Dump file founded but already expired (create at: {})", dump.create_time);
-                        ChatServiceImpl::new(users_repository)
-                    } else {
-                        info!("[ChatDump] Load chat service from dump files!");
-                        ChatServiceImpl::from_dump(dump, users_repository).await
-                    }
-                },
-                Err(err) => {
-                    warn!("[ChatDump] Failed to load dump file from path \"{}\", err: {}", cfg.dump_path(), err);
-                    ChatServiceImpl::new(users_repository)
-                },
+                    },
+                    Err(err) => {
+                        warn!("[ChatDump] Failed to load dump file from path: \"{}\", err: {}", cfg.dump_path(), err);
+                    },
+                }
+            } else {
+                info!(
+                    "[ChatDump] Dump file not found, path: \"{}\"",
+                    cfg.dump_path(),
+                );
             }
-        } else {
-            ChatServiceImpl::new(users_repository)
         }
+
+        ChatServiceImpl::new(users_repository)
     }
 }
 
@@ -272,10 +284,10 @@ pub struct ChatServiceDump {
 }
 
 impl ChatServiceDump {
-    pub fn from_dump_file<P: AsRef<Path>>(
+    pub async fn from_dump_file<P: AsRef<Path>>(
         path: P,
     ) -> Result<Self, anyhow::Error> {
-        Ok(bincode::deserialize(&std::fs::read(path)?)?)
+        Ok(bincode::deserialize(&tokio::fs::read(path).await?)?)
     }
 
     pub fn is_expired(&self, expires: u64) -> bool {

@@ -1,8 +1,8 @@
 use super::traits::*;
 use crate::{
     bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
-    signature::DynSignatureService, users::SessionFilter, DumpData, DumpToDisk,
-    IntoService, TryDumpToDisk,
+    signature::DynSignatureService, users::SessionFilter, DumpConfig, DumpData,
+    DumpToDisk, IntoService, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -19,40 +19,42 @@ impl BanchoStateServiceDumpLoader {
         cfg: &CliBanchoStateServiceDumpConfigs,
         signature_service: DynSignatureService,
     ) -> BanchoStateServiceImpl {
-        if cfg.bancho_state_load_dump {
-            match BanchoStateServiceDump::from_dump_file(
-                &cfg.bancho_state_dump_path,
-            ) {
-                Ok(dump) => {
-                    if dump.is_expired(cfg.bancho_state_dump_expries) {
+        if cfg.load_dump() {
+            let dump_path = Path::new(cfg.dump_path());
+            if dump_path.is_file() {
+                match BanchoStateServiceDump::from_dump_file(cfg.dump_path())
+                    .await
+                {
+                    Ok(dump) => {
+                        if !dump.is_expired(cfg.dump_expries()) {
+                            info!(
+                                "[BanchoStateDump] Load chat service from dump files!"
+                            );
+                            return BanchoStateServiceImpl::from_dump(
+                                dump,
+                                signature_service,
+                            )
+                            .await;
+                        }
+
                         info!("[BanchoStateDump] Dump file founded but already expired (create at: {})", dump.create_time);
-                        BanchoStateServiceImpl::new(
-                            UserSessionsServiceImpl::new().into_service(),
-                            signature_service,
-                        )
-                    } else {
-                        info!("[BanchoStateDump] Load chat service from dump files!");
-                        BanchoStateServiceImpl::from_dump(
-                            dump,
-                            signature_service,
-                        )
-                        .await
-                    }
-                },
-                Err(err) => {
-                    warn!("[BanchoStateDump] Failed to load dump file from path \"{}\", err: {}", cfg.bancho_state_dump_path, err);
-                    BanchoStateServiceImpl::new(
-                        UserSessionsServiceImpl::new().into_service(),
-                        signature_service,
-                    )
-                },
+                    },
+                    Err(err) => {
+                        warn!("[BanchoStateDump] Failed to load dump file from path: \"{}\", err: {}", cfg.dump_path(), err);
+                    },
+                }
+            } else {
+                info!(
+                    "[BanchoStateDump] Dump file not found, path: \"{}\"",
+                    cfg.dump_path(),
+                );
             }
-        } else {
-            BanchoStateServiceImpl::new(
-                UserSessionsServiceImpl::new().into_service(),
-                signature_service,
-            )
         }
+
+        BanchoStateServiceImpl::new(
+            UserSessionsServiceImpl::new().into_service(),
+            signature_service,
+        )
     }
 }
 
@@ -64,10 +66,10 @@ pub struct BanchoStateServiceDump {
 }
 
 impl BanchoStateServiceDump {
-    pub fn from_dump_file<P: AsRef<Path>>(
+    pub async fn from_dump_file<P: AsRef<Path>>(
         path: P,
     ) -> Result<Self, anyhow::Error> {
-        Ok(bincode::deserialize(&std::fs::read(path)?)?)
+        Ok(bincode::deserialize(&tokio::fs::read(path).await?)?)
     }
 
     pub fn is_expired(&self, expires: u64) -> bool {
