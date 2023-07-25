@@ -4,8 +4,8 @@ use crate::{
     },
     chat::*,
     users::Session,
-    DumpConfig, DumpData, DumpToDisk, DumpType, FromRpcClient, IntoService,
-    RpcClient, TryDumpToDisk,
+    DumpConfig, DumpData, DumpTime, DumpToDisk, DumpType, FromDumpFile,
+    FromRpcClient, IntoService, Isexpired, RpcClient, TryDumpToDisk,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
@@ -251,7 +251,7 @@ impl ChatServiceDumpLoader {
                 .await
                 {
                     Ok(dump) => {
-                        if !dump.is_expired(cfg.dump_expries()) {
+                        if !dump.is_expired(cfg.dump_expires()) {
                             info!(
                                 "[ChatDump] Load chat service from dump files!"
                             );
@@ -288,20 +288,9 @@ pub struct ChatServiceDump {
     pub create_time: DateTime<Utc>,
 }
 
-impl ChatServiceDump {
-    pub async fn from_dump_file<P: AsRef<Path>>(
-        dump_type: DumpType,
-        path: P,
-    ) -> Result<Self, anyhow::Error> {
-        let content = tokio::fs::read(path).await?;
-        Ok(match dump_type {
-            DumpType::Binary => bincode::deserialize(&content)?,
-            DumpType::Json => serde_json::from_slice(&content)?,
-        })
-    }
-
-    pub fn is_expired(&self, expires: u64) -> bool {
-        (self.create_time.timestamp() + expires as i64) < Utc::now().timestamp()
+impl DumpTime for ChatServiceDump {
+    fn dump_time(&self) -> u64 {
+        self.create_time.timestamp() as u64
     }
 }
 

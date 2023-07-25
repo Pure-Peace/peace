@@ -654,7 +654,7 @@ pub struct CliChatServiceDumpConfigs {
 
     #[default(300)]
     #[arg(long, default_value = "300")]
-    pub chat_dump_expries: u64,
+    pub chat_dump_expires: u64,
 }
 
 impl DumpConfig for CliChatServiceDumpConfigs {
@@ -674,7 +674,7 @@ impl DumpConfig for CliChatServiceDumpConfigs {
         self.chat_load_dump
     }
 
-    fn dump_expries(&self) -> u64 {
-        self.chat_dump_expries
+    fn dump_expires(&self) -> u64 {
+        self.chat_dump_expires
     }
 }

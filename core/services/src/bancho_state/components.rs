@@ -554,7 +554,7 @@ pub struct CliBanchoStateServiceDumpConfigs {
 
     #[default(300)]
     #[arg(long, default_value = "300")]
-    pub bancho_state_dump_expries: u64,
+    pub bancho_state_dump_expires: u64,
 }
 
 impl DumpConfig for CliBanchoStateServiceDumpConfigs {
@@ -574,7 +574,7 @@ impl DumpConfig for CliBanchoStateServiceDumpConfigs {
         self.bancho_state_load_dump
     }
 
-    fn dump_expries(&self) -> u64 {
-        self.bancho_state_dump_expries
+    fn dump_expires(&self) -> u64 {
+        self.bancho_state_dump_expires
     }
 }

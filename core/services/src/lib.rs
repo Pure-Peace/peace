@@ -72,12 +72,55 @@ pub trait IntoService<T>: Sized + Sync + Send + 'static {
     fn into_service(self) -> T;
 }
 
+#[async_trait]
+pub trait FromDumpFile: Sized {
+    async fn from_dump_file(
+        dump_type: DumpType,
+        path: &str,
+    ) -> Result<Self, anyhow::Error>;
+}
+
+#[async_trait]
+impl<T> FromDumpFile for T
+where
+    T: for<'a> serde::Deserialize<'a>,
+{
+    async fn from_dump_file(
+        dump_type: DumpType,
+        path: &str,
+    ) -> Result<Self, anyhow::Error> {
+        let content = tokio::fs::read(path).await?;
+
+        Ok(match dump_type {
+            DumpType::Binary => bincode::deserialize(&content)?,
+            DumpType::Json => serde_json::from_slice(&content)?,
+        })
+    }
+}
+
+pub trait DumpTime {
+    fn dump_time(&self) -> u64;
+}
+
+pub trait Isexpired {
+    fn is_expired(&self, expires: u64) -> bool;
+}
+
+impl<T> Isexpired for T
+where
+    T: DumpTime,
+{
+    fn is_expired(&self, expires: u64) -> bool {
+        (self.dump_time() + expires) < chrono::Utc::now().timestamp() as u64
+    }
+}
+
 pub trait DumpConfig {
     fn dump_path(&self) -> &str;
     fn dump_type(&self) -> DumpType;
     fn save_dump(&self) -> bool;
     fn load_dump(&self) -> bool;
-    fn dump_expries(&self) -> u64;
+    fn dump_expires(&self) -> u64;
 }
 
 #[async_trait]

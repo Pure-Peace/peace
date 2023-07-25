@@ -2,7 +2,8 @@ use super::traits::*;
 use crate::{
     bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
     signature::DynSignatureService, users::SessionFilter, DumpConfig, DumpData,
-    DumpToDisk, DumpType, IntoService, TryDumpToDisk,
+    DumpTime, DumpToDisk, DumpType, FromDumpFile, IntoService, Isexpired,
+    TryDumpToDisk,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -29,9 +30,9 @@ impl BanchoStateServiceDumpLoader {
                 .await
                 {
                     Ok(dump) => {
-                        if !dump.is_expired(cfg.dump_expries()) {
+                        if !dump.is_expired(cfg.dump_expires()) {
                             info!(
-                                "[BanchoStateDump] Load bancho state service from dump files!"
+                                "[BanchoStateDump] Load Bancho state service from dump files!"
                             );
                             return BanchoStateServiceImpl::from_dump(
                                 dump,
@@ -68,20 +69,9 @@ pub struct BanchoStateServiceDump {
     pub create_time: DateTime<Utc>,
 }
 
-impl BanchoStateServiceDump {
-    pub async fn from_dump_file<P: AsRef<Path>>(
-        dump_type: DumpType,
-        path: P,
-    ) -> Result<Self, anyhow::Error> {
-        let content = tokio::fs::read(path).await?;
-        Ok(match dump_type {
-            DumpType::Binary => bincode::deserialize(&content)?,
-            DumpType::Json => serde_json::from_slice(&content)?,
-        })
-    }
-
-    pub fn is_expired(&self, expires: u64) -> bool {
-        (self.create_time.timestamp() + expires as i64) < Utc::now().timestamp()
+impl DumpTime for BanchoStateServiceDump {
+    fn dump_time(&self) -> u64 {
+        self.create_time.timestamp() as u64
     }
 }
 

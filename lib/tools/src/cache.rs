@@ -48,7 +48,7 @@ impl<T> CachedAtomic<T> {
     }
 
     #[inline]
-    pub fn set_expries(&self, expires: u64) {
+    pub fn set_expires(&self, expires: u64) {
         self.expires.set(expires)
     }
 
@@ -102,7 +102,7 @@ impl<T> CachedRwLock<T> {
     }
 
     #[inline]
-    pub fn set_expries(&self, expires: u64) {
+    pub fn set_expires(&self, expires: u64) {
         self.expires.set(expires)
     }
 
