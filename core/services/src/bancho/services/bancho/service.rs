@@ -7,6 +7,7 @@ use crate::{
     FromRpcClient, IntoService, RpcClient,
 };
 use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
+use peace_domain::bancho::BanchoCountryCode;
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,
@@ -146,21 +147,28 @@ impl Login for BanchoServiceImpl {
         let geoip_data =
             self.geoip_service.lookup_with_ip_address(client_ip).await.ok();
 
+        let country_code = geoip_data
+            .as_ref()
+            .map(|d| BanchoCountryCode::get_code(&d.country.code))
+            .unwrap_or_default();
+
         let CreateUserSessionResponse { session_id, signature } = self
             .bancho_state_service
             .create_user_session(CreateUserSessionRequest {
                 user_id: user.id,
                 username: user.name.to_owned(),
                 username_unicode: user.name_unicode.to_owned(),
-                privileges: 1,
+                privileges: 1, // todo
                 client_version,
                 utc_offset,
                 display_city,
                 only_friend_pm_allowed,
+                bancho_privileges: 1, // todo
                 connection_info: Some(ConnectionInfo {
                     ip: client_ip.to_string(),
                     geoip_data: geoip_data.map(|g| g.into()),
                 }),
+                country_code: country_code as i32,
             })
             .await?;
 
@@ -170,7 +178,7 @@ impl Login for BanchoServiceImpl {
                 user_id: user.id,
                 username: user.name.to_owned(),
                 username_unicode: user.name_unicode,
-                privileges: 1,
+                privileges: 1, // todo
                 platforms: Platform::Bancho.bits(),
             })
             .await

@@ -101,7 +101,9 @@ message CreateUserSessionRequest {
   int32 utc_offset = 6;
   bool display_city = 7;
   bool only_friend_pm_allowed = 8;
-  ConnectionInfo connection_info = 9;
+  int32 bancho_privileges = 9;
+  ConnectionInfo connection_info = 10;
+  int32 country_code = 11;
 }
 
 message CreateUserSessionResponse {

@@ -97,6 +97,37 @@ impl GameMode {
 
 #[rustfmt::skip]
 #[derive(Default)]
+#[bitmask(i32)]
+pub enum BanchoPrivileges {
+    #[default]
+    Normal          = 1 << 0,
+    Moderator       = 1 << 1,
+    Supporter       = 1 << 2,
+    Administrator   = 1 << 3,
+    Developer       = 1 << 4,
+    Tournament      = 1 << 5,
+}
+
+impl serde::Serialize for BanchoPrivileges {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(self.bits())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for BanchoPrivileges {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        i32::deserialize(deserializer).map(Self::from)
+    }
+}
+
+#[rustfmt::skip]
+#[derive(Default)]
 #[bitmask(u32)]
 pub enum Mods {
     #[default]
@@ -394,10 +425,11 @@ pub struct BanchoExtend {
     pub display_city: bool,
     pub only_friend_pm_allowed: Bool,
     pub bancho_status: BanchoStatus,
+    pub bancho_privileges: Atomic<BanchoPrivileges>,
     pub mode_stat_sets: UserModeStatSets,
     pub packets_queue: BanchoPacketsQueue,
-    /// Information about the user's connection.
     pub connection_info: ConnectionInfo,
+    pub country_code: u8,
     pub notify_index: Atomic<Ulid>,
 }
 
@@ -410,9 +442,11 @@ impl From<BanchoExtendData> for BanchoExtend {
             display_city: data.display_city,
             only_friend_pm_allowed: data.only_friend_pm_allowed.into(),
             bancho_status: data.bancho_status,
+            bancho_privileges: data.bancho_privileges.into(),
             mode_stat_sets: data.mode_stat_sets,
             packets_queue: data.packets_queue.into(),
             connection_info: data.connection_info,
+            country_code: data.country_code,
             notify_index: data.notify_index.into(),
         }
     }
@@ -421,22 +455,27 @@ impl From<BanchoExtendData> for BanchoExtend {
 impl BanchoExtend {
     #[inline]
     pub fn new(
+        initial_packets: Option<Vec<u8>>,
         client_version: String,
         utc_offset: u8,
         display_city: bool,
-        only_friend_pm_allowed: impl Into<Bool>,
-        initial_packets: Option<Vec<u8>>,
+        only_friend_pm_allowed: bool,
+        bancho_privileges: BanchoPrivileges,
         connection_info: ConnectionInfo,
+        country_code: u8,
     ) -> Self {
+        let packets_queue =
+            initial_packets.map(BanchoPacketsQueue::from).unwrap_or_default();
+
         Self {
             client_version,
             utc_offset,
             display_city,
             only_friend_pm_allowed: only_friend_pm_allowed.into(),
-            packets_queue: initial_packets
-                .map(BanchoPacketsQueue::from)
-                .unwrap_or_default(),
+            bancho_privileges: bancho_privileges.into(),
+            packets_queue,
             connection_info,
+            country_code,
             ..Default::default()
         }
     }
@@ -495,8 +534,8 @@ impl Session<BanchoExtend> {
             self.user_id,
             self.username.to_string().into(),
             self.extends.utc_offset,
-            0, // todo
-            1, // todo
+            self.extends.country_code,
+            self.extends.bancho_privileges.load().bits(),
             self.extends.connection_info.location.longitude as f32,
             self.extends.connection_info.location.latitude as f32,
             self.mode_stats().map(|s| s.rank.val()).unwrap_or_default() as i32,
@@ -512,9 +551,11 @@ pub struct BanchoExtendData {
     pub display_city: bool,
     pub only_friend_pm_allowed: bool,
     pub bancho_status: BanchoStatus,
+    pub bancho_privileges: BanchoPrivileges,
     pub mode_stat_sets: UserModeStatSets,
     pub packets_queue: Vec<Packet>,
     pub connection_info: ConnectionInfo,
+    pub country_code: u8,
     pub notify_index: Ulid,
 }
 
@@ -528,9 +569,11 @@ impl DumpData<BanchoExtendData> for BanchoExtend {
             display_city: self.display_city,
             only_friend_pm_allowed: self.only_friend_pm_allowed.val(),
             bancho_status: self.bancho_status.clone(),
+            bancho_privileges: *self.bancho_privileges.load().as_ref(),
             mode_stat_sets: self.mode_stat_sets.clone(),
             packets_queue: self.packets_queue.dump_packets().await,
             connection_info: self.connection_info.clone(),
+            country_code: self.country_code,
             notify_index: *self.notify_index.load().as_ref(),
         }
     }

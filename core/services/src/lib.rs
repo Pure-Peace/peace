@@ -102,11 +102,11 @@ pub trait DumpTime {
     fn dump_time(&self) -> u64;
 }
 
-pub trait Isexpired {
+pub trait IsExpired {
     fn is_expired(&self, expires: u64) -> bool;
 }
 
-impl<T> Isexpired for T
+impl<T> IsExpired for T
 where
     T: DumpTime,
 {

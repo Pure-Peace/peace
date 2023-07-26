@@ -27,6 +27,7 @@ pub type ChatSessionData = SessionData<ChatSessionExtendData>;
 pub type SessionIndexes = UserIndexes<ChatSession>;
 pub type UserSessions = UserStore<ChatSession>;
 
+#[rustfmt::skip]
 #[derive(
     Debug,
     Copy,
@@ -43,21 +44,40 @@ pub type UserSessions = UserStore<ChatSession>;
 )]
 pub enum ChannelType {
     #[default]
-    Private = 0,
-    Public = 1,
-    Group = 2,
-    Multiplayer = 3,
-    Spectaor = 4,
+    Private       = 0,
+    Public        = 1,
+    Group         = 2,
+    Multiplayer   = 3,
+    Spectaor      = 4,
 }
 
+#[rustfmt::skip]
 #[derive(Default)]
 #[bitmask(i32)]
 pub enum Platform {
     #[default]
-    None = 0,
-    Bancho = 1,
-    Lazer = 2,
-    Web = 3,
+    None    = 0,
+    Bancho  = 1,
+    Lazer   = 2,
+    Web     = 3,
+}
+
+impl serde::Serialize for Platform {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(self.bits())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Platform {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        i32::deserialize(deserializer).map(Self::from)
+    }
 }
 
 impl Platform {

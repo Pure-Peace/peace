@@ -2,7 +2,7 @@ use super::traits::*;
 use crate::{
     bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
     signature::DynSignatureService, users::SessionFilter, DumpConfig, DumpData,
-    DumpTime, DumpToDisk, DumpType, FromDumpFile, IntoService, Isexpired,
+    DumpTime, DumpToDisk, DumpType, FromDumpFile, IntoService, IsExpired,
     TryDumpToDisk,
 };
 use async_trait::async_trait;
@@ -615,8 +615,14 @@ impl CreateUserSession for BanchoStateServiceImpl {
             utc_offset,
             display_city,
             only_friend_pm_allowed,
+            bancho_privileges,
             connection_info,
+            country_code,
         } = request;
+
+        let connection_info = connection_info
+            .ok_or(CreateSessionError::InvalidConnectionInfo)?
+            .into();
 
         // Create a new user session using the provided request.
         let session = self
@@ -627,14 +633,14 @@ impl CreateUserSession for BanchoStateServiceImpl {
                 username_unicode,
                 privileges,
                 extends: BanchoExtend::new(
+                    None,
                     client_version,
                     utc_offset as u8,
                     display_city,
                     only_friend_pm_allowed,
-                    None,
-                    connection_info
-                        .ok_or(CreateSessionError::InvalidConnectionInfo)?
-                        .into(),
+                    BanchoPrivileges::from(bancho_privileges),
+                    connection_info,
+                    country_code as u8,
                 ),
             })
             .await;
