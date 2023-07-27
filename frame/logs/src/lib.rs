@@ -8,8 +8,11 @@ pub mod grpc;
 #[cfg(feature = "api_axum")]
 pub mod api;
 
+#[cfg(feature = "cli")]
 use clap::Parser;
+#[cfg(feature = "cli")]
 use clap_serde_derive::ClapSerde;
+
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::{

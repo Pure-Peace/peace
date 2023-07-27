@@ -25,4 +25,4 @@ clap-serde-derive = { workspace = true }
 
 
 peace_cfg = { workspace = true }
-peace_logs = { workspace = true }
+peace_logs = { workspace = true, features = ["cli"] }

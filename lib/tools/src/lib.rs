@@ -3,6 +3,8 @@ use std::{fmt::Display, str::FromStr};
 
 #[cfg(feature = "async_collections")]
 pub mod async_collections;
+#[cfg(feature = "async_collections")]
+pub mod message_queue;
 
 pub mod atomic;
 #[cfg(feature = "cache")]
@@ -11,7 +13,6 @@ pub mod constants;
 #[cfg(feature = "crypto")]
 pub mod crypto;
 pub mod macros;
-pub mod message_queue;
 #[cfg(feature = "tonic_utils")]
 pub mod tonic_utils;
 
@@ -118,6 +119,7 @@ impl Default for Ulid {
     }
 }
 
+#[cfg(feature = "async_collections")]
 impl message_queue::MessageId for Ulid {
     fn generate() -> Self {
         Self::new()
