@@ -196,7 +196,10 @@ impl UsersRepository for UsersRepositoryImpl {
 
 #[cfg(test)]
 mod test {
-    use peace_db::*;
+    use peace_db::{
+        peace::entity::{user_privileges, users},
+        *,
+    };
     use peace_domain::users::UsernameAscii;
 
     use crate::users::{UsersRepository, UsersRepositoryImpl};
@@ -228,5 +231,31 @@ mod test {
                 )
                 .await
         );
+    }
+
+    #[tokio::test]
+    async fn tests() {
+        peace_logs::fmt()
+            .with_max_level(peace_logs::Level::TRACE)
+            .with_test_writer()
+            .init();
+
+        let db =
+            Database::connect(ConnectOptions::from("sqlite://../../peace.db"))
+                .await
+                .unwrap();
+
+        let model = users::Entity::find()
+            .filter(Condition::any().add(
+                users::Column::NameSafe.eq(UsernameAscii::to_safe_name("test")),
+            ))
+            .join(
+                JoinType::LeftJoin,
+                user_privileges::Relation::Users1.def(),
+            ).build(DatabaseBackend::Sqlite)
+            /* .one(&db)
+            .await */;
+
+        println!("{model}");
     }
 }

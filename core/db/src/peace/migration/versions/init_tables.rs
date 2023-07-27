@@ -750,7 +750,6 @@ pub mod privileges {
     use sea_orm_migration::prelude::*;
 
     const INDEX_NAME: &str = "IDX_privileges_name";
-    const INDEX_PRIORITY: &str = "IDX_privileges_priority";
 
     #[derive(Iden)]
     pub enum Privileges {
@@ -802,33 +801,19 @@ pub mod privileges {
     }
 
     pub fn create_indexes() -> Vec<IndexCreateStatement> {
-        vec![
-            sea_query::Index::create()
-                .name(INDEX_NAME)
-                .table(Privileges::Table)
-                .col(Privileges::Name)
-                .unique()
-                .to_owned(),
-            sea_query::Index::create()
-                .name(INDEX_PRIORITY)
-                .table(Privileges::Table)
-                .col(Privileges::Priority)
-                .unique()
-                .to_owned(),
-        ]
+        vec![sea_query::Index::create()
+            .name(INDEX_NAME)
+            .table(Privileges::Table)
+            .col(Privileges::Name)
+            .unique()
+            .to_owned()]
     }
 
     pub fn drop_indexes() -> Vec<IndexDropStatement> {
-        vec![
-            sea_query::Index::drop()
-                .table(Privileges::Table)
-                .name(INDEX_NAME)
-                .to_owned(),
-            sea_query::Index::drop()
-                .table(Privileges::Table)
-                .name(INDEX_PRIORITY)
-                .to_owned(),
-        ]
+        vec![sea_query::Index::drop()
+            .table(Privileges::Table)
+            .name(INDEX_NAME)
+            .to_owned()]
     }
 }
 
@@ -929,7 +914,6 @@ pub mod user_privileges {
             .name(INDEX_PRIV_ID)
             .table(UserPrivileges::Table)
             .col(UserPrivileges::PrivilegeId)
-            .unique()
             .to_owned()]
     }
 
@@ -2721,7 +2705,6 @@ pub mod channel_privileges {
             .name(INDEX_PRIV_ID)
             .table(ChannelPrivileges::Table)
             .col(ChannelPrivileges::RequiredPrivilegeId)
-            .unique()
             .to_owned()]
     }
 
