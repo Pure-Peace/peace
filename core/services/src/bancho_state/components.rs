@@ -1,12 +1,10 @@
-use crate::{
-    users::{Session, SessionData, UserIndexes, UserStore},
-    DumpConfig, DumpData, DumpType,
-};
+use crate::users::{Session, SessionData, UserIndexes, UserStore};
 use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use clap_serde_derive::ClapSerde;
 use peace_domain::bancho_state::ConnectionInfo;
+use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
@@ -392,7 +390,7 @@ impl BanchoPacketsQueue {
         buf
     }
 
-    pub async fn dump_packets(&self) -> Vec<Packet> {
+    pub async fn snapshot_packets(&self) -> Vec<Packet> {
         let queue = self.queue.lock().await;
         Vec::from_iter(queue.iter().cloned())
     }
@@ -560,8 +558,8 @@ pub struct BanchoExtendData {
 }
 
 #[async_trait]
-impl DumpData<BanchoExtendData> for BanchoExtend {
-    async fn dump_data(&self) -> BanchoExtendData {
+impl CreateSnapshot<BanchoExtendData> for BanchoExtend {
+    async fn create_snapshot(&self) -> BanchoExtendData {
         BanchoExtendData {
             client_version: self.client_version.clone(),
             utc_offset: self.utc_offset,
@@ -571,7 +569,7 @@ impl DumpData<BanchoExtendData> for BanchoExtend {
             bancho_status: self.bancho_status.clone(),
             bancho_privileges: *self.bancho_privileges.load().as_ref(),
             mode_stat_sets: self.mode_stat_sets.clone(),
-            packets_queue: self.packets_queue.dump_packets().await,
+            packets_queue: self.packets_queue.snapshot_packets().await,
             connection_info: self.connection_info.clone(),
             country_code: self.country_code,
             notify_index: *self.notify_index.load().as_ref(),
@@ -580,44 +578,44 @@ impl DumpData<BanchoExtendData> for BanchoExtend {
 }
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
-pub struct CliBanchoStateServiceDumpConfigs {
-    #[default("./.service_dump/bancho_state.dump".to_owned())]
-    #[arg(long, default_value = "./.service_dump/bancho_state.dump")]
-    pub bancho_state_dump_path: String,
+pub struct CliBanchoStateServiceSnapshopConfigs {
+    #[default("./.snapshots/bancho_state.snapshot".to_owned())]
+    #[arg(long, default_value = "./.snapshots/bancho_state.snapshot")]
+    pub bancho_state_snapshot_path: String,
 
-    #[default(DumpType::Binary)]
+    #[default(SnapshopType::Binary)]
     #[arg(long, value_enum, default_value = "binary")]
-    pub bancho_state_dump_type: DumpType,
+    pub bancho_state_snapshot_type: SnapshopType,
 
     #[arg(long)]
-    pub bancho_state_save_dump: bool,
+    pub bancho_state_snapshot: bool,
 
     #[arg(long)]
-    pub bancho_state_load_dump: bool,
+    pub bancho_state_load_snapshot: bool,
 
     #[default(300)]
     #[arg(long, default_value = "300")]
-    pub bancho_state_dump_expires: u64,
+    pub bancho_state_snapshot_expired_secs: u64,
 }
 
-impl DumpConfig for CliBanchoStateServiceDumpConfigs {
-    fn dump_path(&self) -> &str {
-        &self.bancho_state_dump_path
+impl SnapshopConfig for CliBanchoStateServiceSnapshopConfigs {
+    fn snapshot_path(&self) -> &str {
+        &self.bancho_state_snapshot_path
     }
 
-    fn dump_type(&self) -> DumpType {
-        self.bancho_state_dump_type
+    fn snapshot_type(&self) -> SnapshopType {
+        self.bancho_state_snapshot_type
     }
 
-    fn save_dump(&self) -> bool {
-        self.bancho_state_save_dump
+    fn should_save_snapshot(&self) -> bool {
+        self.bancho_state_snapshot
     }
 
-    fn load_dump(&self) -> bool {
-        self.bancho_state_load_dump
+    fn should_load_snapshot(&self) -> bool {
+        self.bancho_state_load_snapshot
     }
 
-    fn dump_expires(&self) -> u64 {
-        self.bancho_state_dump_expires
+    fn snapshot_expired_secs(&self) -> u64 {
+        self.bancho_state_snapshot_expired_secs
     }
 }

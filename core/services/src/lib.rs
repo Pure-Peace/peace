@@ -1,9 +1,3 @@
-use std::path::Path;
-
-use async_trait::async_trait;
-use peace_rpc_error::{RpcError, TonicError};
-use tonic::Status;
-
 #[macro_use]
 extern crate peace_logs;
 
@@ -72,151 +66,21 @@ pub trait IntoService<T>: Sized + Sync + Send + 'static {
     fn into_service(self) -> T;
 }
 
-#[async_trait]
-pub trait FromDumpFile: Sized {
-    async fn from_dump_file(
-        dump_type: DumpType,
-        path: &str,
-    ) -> Result<Self, anyhow::Error>;
-}
-
-#[async_trait]
-impl<T> FromDumpFile for T
-where
-    T: for<'a> serde::Deserialize<'a>,
-{
-    async fn from_dump_file(
-        dump_type: DumpType,
-        path: &str,
-    ) -> Result<Self, anyhow::Error> {
-        let content = tokio::fs::read(path).await?;
-
-        Ok(match dump_type {
-            DumpType::Binary => bincode::deserialize(&content)?,
-            DumpType::Json => serde_json::from_slice(&content)?,
-        })
-    }
-}
-
-pub trait DumpTime {
-    fn dump_time(&self) -> u64;
-}
-
-pub trait IsExpired {
-    fn is_expired(&self, expires: u64) -> bool;
-}
-
-impl<T> IsExpired for T
-where
-    T: DumpTime,
-{
-    fn is_expired(&self, expires: u64) -> bool {
-        (self.dump_time() + expires) < chrono::Utc::now().timestamp() as u64
-    }
-}
-
-pub trait DumpConfig {
-    fn dump_path(&self) -> &str;
-    fn dump_type(&self) -> DumpType;
-    fn save_dump(&self) -> bool;
-    fn load_dump(&self) -> bool;
-    fn dump_expires(&self) -> u64;
-}
-
-#[async_trait]
-pub trait DumpData<D> {
-    async fn dump_data(&self) -> D;
-}
-
-#[derive(
-    Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum,
-)]
-#[serde(rename_all = "lowercase")]
-pub enum DumpType {
-    Binary,
-    Json,
-}
-
-#[async_trait]
-pub trait DumpToDisk<D> {
-    async fn dump_to_disk(
+#[async_trait::async_trait]
+pub trait ServiceSnapshot {
+    async fn save_service_snapshot(
         &self,
-        dump_type: DumpType,
-        path: &str,
-    ) -> Result<usize, DumpError>;
-}
-
-#[async_trait]
-pub trait TryDumpToDisk {
-    async fn try_dump_to_disk(
-        &self,
-        dump_type: DumpType,
-        dump_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>>;
-}
-
-#[async_trait]
-impl<T, D> DumpToDisk<D> for T
-where
-    T: DumpData<D> + Sync + Send,
-    D: serde::Serialize + Send,
-{
-    async fn dump_to_disk(
-        &self,
-        dump_type: DumpType,
-        path: &str,
-    ) -> Result<usize, DumpError> {
-        let dump_data = self.dump_data().await;
-
-        let bytes_data =
-            match dump_type {
-                DumpType::Binary => bincode::serialize(&dump_data)
-                    .map_err(|err| err.to_string()),
-                DumpType::Json => serde_json::to_vec(&dump_data)
-                    .map_err(|err| err.to_string()),
-            }
-            .map_err(DumpError::SerializeError)?;
-
-        let path = Path::new(path);
-
-        if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .map_err(|err| DumpError::CreateDirError(err.to_string()))?;
-        }
-
-        tokio::fs::write(path, &bytes_data)
-            .await
-            .map_err(|err| DumpError::WriteFileError(err.to_string()))?;
-
-        Ok(bytes_data.len())
-    }
-}
-
-#[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
-pub enum DumpError {
-    #[error("SerializeError: {0}")]
-    SerializeError(String),
-    #[error("CreateDirError: {0}")]
-    CreateDirError(String),
-    #[error("WriteFileError: {0}")]
-    WriteFileError(String),
-    #[error("TonicError: {0}")]
-    TonicError(String),
-}
-
-impl TonicError for DumpError {
-    fn tonic_error(s: Status) -> Self {
-        Self::TonicError(s.message().to_owned())
-    }
+        snapshot_type: peace_snapshot::SnapshopType,
+        snapshot_path: &str,
+    ) -> Result<(), peace_snapshot::CreateSnapshotError>;
 }
 
 pub mod users {
-    use crate::DumpData;
     use async_trait::async_trait;
     use chrono::{DateTime, Utc};
     use peace_domain::bancho_state::CreateSessionDto;
     use peace_pb::bancho_state::UserQuery;
+    use peace_snapshot::CreateSnapshot;
     use std::{
         collections::{BTreeMap, HashMap},
         ops::Deref,
@@ -342,12 +206,12 @@ pub mod users {
     }
 
     #[async_trait]
-    impl<T, D> DumpData<D> for Session<T>
+    impl<T, D> CreateSnapshot<D> for Session<T>
     where
         T: Sync + Send,
         D: FromSession<T>,
     {
-        async fn dump_data(&self) -> D {
+        async fn create_snapshot(&self) -> D {
             D::from_session(self).await
         }
     }
@@ -367,7 +231,7 @@ pub mod users {
     #[async_trait]
     impl<T, D> FromSession<T> for SessionData<D>
     where
-        T: DumpData<D> + Sync + Send,
+        T: CreateSnapshot<D> + Sync + Send,
     {
         async fn from_session(s: &Session<T>) -> Self {
             Self {
@@ -378,7 +242,7 @@ pub mod users {
                 privileges: s.privileges.val(),
                 created_at: s.created_at,
                 last_active: s.last_active.val(),
-                extends: s.extends.dump_data().await,
+                extends: s.extends.create_snapshot().await,
             }
         }
     }
@@ -626,7 +490,7 @@ pub mod users {
     }
 
     impl<T> UserStore<Session<T>> {
-        pub async fn dump_sessions<D>(&self) -> Vec<D>
+        pub async fn snapshot_sessions<D>(&self) -> Vec<D>
         where
             D: FromSession<T>,
         {

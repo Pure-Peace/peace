@@ -3,13 +3,13 @@ use crate::{
         BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
     },
     users::{Session, SessionData, UserIndexes, UserStore},
-    DumpConfig, DumpData, DumpType,
 };
 use async_trait::async_trait;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use clap_serde_derive::ClapSerde;
 use peace_pb::chat::ChannelQuery;
+use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
 use std::{
     collections::HashMap,
     ops::Deref,
@@ -158,10 +158,10 @@ pub struct BanchoChatExtData {
 }
 
 #[async_trait]
-impl DumpData<BanchoChatExtData> for BanchoChatExt {
-    async fn dump_data(&self) -> BanchoChatExtData {
+impl CreateSnapshot<BanchoChatExtData> for BanchoChatExt {
+    async fn create_snapshot(&self) -> BanchoChatExtData {
         BanchoChatExtData {
-            packets_queue: self.packets_queue.dump_packets().await,
+            packets_queue: self.packets_queue.snapshot_packets().await,
             notify_index: *self.notify_index.load().as_ref(),
         }
     }
@@ -239,12 +239,12 @@ pub struct ChatSessionExtendData {
 }
 
 #[async_trait]
-impl DumpData<ChatSessionExtendData> for ChatSessionExtend {
-    async fn dump_data(&self) -> ChatSessionExtendData {
+impl CreateSnapshot<ChatSessionExtendData> for ChatSessionExtend {
+    async fn create_snapshot(&self) -> ChatSessionExtendData {
         ChatSessionExtendData {
             platforms: self.platforms.load().bits(),
             bancho_ext: match self.bancho_ext.load().as_deref() {
-                Some(ext) => Some(ext.dump_data().await),
+                Some(ext) => Some(ext.create_snapshot().await),
                 None => None,
             },
             joined_channels: self.collect_joined_channels().await,
@@ -490,7 +490,12 @@ impl ChannelData {
                 .map(|s| s.to_string()),
             users: ch.users.read().await.keys().copied().collect(),
             min_msg_index: ch.min_msg_index.load().as_deref().copied(),
-            message_queue: ch.message_queue.read().await.dump_messages().await,
+            message_queue: ch
+                .message_queue
+                .read()
+                .await
+                .snapshot_messages()
+                .await,
             created_at: ch.created_at,
         }
     }
@@ -645,7 +650,7 @@ impl Channels {
         self.len.val()
     }
 
-    pub async fn dump_channels(&self) -> Vec<ChannelData> {
+    pub async fn snapshot_channels(&self) -> Vec<ChannelData> {
         let mut channel_data = Vec::with_capacity(self.len.val());
         for channel in self.read().await.values() {
             channel_data
@@ -657,44 +662,44 @@ impl Channels {
 }
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
-pub struct CliChatServiceDumpConfigs {
-    #[default("./.service_dump/chat.dump".to_owned())]
-    #[arg(long, default_value = "./.service_dump/chat.dump")]
-    pub chat_dump_path: String,
+pub struct CliChatServiceSnapshopConfigs {
+    #[default("./.snapshots/chat.snapshot".to_owned())]
+    #[arg(long, default_value = "./.snapshots/chat.snapshot")]
+    pub chat_snapshot_path: String,
 
-    #[default(DumpType::Binary)]
+    #[default(SnapshopType::Binary)]
     #[arg(long, value_enum, default_value = "binary")]
-    pub chat_dump_type: DumpType,
+    pub chat_snapshot_type: SnapshopType,
 
     #[arg(long)]
-    pub chat_save_dump: bool,
+    pub chat_snapshot: bool,
 
     #[arg(long)]
-    pub chat_load_dump: bool,
+    pub chat_load_snapshot: bool,
 
     #[default(300)]
     #[arg(long, default_value = "300")]
-    pub chat_dump_expires: u64,
+    pub chat_snapshot_expired_secs: u64,
 }
 
-impl DumpConfig for CliChatServiceDumpConfigs {
-    fn dump_path(&self) -> &str {
-        &self.chat_dump_path
+impl SnapshopConfig for CliChatServiceSnapshopConfigs {
+    fn snapshot_path(&self) -> &str {
+        &self.chat_snapshot_path
     }
 
-    fn dump_type(&self) -> DumpType {
-        self.chat_dump_type
+    fn snapshot_type(&self) -> SnapshopType {
+        self.chat_snapshot_type
     }
 
-    fn save_dump(&self) -> bool {
-        self.chat_save_dump
+    fn should_save_snapshot(&self) -> bool {
+        self.chat_snapshot
     }
 
-    fn load_dump(&self) -> bool {
-        self.chat_load_dump
+    fn should_load_snapshot(&self) -> bool {
+        self.chat_load_snapshot
     }
 
-    fn dump_expires(&self) -> u64 {
-        self.chat_dump_expires
+    fn snapshot_expired_secs(&self) -> u64 {
+        self.chat_snapshot_expired_secs
     }
 }

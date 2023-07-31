@@ -47,7 +47,7 @@ pub struct BanchoStateConfig {
     pub ed25519_private_key_path: Option<String>,
 
     #[command(flatten)]
-    pub bancho_state_service_dump_configs: CliBanchoStateServiceDumpConfigs,
+    pub bancho_state_snapshot: CliBanchoStateServiceSnapshopConfigs,
 }
 
 /// The BanchoState application struct.
@@ -77,8 +77,8 @@ impl App {
         )
         .await;
 
-        let bancho_state_service = BanchoStateServiceDumpLoader::load(
-            &cfg.bancho_state_service_dump_configs,
+        let bancho_state_service = BanchoStateServiceSnapshotLoader::load(
+            &cfg.bancho_state_snapshot,
             signature_service.clone(),
         )
         .await;

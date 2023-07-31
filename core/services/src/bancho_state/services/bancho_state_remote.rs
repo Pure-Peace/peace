@@ -1,14 +1,15 @@
-use super::{traits::*, BanchoStateServiceDump};
+use super::{traits::*, BanchoStateServiceSnapshot};
 use crate::{
     bancho_state::BanchoStateError,
-    gateway::bancho_endpoints::components::BanchoClientToken, DumpData,
-    DumpType, FromRpcClient, IntoService, RpcClient, TryDumpToDisk,
+    gateway::bancho_endpoints::components::BanchoClientToken, FromRpcClient,
+    IntoService, RpcClient, ServiceSnapshot,
 };
 use async_trait::async_trait;
 use peace_pb::{
     bancho_state::{bancho_state_rpc_client::BanchoStateRpcClient, *},
     base::ExecSuccess,
 };
+use peace_snapshot::{CreateSnapshot, CreateSnapshotError, SnapshopType};
 use std::sync::Arc;
 use tonic::transport::Channel;
 
@@ -38,19 +39,19 @@ impl IntoService<DynBanchoStateService> for BanchoStateServiceRemote {
 }
 
 #[async_trait]
-impl DumpData<BanchoStateServiceDump> for BanchoStateServiceRemote {
-    async fn dump_data(&self) -> BanchoStateServiceDump {
+impl CreateSnapshot<BanchoStateServiceSnapshot> for BanchoStateServiceRemote {
+    async fn create_snapshot(&self) -> BanchoStateServiceSnapshot {
         unimplemented!()
     }
 }
 
 #[async_trait]
-impl TryDumpToDisk for BanchoStateServiceRemote {
-    async fn try_dump_to_disk(
+impl ServiceSnapshot for BanchoStateServiceRemote {
+    async fn save_service_snapshot(
         &self,
-        _: DumpType,
+        _: SnapshopType,
         _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), CreateSnapshotError> {
         unimplemented!()
     }
 }

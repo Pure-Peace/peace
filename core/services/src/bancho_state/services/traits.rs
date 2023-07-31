@@ -1,15 +1,16 @@
-use super::{BanchoStateBackgroundServiceConfigs, BanchoStateServiceDump};
+use super::{BanchoStateBackgroundServiceConfigs, BanchoStateServiceSnapshot};
 use crate::{
     bancho_state::{
         BanchoExtend, BanchoSession, BanchoStateError, Packet, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
     users::Session,
-    DumpData, DumpToDisk, TryDumpToDisk,
+    ServiceSnapshot,
 };
 use async_trait::async_trait;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
+use peace_snapshot::{CreateSnapshot, SaveSnapshotTo};
 use std::sync::Arc;
 use tools::{
     async_collections::{
@@ -220,9 +221,9 @@ pub trait BanchoStateService:
     + BatchEnqueueBanchoPackets
     + EnqueueBanchoPackets
     + BroadcastBanchoPackets
-    + DumpData<BanchoStateServiceDump>
-    + DumpToDisk<BanchoStateServiceDump>
-    + TryDumpToDisk
+    + CreateSnapshot<BanchoStateServiceSnapshot>
+    + SaveSnapshotTo<BanchoStateServiceSnapshot>
+    + ServiceSnapshot
 {
 }
 

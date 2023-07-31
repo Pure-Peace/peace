@@ -62,13 +62,16 @@ impl<T> CachedAtomic<T> {
     }
 
     #[inline]
-    pub fn is_expired(&self) -> bool {
+    pub fn snapshot_expired(&self) -> bool {
         Timestamp::now() - self.expires.val() > self.last_update.val()
     }
 
     #[inline]
     pub fn get(&self) -> Option<Cached<Arc<T>>> {
-        Some(Cached { cache: self.inner.val()?, expired: self.is_expired() })
+        Some(Cached {
+            cache: self.inner.val()?,
+            expired: self.snapshot_expired(),
+        })
     }
 
     #[inline]
@@ -118,12 +121,12 @@ impl<T> CachedRwLock<T> {
     }
 
     #[inline]
-    pub fn is_expired(&self) -> bool {
+    pub fn snapshot_expired(&self) -> bool {
         Timestamp::now() - self.expires.val() > self.last_update.val()
     }
 
     #[inline]
     pub fn get(&self) -> Option<Cached<&RwLock<T>>> {
-        Some(Cached { cache: &self.inner, expired: self.is_expired() })
+        Some(Cached { cache: &self.inner, expired: self.snapshot_expired() })
     }
 }

@@ -200,8 +200,8 @@ where
             .await
     }
 
-    pub async fn dump_messages(&self) -> Vec<MessageData<T, K, I>> {
-        self.read().await.dump_messages().await
+    pub async fn snapshot_messages(&self) -> Vec<MessageData<T, K, I>> {
+        self.read().await.snapshot_messages().await
     }
 }
 
@@ -371,7 +371,7 @@ where
         })
     }
 
-    pub async fn dump_messages(&self) -> Vec<MessageData<T, K, I>> {
+    pub async fn snapshot_messages(&self) -> Vec<MessageData<T, K, I>> {
         let mut messages = Vec::with_capacity(self.messages.len());
 
         for (msg_id, msg) in self.messages.iter() {

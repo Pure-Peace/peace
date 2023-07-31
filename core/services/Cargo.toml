@@ -41,6 +41,7 @@ bincode = "1.3"
 
 bancho-packets = { workspace = true }
 tools = { workspace = true, features = ["all"] }
+peace_snapshot = { workspace = true }
 
 peace_api = { workspace = true }
 peace_rpc = { workspace = true }

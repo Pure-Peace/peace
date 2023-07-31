@@ -1,12 +1,10 @@
-use crate::{
-    bancho_state::BanchoMessageQueue, chat::*, DumpData, DumpToDisk,
-    TryDumpToDisk,
-};
+use crate::{bancho_state::BanchoMessageQueue, chat::*, ServiceSnapshot};
 use peace_pb::{
     bancho_state::{BanchoPackets, UserQuery},
     base::ExecSuccess,
     chat::*,
 };
+use peace_snapshot::{CreateSnapshot, SaveSnapshotTo};
 use std::sync::Arc;
 use tonic::async_trait;
 
@@ -38,9 +36,9 @@ pub trait ChatService:
     UserSessionsStore
     + NotifyMessagesQueue
     + ChannelStore
-    + DumpData<ChatServiceDump>
-    + DumpToDisk<ChatServiceDump>
-    + TryDumpToDisk
+    + CreateSnapshot<ChatServiceSnapshot>
+    + SaveSnapshotTo<ChatServiceSnapshot>
+    + ServiceSnapshot
 {
     async fn login(
         &self,

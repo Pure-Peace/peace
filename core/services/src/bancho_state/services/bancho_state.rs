@@ -1,56 +1,61 @@
 use super::traits::*;
 use crate::{
     bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
-    signature::DynSignatureService, users::SessionFilter, DumpConfig, DumpData,
-    DumpTime, DumpToDisk, DumpType, FromDumpFile, IntoService, IsExpired,
-    TryDumpToDisk,
+    signature::DynSignatureService, users::SessionFilter, IntoService,
+    ServiceSnapshot,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
 use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
+use peace_snapshot::{
+    CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
+    SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
+};
 use std::{path::Path, sync::Arc};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
-pub struct BanchoStateServiceDumpLoader;
+pub struct BanchoStateServiceSnapshotLoader;
 
-impl BanchoStateServiceDumpLoader {
+impl BanchoStateServiceSnapshotLoader {
     pub async fn load(
-        cfg: &CliBanchoStateServiceDumpConfigs,
+        cfg: &CliBanchoStateServiceSnapshopConfigs,
         signature_service: DynSignatureService,
     ) -> BanchoStateServiceImpl {
-        if cfg.load_dump() {
-            let dump_path = Path::new(cfg.dump_path());
-            if dump_path.is_file() {
-                match BanchoStateServiceDump::from_dump_file(
-                    cfg.dump_type(),
-                    cfg.dump_path(),
+        if cfg.should_load_snapshot() {
+            let snapshot_path = Path::new(cfg.snapshot_path());
+            if snapshot_path.is_file() {
+                match BanchoStateServiceSnapshot::load_snapshot_from(
+                    cfg.snapshot_type(),
+                    cfg.snapshot_path(),
                 )
                 .await
                 {
-                    Ok(dump) => {
-                        if !dump.is_expired(cfg.dump_expires()) {
+                    Ok(snapshot) => {
+                        if !snapshot
+                            .snapshot_expired(cfg.snapshot_expired_secs())
+                        {
                             info!(
-                                "[BanchoStateDump] Load Bancho state service from dump files!"
+                                "[BanchoStateSnapshot] Load Bancho state service from snapshot files!"
                             );
-                            return BanchoStateServiceImpl::from_dump(
-                                dump,
+                            return BanchoStateServiceImpl::from_snapshot(
+                                snapshot,
                                 signature_service,
                             )
                             .await;
                         }
 
-                        info!("[BanchoStateDump] Dump file founded but already expired (create at: {})", dump.create_time);
+                        info!("[BanchoStateSnapshot] Snapshot file founded but already expired (create at: {})", snapshot.create_time);
                     },
                     Err(err) => {
-                        warn!("[BanchoStateDump] Failed to load dump file from path: \"{}\", err: {}", cfg.dump_path(), err);
+                        warn!("[BanchoStateSnapshot] Failed to load snapshot file from path: \"{}\", err: {}", cfg.snapshot_path(), err);
                     },
                 }
             } else {
                 info!(
-                    "[BanchoStateDump] Dump file not found, path: \"{}\"",
-                    cfg.dump_path(),
+                    "[BanchoStateSnapshot] Snapshot file not found, path: \"{}\"",
+                    cfg.snapshot_path(),
                 );
             }
         }
@@ -63,14 +68,14 @@ impl BanchoStateServiceDumpLoader {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BanchoStateServiceDump {
+pub struct BanchoStateServiceSnapshot {
     pub user_sessions: Vec<BanchoSessionData>,
     pub notify_queue: Vec<BanchoMessageData>,
     pub create_time: DateTime<Utc>,
 }
 
-impl DumpTime for BanchoStateServiceDump {
-    fn dump_time(&self) -> u64 {
+impl SnapshotTime for BanchoStateServiceSnapshot {
+    fn snapshot_time(&self) -> u64 {
         self.create_time.timestamp() as u64
     }
 }
@@ -91,14 +96,14 @@ impl BanchoStateServiceImpl {
     }
 
     #[inline]
-    pub async fn from_dump(
-        dump: BanchoStateServiceDump,
+    pub async fn from_snapshot(
+        snapshot: BanchoStateServiceSnapshot,
         signature_service: DynSignatureService,
     ) -> Self {
         let mut session_indexes =
-            SessionIndexes::with_capacity(dump.user_sessions.len());
+            SessionIndexes::with_capacity(snapshot.user_sessions.len());
 
-        for u in dump.user_sessions {
+        for u in snapshot.user_sessions {
             let session = Arc::new(u.into());
             session_indexes.add_session(session);
         }
@@ -107,7 +112,7 @@ impl BanchoStateServiceImpl {
             Arc::new(UserSessions::from_indexes(session_indexes));
 
         let notify_queue =
-            Arc::new(BanchoMessageQueue::from(dump.notify_queue));
+            Arc::new(BanchoMessageQueue::from(snapshot.notify_queue));
 
         let user_sessions_service =
             UserSessionsServiceImpl { user_sessions, notify_queue }
@@ -125,39 +130,44 @@ impl IntoService<DynBanchoStateService> for BanchoStateServiceImpl {
 }
 
 #[async_trait]
-impl TryDumpToDisk for BanchoStateServiceImpl {
-    async fn try_dump_to_disk(
+impl ServiceSnapshot for BanchoStateServiceImpl {
+    async fn save_service_snapshot(
         &self,
-        dump_type: DumpType,
-        dump_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Saving Bancho state dump file to path: \"{}\"...", dump_path);
-        let size =
-            self.dump_to_disk(dump_type, dump_path).await.map_err(|err| {
+        snapshot_type: SnapshopType,
+        snapshot_path: &str,
+    ) -> Result<(), CreateSnapshotError> {
+        info!(
+            "Saving Bancho state snapshot file to path: \"{}\"...",
+            snapshot_path
+        );
+        let size = self
+            .save_snapshot_to(snapshot_type, snapshot_path)
+            .await
+            .map_err(|err| {
                 warn!(
-                    "[Failed] Failed to create Bancho state dump, err: {err}"
+                    "[Failed] Failed to create Bancho state snapshot, err: {err}"
                 );
                 err
             })?;
-        info!("[Success] Bancho state dump saved, size: {}", size);
+        info!("[Success] Bancho state snapshot saved, size: {}", size);
 
         Ok(())
     }
 }
 
 #[async_trait]
-impl DumpData<BanchoStateServiceDump> for BanchoStateServiceImpl {
-    async fn dump_data(&self) -> BanchoStateServiceDump {
-        BanchoStateServiceDump {
+impl CreateSnapshot<BanchoStateServiceSnapshot> for BanchoStateServiceImpl {
+    async fn create_snapshot(&self) -> BanchoStateServiceSnapshot {
+        BanchoStateServiceSnapshot {
             user_sessions: self
                 .user_sessions_service
                 .user_sessions()
-                .dump_sessions()
+                .snapshot_sessions()
                 .await,
             notify_queue: self
                 .user_sessions_service
                 .notify_queue()
-                .dump_messages()
+                .snapshot_messages()
                 .await,
             create_time: Utc::now(),
         }

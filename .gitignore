@@ -30,4 +30,4 @@ Cargo.lock
 
 *.mmdb
 *.db
-*.dump
+*.snapshot

@@ -11,7 +11,7 @@ pub mod rpc;
 pub use app::*;
 pub use rpc::*;
 
-use peace_services::DumpConfig;
+use peace_snapshot::SnapshopConfig;
 
 pub async fn run(
     cfg: std::sync::Arc<BanchoStateConfig>,
@@ -22,12 +22,12 @@ pub async fn run(
     // Start serving the RPC server with the `App` instance.
     peace_rpc::server::serve(app.clone()).await;
 
-    if cfg.bancho_state_service_dump_configs.save_dump() {
+    if cfg.bancho_state_snapshot.should_save_snapshot() {
         let _ = app
             .bancho_state_service
-            .try_dump_to_disk(
-                cfg.bancho_state_service_dump_configs.dump_type(),
-                cfg.bancho_state_service_dump_configs.dump_path(),
+            .save_service_snapshot(
+                cfg.bancho_state_snapshot.snapshot_type(),
+                cfg.bancho_state_snapshot.snapshot_path(),
             )
             .await;
     }

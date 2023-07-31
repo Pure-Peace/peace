@@ -65,10 +65,10 @@ pub struct BanchoStandaloneConfig {
     pub ed25519_private_key_path: Option<String>,
 
     #[command(flatten)]
-    pub chat_service_dump_configs: CliChatServiceDumpConfigs,
+    pub chat_snapshot: CliChatServiceSnapshopConfigs,
 
     #[command(flatten)]
-    pub bancho_state_service_dump_configs: CliBanchoStateServiceDumpConfigs,
+    pub bancho_state_snapshot: CliBanchoStateServiceSnapshopConfigs,
 }
 
 #[derive(Clone)]
@@ -111,8 +111,8 @@ impl App {
         )
         .await;
 
-        let bancho_state_service = BanchoStateServiceDumpLoader::load(
-            &cfg.bancho_state_service_dump_configs,
+        let bancho_state_service = BanchoStateServiceSnapshotLoader::load(
+            &cfg.bancho_state_snapshot,
             signature_service.clone(),
         )
         .await;
@@ -136,8 +136,8 @@ impl App {
             )
             .await;
 
-        let chat_service = ChatServiceDumpLoader::load(
-            &cfg.chat_service_dump_configs,
+        let chat_service = ChatServiceSnapshotLoader::load(
+            &cfg.chat_snapshot,
             users_repository.clone(),
         )
         .await

@@ -1,9 +1,10 @@
 use super::traits::*;
 use crate::{
     bancho_state::{BanchoSessionData, UserSessions},
-    DumpData, IntoService,
+    IntoService,
 };
 use async_trait::async_trait;
+use peace_snapshot::CreateSnapshot;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -20,17 +21,17 @@ impl UserSessionsServiceImpl {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserSessionsServiceDump {
+pub struct UserSessionsServiceSnapshot {
     pub user_sessions: Vec<BanchoSessionData>,
     pub notify_queue: Vec<BanchoMessageData>,
 }
 
 #[async_trait]
-impl DumpData<UserSessionsServiceDump> for UserSessionsServiceImpl {
-    async fn dump_data(&self) -> UserSessionsServiceDump {
-        UserSessionsServiceDump {
-            user_sessions: self.user_sessions.dump_sessions().await,
-            notify_queue: self.notify_queue.dump_messages().await,
+impl CreateSnapshot<UserSessionsServiceSnapshot> for UserSessionsServiceImpl {
+    async fn create_snapshot(&self) -> UserSessionsServiceSnapshot {
+        UserSessionsServiceSnapshot {
+            user_sessions: self.user_sessions.snapshot_sessions().await,
+            notify_queue: self.notify_queue.snapshot_messages().await,
         }
     }
 }

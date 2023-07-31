@@ -4,8 +4,7 @@ use crate::{
     },
     chat::*,
     users::Session,
-    DumpConfig, DumpData, DumpTime, DumpToDisk, DumpType, FromDumpFile,
-    FromRpcClient, IntoService, IsExpired, RpcClient, TryDumpToDisk,
+    FromRpcClient, IntoService, RpcClient, ServiceSnapshot,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
@@ -23,6 +22,10 @@ use peace_pb::{
     },
 };
 use peace_repositories::users::DynUsersRepository;
+use peace_snapshot::{
+    CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
+    SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
+};
 use std::{
     borrow::Cow,
     collections::{HashMap, VecDeque},
@@ -56,25 +59,25 @@ impl ChatServiceImpl {
     }
 
     #[inline]
-    pub async fn from_dump(
-        dump: ChatServiceDump,
+    pub async fn from_snapshot(
+        snapshot: ChatServiceSnapshot,
         users_repository: DynUsersRepository,
     ) -> Self {
         let mut session_indexes =
-            SessionIndexes::with_capacity(dump.user_sessions.len());
+            SessionIndexes::with_capacity(snapshot.user_sessions.len());
 
-        for u in dump.user_sessions {
+        for u in snapshot.user_sessions {
             let session = Arc::new(u.into());
             session_indexes.add_session(session);
         }
 
         let notify_queue =
-            Arc::new(BanchoMessageQueue::from(dump.notify_queue));
+            Arc::new(BanchoMessageQueue::from(snapshot.notify_queue));
 
         let mut channel_indexes =
-            ChannelIndexes::with_capacity(dump.channels.len());
+            ChannelIndexes::with_capacity(snapshot.channels.len());
 
-        for ch in dump.channels {
+        for ch in snapshot.channels {
             let user_count = U32::new(ch.users.len() as u32);
             let users = Arc::new(RwLock::new(HashMap::from_iter(
                 ch.users.into_iter().map(|user_id| {
@@ -234,44 +237,46 @@ impl ChatServiceImpl {
     }
 }
 
-pub struct ChatServiceDumpLoader;
+pub struct ChatServiceSnapshotLoader;
 
-impl ChatServiceDumpLoader {
+impl ChatServiceSnapshotLoader {
     pub async fn load(
-        cfg: &CliChatServiceDumpConfigs,
+        cfg: &CliChatServiceSnapshopConfigs,
         users_repository: DynUsersRepository,
     ) -> ChatServiceImpl {
-        if cfg.load_dump() {
-            let dump_path = Path::new(cfg.dump_path());
-            if dump_path.is_file() {
-                match ChatServiceDump::from_dump_file(
-                    cfg.dump_type(),
-                    cfg.dump_path(),
+        if cfg.should_load_snapshot() {
+            let snapshot_path = Path::new(cfg.snapshot_path());
+            if snapshot_path.is_file() {
+                match ChatServiceSnapshot::load_snapshot_from(
+                    cfg.snapshot_type(),
+                    cfg.snapshot_path(),
                 )
                 .await
                 {
-                    Ok(dump) => {
-                        if !dump.is_expired(cfg.dump_expires()) {
+                    Ok(snapshot) => {
+                        if !snapshot
+                            .snapshot_expired(cfg.snapshot_expired_secs())
+                        {
                             info!(
-                                "[ChatDump] Load chat service from dump files!"
+                                "[ChatSnapshot] Load chat service from snapshot files!"
                             );
-                            return ChatServiceImpl::from_dump(
-                                dump,
+                            return ChatServiceImpl::from_snapshot(
+                                snapshot,
                                 users_repository,
                             )
                             .await;
                         }
 
-                        info!("[ChatDump] Dump file founded but already expired (create at: {})", dump.create_time);
+                        info!("[ChatSnapshot] Snapshot file founded but already expired (create at: {})", snapshot.create_time);
                     },
                     Err(err) => {
-                        warn!("[ChatDump] Failed to load dump file from path: \"{}\", err: {}", cfg.dump_path(), err);
+                        warn!("[ChatSnapshot] Failed to load snapshot file from path: \"{}\", err: {}", cfg.snapshot_path(), err);
                     },
                 }
             } else {
                 info!(
-                    "[ChatDump] Dump file not found, path: \"{}\"",
-                    cfg.dump_path(),
+                    "[ChatSnapshot] Snapshot file not found, path: \"{}\"",
+                    cfg.snapshot_path(),
                 );
             }
         }
@@ -281,26 +286,26 @@ impl ChatServiceDumpLoader {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatServiceDump {
+pub struct ChatServiceSnapshot {
     pub user_sessions: Vec<ChatSessionData>,
     pub notify_queue: Vec<BanchoMessageData>,
     pub channels: Vec<ChannelData>,
     pub create_time: DateTime<Utc>,
 }
 
-impl DumpTime for ChatServiceDump {
-    fn dump_time(&self) -> u64 {
+impl SnapshotTime for ChatServiceSnapshot {
+    fn snapshot_time(&self) -> u64 {
         self.create_time.timestamp() as u64
     }
 }
 
 #[async_trait]
-impl DumpData<ChatServiceDump> for ChatServiceImpl {
-    async fn dump_data(&self) -> ChatServiceDump {
-        ChatServiceDump {
-            user_sessions: self.user_sessions.dump_sessions().await,
-            notify_queue: self.notify_queue.dump_messages().await,
-            channels: self.channels.dump_channels().await,
+impl CreateSnapshot<ChatServiceSnapshot> for ChatServiceImpl {
+    async fn create_snapshot(&self) -> ChatServiceSnapshot {
+        ChatServiceSnapshot {
+            user_sessions: self.user_sessions.snapshot_sessions().await,
+            notify_queue: self.notify_queue.snapshot_messages().await,
+            channels: self.channels.snapshot_channels().await,
             create_time: Utc::now(),
         }
     }
@@ -328,19 +333,21 @@ impl ChannelStore for ChatServiceImpl {
 }
 
 #[async_trait]
-impl TryDumpToDisk for ChatServiceImpl {
-    async fn try_dump_to_disk(
+impl ServiceSnapshot for ChatServiceImpl {
+    async fn save_service_snapshot(
         &self,
-        dump_type: DumpType,
-        dump_path: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Saving chat dump file to path: \"{}\"...", dump_path);
-        let size =
-            self.dump_to_disk(dump_type, dump_path).await.map_err(|err| {
-                warn!("[Failed] Failed to create Chat dump, err: {err}");
+        snapshot_type: SnapshopType,
+        snapshot_path: &str,
+    ) -> Result<(), CreateSnapshotError> {
+        info!("Saving chat snapshot file to path: \"{}\"...", snapshot_path);
+        let size = self
+            .save_snapshot_to(snapshot_type, snapshot_path)
+            .await
+            .map_err(|err| {
+                warn!("[Failed] Failed to create Chat snapshot, err: {err}");
                 err
             })?;
-        info!("[Success] Chat dump saved, size: {}", size);
+        info!("[Success] Chat snapshot saved, size: {}", size);
 
         Ok(())
     }
@@ -836,19 +843,19 @@ impl NotifyMessagesQueue for ChatServiceRemote {}
 impl ChannelStore for ChatServiceRemote {}
 
 #[async_trait]
-impl DumpData<ChatServiceDump> for ChatServiceRemote {
-    async fn dump_data(&self) -> ChatServiceDump {
+impl CreateSnapshot<ChatServiceSnapshot> for ChatServiceRemote {
+    async fn create_snapshot(&self) -> ChatServiceSnapshot {
         unimplemented!()
     }
 }
 
 #[async_trait]
-impl TryDumpToDisk for ChatServiceRemote {
-    async fn try_dump_to_disk(
+impl ServiceSnapshot for ChatServiceRemote {
+    async fn save_service_snapshot(
         &self,
-        _: DumpType,
+        _: SnapshopType,
         _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), CreateSnapshotError> {
         unimplemented!()
     }
 }

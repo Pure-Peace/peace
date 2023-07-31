@@ -240,7 +240,7 @@ mod test {
             .with_test_writer()
             .init();
 
-        let db =
+        let _db =
             Database::connect(ConnectOptions::from("sqlite://../../peace.db"))
                 .await
                 .unwrap();

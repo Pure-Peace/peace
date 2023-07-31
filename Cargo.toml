@@ -26,6 +26,7 @@ members = [
     "lib/tools/derive",
     "lib/bancho-packets",
     "lib/bancho-packets/derive",
+    "lib/snapshot",
 ]
 
 [workspace.package]
@@ -141,6 +142,7 @@ peace_repositories = { path = "./core/repositories" }
 # libs
 bancho-packets = { path = "./lib/bancho-packets" }
 tools = { path = "./lib/tools" }
+peace_snapshot = { path = "./lib/snapshot" }
 
 [profile.release]
 codegen-units = 1 # Compile crates one after another so the compiler can optimize better

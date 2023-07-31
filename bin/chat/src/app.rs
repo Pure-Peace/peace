@@ -10,8 +10,8 @@ use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
 use peace_services::chat::{
     ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl,
-    ChatServiceDumpLoader, CliChatBackgroundServiceConfigs,
-    CliChatServiceDumpConfigs, DynChatBackgroundService, DynChatService,
+    ChatServiceSnapshotLoader, CliChatBackgroundServiceConfigs,
+    CliChatServiceSnapshopConfigs, DynChatBackgroundService, DynChatService,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
@@ -36,7 +36,7 @@ pub struct ChatServiceConfig {
     pub chat_background_service_configs: CliChatBackgroundServiceConfigs,
 
     #[command(flatten)]
-    pub chat_service_dump_configs: CliChatServiceDumpConfigs,
+    pub chat_snapshot: CliChatServiceSnapshopConfigs,
 }
 
 #[derive(Clone)]
@@ -61,8 +61,8 @@ impl App {
         let users_repository =
             UsersRepositoryImpl::new(peace_db_conn.clone()).into_service();
 
-        let chat_service = ChatServiceDumpLoader::load(
-            &cfg.chat_service_dump_configs,
+        let chat_service = ChatServiceSnapshotLoader::load(
+            &cfg.chat_snapshot,
             users_repository.clone(),
         )
         .await
