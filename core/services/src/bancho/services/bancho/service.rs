@@ -2,12 +2,12 @@ use super::packet_processor::PacketProcessor;
 use crate::{
     bancho::{traits::*, BanchoServiceError, ProcessBanchoPacketError},
     bancho_state::DynBanchoStateService,
-    chat::{DynChatService, Platform},
+    chat::DynChatService,
     geoip::DynGeoipService,
     FromRpcClient, IntoService, RpcClient,
 };
 use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
-use peace_domain::bancho::BanchoCountryCode;
+use peace_domain::{bancho::BanchoCountryCode, chat::Platform};
 use peace_pb::{
     bancho::{bancho_rpc_client::BanchoRpcClient, *},
     bancho_state::*,

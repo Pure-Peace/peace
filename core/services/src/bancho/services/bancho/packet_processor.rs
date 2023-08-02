@@ -1,6 +1,6 @@
 use crate::{
     bancho::{traits::*, ProcessBanchoPacketError},
-    bancho_state::{BanchoStateService, PresenceFilter},
+    bancho_state::BanchoStateService,
     chat::ChatService,
 };
 use async_trait::async_trait;
@@ -8,6 +8,7 @@ use bancho_packets::{
     BanchoMessage, ClientChangeAction, Packet, PayloadReader,
 };
 use num_traits::FromPrimitive;
+use peace_domain::bancho::PresenceFilter;
 use peace_pb::{
     bancho::*,
     bancho_state::UserQuery,

@@ -9,6 +9,7 @@ use chat::traits::{ChatService, DynChatService};
 use chrono::{DateTime, Utc};
 use infra_packets::{Packet, PacketsQueue};
 use infra_users::CreateSessionDto;
+use peace_domain::chat::{ChannelType, Platform};
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
     base::ExecSuccess,
@@ -22,7 +23,7 @@ use peace_pb::{
 use peace_repositories::users::DynUsersRepository;
 use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
-    SnapshotConfig, SnapshotType, SnapshotExpired, SnapshotTime,
+    SnapshotConfig, SnapshotExpired, SnapshotTime, SnapshotType,
 };
 use std::{
     borrow::Cow,

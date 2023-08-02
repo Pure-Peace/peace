@@ -19,6 +19,9 @@ regex = { workspace = true }
 thiserror = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
+bitmask-enum = { workspace = true }
+enum-primitive-derive = { workspace = true }
+num-traits = { workspace = true }
 
 # password
 rust-argon2 = { workspace = true }

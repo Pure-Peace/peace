@@ -5,10 +5,6 @@ extern crate peace_logs;
 #[macro_use]
 extern crate anyhow;
 
-#[macro_use]
-extern crate enum_primitive_derive;
-extern crate num_traits;
-
 pub mod bancho;
 pub mod bancho_state;
 pub mod chat;

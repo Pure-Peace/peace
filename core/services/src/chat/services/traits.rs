@@ -1,4 +1,5 @@
 use crate::{bancho_state::BanchoMessageQueue, chat::*, ServiceSnapshot};
+use peace_domain::chat::Platform;
 use peace_pb::{
     bancho_state::{BanchoPackets, UserQuery},
     base::ExecSuccess,
