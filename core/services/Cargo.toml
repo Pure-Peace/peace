@@ -52,6 +52,7 @@ peace_pb = { workspace = true }
 peace_domain = { workspace = true }
 peace_repositories = { workspace = true }
 peace_cfg = { workspace = true }
+infra_users = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros"] }

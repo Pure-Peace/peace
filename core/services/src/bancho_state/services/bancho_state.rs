@@ -1,18 +1,17 @@
 use super::traits::*;
 use crate::{
     bancho_state::*, gateway::bancho_endpoints::components::BanchoClientToken,
-    signature::DynSignatureService, users::SessionFilter, IntoService,
-    ServiceSnapshot,
+    signature::DynSignatureService, IntoService, ServiceSnapshot,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use num_traits::FromPrimitive;
-use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
     SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
 };
+use infra_users::{CreateSessionDto, SessionFilter};
 use std::{path::Path, sync::Arc};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
 
@@ -162,7 +161,7 @@ impl CreateSnapshot<BanchoStateServiceSnapshot> for BanchoStateServiceImpl {
             user_sessions: self
                 .user_sessions_service
                 .user_sessions()
-                .snapshot_sessions()
+                .create_snapshot()
                 .await,
             notify_queue: self
                 .user_sessions_service

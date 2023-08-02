@@ -1,8 +1,5 @@
-use crate::{
-    bancho_state::{
-        BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
-    },
-    users::{Session, SessionData, UserIndexes, UserStore},
+use crate::bancho_state::{
+    BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
 };
 use async_trait::async_trait;
 use bitmask_enum::bitmask;
@@ -10,9 +7,12 @@ use chrono::{DateTime, Utc};
 use clap_serde_derive::ClapSerde;
 use peace_pb::chat::ChannelQuery;
 use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
+use infra_users::{
+    BaseSession, BaseSessionData, CreateSessionDto, UserIndexes, UserStore,
+};
 use std::{
     collections::HashMap,
-    ops::Deref,
+    ops::{Deref, DerefMut},
     sync::{Arc, Weak},
 };
 use tokio::sync::RwLock;
@@ -21,11 +21,72 @@ use tools::{
     Ulid,
 };
 
-pub type ChatSession = Session<ChatSessionExtend>;
-pub type ChatSessionData = SessionData<ChatSessionExtendData>;
-
 pub type SessionIndexes = UserIndexes<ChatSession>;
 pub type UserSessions = UserStore<ChatSession>;
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ChatSessionData {
+    pub base: BaseSessionData,
+    pub extends: ChatSessionExtendData,
+}
+
+#[derive(Debug, Default)]
+pub struct ChatSession {
+    pub base: BaseSession,
+    pub extends: ChatSessionExtend,
+}
+
+#[async_trait]
+impl CreateSnapshot<ChatSessionData> for ChatSession {
+    async fn create_snapshot(&self) -> ChatSessionData {
+        ChatSessionData {
+            base: self.base.to_session_data(),
+            extends: self.extends.create_snapshot().await,
+        }
+    }
+}
+
+impl From<ChatSessionData> for ChatSession {
+    fn from(d: ChatSessionData) -> Self {
+        Self { base: d.base.into(), extends: d.extends.into() }
+    }
+}
+
+impl Deref for ChatSession {
+    type Target = BaseSession;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+impl DerefMut for ChatSession {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
+}
+
+impl ChatSession {
+    pub fn new(
+        CreateSessionDto {
+            user_id,
+            username,
+            username_unicode,
+            privileges,
+            extends,
+        }: CreateSessionDto<ChatSessionExtend>,
+    ) -> Self {
+        Self {
+            base: BaseSession::new(
+                user_id,
+                username,
+                username_unicode,
+                privileges,
+            ),
+            extends,
+        }
+    }
+}
 
 #[rustfmt::skip]
 #[derive(
@@ -231,7 +292,7 @@ impl ChatSessionExtend {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ChatSessionExtendData {
     pub platforms: i32,
     pub bancho_ext: Option<BanchoChatExtData>,
@@ -350,10 +411,7 @@ impl Channel {
         }
     }
 
-    pub async fn join(
-        session: &Arc<Session<ChatSessionExtend>>,
-        channel: &Arc<Channel>,
-    ) {
+    pub async fn join(session: &Arc<ChatSession>, channel: &Arc<Channel>) {
         const LOG_TARGET: &str = "chat::channel::join";
 
         channel.users.write().await.entry(session.user_id).or_insert_with(
@@ -397,10 +455,7 @@ impl Channel {
         );
     }
 
-    pub async fn remove(
-        session: &Arc<Session<ChatSessionExtend>>,
-        channel: &Arc<Channel>,
-    ) {
+    pub async fn remove(session: &Arc<ChatSession>, channel: &Arc<Channel>) {
         const LOG_TARGET: &str = "chat::channel::remove";
 
         if channel.users.write().await.remove(&session.user_id).is_some() {

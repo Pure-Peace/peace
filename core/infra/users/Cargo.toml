@@ -1,0 +1,25 @@
+[package]
+name = "infra_users"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+
+[features]
+default = []
+
+[dependencies]
+tokio = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+
+tools = { workspace = true }
+
+
+peace_domain = { workspace = true }
+peace_pb = { workspace = true }
+peace_snapshot = { workspace = true }

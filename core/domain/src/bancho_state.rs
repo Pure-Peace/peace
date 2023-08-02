@@ -6,15 +6,6 @@ use peace_pb::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
-pub struct CreateSessionDto<T> {
-    pub user_id: i32,
-    pub username: String,
-    pub username_unicode: Option<String>,
-    pub privileges: i32,
-    pub extends: T,
-}
-
-#[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct ConnectionInfo {
     pub ip: String,
     pub location: Location,

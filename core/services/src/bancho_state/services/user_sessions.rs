@@ -30,7 +30,7 @@ pub struct UserSessionsServiceSnapshot {
 impl CreateSnapshot<UserSessionsServiceSnapshot> for UserSessionsServiceImpl {
     async fn create_snapshot(&self) -> UserSessionsServiceSnapshot {
         UserSessionsServiceSnapshot {
-            user_sessions: self.user_sessions.snapshot_sessions().await,
+            user_sessions: self.user_sessions.create_snapshot().await,
             notify_queue: self.notify_queue.snapshot_messages().await,
         }
     }

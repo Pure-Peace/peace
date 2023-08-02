@@ -3,14 +3,12 @@ use crate::{
         BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
     },
     chat::*,
-    users::Session,
     FromRpcClient, IntoService, RpcClient, ServiceSnapshot,
 };
 use async_trait::async_trait;
 use bancho_packets::server;
 use chat::traits::{ChatService, DynChatService};
 use chrono::{DateTime, Utc};
-use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
     base::ExecSuccess,
@@ -26,6 +24,7 @@ use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
     SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
 };
+use infra_users::CreateSessionDto;
 use std::{
     borrow::Cow,
     collections::{HashMap, VecDeque},
@@ -175,7 +174,7 @@ impl ChatServiceImpl {
 
         let extends = ChatSessionExtend::new(platforms, bancho_chat_ext, None);
 
-        let session = Session::new(CreateSessionDto {
+        let session = ChatSession::new(CreateSessionDto {
             user_id,
             username,
             username_unicode,
@@ -183,7 +182,7 @@ impl ChatServiceImpl {
             extends,
         });
 
-        let session = self.user_sessions.create(session).await;
+        let session = self.user_sessions.create(session.into()).await;
 
         Ok(session)
     }
@@ -303,7 +302,7 @@ impl SnapshotTime for ChatServiceSnapshot {
 impl CreateSnapshot<ChatServiceSnapshot> for ChatServiceImpl {
     async fn create_snapshot(&self) -> ChatServiceSnapshot {
         ChatServiceSnapshot {
-            user_sessions: self.user_sessions.snapshot_sessions().await,
+            user_sessions: self.user_sessions.create_snapshot().await,
             notify_queue: self.notify_queue.snapshot_messages().await,
             channels: self.channels.snapshot_channels().await,
             create_time: Utc::now(),

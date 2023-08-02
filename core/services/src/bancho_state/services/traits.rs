@@ -4,13 +4,12 @@ use crate::{
         BanchoExtend, BanchoSession, BanchoStateError, Packet, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
-    users::Session,
     ServiceSnapshot,
 };
 use async_trait::async_trait;
-use peace_domain::bancho_state::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_snapshot::{CreateSnapshot, SaveSnapshotTo};
+use infra_users::CreateSessionDto;
 use std::sync::Arc;
 use tools::{
     async_collections::{
@@ -138,8 +137,10 @@ pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
         const LOG_TARGET: &str = "bancho_state::user_sessions::create_session";
         const PRESENCE_SHARD_SIZE: usize = 512;
 
-        let session =
-            self.user_sessions().create(Session::new(create_session)).await;
+        let session = self
+            .user_sessions()
+            .create(BanchoSession::new(create_session).into())
+            .await;
 
         let weak = Arc::downgrade(&session);
 

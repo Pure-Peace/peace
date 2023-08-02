@@ -93,7 +93,7 @@ impl BanchoStateBackgroundServiceImpl {
                     let removed_deactive_sessions = match sessions_deactive {
                         Some(sessions_deactive) => {
                             let user_sessions =
-                                &user_sessions_service.user_sessions();
+                                user_sessions_service.user_sessions();
 
                             // remove deactive sessions
                             {

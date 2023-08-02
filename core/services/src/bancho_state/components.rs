@@ -1,11 +1,16 @@
-use crate::users::{Session, SessionData, UserIndexes, UserStore};
 use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use clap_serde_derive::ClapSerde;
 use peace_domain::bancho_state::ConnectionInfo;
 use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
-use std::{collections::VecDeque, sync::Arc};
+use infra_users::CreateSessionDto;
+use infra_users::{BaseSession, BaseSessionData, UserIndexes, UserStore};
+use std::{
+    collections::VecDeque,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 use tokio::sync::{Mutex, MutexGuard};
 use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, U32, U64},
@@ -14,9 +19,6 @@ use tools::{
 
 pub type PacketData = Vec<u8>;
 pub type PacketDataPtr = Arc<Vec<u8>>;
-
-pub type BanchoSession = Session<BanchoExtend>;
-pub type BanchoSessionData = SessionData<BanchoExtendData>;
 
 pub type SessionIndexes = UserIndexes<BanchoSession>;
 pub type UserSessions = UserStore<BanchoSession>;
@@ -450,6 +452,26 @@ impl From<BanchoExtendData> for BanchoExtend {
     }
 }
 
+#[async_trait]
+impl CreateSnapshot<BanchoExtendData> for BanchoExtend {
+    async fn create_snapshot(&self) -> BanchoExtendData {
+        BanchoExtendData {
+            client_version: self.client_version.clone(),
+            utc_offset: self.utc_offset,
+            presence_filter: *self.presence_filter.load().as_ref(),
+            display_city: self.display_city,
+            only_friend_pm_allowed: self.only_friend_pm_allowed.val(),
+            bancho_status: self.bancho_status.clone(),
+            bancho_privileges: *self.bancho_privileges.load().as_ref(),
+            mode_stat_sets: self.mode_stat_sets.clone(),
+            packets_queue: self.packets_queue.snapshot_packets().await,
+            connection_info: self.connection_info.clone(),
+            country_code: self.country_code,
+            notify_index: *self.notify_index.load().as_ref(),
+        }
+    }
+}
+
 impl BanchoExtend {
     #[inline]
     pub fn new(
@@ -479,7 +501,69 @@ impl BanchoExtend {
     }
 }
 
-impl Session<BanchoExtend> {
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct BanchoSessionData {
+    pub base: BaseSessionData,
+    pub extends: BanchoExtendData,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct BanchoSession {
+    pub base: BaseSession,
+    pub extends: BanchoExtend,
+}
+
+#[async_trait]
+impl CreateSnapshot<BanchoSessionData> for BanchoSession {
+    async fn create_snapshot(&self) -> BanchoSessionData {
+        BanchoSessionData {
+            base: self.base.to_session_data(),
+            extends: self.extends.create_snapshot().await,
+        }
+    }
+}
+
+impl From<BanchoSessionData> for BanchoSession {
+    fn from(d: BanchoSessionData) -> Self {
+        Self { base: d.base.into(), extends: d.extends.into() }
+    }
+}
+
+impl Deref for BanchoSession {
+    type Target = BaseSession;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+impl DerefMut for BanchoSession {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
+}
+
+impl BanchoSession {
+    pub fn new(
+        CreateSessionDto {
+            user_id,
+            username,
+            username_unicode,
+            privileges,
+            extends,
+        }: CreateSessionDto<BanchoExtend>,
+    ) -> Self {
+        Self {
+            base: BaseSession::new(
+                user_id,
+                username,
+                username_unicode,
+                privileges,
+            ),
+            extends,
+        }
+    }
+
     #[inline]
     pub fn mode_stats(&self) -> Option<Arc<ModeStats>> {
         let stats = &self.extends.mode_stat_sets;
@@ -541,7 +625,7 @@ impl Session<BanchoExtend> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct BanchoExtendData {
     pub client_version: String,
     pub utc_offset: u8,
@@ -555,26 +639,6 @@ pub struct BanchoExtendData {
     pub connection_info: ConnectionInfo,
     pub country_code: u8,
     pub notify_index: Ulid,
-}
-
-#[async_trait]
-impl CreateSnapshot<BanchoExtendData> for BanchoExtend {
-    async fn create_snapshot(&self) -> BanchoExtendData {
-        BanchoExtendData {
-            client_version: self.client_version.clone(),
-            utc_offset: self.utc_offset,
-            presence_filter: *self.presence_filter.load().as_ref(),
-            display_city: self.display_city,
-            only_friend_pm_allowed: self.only_friend_pm_allowed.val(),
-            bancho_status: self.bancho_status.clone(),
-            bancho_privileges: *self.bancho_privileges.load().as_ref(),
-            mode_stat_sets: self.mode_stat_sets.clone(),
-            packets_queue: self.packets_queue.snapshot_packets().await,
-            connection_info: self.connection_info.clone(),
-            country_code: self.country_code,
-            notify_index: *self.notify_index.load().as_ref(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
