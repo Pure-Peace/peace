@@ -11,7 +11,7 @@ use num_traits::FromPrimitive;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
-    SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
+    SnapshotConfig, SnapshotType, SnapshotExpired, SnapshotTime,
 };
 use std::{path::Path, sync::Arc};
 use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
@@ -20,7 +20,7 @@ pub struct BanchoStateServiceSnapshotLoader;
 
 impl BanchoStateServiceSnapshotLoader {
     pub async fn load(
-        cfg: &CliBanchoStateServiceSnapshopConfigs,
+        cfg: &CliBanchoStateServiceSnapshotConfigs,
         signature_service: DynSignatureService,
     ) -> BanchoStateServiceImpl {
         if cfg.should_load_snapshot() {
@@ -133,7 +133,7 @@ impl IntoService<DynBanchoStateService> for BanchoStateServiceImpl {
 impl ServiceSnapshot for BanchoStateServiceImpl {
     async fn save_service_snapshot(
         &self,
-        snapshot_type: SnapshopType,
+        snapshot_type: SnapshotType,
         snapshot_path: &str,
     ) -> Result<(), CreateSnapshotError> {
         info!(

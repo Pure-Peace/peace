@@ -70,7 +70,7 @@ pub trait IntoService<T>: Sized + Sync + Send + 'static {
 pub trait ServiceSnapshot {
     async fn save_service_snapshot(
         &self,
-        snapshot_type: peace_snapshot::SnapshopType,
+        snapshot_type: peace_snapshot::SnapshotType,
         snapshot_path: &str,
     ) -> Result<(), peace_snapshot::CreateSnapshotError>;
 }

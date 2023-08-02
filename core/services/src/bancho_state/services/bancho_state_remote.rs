@@ -9,7 +9,7 @@ use peace_pb::{
     bancho_state::{bancho_state_rpc_client::BanchoStateRpcClient, *},
     base::ExecSuccess,
 };
-use peace_snapshot::{CreateSnapshot, CreateSnapshotError, SnapshopType};
+use peace_snapshot::{CreateSnapshot, CreateSnapshotError, SnapshotType};
 use std::sync::Arc;
 use tonic::transport::Channel;
 
@@ -49,7 +49,7 @@ impl CreateSnapshot<BanchoStateServiceSnapshot> for BanchoStateServiceRemote {
 impl ServiceSnapshot for BanchoStateServiceRemote {
     async fn save_service_snapshot(
         &self,
-        _: SnapshopType,
+        _: SnapshotType,
         _: &str,
     ) -> Result<(), CreateSnapshotError> {
         unimplemented!()

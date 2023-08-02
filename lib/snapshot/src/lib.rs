@@ -47,7 +47,7 @@ impl TonicError for CreateSnapshotError {
     Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum,
 )]
 #[serde(rename_all = "lowercase")]
-pub enum SnapshopType {
+pub enum SnapshotType {
     Binary,
     Json,
 }
@@ -56,9 +56,9 @@ pub trait SnapshotTime {
     fn snapshot_time(&self) -> u64;
 }
 
-pub trait SnapshopConfig {
+pub trait SnapshotConfig {
     fn snapshot_path(&self) -> &str;
-    fn snapshot_type(&self) -> SnapshopType;
+    fn snapshot_type(&self) -> SnapshotType;
     fn should_save_snapshot(&self) -> bool;
     fn should_load_snapshot(&self) -> bool;
     fn snapshot_expired_secs(&self) -> u64;
@@ -72,7 +72,7 @@ pub trait CreateSnapshot<D> {
 #[async_trait]
 pub trait LoadSnapshotFrom: Sized {
     async fn load_snapshot_from(
-        snapshot_type: SnapshopType,
+        snapshot_type: SnapshotType,
         snapshot_path: &str,
     ) -> Result<Self, LoadSnapshotError>;
 }
@@ -83,7 +83,7 @@ where
     T: for<'a> serde::Deserialize<'a>,
 {
     async fn load_snapshot_from(
-        snapshot_type: SnapshopType,
+        snapshot_type: SnapshotType,
         snapshot_path: &str,
     ) -> Result<Self, LoadSnapshotError> {
         let content = fs::read(snapshot_path)
@@ -91,12 +91,12 @@ where
             .map_err(|err| LoadSnapshotError::ReadFileError(err.to_string()))?;
 
         Ok(match snapshot_type {
-            SnapshopType::Binary => {
+            SnapshotType::Binary => {
                 bincode::deserialize(&content).map_err(|err| {
                     LoadSnapshotError::DeserializeError(err.to_string())
                 })?
             },
-            SnapshopType::Json => {
+            SnapshotType::Json => {
                 serde_json::from_slice(&content).map_err(|err| {
                     LoadSnapshotError::DeserializeError(err.to_string())
                 })?
@@ -126,7 +126,7 @@ where
 pub trait SaveSnapshotTo<D> {
     async fn save_snapshot_to(
         &self,
-        snapshot_type: SnapshopType,
+        snapshot_type: SnapshotType,
         snapshot_path: &str,
     ) -> Result<usize, CreateSnapshotError>;
 }
@@ -139,15 +139,15 @@ where
 {
     async fn save_snapshot_to(
         &self,
-        snapshot_type: SnapshopType,
+        snapshot_type: SnapshotType,
         snapshot_path: &str,
     ) -> Result<usize, CreateSnapshotError> {
         let create_snapshot = self.create_snapshot().await;
 
         let bytes_data = match snapshot_type {
-            SnapshopType::Binary => bincode::serialize(&create_snapshot)
+            SnapshotType::Binary => bincode::serialize(&create_snapshot)
                 .map_err(|err| err.to_string()),
-            SnapshopType::Json => serde_json::to_vec(&create_snapshot)
+            SnapshotType::Json => serde_json::to_vec(&create_snapshot)
                 .map_err(|err| err.to_string()),
         }
         .map_err(CreateSnapshotError::SerializeError)?;

@@ -9,7 +9,7 @@ pub mod app;
 
 pub use app::*;
 
-use peace_snapshot::SnapshopConfig;
+use peace_snapshot::SnapshotConfig;
 
 pub async fn run(
     cfg: std::sync::Arc<BanchoStandaloneConfig>,

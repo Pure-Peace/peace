@@ -11,7 +11,7 @@ pub mod rpc;
 pub use app::*;
 pub use rpc::*;
 
-use peace_snapshot::SnapshopConfig;
+use peace_snapshot::SnapshotConfig;
 
 pub async fn run(
     cfg: std::sync::Arc<ChatServiceConfig>,

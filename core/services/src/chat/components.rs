@@ -8,7 +8,7 @@ use infra_users::{
     BaseSession, BaseSessionData, CreateSessionDto, UserIndexes, UserStore,
 };
 use peace_pb::chat::ChannelQuery;
-use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
+use peace_snapshot::{CreateSnapshot, SnapshotConfig, SnapshotType};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -716,14 +716,14 @@ impl Channels {
 }
 
 #[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
-pub struct CliChatServiceSnapshopConfigs {
+pub struct CliChatServiceSnapshotConfigs {
     #[default("./.snapshots/chat.snapshot".to_owned())]
     #[arg(long, default_value = "./.snapshots/chat.snapshot")]
     pub chat_snapshot_path: String,
 
-    #[default(SnapshopType::Binary)]
+    #[default(SnapshotType::Binary)]
     #[arg(long, value_enum, default_value = "binary")]
-    pub chat_snapshot_type: SnapshopType,
+    pub chat_snapshot_type: SnapshotType,
 
     #[arg(long)]
     pub chat_snapshot: bool,
@@ -736,12 +736,12 @@ pub struct CliChatServiceSnapshopConfigs {
     pub chat_snapshot_expired_secs: u64,
 }
 
-impl SnapshopConfig for CliChatServiceSnapshopConfigs {
+impl SnapshotConfig for CliChatServiceSnapshotConfigs {
     fn snapshot_path(&self) -> &str {
         &self.chat_snapshot_path
     }
 
-    fn snapshot_type(&self) -> SnapshopType {
+    fn snapshot_type(&self) -> SnapshotType {
         self.chat_snapshot_type
     }
 

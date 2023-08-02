@@ -22,7 +22,7 @@ use peace_pb::{
 use peace_repositories::users::DynUsersRepository;
 use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
-    SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
+    SnapshotConfig, SnapshotType, SnapshotExpired, SnapshotTime,
 };
 use std::{
     borrow::Cow,
@@ -239,7 +239,7 @@ pub struct ChatServiceSnapshotLoader;
 
 impl ChatServiceSnapshotLoader {
     pub async fn load(
-        cfg: &CliChatServiceSnapshopConfigs,
+        cfg: &CliChatServiceSnapshotConfigs,
         users_repository: DynUsersRepository,
     ) -> ChatServiceImpl {
         if cfg.should_load_snapshot() {
@@ -334,7 +334,7 @@ impl ChannelStore for ChatServiceImpl {
 impl ServiceSnapshot for ChatServiceImpl {
     async fn save_service_snapshot(
         &self,
-        snapshot_type: SnapshopType,
+        snapshot_type: SnapshotType,
         snapshot_path: &str,
     ) -> Result<(), CreateSnapshotError> {
         info!("Saving chat snapshot file to path: \"{}\"...", snapshot_path);
@@ -851,7 +851,7 @@ impl CreateSnapshot<ChatServiceSnapshot> for ChatServiceRemote {
 impl ServiceSnapshot for ChatServiceRemote {
     async fn save_service_snapshot(
         &self,
-        _: SnapshopType,
+        _: SnapshotType,
         _: &str,
     ) -> Result<(), CreateSnapshotError> {
         unimplemented!()

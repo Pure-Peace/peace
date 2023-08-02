@@ -11,7 +11,7 @@ use peace_runtime::cfg::RuntimeConfig;
 use peace_services::chat::{
     ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl,
     ChatServiceSnapshotLoader, CliChatBackgroundServiceConfigs,
-    CliChatServiceSnapshopConfigs, DynChatBackgroundService, DynChatService,
+    CliChatServiceSnapshotConfigs, DynChatBackgroundService, DynChatService,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
@@ -36,7 +36,7 @@ pub struct ChatServiceConfig {
     pub chat_background_service_configs: CliChatBackgroundServiceConfigs,
 
     #[command(flatten)]
-    pub chat_snapshot: CliChatServiceSnapshopConfigs,
+    pub chat_snapshot: CliChatServiceSnapshotConfigs,
 }
 
 #[derive(Clone)]

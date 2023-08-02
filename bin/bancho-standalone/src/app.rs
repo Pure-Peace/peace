@@ -65,10 +65,10 @@ pub struct BanchoStandaloneConfig {
     pub ed25519_private_key_path: Option<String>,
 
     #[command(flatten)]
-    pub chat_snapshot: CliChatServiceSnapshopConfigs,
+    pub chat_snapshot: CliChatServiceSnapshotConfigs,
 
     #[command(flatten)]
-    pub bancho_state_snapshot: CliBanchoStateServiceSnapshopConfigs,
+    pub bancho_state_snapshot: CliBanchoStateServiceSnapshotConfigs,
 }
 
 #[derive(Clone)]

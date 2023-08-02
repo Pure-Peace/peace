@@ -47,7 +47,7 @@ pub struct BanchoStateConfig {
     pub ed25519_private_key_path: Option<String>,
 
     #[command(flatten)]
-    pub bancho_state_snapshot: CliBanchoStateServiceSnapshopConfigs,
+    pub bancho_state_snapshot: CliBanchoStateServiceSnapshotConfigs,
 }
 
 /// The BanchoState application struct.
