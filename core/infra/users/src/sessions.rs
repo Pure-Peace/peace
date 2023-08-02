@@ -3,10 +3,11 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use peace_pb::bancho_state::UserQuery;
 use peace_snapshot::CreateSnapshot;
+use peace_unique_id::Ulid;
 use serde::{Deserialize, Serialize};
 use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, I32, U64},
-    Timestamp, Ulid,
+    Timestamp,
 };
 
 #[async_trait]

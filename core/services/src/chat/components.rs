@@ -9,15 +9,15 @@ use infra_users::{
 use peace_domain::chat::{ChannelType, Platform};
 use peace_pb::chat::ChannelQuery;
 use peace_snapshot::{cli_snapshot_config, CreateSnapshot, SnapshotType};
+use peace_unique_id::Ulid;
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
     sync::{Arc, Weak},
 };
 use tokio::sync::RwLock;
-use tools::{
-    atomic::{Atomic, AtomicOperation, AtomicOption, AtomicValue, Usize, U32},
-    Ulid,
+use tools::atomic::{
+    Atomic, AtomicOperation, AtomicOption, AtomicValue, Usize, U32,
 };
 
 pub type SessionIndexes = UserIndexes<ChatSession>;

@@ -20,7 +20,7 @@ serde_json = { workspace = true }
 bitmask-enum = { workspace = true }
 thiserror = { workspace = true }
 
-tools = { workspace = true }
+peace_unique_id = { workspace = true }
 
 peace_rpc_error = { workspace = true }
 

@@ -1,5 +1,5 @@
 [package]
-name = "infra_users"
+name = "peace_message_queue"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
@@ -13,13 +13,4 @@ default = []
 
 [dependencies]
 tokio = { workspace = true }
-async-trait = { workspace = true }
-chrono = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-
-tools = { workspace = true }
-peace_unique_id = { workspace = true }
-
-peace_domain = { workspace = true }
-peace_pb = { workspace = true }
-peace_snapshot = { workspace = true }

@@ -43,8 +43,8 @@ pub mod bancho_state {
     use self::raw_user_query::QueryType;
     use crate::ConvertError;
     use bitmask_enum::bitmask;
+    use peace_unique_id::{raw::DecodingError, Ulid};
     use std::{error::Error, fmt, str::FromStr};
-    use tools::{DecodingError, Ulid};
 
     #[bitmask(i32)]
     pub enum UserSessionFields {
@@ -146,14 +146,12 @@ pub mod chat {
     pub const CHAT_DESCRIPTOR_SET: &[u8] =
         descriptor!("peace.services.chat.descriptor");
 
-    use std::str::FromStr;
-
-    use tools::Ulid;
-
     use self::{
         raw_channel_query::QueryType, raw_chat_message_target::ChatTarget,
     };
     use crate::{bancho_state::UserQuery, ConvertError};
+    use peace_unique_id::Ulid;
+    use std::str::FromStr;
 
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub enum ChannelQuery {

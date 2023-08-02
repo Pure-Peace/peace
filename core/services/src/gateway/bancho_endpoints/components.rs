@@ -1,8 +1,8 @@
 use super::BanchoHttpError;
 use peace_pb::bancho_state::CheckUserTokenRequest;
+use peace_unique_id::Ulid;
 use std::str::FromStr;
 use tonic::IntoRequest;
-use tools::Ulid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BanchoClientToken {

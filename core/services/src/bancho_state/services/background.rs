@@ -5,6 +5,7 @@ use crate::bancho_state::{
 };
 use async_trait::async_trait;
 use clap_serde_derive::ClapSerde;
+use peace_unique_id::Ulid;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -16,7 +17,7 @@ use tools::{
         LoopBackgroundTaskConfig, SignalHandle,
     },
     atomic::{Atomic, AtomicValue, U64},
-    lazy_init, Timestamp, Ulid,
+    lazy_init, Timestamp,
 };
 
 #[derive(Clone, Default)]

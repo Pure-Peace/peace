@@ -2,8 +2,8 @@ pub mod protobufs;
 pub use protobufs::*;
 
 use peace_rpc_error::RpcError;
+use peace_unique_id::raw::DecodingError;
 use serde::{Deserialize, Serialize};
-use tools::DecodingError;
 
 pub const OUT_DIR: &str = "generated";
 

@@ -10,6 +10,7 @@ use chrono::{DateTime, Utc};
 use infra_packets::{Packet, PacketsQueue};
 use infra_users::CreateSessionDto;
 use peace_domain::chat::{ChannelType, Platform};
+use peace_message_queue::ReceivedMessages;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
     base::ExecSuccess,
@@ -33,10 +34,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 use tonic::{transport::Channel as RpcChannel, IntoRequest};
-use tools::{
-    atomic::{AtomicValue, U32},
-    message_queue::ReceivedMessages,
-};
+use tools::atomic::{AtomicValue, U32};
 
 #[derive(Clone)]
 pub struct ChatServiceImpl {

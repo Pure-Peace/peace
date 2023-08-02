@@ -29,6 +29,8 @@ members = [
     "lib/bancho-packets",
     "lib/bancho-packets/derive",
     "lib/snapshot",
+    "lib/message_queue",
+    "lib/unique_id",
 ]
 
 [workspace.package]
@@ -144,7 +146,10 @@ peace_repositories = { path = "./core/repositories" }
 # libs
 bancho-packets = { path = "./lib/bancho-packets" }
 tools = { path = "./lib/tools" }
+
 peace_snapshot = { path = "./lib/snapshot" }
+peace_message_queue = { path = "./lib/message_queue" }
+peace_unique_id = { path = "./lib/unique_id" }
 
 # infra
 infra_users = { path = "./core/infra/users" }

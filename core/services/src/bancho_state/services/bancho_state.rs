@@ -11,13 +11,14 @@ use num_traits::FromPrimitive;
 use peace_domain::bancho::{
     BanchoPrivileges, GameMode, Mods, PresenceFilter, UserOnlineStatus,
 };
+use peace_message_queue::ReceivedMessages;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
     SnapshotConfig, SnapshotExpired, SnapshotTime, SnapshotType,
 };
 use std::{path::Path, sync::Arc};
-use tools::{atomic::AtomicValue, message_queue::ReceivedMessages};
+use tools::atomic::AtomicValue;
 
 pub struct BanchoStateServiceSnapshotLoader;
 

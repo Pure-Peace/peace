@@ -34,3 +34,4 @@ peace_services = { workspace = true }
 peace_snapshot = { workspace = true }
 
 tools = { workspace = true }
+peace_unique_id = { workspace = true }

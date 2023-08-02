@@ -9,14 +9,12 @@ use peace_domain::bancho::{
 };
 use peace_domain::bancho_state::ConnectionInfo;
 use peace_snapshot::{cli_snapshot_config, CreateSnapshot, SnapshotType};
+use peace_unique_id::Ulid;
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
-use tools::{
-    atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, U32, U64},
-    Ulid,
-};
+use tools::atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, U32, U64};
 
 pub type SessionIndexes = UserIndexes<BanchoSession>;
 pub type UserSessions = UserStore<BanchoSession>;

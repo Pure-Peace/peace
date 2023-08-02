@@ -1,4 +1,4 @@
-use tools::Ulid;
+use peace_unique_id::Ulid;
 
 pub mod sessions;
 pub mod users_store;

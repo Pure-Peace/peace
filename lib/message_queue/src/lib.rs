@@ -1,4 +1,3 @@
-use crate::lazy_init;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashSet},
@@ -352,7 +351,11 @@ where
             msg.mark_readed(reader.clone()).await;
 
             // init or push msg to list
-            lazy_init!(messages => messages.push(msg.content.clone()), vec![msg.content.clone()]);
+            match messages {
+                Some(ref mut messages) => messages.push(msg.content.clone()),
+                None => messages = Some(vec![msg.content.clone()]),
+            };
+
             last_msg_id = Some(msg_id.clone());
 
             // check receive count
