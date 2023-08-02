@@ -2,74 +2,22 @@ use async_trait::async_trait;
 use bancho_packets::server::{UserPresence, UserStats};
 use bitmask_enum::bitmask;
 use clap_serde_derive::ClapSerde;
-use peace_domain::bancho_state::ConnectionInfo;
-use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
+use infra_packets::{Packet, PacketsQueue};
 use infra_users::CreateSessionDto;
 use infra_users::{BaseSession, BaseSessionData, UserIndexes, UserStore};
+use peace_domain::bancho_state::ConnectionInfo;
+use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
 use std::{
-    collections::VecDeque,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
-use tokio::sync::{Mutex, MutexGuard};
 use tools::{
     atomic::{Atomic, AtomicOption, AtomicValue, Bool, F32, U32, U64},
     Ulid,
 };
 
-pub type PacketData = Vec<u8>;
-pub type PacketDataPtr = Arc<Vec<u8>>;
-
 pub type SessionIndexes = UserIndexes<BanchoSession>;
 pub type UserSessions = UserStore<BanchoSession>;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Packet {
-    Data(PacketData),
-    Ptr(PacketDataPtr),
-}
-
-impl Default for Packet {
-    fn default() -> Self {
-        Self::Data(Vec::new())
-    }
-}
-
-impl Packet {
-    pub fn new(data: PacketData) -> Self {
-        Self::Data(data)
-    }
-
-    pub fn new_ptr(data: PacketData) -> Self {
-        Self::Ptr(Arc::new(data))
-    }
-}
-
-impl IntoIterator for Packet {
-    type Item = u8;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            Packet::Data(data) => data.into_iter(),
-            Packet::Ptr(ptr) => Arc::try_unwrap(ptr)
-                .unwrap_or_else(|ptr| (*ptr).clone())
-                .into_iter(),
-        }
-    }
-}
-
-impl From<Arc<Vec<u8>>> for Packet {
-    fn from(ptr: Arc<Vec<u8>>) -> Self {
-        Self::Ptr(ptr)
-    }
-}
-
-impl From<Vec<u8>> for Packet {
-    fn from(data: Vec<u8>) -> Self {
-        Self::Data(data)
-    }
-}
 
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash, Serialize, Deserialize)]
@@ -307,116 +255,6 @@ pub struct UserModeStatSets {
     pub standard_score_v2: AtomicOption<ModeStats>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct BanchoPacketsQueue {
-    pub queue: Arc<Mutex<VecDeque<Packet>>>,
-}
-
-impl From<Vec<Packet>> for BanchoPacketsQueue {
-    fn from(packets: Vec<Packet>) -> Self {
-        let mut queue = VecDeque::with_capacity(packets.len());
-        for p in packets {
-            queue.push_back(p);
-        }
-        Self::new(queue)
-    }
-}
-
-impl From<Vec<u8>> for BanchoPacketsQueue {
-    fn from(packets: Vec<u8>) -> Self {
-        Self::new(VecDeque::from([packets.into()]))
-    }
-}
-
-impl BanchoPacketsQueue {
-    #[inline]
-    pub fn new(packets: VecDeque<Packet>) -> Self {
-        Self { queue: Arc::new(Mutex::new(packets)) }
-    }
-
-    #[inline]
-    pub async fn queued_packets(&self) -> usize {
-        self.queue.lock().await.len()
-    }
-
-    #[inline]
-    pub async fn push_packet(&self, packet: Packet) -> usize {
-        let mut queue = self.queue.lock().await;
-        queue.push_back(packet);
-        queue.len()
-    }
-
-    #[inline]
-    pub async fn enqueue_packets<I>(&self, packets: I) -> usize
-    where
-        I: IntoIterator<Item = Packet>,
-    {
-        let mut queue = self.queue.lock().await;
-        queue.extend(packets);
-        queue.len()
-    }
-
-    #[inline]
-    pub async fn dequeue_packet(
-        &self,
-        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
-    ) -> Option<Packet> {
-        match queue_lock {
-            Some(queue) => queue.pop_front(),
-            None => self.queue.lock().await.pop_front(),
-        }
-    }
-
-    #[inline]
-    pub async fn dequeue_all_packets(
-        &self,
-        queue_lock: Option<&mut MutexGuard<'_, VecDeque<Packet>>>,
-    ) -> Vec<u8> {
-        let mut buf = Vec::new();
-
-        #[inline]
-        fn dequeue(
-            buf: &mut Vec<u8>,
-            queue_lock: &mut MutexGuard<'_, VecDeque<Packet>>,
-        ) {
-            while let Some(packet) = queue_lock.pop_front() {
-                buf.extend(packet);
-            }
-        }
-
-        match queue_lock {
-            Some(queue_lock) => dequeue(&mut buf, queue_lock),
-            None => dequeue(&mut buf, &mut self.queue.lock().await),
-        };
-
-        buf
-    }
-
-    pub async fn snapshot_packets(&self) -> Vec<Packet> {
-        let queue = self.queue.lock().await;
-        Vec::from_iter(queue.iter().cloned())
-    }
-}
-
-impl serde::Serialize for BanchoPacketsQueue {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let packets = self.queue.blocking_lock().clone();
-        packets.serialize(serializer)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for BanchoPacketsQueue {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self::new(VecDeque::deserialize(deserializer)?))
-    }
-}
-
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct BanchoExtend {
     pub client_version: String,
@@ -427,7 +265,7 @@ pub struct BanchoExtend {
     pub bancho_status: BanchoStatus,
     pub bancho_privileges: Atomic<BanchoPrivileges>,
     pub mode_stat_sets: UserModeStatSets,
-    pub packets_queue: BanchoPacketsQueue,
+    pub packets_queue: PacketsQueue,
     pub connection_info: ConnectionInfo,
     pub country_code: u8,
     pub notify_index: Atomic<Ulid>,
@@ -485,7 +323,7 @@ impl BanchoExtend {
         country_code: u8,
     ) -> Self {
         let packets_queue =
-            initial_packets.map(BanchoPacketsQueue::from).unwrap_or_default();
+            initial_packets.map(PacketsQueue::from).unwrap_or_default();
 
         Self {
             client_version,

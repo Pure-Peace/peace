@@ -1,15 +1,16 @@
 use super::{BanchoStateBackgroundServiceConfigs, BanchoStateServiceSnapshot};
 use crate::{
     bancho_state::{
-        BanchoExtend, BanchoSession, BanchoStateError, Packet, UserSessions,
+        BanchoExtend, BanchoSession, BanchoStateError, UserSessions,
     },
     gateway::bancho_endpoints::components::BanchoClientToken,
     ServiceSnapshot,
 };
 use async_trait::async_trait;
+use infra_packets::Packet;
+use infra_users::CreateSessionDto;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_snapshot::{CreateSnapshot, SaveSnapshotTo};
-use infra_users::CreateSessionDto;
 use std::sync::Arc;
 use tools::{
     async_collections::{
@@ -173,12 +174,12 @@ pub trait UserSessionsCreate: UserSessionsStore + NotifyMessagesQueue {
 
         let mut pending_packets = Vec::with_capacity(pre_alloc_size);
 
-        pending_packets.push(Packet::Data(session_info));
+        pending_packets.push(session_info.into());
 
         for shard in online_users.chunks(PRESENCE_SHARD_SIZE) {
-            pending_packets.push(Packet::Data(
-                bancho_packets::server::UserPresenceBundle::pack(shard),
-            ))
+            pending_packets.push(
+                bancho_packets::server::UserPresenceBundle::pack(shard).into(),
+            )
         }
 
         session.extends.packets_queue.enqueue_packets(pending_packets).await;

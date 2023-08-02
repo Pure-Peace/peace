@@ -1,7 +1,5 @@
 use crate::{
-    bancho_state::{
-        BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
-    },
+    bancho_state::{BanchoMessageData, BanchoMessageQueue},
     chat::*,
     FromRpcClient, IntoService, RpcClient, ServiceSnapshot,
 };
@@ -9,6 +7,8 @@ use async_trait::async_trait;
 use bancho_packets::server;
 use chat::traits::{ChatService, DynChatService};
 use chrono::{DateTime, Utc};
+use infra_packets::{Packet, PacketsQueue};
+use infra_users::CreateSessionDto;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},
     base::ExecSuccess,
@@ -24,7 +24,6 @@ use peace_snapshot::{
     CreateSnapshot, CreateSnapshotError, LoadSnapshotFrom, SaveSnapshotTo,
     SnapshopConfig, SnapshopType, SnapshotExpired, SnapshotTime,
 };
-use infra_users::CreateSessionDto;
 use std::{
     borrow::Cow,
     collections::{HashMap, VecDeque},
@@ -167,7 +166,7 @@ impl ChatServiceImpl {
 
             channel_packets.push_back(server::ChannelInfoEnd::pack().into());
 
-            Some(BanchoPacketsQueue::new(channel_packets).into())
+            Some(PacketsQueue::new(channel_packets).into())
         } else {
             None
         };

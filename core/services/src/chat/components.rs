@@ -1,15 +1,14 @@
-use crate::bancho_state::{
-    BanchoMessageData, BanchoMessageQueue, BanchoPacketsQueue, Packet,
-};
+use crate::bancho_state::{BanchoMessageData, BanchoMessageQueue};
 use async_trait::async_trait;
 use bitmask_enum::bitmask;
 use chrono::{DateTime, Utc};
 use clap_serde_derive::ClapSerde;
-use peace_pb::chat::ChannelQuery;
-use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
+use infra_packets::{Packet, PacketsQueue};
 use infra_users::{
     BaseSession, BaseSessionData, CreateSessionDto, UserIndexes, UserStore,
 };
+use peace_pb::chat::ChannelQuery;
+use peace_snapshot::{CreateSnapshot, SnapshopConfig, SnapshopType};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -193,21 +192,21 @@ pub struct JoinedChannelData {
 
 #[derive(Debug, Default)]
 pub struct BanchoChatExt {
-    pub packets_queue: BanchoPacketsQueue,
+    pub packets_queue: PacketsQueue,
     pub notify_index: Atomic<Ulid>,
 }
 
 impl From<BanchoChatExtData> for BanchoChatExt {
     fn from(data: BanchoChatExtData) -> Self {
         Self {
-            packets_queue: BanchoPacketsQueue::from(data.packets_queue),
+            packets_queue: PacketsQueue::from(data.packets_queue),
             notify_index: data.notify_index.into(),
         }
     }
 }
 
-impl From<BanchoPacketsQueue> for BanchoChatExt {
-    fn from(packets_queue: BanchoPacketsQueue) -> Self {
+impl From<PacketsQueue> for BanchoChatExt {
+    fn from(packets_queue: PacketsQueue) -> Self {
         Self { packets_queue, ..Default::default() }
     }
 }
