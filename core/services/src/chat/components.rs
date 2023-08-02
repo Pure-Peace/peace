@@ -8,7 +8,9 @@ use infra_users::{
     BaseSession, BaseSessionData, CreateSessionDto, UserIndexes, UserStore,
 };
 use peace_pb::chat::ChannelQuery;
-use peace_snapshot::{CreateSnapshot, SnapshotConfig, SnapshotType};
+use peace_snapshot::{
+    cli_snapshot_config, CreateSnapshot, SnapshotType,
+};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -715,45 +717,4 @@ impl Channels {
     }
 }
 
-#[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
-pub struct CliChatServiceSnapshotConfigs {
-    #[default("./.snapshots/chat.snapshot".to_owned())]
-    #[arg(long, default_value = "./.snapshots/chat.snapshot")]
-    pub chat_snapshot_path: String,
-
-    #[default(SnapshotType::Binary)]
-    #[arg(long, value_enum, default_value = "binary")]
-    pub chat_snapshot_type: SnapshotType,
-
-    #[arg(long)]
-    pub chat_snapshot: bool,
-
-    #[arg(long)]
-    pub chat_load_snapshot: bool,
-
-    #[default(300)]
-    #[arg(long, default_value = "300")]
-    pub chat_snapshot_expired_secs: u64,
-}
-
-impl SnapshotConfig for CliChatServiceSnapshotConfigs {
-    fn snapshot_path(&self) -> &str {
-        &self.chat_snapshot_path
-    }
-
-    fn snapshot_type(&self) -> SnapshotType {
-        self.chat_snapshot_type
-    }
-
-    fn should_save_snapshot(&self) -> bool {
-        self.chat_snapshot
-    }
-
-    fn should_load_snapshot(&self) -> bool {
-        self.chat_load_snapshot
-    }
-
-    fn snapshot_expired_secs(&self) -> u64 {
-        self.chat_snapshot_expired_secs
-    }
-}
+cli_snapshot_config!(service: Chat);

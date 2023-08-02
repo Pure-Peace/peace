@@ -5,6 +5,8 @@ use std::path::Path;
 use tokio::fs;
 use tonic::Status;
 
+pub mod macros;
+
 #[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
 pub enum LoadSnapshotError {
     #[error("failed to deserialize snapshot: {0}")]

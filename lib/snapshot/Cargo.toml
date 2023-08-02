@@ -19,6 +19,8 @@ async-trait = { workspace = true }
 tonic = { workspace = true }
 serde_json = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+paste = { workspace = true }
 
 bincode = "1.3"
 

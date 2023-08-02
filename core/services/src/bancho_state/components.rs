@@ -6,7 +6,7 @@ use infra_packets::{Packet, PacketsQueue};
 use infra_users::CreateSessionDto;
 use infra_users::{BaseSession, BaseSessionData, UserIndexes, UserStore};
 use peace_domain::bancho_state::ConnectionInfo;
-use peace_snapshot::{CreateSnapshot, SnapshotConfig, SnapshotType};
+use peace_snapshot::{cli_snapshot_config, CreateSnapshot, SnapshotType};
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -479,45 +479,4 @@ pub struct BanchoExtendData {
     pub notify_index: Ulid,
 }
 
-#[derive(Debug, Clone, Parser, ClapSerde, Serialize, Deserialize)]
-pub struct CliBanchoStateServiceSnapshotConfigs {
-    #[default("./.snapshots/bancho_state.snapshot".to_owned())]
-    #[arg(long, default_value = "./.snapshots/bancho_state.snapshot")]
-    pub bancho_state_snapshot_path: String,
-
-    #[default(SnapshotType::Binary)]
-    #[arg(long, value_enum, default_value = "binary")]
-    pub bancho_state_snapshot_type: SnapshotType,
-
-    #[arg(long)]
-    pub bancho_state_snapshot: bool,
-
-    #[arg(long)]
-    pub bancho_state_load_snapshot: bool,
-
-    #[default(300)]
-    #[arg(long, default_value = "300")]
-    pub bancho_state_snapshot_expired_secs: u64,
-}
-
-impl SnapshotConfig for CliBanchoStateServiceSnapshotConfigs {
-    fn snapshot_path(&self) -> &str {
-        &self.bancho_state_snapshot_path
-    }
-
-    fn snapshot_type(&self) -> SnapshotType {
-        self.bancho_state_snapshot_type
-    }
-
-    fn should_save_snapshot(&self) -> bool {
-        self.bancho_state_snapshot
-    }
-
-    fn should_load_snapshot(&self) -> bool {
-        self.bancho_state_load_snapshot
-    }
-
-    fn snapshot_expired_secs(&self) -> u64 {
-        self.bancho_state_snapshot_expired_secs
-    }
-}
+cli_snapshot_config!(service: BanchoState);
