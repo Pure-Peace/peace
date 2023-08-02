@@ -76,7 +76,7 @@ impl From<Vec<u8>> for PacketDataPtr {
 
 impl From<Arc<Vec<u8>>> for PacketDataPtr {
     fn from(value: Arc<Vec<u8>>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 

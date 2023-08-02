@@ -221,7 +221,7 @@ pub struct BanchoChatExtData {
 impl CreateSnapshot<BanchoChatExtData> for BanchoChatExt {
     async fn create_snapshot(&self) -> BanchoChatExtData {
         BanchoChatExtData {
-            packets_queue: self.packets_queue.snapshot_packets().await,
+            packets_queue: self.packets_queue.create_snapshot().await,
             notify_index: *self.notify_index.load().as_ref(),
         }
     }

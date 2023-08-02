@@ -1,4 +1,6 @@
 use crate::Packet;
+use async_trait::async_trait;
+use peace_snapshot::CreateSnapshot;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::{Mutex, MutexGuard};
 
@@ -86,8 +88,11 @@ impl PacketsQueue {
 
         buf
     }
+}
 
-    pub async fn snapshot_packets(&self) -> Vec<Packet> {
+#[async_trait]
+impl CreateSnapshot<Vec<Packet>> for PacketsQueue {
+    async fn create_snapshot(&self) -> Vec<Packet> {
         let queue = self.queue.lock().await;
         Vec::from_iter(queue.iter().cloned())
     }

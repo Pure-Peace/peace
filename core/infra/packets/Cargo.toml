@@ -14,13 +14,7 @@ default = []
 [dependencies]
 tokio = { workspace = true }
 async-trait = { workspace = true }
-chrono = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 derive_deref = { workspace = true }
 
-tools = { workspace = true }
-
-
-peace_domain = { workspace = true }
-peace_pb = { workspace = true }
 peace_snapshot = { workspace = true }

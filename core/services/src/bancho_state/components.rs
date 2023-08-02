@@ -302,7 +302,7 @@ impl CreateSnapshot<BanchoExtendData> for BanchoExtend {
             bancho_status: self.bancho_status.clone(),
             bancho_privileges: *self.bancho_privileges.load().as_ref(),
             mode_stat_sets: self.mode_stat_sets.clone(),
-            packets_queue: self.packets_queue.snapshot_packets().await,
+            packets_queue: self.packets_queue.create_snapshot().await,
             connection_info: self.connection_info.clone(),
             country_code: self.country_code,
             notify_index: *self.notify_index.load().as_ref(),
