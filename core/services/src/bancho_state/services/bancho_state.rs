@@ -171,7 +171,7 @@ impl CreateSnapshot<BanchoStateServiceSnapshot> for BanchoStateServiceImpl {
             notify_queue: self
                 .user_sessions_service
                 .notify_queue()
-                .snapshot_messages()
+                .create_snapshot()
                 .await,
             create_time: Utc::now(),
         }

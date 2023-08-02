@@ -301,7 +301,7 @@ impl CreateSnapshot<ChatServiceSnapshot> for ChatServiceImpl {
     async fn create_snapshot(&self) -> ChatServiceSnapshot {
         ChatServiceSnapshot {
             user_sessions: self.user_sessions.create_snapshot().await,
-            notify_queue: self.notify_queue.snapshot_messages().await,
+            notify_queue: self.notify_queue.create_snapshot().await,
             channels: self.channels.snapshot_channels().await,
             create_time: Utc::now(),
         }

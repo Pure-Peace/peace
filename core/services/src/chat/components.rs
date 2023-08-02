@@ -469,7 +469,7 @@ impl ChannelData {
                 .message_queue
                 .read()
                 .await
-                .snapshot_messages()
+                .create_snapshot()
                 .await,
             created_at: ch.created_at,
         }

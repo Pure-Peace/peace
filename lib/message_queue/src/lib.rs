@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+use peace_snapshot::CreateSnapshot;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, HashSet},
@@ -86,8 +88,8 @@ pub struct MessageData<T, K, I> {
 impl<T, K, I> MessageData<T, K, I>
 where
     T: Clone,
-    K: Clone + Eq + Hash,
-    I: MessageId,
+    K: Clone,
+    I: Clone,
 {
     pub async fn from_message(msg_id: &I, message: &Message<T, K>) -> Self {
         Self {
@@ -125,6 +127,19 @@ impl<T, K, I> Deref for MessageQueue<T, K, I> {
 
     fn deref(&self) -> &Self::Target {
         &self.raw
+    }
+}
+
+#[async_trait]
+impl<T, K, I> CreateSnapshot<Vec<MessageData<T, K, I>>>
+    for MessageQueue<T, K, I>
+where
+    T: Clone + Send + Sync,
+    K: Clone + Send + Sync,
+    I: Clone + Send + Sync,
+{
+    async fn create_snapshot(&self) -> Vec<MessageData<T, K, I>> {
+        self.raw.read().await.create_snapshot().await
     }
 }
 
@@ -197,10 +212,6 @@ where
             .await
             .receive_messages(reader, from_msg_id, receive_count)
             .await
-    }
-
-    pub async fn snapshot_messages(&self) -> Vec<MessageData<T, K, I>> {
-        self.read().await.snapshot_messages().await
     }
 }
 
@@ -373,8 +384,17 @@ where
             last_msg_id: last_msg_id.unwrap(),
         })
     }
+}
 
-    pub async fn snapshot_messages(&self) -> Vec<MessageData<T, K, I>> {
+#[async_trait]
+impl<T, K, I> CreateSnapshot<Vec<MessageData<T, K, I>>>
+    for RawMessageQueue<T, K, I>
+where
+    T: Clone + Send + Sync,
+    K: Clone + Send + Sync,
+    I: Clone + Send + Sync,
+{
+    async fn create_snapshot(&self) -> Vec<MessageData<T, K, I>> {
         let mut messages = Vec::with_capacity(self.messages.len());
 
         for (msg_id, msg) in self.messages.iter() {

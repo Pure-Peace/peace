@@ -31,7 +31,7 @@ impl CreateSnapshot<UserSessionsServiceSnapshot> for UserSessionsServiceImpl {
     async fn create_snapshot(&self) -> UserSessionsServiceSnapshot {
         UserSessionsServiceSnapshot {
             user_sessions: self.user_sessions.create_snapshot().await,
-            notify_queue: self.notify_queue.snapshot_messages().await,
+            notify_queue: self.notify_queue.create_snapshot().await,
         }
     }
 }

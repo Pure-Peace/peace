@@ -14,3 +14,6 @@ default = []
 [dependencies]
 tokio = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+async-trait = { workspace = true }
+
+peace_snapshot = { workspace = true }
