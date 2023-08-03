@@ -149,12 +149,12 @@ peace_domain = { path = "./core/domain" }
 peace_repositories = { path = "./core/repositories" }
 
 # services
-bancho_service = { path = "./core/services/bancho" }
-bancho_state_service = { path = "./core/services/bancho_state" }
-gateway_service = { path = "./core/services/gateway" }
-chat_service = { path = "./core/services/chat" }
-geoip_service = { path = "./core/services/geoip" }
-signature_service = { path = "./core/services/signature" }
+core_bancho = { path = "./core/services/bancho" }
+core_bancho_state = { path = "./core/services/bancho_state" }
+core_gateway = { path = "./core/services/gateway" }
+core_chat = { path = "./core/services/chat" }
+core_geoip = { path = "./core/services/geoip" }
+core_signature = { path = "./core/services/signature" }
 
 # libs
 bancho-packets = { path = "./lib/bancho-packets" }

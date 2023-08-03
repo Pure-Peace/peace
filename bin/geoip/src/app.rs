@@ -1,6 +1,6 @@
 use crate::GeoipRpcImpl;
 use clap_serde_derive::ClapSerde;
-use geoip_service::{DynGeoipService, FromGeoDbPath, GeoipServiceImpl};
+use core_geoip::{DynGeoipService, FromGeoDbPath, GeoipServiceImpl};
 use infra_services::IntoService;
 use peace_pb::geoip::{geoip_rpc_server::GeoipRpcServer, GEOIP_DESCRIPTOR_SET};
 use peace_rpc::{RpcApplication, RpcFrameConfig};

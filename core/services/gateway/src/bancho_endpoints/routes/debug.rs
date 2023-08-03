@@ -3,7 +3,7 @@ use axum::{
     routing::*,
     Extension, Router,
 };
-use bancho_state_service::DynBanchoStateService;
+use core_bancho_state::DynBanchoStateService;
 use peace_pb::bancho_state::UserData;
 use serde_json::{Map, Value};
 

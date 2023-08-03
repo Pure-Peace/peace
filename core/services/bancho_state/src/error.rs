@@ -1,6 +1,6 @@
+use core_signature::error::SignatureError;
 use peace_pb::ConvertError;
 use peace_rpc_error::{RpcError, TonicError};
-use signature_service::error::SignatureError;
 use tonic::Status;
 
 #[derive(thiserror::Error, Debug, Serialize, Deserialize)]

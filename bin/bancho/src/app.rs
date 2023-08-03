@@ -1,11 +1,11 @@
 use crate::BanchoRpcImpl;
-use bancho_service::*;
-use bancho_state_service::{
+use clap_serde_derive::ClapSerde;
+use core_bancho::*;
+use core_bancho_state::{
     BanchoStateRpcConfig, BanchoStateServiceRemote, DynBanchoStateService,
 };
-use chat_service::{ChatRpcConfig, ChatServiceRemote, DynChatService};
-use clap_serde_derive::ClapSerde;
-use geoip_service::{
+use core_chat::{ChatRpcConfig, ChatServiceRemote, DynChatService};
+use core_geoip::{
     DynGeoipService, GeoipRpcConfig, GeoipServiceBuilder, GeoipServiceImpl,
     GeoipServiceRemote,
 };

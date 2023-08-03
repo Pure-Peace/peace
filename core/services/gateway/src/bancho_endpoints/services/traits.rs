@@ -4,8 +4,8 @@ use crate::bancho_endpoints::{
 };
 use async_trait::async_trait;
 use axum::response::Response;
-use bancho_state_service::BanchoStateError;
-use chat_service::ChatError;
+use core_bancho_state::BanchoStateError;
+use core_chat::ChatError;
 use peace_domain::bancho::BanchoClientToken;
 use peace_pb::{bancho::LoginSuccess, bancho_state::UserQuery};
 use std::{net::IpAddr, sync::Arc};

@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use axum::response::{IntoResponse, Response};
 use bancho_packets::PacketBuilder;
 use bancho_packets::PacketReader;
-use bancho_service::DynBanchoService;
-use bancho_state_service::{BanchoStateError, DynBanchoStateService};
-use chat_service::{ChatError, DynChatService};
+use core_bancho::DynBanchoService;
+use core_bancho_state::{BanchoStateError, DynBanchoStateService};
+use core_chat::{ChatError, DynChatService};
 use peace_domain::bancho::BanchoClientToken;
 use peace_pb::{
     bancho::*,

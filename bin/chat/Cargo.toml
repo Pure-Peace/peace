@@ -34,6 +34,6 @@ peace_db = { workspace = true }
 peace_repositories = { workspace = true }
 peace_snapshot = { workspace = true }
 
-chat_service = { workspace = true }
+core_chat = { workspace = true }
 
 tools = { workspace = true }

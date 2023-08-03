@@ -33,6 +33,6 @@ peace_runtime = { workspace = true }
 peace_pb = { workspace = true }
 peace_domain = { workspace = true }
 
-signature_service = { workspace = true }
+core_signature = { workspace = true }
 
 tools = { workspace = true }

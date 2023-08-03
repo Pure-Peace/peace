@@ -1,4 +1,4 @@
-use bancho_state_service::DynBanchoStateService;
+use core_bancho_state::DynBanchoStateService;
 use peace_domain::bancho::BanchoClientToken;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_unique_id::Ulid;

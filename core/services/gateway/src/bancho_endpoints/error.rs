@@ -4,8 +4,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use bancho_packets::{server, PacketBuilder};
-use bancho_service::{BanchoServiceError, ProcessBanchoPacketError};
-use bancho_state_service::BanchoStateError;
+use core_bancho::{BanchoServiceError, ProcessBanchoPacketError};
+use core_bancho_state::BanchoStateError;
 use std::string::FromUtf8Error;
 
 #[derive(thiserror::Error, Debug)]

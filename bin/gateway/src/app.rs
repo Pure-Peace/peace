@@ -1,11 +1,11 @@
 use axum::{async_trait, Router};
-use bancho_service::{BanchoRpcConfig, BanchoServiceRemote, DynBanchoService};
-use bancho_state_service::{
+use clap_serde_derive::ClapSerde;
+use core_bancho::{BanchoRpcConfig, BanchoServiceRemote, DynBanchoService};
+use core_bancho_state::{
     BanchoStateRpcConfig, BanchoStateServiceRemote, DynBanchoStateService,
 };
-use chat_service::{ChatRpcConfig, ChatServiceRemote};
-use clap_serde_derive::ClapSerde;
-use gateway_service::{
+use core_chat::{ChatRpcConfig, ChatServiceRemote};
+use core_gateway::{
     bancho_endpoints::{
         routes::{BanchoDebugRouter, BanchoRouter},
         BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,

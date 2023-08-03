@@ -1,4 +1,4 @@
-use geoip_service::DynGeoipService;
+use core_geoip::DynGeoipService;
 use peace_pb::{
     base::ExecSuccess,
     geoip::{GeoipData as RpcGeoipData, *},

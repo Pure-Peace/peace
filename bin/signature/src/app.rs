@@ -1,11 +1,11 @@
 use crate::SignatureRpcImpl;
 use clap_serde_derive::ClapSerde;
+use core_signature::*;
 use peace_pb::signature::{
     signature_rpc_server::SignatureRpcServer, SIGNATURE_DESCRIPTOR_SET,
 };
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use signature_service::*;
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,

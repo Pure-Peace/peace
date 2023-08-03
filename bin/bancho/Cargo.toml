@@ -33,10 +33,10 @@ peace_pb = { workspace = true }
 peace_db = { workspace = true }
 peace_repositories = { workspace = true }
 
-bancho_service = { workspace = true }
-bancho_state_service = { workspace = true }
-chat_service = { workspace = true }
-geoip_service = { workspace = true }
+core_bancho = { workspace = true }
+core_bancho_state = { workspace = true }
+core_chat = { workspace = true }
+core_geoip = { workspace = true }
 
 infra_services = { workspace = true }
 

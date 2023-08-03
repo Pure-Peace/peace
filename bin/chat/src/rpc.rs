@@ -1,4 +1,4 @@
-use chat_service::{ChatError, DynChatService};
+use core_chat::{ChatError, DynChatService};
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery},
     base::ExecSuccess,

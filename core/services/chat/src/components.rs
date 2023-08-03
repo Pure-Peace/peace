@@ -1,4 +1,4 @@
-use crate::{BanchoMessageQueue, BanchoMessageData};
+use crate::{BanchoMessageData, BanchoMessageQueue};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use clap_serde_derive::ClapSerde;

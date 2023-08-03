@@ -1,5 +1,5 @@
 [package]
-name = "bancho_state_service"
+name = "core_bancho_state"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
@@ -35,7 +35,7 @@ peace_pb = { workspace = true }
 peace_domain = { workspace = true }
 peace_cfg = { workspace = true }
 
-signature_service = { workspace = true }
+core_signature = { workspace = true }
 
 infra_users = { workspace = true }
 infra_packets = { workspace = true }

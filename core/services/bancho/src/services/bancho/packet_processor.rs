@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use bancho_packets::{
     BanchoMessage, ClientChangeAction, Packet, PayloadReader,
 };
-use bancho_state_service::BanchoStateService;
-use chat_service::ChatService;
+use core_bancho_state::BanchoStateService;
+use core_chat::ChatService;
 use num_traits::FromPrimitive;
 use peace_domain::bancho::PresenceFilter;
 use peace_pb::{

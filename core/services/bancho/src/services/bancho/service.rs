@@ -3,9 +3,9 @@ use crate::{
     ProcessBanchoPacketError,
 };
 use bancho_packets::{server, Packet, PacketBuilder, PacketId, PacketReader};
-use bancho_state_service::DynBanchoStateService;
-use chat_service::DynChatService;
-use geoip_service::DynGeoipService;
+use core_bancho_state::DynBanchoStateService;
+use core_chat::DynChatService;
+use core_geoip::DynGeoipService;
 use infra_services::{FromRpcClient, IntoService, RpcClient};
 use peace_domain::{bancho::BanchoCountryCode, chat::Platform};
 use peace_pb::{
@@ -65,7 +65,7 @@ impl Login for BanchoServiceImpl {
         client_ip: IpAddr,
         request: LoginRequest,
     ) -> Result<LoginSuccess, BanchoServiceError> {
-        const LOG_TARGET: &str = "bancho_service::login";
+        const LOG_TARGET: &str = "core_bancho::login";
 
         let LoginRequest {
             username,

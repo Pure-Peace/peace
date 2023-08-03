@@ -1,6 +1,6 @@
 use crate::ChatRpcImpl;
-use chat_service::*;
 use clap_serde_derive::ClapSerde;
+use core_chat::*;
 use peace_db::{
     peace::{Peace, PeaceDbConfig},
     DbConfig, DbConnection,

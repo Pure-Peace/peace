@@ -35,12 +35,12 @@ peace_db = { workspace = true }
 peace_repositories = { workspace = true }
 peace_snapshot = { workspace = true }
 
-bancho_service = { workspace = true }
-bancho_state_service = { workspace = true }
-gateway_service = { workspace = true }
-chat_service = { workspace = true }
-geoip_service = { workspace = true }
-signature_service = { workspace = true }
+core_bancho = { workspace = true }
+core_bancho_state = { workspace = true }
+core_gateway = { workspace = true }
+core_chat = { workspace = true }
+core_geoip = { workspace = true }
+core_signature = { workspace = true }
 
 infra_services = { workspace = true }
 

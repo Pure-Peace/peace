@@ -1,5 +1,5 @@
 [package]
-name = "bancho_service"
+name = "core_bancho"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
@@ -36,9 +36,9 @@ peace_domain = { workspace = true }
 peace_repositories = { workspace = true }
 peace_cfg = { workspace = true }
 
-bancho_state_service = { workspace = true }
-chat_service = { workspace = true }
-geoip_service = { workspace = true }
+core_bancho_state = { workspace = true }
+core_chat = { workspace = true }
+core_geoip = { workspace = true }
 
 infra_users = { workspace = true }
 infra_packets = { workspace = true }

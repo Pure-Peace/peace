@@ -1,5 +1,5 @@
 [package]
-name = "geoip_service"
+name = "core_geoip"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
