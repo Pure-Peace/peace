@@ -14,7 +14,7 @@ use std::{
     process,
 };
 
-const DEFAULT_CONFIG_PATH: &str = "config.json";
+const DEFAULT_CONFIG_PATH: &str = "config.yml";
 
 #[derive(Parser)]
 pub struct BaseConfig<T>
@@ -65,7 +65,7 @@ pub struct TlsConfig {
 
 #[derive(Args)]
 pub struct ConfigPath {
-    /// Configuration file path (Support `.yml`, `.json`, `toml`).
+    /// Configuration file path (Support `.yml (.yaml)`, `.json`, `.toml`).
     #[arg(short = 'c', long = "config")]
     pub path: Option<PathBuf>,
 }

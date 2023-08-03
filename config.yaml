@@ -1,0 +1,87 @@
+runtime_cfg:
+  runtime_multi_thread: false
+  runtime_worker_threads: null
+  runtime_thread_name: null
+  runtime_thread_stack_size: null
+  runtime_enable_io: true
+  runtime_enable_time: true
+  runtime_enable_all: true
+  runtime_event_interval: null
+  runtime_global_queue_interval: null
+  runtime_max_blocking_threads: null
+  runtime_thread_keep_alive: null
+frame_cfg:
+  logging:
+    log_level: info
+    log_env_filter: null
+    debug: false
+  api:
+    http_addr: null
+    https_addr: null
+    tls_config:
+      tls: true
+      ssl_cert: ./cert.cer
+      ssl_key: ./key.pem
+    admin_endpoints: true
+    admin_token: null
+    concurrency_limit: 1024
+    req_timeout: 10
+    hostname_routing: false
+    force_https: false
+    tcp_nodelay: false
+    tcp_sleep_on_accept_errors: true
+    tcp_keepalive: null
+    tcp_keepalive_interval: null
+    tcp_keepalive_retries: null
+    swagger_path: /swagger-ui
+    openapi_json: /api-doc/openapi.json
+peace_db:
+  peace_db_url: sqlite://peace.db
+  peace_db_max_connections: null
+  peace_db_min_connections: null
+  peace_db_connect_timeout: null
+  peace_db_acquire_timeout: null
+  peace_db_idle_timeout: null
+  peace_db_max_lifetime: null
+  peace_db_sqlx_logging: false
+  peace_db_sqlx_logging_level: info
+  peace_db_set_schema_search_path: null
+debug_endpoints: false
+bancho_state_background_service_configs:
+  bancho_user_sessions_recycle_deactive_secs: 180
+  bancho_user_sessions_recycle_interval_secs: 180
+  bancho_notify_messages_recycle_interval_secs: 300
+bancho_background_service_configs:
+  password_caches_recycle_deactive_secs: 86400
+  password_caches_recycle_interval_secs: 43200
+chat_background_service_configs:
+  chat_user_sessions_recycle_deactive_secs: 180
+  chat_user_sessions_recycle_interval_secs: 180
+  chat_notify_messages_recycle_interval_secs: 300
+  channel_messages_recycle_interval_secs: 300
+geoip:
+  geoip_uri: http://127.0.0.1:5013
+  geoip_uds: null
+  geoip_tls: false
+  geoip_ssl_cert: null
+  geoip_lazy_connect: false
+geo_db_path: null
+signature_rpc_cfg:
+  signature_uri: http://127.0.0.1:5014
+  signature_uds: null
+  signature_tls: false
+  signature_ssl_cert: null
+  signature_lazy_connect: false
+ed25519_private_key_path: null
+chat_snapshot:
+  chat_snapshot_path: ./.snapshots/chat.snapshot
+  chat_snapshot_type: binary
+  chat_snapshot: true
+  chat_load_snapshot: true
+  chat_snapshot_expired_secs: 300
+bancho_state_snapshot:
+  bancho_state_snapshot_path: ./.snapshots/bancho_state.snapshot
+  bancho_state_snapshot_type: binary
+  bancho_state_snapshot: true
+  bancho_state_load_snapshot: true
+  bancho_state_snapshot_expired_secs: 300
