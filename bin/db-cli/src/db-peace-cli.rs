@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
 use clap4 as clap;
-use dotenvy::dotenv;
-use peace_db::{Database, DbConnection};
-use peace_domain::users::{
+use domain_users::{
     CreateUser, Email, Password, UsernameAscii, UsernameUnicode,
 };
+use dotenvy::dotenv;
+use peace_db::{Database, DbConnection};
 use peace_repositories::users::{UsersRepository, UsersRepositoryImpl};
 
 #[derive(Debug, Parser)]

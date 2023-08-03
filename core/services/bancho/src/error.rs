@@ -1,7 +1,7 @@
 use bancho_packets::PacketId;
 use core_bancho_state::BanchoStateError;
 use core_chat::ChatError;
-use peace_domain::users::PasswordError;
+use domain_users::PasswordError;
 use peace_pb::ConvertError;
 use peace_repositories::GetUserError;
 use peace_rpc_error::{RpcError, TonicError};

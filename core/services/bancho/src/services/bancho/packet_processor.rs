@@ -5,8 +5,8 @@ use bancho_packets::{
 };
 use core_bancho_state::BanchoStateService;
 use core_chat::ChatService;
+use domain_bancho::PresenceFilter;
 use num_traits::FromPrimitive;
-use peace_domain::bancho::PresenceFilter;
 use peace_pb::{
     bancho::*,
     bancho_state::UserQuery,

@@ -1,5 +1,5 @@
 use core_bancho_state::DynBanchoStateService;
-use peace_domain::bancho::BanchoClientToken;
+use domain_bancho::BanchoClientToken;
 use peace_pb::{bancho_state::*, base::ExecSuccess};
 use peace_unique_id::Ulid;
 use std::str::FromStr;

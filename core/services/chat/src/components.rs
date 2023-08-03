@@ -2,11 +2,11 @@ use crate::{BanchoMessageData, BanchoMessageQueue};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use clap_serde_derive::ClapSerde;
+use domain_chat::{ChannelType, Platform};
 use infra_packets::{Packet, PacketsQueue};
 use infra_users::{
     BaseSession, BaseSessionData, CreateSessionDto, UserIndexes, UserStore,
 };
-use peace_domain::chat::{ChannelType, Platform};
 use peace_pb::chat::ChannelQuery;
 use peace_snapshot::{cli_snapshot_config, CreateSnapshot, SnapshotType};
 use peace_unique_id::Ulid;

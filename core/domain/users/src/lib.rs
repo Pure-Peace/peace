@@ -1,10 +1,12 @@
-use super::{EmailError, PasswordError, UsernameError};
 use argon2::Config;
 use once_cell::sync::OnceCell;
 use rand::Rng;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, ops::Deref};
+
+pub mod errors;
+pub use errors::*;
 
 pub type UsernameAscii = Username<Ascii>;
 pub type UsernameUnicode = Username<Unicode>;

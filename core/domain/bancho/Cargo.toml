@@ -1,5 +1,5 @@
 [package]
-name = "peace_domain"
+name = "domain_bancho"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
@@ -14,21 +14,12 @@ authors.workspace = true
 [dependencies]
 tonic = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-async-trait = { workspace = true }
-regex = { workspace = true }
-thiserror = { workspace = true }
-strum = { workspace = true }
-strum_macros = { workspace = true }
 bitmask-enum = { workspace = true }
 enum-primitive-derive = { workspace = true }
 num-traits = { workspace = true }
-
-# password
-rust-argon2 = { workspace = true }
-rand = { workspace = true }
-once_cell = { workspace = true }
-
-tools = { workspace = true }
-peace_unique_id = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true }
 
 peace_pb = { workspace = true }
+peace_unique_id = { workspace = true }

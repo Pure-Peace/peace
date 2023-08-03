@@ -32,9 +32,12 @@ peace_rpc_error = { workspace = true }
 peace_logs = { workspace = true }
 peace_db = { workspace = true }
 peace_pb = { workspace = true }
-peace_domain = { workspace = true }
 peace_repositories = { workspace = true }
 peace_cfg = { workspace = true }
+
+domain_bancho = { workspace = true }
+domain_chat = { workspace = true }
+domain_users = { workspace = true }
 
 core_bancho_state = { workspace = true }
 core_chat = { workspace = true }

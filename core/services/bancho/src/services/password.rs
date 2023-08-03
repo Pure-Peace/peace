@@ -1,7 +1,7 @@
 use crate::{DynPasswordService, GetPasswordCacheStore, PasswordService};
 use async_trait::async_trait;
+use domain_users::{Password, PasswordError};
 use infra_services::IntoService;
-use peace_domain::users::{Password, PasswordError};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use tools::Timestamp;

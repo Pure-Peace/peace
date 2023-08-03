@@ -1,7 +1,6 @@
-use super::traits::*;
 use crate::{
-    BanchoSession, DynBanchoStateBackgroundService, NotifyMessagesCleaner,
-    UserSessionsCleaner,
+    traits::*, BanchoSession, DynBanchoStateBackgroundService,
+    NotifyMessagesCleaner, UserSessionsCleaner,
 };
 use async_trait::async_trait;
 use clap_serde_derive::ClapSerde;

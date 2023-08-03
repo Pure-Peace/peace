@@ -10,7 +10,11 @@ members = [
     "bin/geoip",
     "bin/signature",
     "core/db",
-    "core/domain",
+    "core/domain/bancho",
+    "core/domain/bancho_state",
+    "core/domain/chat",
+    "core/domain/geoip",
+    "core/domain/users",
     "core/pb",
     "core/repositories",
     "core/services/bancho",
@@ -145,8 +149,14 @@ peace_runtime = { path = "./frame/runtime" }
 # core
 peace_pb = { path = "./core/pb" }
 peace_db = { path = "./core/db" }
-peace_domain = { path = "./core/domain" }
 peace_repositories = { path = "./core/repositories" }
+
+# domain
+domain_bancho = { path = "./core/domain/bancho" }
+domain_bancho_state = { path = "./core/domain/bancho_state" }
+domain_chat = { path = "./core/domain/chat" }
+domain_geoip = { path = "./core/domain/geoip" }
+domain_users = { path = "./core/domain/users" }
 
 # services
 core_bancho = { path = "./core/services/bancho" }

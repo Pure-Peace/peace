@@ -2,10 +2,10 @@ use crate::*;
 use async_trait::async_trait;
 use bancho_packets::server;
 use chrono::{DateTime, Utc};
+use domain_chat::{ChannelType, Platform};
 use infra_packets::{Packet, PacketsQueue};
 use infra_services::{FromRpcClient, IntoService, RpcClient, ServiceSnapshot};
 use infra_users::CreateSessionDto;
-use peace_domain::chat::{ChannelType, Platform};
 use peace_message_queue::ReceivedMessages;
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery, UserQuery},

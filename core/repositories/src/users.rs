@@ -1,10 +1,8 @@
 use crate::GetUserError;
+use domain_users::{CreateUser, UsernameAscii, UsernameSafe, UsernameUnicode};
 use peace_db::{
     peace::{entity::users, Peace},
     *,
-};
-use peace_domain::users::{
-    CreateUser, UsernameAscii, UsernameSafe, UsernameUnicode,
 };
 use std::sync::Arc;
 
@@ -196,11 +194,11 @@ impl UsersRepository for UsersRepositoryImpl {
 
 #[cfg(test)]
 mod test {
+    use domain_users::UsernameAscii;
     use peace_db::{
         peace::entity::{user_privileges, users},
         *,
     };
-    use peace_domain::users::UsernameAscii;
 
     use crate::users::{UsersRepository, UsersRepositoryImpl};
 

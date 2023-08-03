@@ -7,7 +7,7 @@ use bancho_packets::PacketReader;
 use core_bancho::DynBanchoService;
 use core_bancho_state::{BanchoStateError, DynBanchoStateService};
 use core_chat::{ChatError, DynChatService};
-use peace_domain::bancho::BanchoClientToken;
+use domain_bancho::BanchoClientToken;
 use peace_pb::{
     bancho::*,
     bancho_state::{

@@ -31,7 +31,8 @@ peace_runtime = { workspace = true }
 
 peace_pb = { workspace = true }
 peace_snapshot = { workspace = true }
-peace_domain = { workspace = true }
+
+domain_bancho = { workspace = true }
 
 core_bancho_state = { workspace = true }
 core_signature = { workspace = true }

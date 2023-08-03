@@ -1,4 +1,4 @@
-use crate::geoip::{City, Continent, Country, Location, Region};
+use domain_geoip::{City, Continent, Country, Location, Region};
 use peace_pb::{
     bancho_state::ConnectionInfo as RpcConnectionInfo,
     geoip::GeoipData as RpcGeoipData,

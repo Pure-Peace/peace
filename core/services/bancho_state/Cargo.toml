@@ -32,8 +32,10 @@ peace_message_queue = { workspace = true }
 peace_rpc_error = { workspace = true }
 peace_logs = { workspace = true }
 peace_pb = { workspace = true }
-peace_domain = { workspace = true }
 peace_cfg = { workspace = true }
+
+domain_bancho = { workspace = true }
+domain_bancho_state = { workspace = true }
 
 core_signature = { workspace = true }
 

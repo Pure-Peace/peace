@@ -1,14 +1,10 @@
-use crate::rpc_config::GeoipRpcConfig;
-use crate::{
-    DynGeoipService, FromGeoDb, FromGeoDbPath, GeoDb, GeoipError, GeoipService,
-    LookupIpAddress, ReloadGeoDb, ReloadableGeoDb,
-};
+use crate::*;
 use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
+use domain_geoip::*;
 use infra_services::{FromRpcClient, IntoService, RpcClient};
 use maxminddb::{geoip2, Reader};
 use peace_api::RpcClientConfig;
-use peace_domain::geoip::*;
 use peace_pb::{
     base::ExecSuccess,
     geoip::{geoip_rpc_client::GeoipRpcClient, GeoDbPath, IpAddress},

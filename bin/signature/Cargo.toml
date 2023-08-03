@@ -20,7 +20,6 @@ serde = { workspace = true, features = ["derive"] }
 clap = { workspace = true, features = ["derive"] }
 clap-serde-derive = { workspace = true }
 
-
 peace_logs = { workspace = true, features = ["grpc", "cli"] }
 peace_rpc = { workspace = true, features = [
     "tls",
@@ -28,10 +27,7 @@ peace_rpc = { workspace = true, features = [
     "reflection",
 ] }
 peace_runtime = { workspace = true }
-
-
 peace_pb = { workspace = true }
-peace_domain = { workspace = true }
 
 core_signature = { workspace = true }
 

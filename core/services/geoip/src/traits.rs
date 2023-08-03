@@ -1,9 +1,9 @@
 use super::GeoipError;
 use arc_swap::ArcSwapOption;
 use async_trait::async_trait;
+use domain_geoip::GeoipData;
 use maxminddb::Reader;
 use memmap2::Mmap;
-use peace_domain::geoip::GeoipData;
 use peace_pb::base::ExecSuccess;
 use std::{net::IpAddr, sync::Arc};
 

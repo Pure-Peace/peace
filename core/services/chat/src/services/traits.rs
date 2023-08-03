@@ -1,7 +1,7 @@
 use crate::*;
+use domain_chat::Platform;
 use infra_packets::Packet;
 use infra_services::ServiceSnapshot;
-use peace_domain::chat::Platform;
 use peace_message_queue::{MessageData, MessageQueue};
 use peace_pb::{
     bancho_state::{BanchoPackets, UserQuery},
