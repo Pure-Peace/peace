@@ -85,7 +85,7 @@ impl Login for BanchoServiceImpl {
         #[cfg(feature = "bancho-mock-test")]
         let user = {
             use chrono::Utc;
-            use peace_domain::users::{UsernameAscii, UsernameUnicode};
+            use domain_users::{UsernameAscii, UsernameUnicode};
             use tools::atomic::{AtomicOperation, U64};
 
             static MOCK_COUNT: U64 = U64::new(10000);
