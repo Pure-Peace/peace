@@ -31,7 +31,11 @@ peace_runtime = { workspace = true }
 
 
 peace_pb = { workspace = true }
-peace_services = { workspace = true }
 peace_domain = { workspace = true }
+
+signature_service = { workspace = true }
+geoip_service = { workspace = true }
+
+infra_services = { workspace = true }
 
 tools = { workspace = true }

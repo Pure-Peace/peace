@@ -30,8 +30,13 @@ peace_rpc = { workspace = true, features = [
 peace_runtime = { workspace = true }
 
 peace_pb = { workspace = true }
-peace_services = { workspace = true }
 peace_snapshot = { workspace = true }
+peace_domain = { workspace = true }
+
+bancho_state_service = { workspace = true }
+signature_service = { workspace = true }
+
+infra_services = { workspace = true }
 
 tools = { workspace = true }
 peace_unique_id = { workspace = true }

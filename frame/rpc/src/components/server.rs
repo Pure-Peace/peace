@@ -252,6 +252,7 @@ pub fn tls_server(
         .unwrap()
 }
 
+#[cfg(feature = "reflection")]
 /// Adds reflection to a `Router` using the provided `Application`
 /// configuration.
 ///

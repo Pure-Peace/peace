@@ -32,6 +32,12 @@ peace_api = { workspace = true, features = ["tls"] }
 peace_runtime = { workspace = true }
 
 peace_pb = { workspace = true }
-peace_services = { workspace = true }
+
+bancho_service = { workspace = true }
+bancho_state_service = { workspace = true }
+gateway_service = { workspace = true }
+chat_service = { workspace = true }
+
+infra_services = { workspace = true }
 
 tools = { workspace = true }

@@ -13,9 +13,15 @@ members = [
     "core/domain",
     "core/pb",
     "core/repositories",
-    "core/services",
+    "core/services/bancho",
+    "core/services/bancho_state",
+    "core/services/gateway",
+    "core/services/chat",
+    "core/services/geoip",
+    "core/services/signature",
     "core/infra/users",
     "core/infra/packets",
+    "core/infra/services",
     "frame/logs",
     "frame/api",
     "frame/rpc",
@@ -140,8 +146,15 @@ peace_runtime = { path = "./frame/runtime" }
 peace_pb = { path = "./core/pb" }
 peace_db = { path = "./core/db" }
 peace_domain = { path = "./core/domain" }
-peace_services = { path = "./core/services" }
 peace_repositories = { path = "./core/repositories" }
+
+# services
+bancho_service = { path = "./core/services/bancho" }
+bancho_state_service = { path = "./core/services/bancho_state" }
+gateway_service = { path = "./core/services/gateway" }
+chat_service = { path = "./core/services/chat" }
+geoip_service = { path = "./core/services/geoip" }
+signature_service = { path = "./core/services/signature" }
 
 # libs
 bancho-packets = { path = "./lib/bancho-packets" }
@@ -154,6 +167,7 @@ peace_unique_id = { path = "./lib/unique_id" }
 # infra
 infra_users = { path = "./core/infra/users" }
 infra_packets = { path = "./core/infra/packets" }
+infra_services = { path = "./core/infra/services" }
 
 [profile.release]
 codegen-units = 1 # Compile crates one after another so the compiler can optimize better

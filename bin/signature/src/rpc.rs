@@ -6,7 +6,7 @@ use peace_pb::{
         SignMessageResponse, VerifyMessageRequest, VerifyMessageResponse,
     },
 };
-use peace_services::signature::DynSignatureService;
+use signature_service::DynSignatureService;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]

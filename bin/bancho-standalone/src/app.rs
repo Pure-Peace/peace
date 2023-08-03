@@ -1,5 +1,11 @@
 use axum::{async_trait, Router};
+use bancho_service::*;
+use bancho_state_service::*;
+use chat_service::*;
 use clap_serde_derive::ClapSerde;
+use gateway_service::bancho_endpoints::{routes::*, *};
+use geoip_service::*;
+use infra_services::IntoService;
 use peace_api::{ApiFrameConfig, WebApplication};
 use peace_db::{
     peace::{Peace, PeaceDbConfig},
@@ -7,16 +13,7 @@ use peace_db::{
 };
 use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::{
-    bancho::*,
-    bancho_state::*,
-    chat::*,
-    gateway::bancho_endpoints::{routes::*, *},
-    geoip::*,
-    rpc_config::*,
-    signature::*,
-    IntoService,
-};
+use signature_service::*;
 use std::{net::SocketAddr, sync::Arc};
 use utoipa::OpenApi;
 

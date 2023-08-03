@@ -12,7 +12,7 @@ authors.workspace = true
 default = []
 
 all = ["async_collections", "tonic_utils", "cache", "crypto"]
-async_collections = ["tokio"]
+async_collections = ["tokio/signal"]
 tonic_utils = ["tonic"]
 cache = ["async-trait", "chrono"]
 crypto = ["ed25519", "ed25519-dalek", "rand"]

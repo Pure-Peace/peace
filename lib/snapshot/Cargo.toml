@@ -12,7 +12,7 @@ authors.workspace = true
 default = []
 
 [dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 async-trait = { workspace = true }

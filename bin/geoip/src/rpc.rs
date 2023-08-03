@@ -1,10 +1,9 @@
-use std::net::IpAddr;
-
+use geoip_service::DynGeoipService;
 use peace_pb::{
     base::ExecSuccess,
     geoip::{GeoipData as RpcGeoipData, *},
 };
-use peace_services::geoip::DynGeoipService;
+use std::net::IpAddr;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]

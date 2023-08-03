@@ -1,18 +1,16 @@
 use crate::BanchoStateRpcImpl;
+use bancho_state_service::*;
 use clap_serde_derive::ClapSerde;
+use infra_services::IntoService;
 use peace_pb::bancho_state::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::{
-    bancho_state::*,
-    rpc_config::SignatureRpcConfig,
-    signature::{
-        DynSignatureService, SignatureServiceBuilder, SignatureServiceImpl,
-        SignatureServiceRemote,
-    },
-    IntoService,
+use signature_service::rpc_config::SignatureRpcConfig;
+use signature_service::{
+    DynSignatureService, SignatureServiceBuilder, SignatureServiceImpl,
+    SignatureServiceRemote,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{

@@ -1,9 +1,11 @@
-use std::str::FromStr;
-
 use bitmask_enum::bitmask;
 use enum_primitive_derive::Primitive;
+use peace_pb::bancho_state::CheckUserTokenRequest;
+use peace_unique_id::Ulid;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use strum_macros::EnumString;
+use tonic::IntoRequest;
 
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Primitive, Hash, Serialize, Deserialize)]
@@ -236,5 +238,77 @@ pub enum BanchoCountryCode {
 impl BanchoCountryCode {
     pub fn get_code(s: &str) -> u8 {
         BanchoCountryCode::from_str(s).map(|c| c as u8).unwrap_or_default()
+    }
+}
+
+#[derive(thiserror::Error, Debug, Serialize, Deserialize)]
+pub enum ParseBanchoClientTokenError {
+    #[error("Invalid token format")]
+    InvalidFormat,
+    #[error("Invalid user id")]
+    InvalidUserId,
+    #[error("Invalid session id")]
+    InvalidSessionId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BanchoClientToken {
+    pub user_id: i32,
+    pub session_id: Ulid,
+    pub signature: String,
+}
+
+impl BanchoClientToken {
+    #[inline]
+    pub fn content(&self) -> String {
+        format!("{}.{}", self.user_id, self.session_id)
+    }
+
+    #[inline]
+    pub fn encode_content(user_id: i32, session_id: &str) -> String {
+        format!("{user_id}.{session_id}")
+    }
+
+    #[inline]
+    pub fn encode(user_id: i32, session_id: &str, signature: &str) -> String {
+        format!("{user_id}.{session_id}.{signature}")
+    }
+}
+
+impl FromStr for BanchoClientToken {
+    type Err = ParseBanchoClientTokenError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let split = s.split('.').collect::<Vec<&str>>();
+        if split.len() != 3 {
+            return Err(ParseBanchoClientTokenError::InvalidFormat);
+        }
+
+        let user_id = split[0]
+            .parse::<i32>()
+            .map_err(|_| ParseBanchoClientTokenError::InvalidUserId)?;
+
+        let session_id = Ulid::from_str(split[1])
+            .map_err(|_| ParseBanchoClientTokenError::InvalidSessionId)?;
+
+        let signature = split[2].to_string();
+
+        Ok(Self { user_id, session_id, signature })
+    }
+}
+
+impl IntoRequest<CheckUserTokenRequest> for BanchoClientToken {
+    fn into_request(self) -> tonic::Request<CheckUserTokenRequest> {
+        tonic::Request::new(CheckUserTokenRequest {
+            user_id: self.user_id,
+            session_id: self.session_id.to_string(),
+            signature: self.signature,
+        })
+    }
+}
+
+impl std::fmt::Display for BanchoClientToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.user_id, self.session_id, self.signature)
     }
 }

@@ -5,10 +5,7 @@ use peace_pb::signature::{
 };
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::signature::{
-    DynSignatureService, SignatureServiceBuilder, SignatureServiceImpl,
-    SignatureServiceRemote,
-};
+use signature_service::*;
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,

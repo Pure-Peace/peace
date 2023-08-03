@@ -1,5 +1,19 @@
 use axum::{async_trait, Router};
+use bancho_service::{BanchoRpcConfig, BanchoServiceRemote, DynBanchoService};
+use bancho_state_service::{
+    BanchoStateRpcConfig, BanchoStateServiceRemote, DynBanchoStateService,
+};
+use chat_service::{ChatRpcConfig, ChatServiceRemote};
 use clap_serde_derive::ClapSerde;
+use gateway_service::{
+    bancho_endpoints::{
+        routes::{BanchoDebugRouter, BanchoRouter},
+        BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
+        DynBanchoHandlerService, DynBanchoRoutingService,
+    },
+    docs::GatewayApiDocs,
+};
+use infra_services::{FromRpcClient, IntoService};
 use peace_api::{ApiFrameConfig, RpcClientConfig, WebApplication};
 use peace_pb::{
     bancho::bancho_rpc_client::BanchoRpcClient,
@@ -7,21 +21,6 @@ use peace_pb::{
     chat::chat_rpc_client::ChatRpcClient,
 };
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::{
-    bancho::{BanchoServiceRemote, DynBanchoService},
-    bancho_state::{BanchoStateServiceRemote, DynBanchoStateService},
-    chat::ChatServiceRemote,
-    gateway::{
-        bancho_endpoints::{
-            routes::{BanchoDebugRouter, BanchoRouter},
-            BanchoHandlerServiceImpl, BanchoRoutingServiceImpl,
-            DynBanchoHandlerService, DynBanchoRoutingService,
-        },
-        docs::GatewayApiDocs,
-    },
-    rpc_config::{BanchoRpcConfig, BanchoStateRpcConfig, ChatRpcConfig},
-    FromRpcClient, IntoService,
-};
 use std::{net::SocketAddr, sync::Arc};
 use tonic::transport::Channel;
 

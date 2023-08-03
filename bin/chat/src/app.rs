@@ -1,4 +1,5 @@
 use crate::ChatRpcImpl;
+use chat_service::*;
 use clap_serde_derive::ClapSerde;
 use peace_db::{
     peace::{Peace, PeaceDbConfig},
@@ -8,11 +9,6 @@ use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;
-use peace_services::chat::{
-    ChatBackgroundServiceConfigs, ChatBackgroundServiceImpl,
-    ChatServiceSnapshotLoader, CliChatBackgroundServiceConfigs,
-    CliChatServiceSnapshotConfigs, DynChatBackgroundService, DynChatService,
-};
 use std::{net::SocketAddr, sync::Arc};
 use tonic::{
     async_trait,

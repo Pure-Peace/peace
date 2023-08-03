@@ -1,0 +1,48 @@
+[package]
+name = "gateway_service"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+default = []
+
+bancho-mock-test = []
+
+
+[dependencies]
+tokio = { workspace = true, features = ["parking_lot"] }
+tonic = { workspace = true }
+axum = { workspace = true }
+hyper = { workspace = true }
+utoipa = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde_json = { workspace = true }
+derive_deref = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+
+bancho-packets = { workspace = true }
+tools = { workspace = true, features = ["all"] }
+
+peace_api = { workspace = true }
+peace_logs = { workspace = true }
+peace_pb = { workspace = true }
+peace_domain = { workspace = true }
+peace_cfg = { workspace = true }
+
+bancho_state_service = { workspace = true }
+bancho_service = { workspace = true }
+chat_service = { workspace = true }
+
+infra_users = { workspace = true }
+infra_packets = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros"] }

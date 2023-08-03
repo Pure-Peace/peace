@@ -67,7 +67,7 @@ where
     where
         S: serde::Serializer,
     {
-        self.load_full().serialize(serializer)
+        self.load().as_ref().serialize(serializer)
     }
 }
 
@@ -79,7 +79,7 @@ where
     where
         S: serde::Serializer,
     {
-        self.load_full().serialize(serializer)
+        self.load().as_deref().serialize(serializer)
     }
 }
 

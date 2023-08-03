@@ -1,0 +1,37 @@
+[package]
+name = "signature_service"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+tokio = { workspace = true, features = ["parking_lot"] }
+tonic = { workspace = true }
+async-trait = { workspace = true }
+derive_deref = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde_json = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+ed25519 = { workspace = true }
+hex = { workspace = true }
+
+tools = { workspace = true, features = ["crypto"] }
+
+peace_rpc_error = { workspace = true }
+peace_logs = { workspace = true }
+peace_cfg = { workspace = true }
+peace_pb = { workspace = true }
+
+infra_services = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros"] }

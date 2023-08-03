@@ -1,9 +1,9 @@
+use chat_service::{ChatError, DynChatService};
 use peace_pb::{
     bancho_state::{BanchoPackets, RawUserQuery},
     base::ExecSuccess,
     chat::*,
 };
-use peace_services::chat::{ChatError, DynChatService};
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
