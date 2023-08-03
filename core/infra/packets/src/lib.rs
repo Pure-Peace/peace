@@ -1,6 +1,6 @@
 use derive_deref::{Deref, DerefMut};
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc, vec::IntoIter};
+use std::{ops::Deref, sync::Arc, vec::IntoIter};
 
 pub mod queue;
 pub use queue::*;
@@ -11,6 +11,14 @@ pub struct PacketData(pub Vec<u8>);
 impl PacketData {
     pub fn into_inner(self) -> Vec<u8> {
         self.0
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
+    pub fn to_iter(&self) -> std::vec::IntoIter<u8> {
+        self.to_vec().into_iter()
     }
 }
 
@@ -60,6 +68,14 @@ impl PacketDataPtr {
     pub fn into_inner(self) -> Arc<Vec<u8>> {
         self.0
     }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
+    pub fn to_iter(&self) -> std::vec::IntoIter<u8> {
+        self.to_vec().into_iter()
+    }
 }
 
 impl From<&[u8]> for PacketDataPtr {
@@ -105,6 +121,23 @@ impl IntoIterator for PacketDataPtr {
 pub enum Packet {
     Data(PacketData),
     Ptr(PacketDataPtr),
+}
+
+impl AsRef<[u8]> for Packet {
+    fn as_ref(&self) -> &[u8] {
+        self.deref()
+    }
+}
+
+impl std::ops::Deref for Packet {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Packet::Data(data) => data.0.deref(),
+            Packet::Ptr(ptr) => ptr.0.deref(),
+        }
+    }
 }
 
 impl Default for Packet {
@@ -156,5 +189,19 @@ impl Packet {
 
     pub fn new_ptr(data: Vec<u8>) -> Self {
         Self::Ptr(data.into())
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        match self {
+            Packet::Data(data) => data.to_vec(),
+            Packet::Ptr(ptr) => ptr.to_vec(),
+        }
+    }
+
+    pub fn to_iter(&self) -> std::vec::IntoIter<u8> {
+        match self {
+            Packet::Data(data) => data.to_iter(),
+            Packet::Ptr(ptr) => ptr.to_iter(),
+        }
     }
 }
