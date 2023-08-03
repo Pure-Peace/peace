@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{env, path::PathBuf};
 
 const OUT_DIR: &str = "generated";
@@ -11,10 +13,19 @@ macro_rules! define_attr {
 define_attr!(SERDE, serde::Deserialize, serde::Serialize);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "base")]
     build("base", None);
+
+    #[cfg(feature = "logs")]
     build("frame.logs", None);
+
+    #[cfg(feature = "chat")]
     build("services.chat", None);
+
+    #[cfg(feature = "bancho")]
     build("services.bancho", None);
+
+    #[cfg(feature = "bancho_state")]
     build(
         "services.bancho_state",
         Some(&[(
@@ -22,6 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &["UserData", "ConnectionInfo", "GetAllSessionsResponse"],
         )]),
     );
+
+    #[cfg(feature = "geoip")]
     build(
         "services.geoip",
         Some(&[(
@@ -37,6 +50,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
         )]),
     );
+
+    #[cfg(feature = "signature")]
     build("services.signature", None);
 
     Ok(())

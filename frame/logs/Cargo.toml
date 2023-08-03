@@ -13,7 +13,7 @@ authors.workspace = true
 default = []
 openapi_axum = ["api_axum", "utoipa/axum_extras", "utoipa-swagger-ui/axum"]
 api_axum = ["axum", "serde_json", "tower-http"]
-grpc = ["tonic", "peace_pb"]
+grpc = ["tonic", "peace_pb/base", "peace_pb/logs"]
 cli = ["clap", "clap-serde-derive"]
 
 
@@ -35,7 +35,6 @@ tower-http = { workspace = true, features = ["auth"], optional = true }
 # cli optional
 clap = { workspace = true, features = ["derive"], optional = true }
 clap-serde-derive = { workspace = true, optional = true }
-
 
 # openapi optional
 utoipa = { workspace = true, features = ["axum_extras"] }

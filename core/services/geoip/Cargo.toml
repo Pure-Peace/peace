@@ -26,7 +26,7 @@ serde = { workspace = true, features = ["derive"] }
 
 peace_rpc_error = { workspace = true }
 peace_logs = { workspace = true }
-peace_pb = { workspace = true }
+peace_pb = { workspace = true, features = ["base", "geoip"] }
 peace_api = { workspace = true }
 
 domain_geoip = { workspace = true }

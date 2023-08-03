@@ -132,6 +132,7 @@ impl CreateSnapshot<BanchoExtendData> for BanchoExtend {
 
 impl BanchoExtend {
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         initial_packets: Option<Vec<u8>>,
         client_version: String,

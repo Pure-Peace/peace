@@ -8,6 +8,18 @@ repository.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[features]
+all = ["base", "logs", "bancho", "bancho_state", "chat", "geoip", "signature"]
+
+default = []
+
+base = []
+logs = []
+bancho = []
+bancho_state = []
+chat = ["bancho_state"]
+geoip = []
+signature = []
 
 [dependencies]
 tonic = { workspace = true }
@@ -16,12 +28,10 @@ prost-types = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
-
 bitmask-enum = { workspace = true }
 thiserror = { workspace = true }
 
 peace_unique_id = { workspace = true }
-
 peace_rpc_error = { workspace = true }
 
 

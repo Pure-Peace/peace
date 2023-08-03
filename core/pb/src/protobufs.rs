@@ -1,6 +1,7 @@
 #![allow(warnings)]
 #![allow(clippy)]
 #![allow(unknown_lints)]
+#![allow(non_snake_case)]
 
 macro_rules! proto {
     ($package: tt) => {
@@ -14,12 +15,14 @@ macro_rules! descriptor {
     };
 }
 
+#[cfg(feature = "base")]
 pub mod base {
     proto!("peace.base");
 
     pub const LOGS_DESCRIPTOR_SET: &[u8] = descriptor!("peace.base.descriptor");
 }
 
+#[cfg(feature = "logs")]
 pub mod logs {
     proto!("peace.frame.logs");
 
@@ -27,6 +30,7 @@ pub mod logs {
         descriptor!("peace.frame.logs.descriptor");
 }
 
+#[cfg(feature = "bancho")]
 pub mod bancho {
     proto!("peace.services.bancho");
 
@@ -34,6 +38,7 @@ pub mod bancho {
         descriptor!("peace.services.bancho.descriptor");
 }
 
+#[cfg(feature = "bancho_state")]
 pub mod bancho_state {
     proto!("peace.services.bancho_state");
 
@@ -140,6 +145,7 @@ pub mod bancho_state {
     }
 }
 
+#[cfg(feature = "chat")]
 pub mod chat {
     proto!("peace.services.chat");
 
@@ -294,6 +300,7 @@ pub mod chat {
     }
 }
 
+#[cfg(feature = "geoip")]
 pub mod geoip {
     proto!("peace.services.geoip");
 
@@ -301,6 +308,7 @@ pub mod geoip {
         descriptor!("peace.services.geoip.descriptor");
 }
 
+#[cfg(feature = "signature")]
 pub mod signature {
     proto!("peace.services.signature");
 
