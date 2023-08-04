@@ -1,6 +1,6 @@
 use bitmask_enum::bitmask;
 use enum_primitive_derive::Primitive;
-use peace_pb::bancho_state::CheckUserTokenRequest;
+use pb_bancho_state::CheckUserTokenRequest;
 use peace_unique_id::Ulid;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;

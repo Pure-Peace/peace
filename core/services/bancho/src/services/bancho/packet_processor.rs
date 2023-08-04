@@ -7,13 +7,11 @@ use core_bancho_state::BanchoStateService;
 use core_chat::ChatService;
 use domain_bancho::PresenceFilter;
 use num_traits::FromPrimitive;
-use peace_pb::{
-    bancho::*,
-    bancho_state::UserQuery,
-    chat::{
-        ChannelQuery, ChatMessageTarget, JoinChannelRequest,
-        LeaveChannelRequest, SendMessageRequest,
-    },
+use pb_bancho::*;
+use pb_bancho_state::UserQuery;
+use pb_chat::{
+    ChannelQuery, ChatMessageTarget, JoinChannelRequest, LeaveChannelRequest,
+    SendMessageRequest,
 };
 use std::fmt::Debug;
 

@@ -1,4 +1,4 @@
-use peace_pb::geoip::{
+use pb_geoip::{
     City as RpcCity, Continent as RpcContinent, Country as RpcCountry,
     GeoipData as RpcGeoipData, Location as RpcLocation, Region as RpcRegion,
 };

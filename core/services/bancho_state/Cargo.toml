@@ -34,6 +34,9 @@ peace_logs = { workspace = true }
 peace_pb = { workspace = true }
 peace_cfg = { workspace = true }
 
+pb_base = { workspace = true }
+pb_bancho_state = { workspace = true }
+
 domain_bancho = { workspace = true }
 domain_bancho_state = { workspace = true }
 

@@ -14,12 +14,10 @@ use core_gateway::{
     docs::GatewayApiDocs,
 };
 use infra_services::{FromRpcClient, IntoService};
+use pb_bancho::bancho_rpc_client::BanchoRpcClient;
+use pb_bancho_state::bancho_state_rpc_client::BanchoStateRpcClient;
+use pb_chat::chat_rpc_client::ChatRpcClient;
 use peace_api::{ApiFrameConfig, RpcClientConfig, WebApplication};
-use peace_pb::{
-    bancho::bancho_rpc_client::BanchoRpcClient,
-    bancho_state::bancho_state_rpc_client::BanchoStateRpcClient,
-    chat::chat_rpc_client::ChatRpcClient,
-};
 use peace_runtime::cfg::RuntimeConfig;
 use std::{net::SocketAddr, sync::Arc};
 use tonic::transport::Channel;

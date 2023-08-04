@@ -29,7 +29,9 @@ tools = { workspace = true, features = ["crypto"] }
 peace_rpc_error = { workspace = true }
 peace_logs = { workspace = true }
 peace_cfg = { workspace = true }
-peace_pb = { workspace = true, features = ["base", "signature"] }
+
+pb_base = { workspace = true }
+pb_signature = { workspace = true }
 
 infra_services = { workspace = true }
 

@@ -10,14 +10,12 @@ use core_geoip::{
     GeoipServiceRemote,
 };
 use infra_services::{FromRpcClient, IntoService};
+use pb_bancho::{bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET};
+use pb_bancho_state::bancho_state_rpc_client::BanchoStateRpcClient;
+use pb_chat::chat_rpc_client::ChatRpcClient;
 use peace_db::{
     peace::{Peace, PeaceDbConfig},
     DbConfig, DbConnection,
-};
-use peace_pb::{
-    bancho::{bancho_rpc_server::BanchoRpcServer, BANCHO_DESCRIPTOR_SET},
-    bancho_state::bancho_state_rpc_client::BanchoStateRpcClient,
-    chat::chat_rpc_client::ChatRpcClient,
 };
 use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
 use peace_rpc::{

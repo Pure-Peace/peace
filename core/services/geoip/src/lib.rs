@@ -18,8 +18,8 @@ pub use traits::*;
 
 pub mod rpc_config {
     use clap_serde_derive::ClapSerde;
+    use pb_geoip as geoip;
     use peace_api::define_rpc_client_config;
-    use peace_pb::geoip;
 
     define_rpc_client_config!(
         service_name: geoip,

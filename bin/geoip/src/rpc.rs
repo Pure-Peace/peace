@@ -1,8 +1,6 @@
 use core_geoip::DynGeoipService;
-use peace_pb::{
-    base::ExecSuccess,
-    geoip::{GeoipData as RpcGeoipData, *},
-};
+use pb_base::ExecSuccess;
+use pb_geoip::{GeoipData as RpcGeoipData, *};
 use std::net::IpAddr;
 use tonic::{Request, Response, Status};
 

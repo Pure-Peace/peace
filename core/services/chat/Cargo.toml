@@ -31,9 +31,13 @@ peace_message_queue = { workspace = true }
 peace_rpc_error = { workspace = true }
 peace_logs = { workspace = true }
 peace_db = { workspace = true }
-peace_pb = { workspace = true, features = ["base", "chat", "bancho_state"] }
+peace_pb = { workspace = true }
 peace_repositories = { workspace = true }
 peace_cfg = { workspace = true }
+
+pb_bancho_state = { workspace = true }
+pb_base = { workspace = true }
+pb_chat = { workspace = true }
 
 domain_chat = { workspace = true }
 

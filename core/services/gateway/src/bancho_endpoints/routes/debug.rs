@@ -4,7 +4,7 @@ use axum::{
     Extension, Router,
 };
 use core_bancho_state::DynBanchoStateService;
-use peace_pb::bancho_state::UserData;
+use pb_bancho_state::UserData;
 use serde_json::{Map, Value};
 
 pub struct BanchoDebugRouter;

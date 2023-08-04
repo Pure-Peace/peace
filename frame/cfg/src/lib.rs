@@ -376,7 +376,7 @@ pub mod macros {
     /// use peace_api::{ApiFrameConfig, Application, RpcClientConfig};
     ///
     /// // Should import RPC service namespace first
-    /// use peace_pb::services::bancho;
+    /// use pb_services::bancho;
     ///
     /// // It will generate a config struct named [`BanchoRpcConfig`]
     /// peace_api::define_rpc_client_config!(

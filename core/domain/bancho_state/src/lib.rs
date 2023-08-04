@@ -1,8 +1,6 @@
 use domain_geoip::{City, Continent, Country, Location, Region};
-use peace_pb::{
-    bancho_state::ConnectionInfo as RpcConnectionInfo,
-    geoip::GeoipData as RpcGeoipData,
-};
+use pb_bancho_state::ConnectionInfo as RpcConnectionInfo;
+use pb_geoip::GeoipData as RpcGeoipData;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]

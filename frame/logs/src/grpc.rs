@@ -1,8 +1,6 @@
 use crate::ToLevelFilter;
-use peace_pb::{
-    base::{BoolValue, EmptyRequest, ExecSuccess, StringValue},
-    logs::{logs_rpc_server::LogsRpc, SetLevelRequest},
-};
+use pb_base::{BoolValue, EmptyRequest, ExecSuccess, StringValue};
+use pb_logs::{logs_rpc_server::LogsRpc, SetLevelRequest};
 use tonic::{Request, Response, Status};
 
 #[derive(Debug, Default)]
@@ -64,10 +62,8 @@ impl LogsRpc for LogsRpcService {
 
 #[cfg(test)]
 mod test {
-    use peace_pb::{
-        base::BoolValue,
-        logs::{logs_rpc_server::LogsRpc, LogLevel, SetLevelRequest},
-    };
+    use pb_base::BoolValue;
+    use pb_logs::{logs_rpc_server::LogsRpc, LogLevel, SetLevelRequest};
 
     use crate::grpc::LogsRpcService;
 

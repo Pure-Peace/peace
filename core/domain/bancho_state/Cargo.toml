@@ -15,4 +15,6 @@ authors.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
 domain_geoip = { workspace = true }
-peace_pb = { workspace = true }
+
+pb_bancho_state = { workspace = true }
+pb_geoip = { workspace = true }

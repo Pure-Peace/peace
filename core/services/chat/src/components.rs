@@ -7,7 +7,7 @@ use infra_packets::{Packet, PacketsQueue};
 use infra_users::{
     BaseSession, BaseSessionData, CreateSessionDto, UserIndexes, UserStore,
 };
-use peace_pb::chat::ChannelQuery;
+use pb_chat::ChannelQuery;
 use peace_snapshot::{cli_snapshot_config, CreateSnapshot, SnapshotType};
 use peace_unique_id::Ulid;
 use std::{

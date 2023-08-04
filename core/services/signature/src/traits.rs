@@ -1,6 +1,6 @@
 use super::error::SignatureError;
 use async_trait::async_trait;
-use peace_pb::base::ExecSuccess;
+use pb_base::ExecSuccess;
 use std::{borrow::Cow, sync::Arc};
 
 pub type DynSignatureService = Arc<dyn SignatureService + Send + Sync>;

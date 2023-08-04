@@ -1,11 +1,9 @@
 use core_signature::DynSignatureService;
-use peace_pb::{
-    base::ExecSuccess,
-    signature::{
-        signature_rpc_server, GetPublicKeyRequest, GetPublicKeyResponse,
-        ReloadFromPemFileRequest, ReloadFromPemRequest, SignMessageRequest,
-        SignMessageResponse, VerifyMessageRequest, VerifyMessageResponse,
-    },
+use pb_base::ExecSuccess;
+use pb_signature::{
+    signature_rpc_server, GetPublicKeyRequest, GetPublicKeyResponse,
+    ReloadFromPemFileRequest, ReloadFromPemRequest, SignMessageRequest,
+    SignMessageResponse, VerifyMessageRequest, VerifyMessageResponse,
 };
 use tonic::{Request, Response, Status};
 

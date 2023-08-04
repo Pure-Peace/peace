@@ -1,6 +1,7 @@
 use core_bancho_state::DynBanchoStateService;
 use domain_bancho::BanchoClientToken;
-use peace_pb::{bancho_state::*, base::ExecSuccess};
+use pb_bancho_state::*;
+use pb_base::ExecSuccess;
 use peace_unique_id::Ulid;
 use std::str::FromStr;
 use tonic::{Request, Response, Status};

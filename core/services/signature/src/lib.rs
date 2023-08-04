@@ -17,8 +17,8 @@ pub use traits::*;
 
 pub mod rpc_config {
     use clap_serde_derive::ClapSerde;
+    use pb_signature as signature;
     use peace_cfg::macro_define_rpc_client_config;
-    use peace_pb::signature;
 
     macro_define_rpc_client_config!(
         service_name: signature,

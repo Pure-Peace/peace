@@ -7,16 +7,14 @@ use async_trait::async_trait;
 use derive_deref::Deref;
 use ed25519::{self, Signature};
 use infra_services::{FromRpcClient, IntoService, RpcClient};
-use peace_cfg::RpcClientConfig;
-use peace_pb::{
-    base::ExecSuccess,
-    signature::{
-        signature_rpc_client::SignatureRpcClient, GetPublicKeyRequest,
-        GetPublicKeyResponse, ReloadFromPemFileRequest, ReloadFromPemRequest,
-        SignMessageRequest, SignMessageResponse, VerifyMessageRequest,
-        VerifyMessageResponse,
-    },
+use pb_base::ExecSuccess;
+use pb_signature::{
+    signature_rpc_client::SignatureRpcClient, GetPublicKeyRequest,
+    GetPublicKeyResponse, ReloadFromPemFileRequest, ReloadFromPemRequest,
+    SignMessageRequest, SignMessageResponse, VerifyMessageRequest,
+    VerifyMessageResponse,
 };
+use peace_cfg::RpcClientConfig;
 use std::{borrow::Cow, sync::Arc};
 use tonic::transport::Channel;
 use tools::crypto::SignerManager;

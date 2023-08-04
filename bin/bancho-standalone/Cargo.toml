@@ -30,7 +30,6 @@ peace_logs = { workspace = true, features = ["cli"] }
 peace_api = { workspace = true, features = ["tls"] }
 peace_runtime = { workspace = true }
 
-peace_pb = { workspace = true }
 peace_db = { workspace = true }
 peace_repositories = { workspace = true }
 peace_snapshot = { workspace = true }

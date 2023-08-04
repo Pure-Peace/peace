@@ -4,11 +4,9 @@ use async_trait::async_trait;
 use domain_geoip::*;
 use infra_services::{FromRpcClient, IntoService, RpcClient};
 use maxminddb::{geoip2, Reader};
+use pb_base::ExecSuccess;
+use pb_geoip::{geoip_rpc_client::GeoipRpcClient, GeoDbPath, IpAddress};
 use peace_api::RpcClientConfig;
-use peace_pb::{
-    base::ExecSuccess,
-    geoip::{geoip_rpc_client::GeoipRpcClient, GeoDbPath, IpAddress},
-};
 use std::{net::IpAddr, path::Path, sync::Arc};
 use tonic::transport::Channel;
 

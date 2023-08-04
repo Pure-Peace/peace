@@ -6,11 +6,8 @@ use core_geoip::DynGeoipService;
 use domain_bancho::BanchoCountryCode;
 use domain_chat::Platform;
 use infra_services::{FromRpcClient, IntoService, RpcClient};
-use peace_pb::{
-    bancho::{bancho_rpc_client::BanchoRpcClient, *},
-    bancho_state::*,
-    chat,
-};
+use pb_bancho::{bancho_rpc_client::BanchoRpcClient, *};
+use pb_bancho_state::*;
 use peace_repositories::users::DynUsersRepository;
 use std::{net::IpAddr, sync::Arc, time::Instant};
 use tonic::{async_trait, transport::Channel};
@@ -172,7 +169,7 @@ impl Login for BanchoServiceImpl {
 
         if let Err(err) = self
             .chat_service
-            .login(chat::LoginRequest {
+            .login(pb_chat::LoginRequest {
                 user_id: user.id,
                 username: user.name.to_owned(),
                 username_unicode: user.name_unicode,

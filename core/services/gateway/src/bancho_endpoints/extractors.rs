@@ -8,7 +8,7 @@ use axum::{
 };
 use derive_deref::Deref;
 use hyper::header::USER_AGENT;
-use peace_pb::bancho::LoginRequest;
+use pb_bancho::LoginRequest;
 
 pub static OSU_USER_AGENT: HeaderName = HeaderName::from_static("osu!");
 pub static OSU_VERSION: HeaderName = HeaderName::from_static("osu-version");

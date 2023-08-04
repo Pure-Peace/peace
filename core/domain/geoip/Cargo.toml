@@ -14,4 +14,4 @@ authors.workspace = true
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 
-peace_pb = { workspace = true, features = ["geoip"] }
+pb_geoip = { workspace = true }

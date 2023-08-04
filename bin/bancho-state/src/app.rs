@@ -7,7 +7,7 @@ use core_signature::{
     SignatureServiceRemote,
 };
 use infra_services::IntoService;
-use peace_pb::bancho_state::{
+use pb_bancho_state::{
     bancho_state_rpc_server::BanchoStateRpcServer, BANCHO_STATE_DESCRIPTOR_SET,
 };
 use peace_rpc::{RpcApplication, RpcFrameConfig};

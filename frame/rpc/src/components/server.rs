@@ -12,7 +12,7 @@ use tonic::{
 use tools::async_collections::{shutdown_signal, SignalHandle};
 
 #[cfg(feature = "admin_endpoints")]
-use peace_pb::logs::logs_rpc_server::LogsRpcServer;
+use pb_logs::logs_rpc_server::LogsRpcServer;
 
 pub const DEFAULT_BINDING_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
@@ -271,9 +271,8 @@ pub fn add_reflection(svr: Router, app: &impl RpcApplication) -> Router {
     // If admin endpoints are enabled, register the logs descriptor set
     #[cfg(feature = "admin_endpoints")]
     if app.frame_cfg().rpc_admin_endpoints {
-        reflection = reflection.register_encoded_file_descriptor_set(
-            peace_pb::logs::LOGS_DESCRIPTOR_SET,
-        );
+        reflection = reflection
+            .register_encoded_file_descriptor_set(pb_logs::LOGS_DESCRIPTOR_SET);
     };
 
     // Register the encoded file descriptor sets for each service in the

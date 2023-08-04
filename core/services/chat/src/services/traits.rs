@@ -2,12 +2,10 @@ use crate::*;
 use domain_chat::Platform;
 use infra_packets::Packet;
 use infra_services::ServiceSnapshot;
+use pb_bancho_state::{BanchoPackets, UserQuery};
+use pb_base::ExecSuccess;
+use pb_chat::*;
 use peace_message_queue::{MessageData, MessageQueue};
-use peace_pb::{
-    bancho_state::{BanchoPackets, UserQuery},
-    base::ExecSuccess,
-    chat::*,
-};
 use peace_snapshot::{CreateSnapshot, SaveSnapshotTo};
 use peace_unique_id::Ulid;
 use std::sync::Arc;

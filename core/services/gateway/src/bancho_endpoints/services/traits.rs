@@ -7,7 +7,8 @@ use axum::response::Response;
 use core_bancho_state::BanchoStateError;
 use core_chat::ChatError;
 use domain_bancho::BanchoClientToken;
-use peace_pb::{bancho::LoginSuccess, bancho_state::UserQuery};
+use pb_bancho::LoginSuccess;
+use pb_bancho_state::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 
 pub type DynBanchoRoutingService = Arc<dyn BanchoRoutingService + Send + Sync>;

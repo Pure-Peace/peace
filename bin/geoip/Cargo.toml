@@ -27,7 +27,9 @@ peace_rpc = { workspace = true, features = [
     "reflection",
 ] }
 peace_runtime = { workspace = true }
-peace_pb = { workspace = true }
+
+pb_base = { workspace = true }
+pb_geoip = { workspace = true }
 
 core_signature = { workspace = true }
 core_geoip = { workspace = true }

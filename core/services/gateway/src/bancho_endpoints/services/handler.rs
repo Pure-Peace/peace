@@ -8,11 +8,9 @@ use core_bancho::DynBanchoService;
 use core_bancho_state::{BanchoStateError, DynBanchoStateService};
 use core_chat::{ChatError, DynChatService};
 use domain_bancho::BanchoClientToken;
-use peace_pb::{
-    bancho::*,
-    bancho_state::{
-        CheckUserTokenResponse, DequeueBanchoPacketsRequest, UserQuery,
-    },
+use pb_bancho::*;
+use pb_bancho_state::{
+    CheckUserTokenResponse, DequeueBanchoPacketsRequest, UserQuery,
 };
 use std::{net::IpAddr, str::FromStr, sync::Arc};
 use tools::lazy_init;

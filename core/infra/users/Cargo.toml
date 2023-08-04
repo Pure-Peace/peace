@@ -20,5 +20,6 @@ serde = { workspace = true, features = ["derive"] }
 tools = { workspace = true }
 peace_unique_id = { workspace = true }
 
-peace_pb = { workspace = true, features = ["bancho_state"]}
+pb_bancho_state = { workspace = true }
+
 peace_snapshot = { workspace = true }

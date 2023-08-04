@@ -18,8 +18,8 @@ pub use services::*;
 
 pub mod rpc_config {
     use clap_serde_derive::ClapSerde;
+    use pb_bancho_state as bancho_state;
     use peace_cfg::macro_define_rpc_client_config;
-    use peace_pb::bancho_state;
 
     macro_define_rpc_client_config!(
         service_name: bancho_state,

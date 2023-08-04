@@ -1,6 +1,6 @@
 use crate::{BaseSession, UserKey};
 use async_trait::async_trait;
-use peace_pb::bancho_state::UserQuery;
+use pb_bancho_state::UserQuery;
 use peace_snapshot::CreateSnapshot;
 use peace_unique_id::Ulid;
 use std::{

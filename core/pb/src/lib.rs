@@ -1,11 +1,6 @@
-pub mod protobufs;
-pub use protobufs::*;
-
 use peace_rpc_error::RpcError;
 use peace_unique_id::raw::DecodingError;
 use serde::{Deserialize, Serialize};
-
-pub const OUT_DIR: &str = "generated";
 
 #[derive(thiserror::Error, Debug, Serialize, Deserialize, RpcError)]
 pub enum ConvertError {

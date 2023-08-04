@@ -1,11 +1,11 @@
 use crate::ChatRpcImpl;
 use clap_serde_derive::ClapSerde;
 use core_chat::*;
+use pb_chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_db::{
     peace::{Peace, PeaceDbConfig},
     DbConfig, DbConnection,
 };
-use peace_pb::chat::{chat_rpc_server::ChatRpcServer, CHAT_DESCRIPTOR_SET};
 use peace_repositories::users::{DynUsersRepository, UsersRepositoryImpl};
 use peace_rpc::{RpcApplication, RpcFrameConfig};
 use peace_runtime::cfg::RuntimeConfig;

@@ -1,6 +1,7 @@
 use bancho_packets::{Packet, PacketId};
 use core_bancho::DynBanchoService;
-use peace_pb::{bancho::*, bancho_state::RawUserQuery};
+use pb_bancho::*;
+use pb_bancho_state::RawUserQuery;
 use peace_rpc::extensions::ClientIp;
 use tonic::{Request, Response, Status};
 

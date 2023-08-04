@@ -6,7 +6,6 @@ extern crate peace_logs;
 extern crate peace_api;
 
 pub mod app;
-
 pub use app::*;
 
 use peace_snapshot::SnapshotConfig;

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    # bin
     "bin/bancho",
     "bin/bancho-state",
     "bin/db-cli",
@@ -9,14 +10,26 @@ members = [
     "bin/chat",
     "bin/geoip",
     "bin/signature",
+    # db
     "core/db",
+    # domain
     "core/domain/bancho",
     "core/domain/bancho_state",
     "core/domain/chat",
     "core/domain/geoip",
     "core/domain/users",
+    # pb
     "core/pb",
+    "core/pb/modules/base",
+    "core/pb/modules/logs",
+    "core/pb/modules/bancho",
+    "core/pb/modules/bancho_state",
+    "core/pb/modules/chat",
+    "core/pb/modules/geoip",
+    "core/pb/modules/signature",
+    # repo
     "core/repositories",
+    # services
     "core/services/bancho",
     "core/services/bancho_state",
     "core/services/gateway",
@@ -26,6 +39,7 @@ members = [
     "core/infra/users",
     "core/infra/packets",
     "core/infra/services",
+    # frameworks
     "frame/logs",
     "frame/api",
     "frame/rpc",
@@ -34,6 +48,7 @@ members = [
     "frame/cfg",
     "frame/cfg/derive",
     "frame/runtime",
+    # libs
     "lib/tools",
     "lib/tools/derive",
     "lib/bancho-packets",
@@ -150,6 +165,15 @@ peace_runtime = { path = "./frame/runtime" }
 peace_pb = { path = "./core/pb" }
 peace_db = { path = "./core/db" }
 peace_repositories = { path = "./core/repositories" }
+
+# pb
+pb_base = { path = "./core/pb/modules/base" }
+pb_logs = { path = "./core/pb/modules/logs" }
+pb_bancho = { path = "./core/pb/modules/bancho" }
+pb_bancho_state = { path = "./core/pb/modules/bancho_state" }
+pb_chat = { path = "./core/pb/modules/chat" }
+pb_geoip = { path = "./core/pb/modules/geoip" }
+pb_signature = { path = "./core/pb/modules/signature" }
 
 # domain
 domain_bancho = { path = "./core/domain/bancho" }

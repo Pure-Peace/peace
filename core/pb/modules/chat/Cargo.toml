@@ -1,0 +1,21 @@
+[package]
+name = "pb_chat"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+
+[dependencies]
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+
+peace_unique_id = { workspace = true }
+peace_pb = { workspace = true }
+
+pb_base = { workspace = true }
+pb_bancho_state = { workspace = true }

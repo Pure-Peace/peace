@@ -21,5 +21,6 @@ strum = { workspace = true }
 strum_macros = { workspace = true }
 thiserror = { workspace = true }
 
-peace_pb = { workspace = true }
+pb_bancho_state = { workspace = true }
+
 peace_unique_id = { workspace = true }

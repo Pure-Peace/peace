@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain_geoip::GeoipData;
 use maxminddb::Reader;
 use memmap2::Mmap;
-use peace_pb::base::ExecSuccess;
+use pb_base::ExecSuccess;
 use std::{net::IpAddr, sync::Arc};
 
 pub type DynGeoipService = Arc<dyn GeoipService + Send + Sync>;

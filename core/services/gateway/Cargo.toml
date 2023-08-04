@@ -30,8 +30,10 @@ tools = { workspace = true, features = ["all"] }
 
 peace_api = { workspace = true }
 peace_logs = { workspace = true }
-peace_pb = { workspace = true, features = ["bancho", "bancho_state"] }
 peace_cfg = { workspace = true }
+
+pb_bancho = { workspace = true }
+pb_bancho_state = { workspace = true }
 
 domain_bancho = { workspace = true }
 

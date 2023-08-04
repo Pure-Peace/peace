@@ -16,7 +16,6 @@ serde = { workspace = true, features = ["derive"] }
 
 peace_logs = { workspace = true }
 peace_db = { workspace = true }
-peace_pb = { workspace = true }
 
 domain_users = { workspace = true }
 

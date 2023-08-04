@@ -1,7 +1,7 @@
 use crate::SignatureRpcImpl;
 use clap_serde_derive::ClapSerde;
 use core_signature::*;
-use peace_pb::signature::{
+use pb_signature::{
     signature_rpc_server::SignatureRpcServer, SIGNATURE_DESCRIPTOR_SET,
 };
 use peace_rpc::{RpcApplication, RpcFrameConfig};

@@ -1,7 +1,8 @@
 use crate::*;
 use bancho_packets::Packet;
 use domain_users::PasswordError;
-use peace_pb::{bancho::*, bancho_state::UserQuery};
+use pb_bancho::*;
+use pb_bancho_state::UserQuery;
 use std::{net::IpAddr, sync::Arc};
 use tonic::async_trait;
 use tools::async_collections::{
