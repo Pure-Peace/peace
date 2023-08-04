@@ -15,7 +15,6 @@ pub mod server;
 pub use bancho_packets_derive::*;
 
 use enum_primitive_derive::Primitive;
-use num_traits::FromPrimitive;
 use std::{
     borrow::Cow,
     convert::TryInto,
@@ -49,6 +48,23 @@ use serde::{Deserialize, Serialize};
 pub struct Packet<'a> {
     pub id: PacketId,
     pub payload: Option<&'a [u8]>,
+}
+
+impl<'a> Packet<'a> {
+    pub fn new(id: PacketId) -> Self {
+        Self { id, payload: None }
+    }
+
+    pub fn with_payload(id: PacketId, payload: Option<&'a [u8]>) -> Self {
+        Self { id, payload }
+    }
+
+    pub fn with_raw_id_and_payload(
+        raw_id: u8,
+        payload: Option<&'a [u8]>,
+    ) -> Self {
+        Self { id: PacketId::new(raw_id), payload }
+    }
 }
 
 impl<'a> std::fmt::Display for Packet<'a> {
@@ -98,7 +114,17 @@ impl From<LoginFailedReason> for LoginResult {
 
 #[rustfmt::skip]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash
+)]
 #[repr(i32)]
 /// The bancho client will handle these failure reasons when the user login fails.
 pub enum LoginFailedReason {
@@ -115,7 +141,18 @@ pub enum LoginFailedReason {
 
 #[rustfmt::skip]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Primitive)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Primitive
+)]
 #[repr(u8)]
 /// Known packet ids for bancho clients.
 pub enum PacketId {
@@ -227,12 +264,19 @@ pub enum PacketId {
     BANCHO_SWITCH_TOURNAMENT_SERVER       = 107,
     OSU_TOURNAMENT_JOIN_MATCH_CHANNEL     = 108,
     OSU_TOURNAMENT_LEAVE_MATCH_CHANNEL    = 109,
+    #[default]
     OSU_UNKNOWN_PACKET                    = 255,
 }
 
 impl std::fmt::Display for PacketId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:?}", self))
+    }
+}
+
+impl PacketId {
+    pub fn new(value: u8) -> Self {
+        Self::try_from(value).unwrap_or_default()
     }
 }
 
@@ -501,8 +545,7 @@ impl<'a> PacketReader<'a> {
     pub fn parse_header(header: &[u8]) -> Option<PacketHeader> {
         let packet_id = *header.first()?;
         Some(PacketHeader {
-            id: PacketId::from_u8(packet_id)
-                .unwrap_or(PacketId::OSU_UNKNOWN_PACKET),
+            id: PacketId::new(packet_id),
             payload_length: u32::from_le_bytes(
                 header[3..BANCHO_PACKET_HEADER_LENGTH].try_into().ok()?,
             ),

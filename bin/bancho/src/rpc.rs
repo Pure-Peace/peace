@@ -1,4 +1,4 @@
-use bancho_packets::{Packet, PacketId};
+use bancho_packets::Packet;
 use core_bancho::DynBanchoService;
 use pb_bancho::*;
 use pb_bancho_state::RawUserQuery;
@@ -37,11 +37,10 @@ impl bancho_rpc_server::BanchoRpc for BanchoRpcImpl {
         let ProcessBanchoPacketRequest { user_id, packet_id, payload } =
             request.into_inner();
 
-        let packet = Packet {
-            id: PacketId::try_from(packet_id)
-                .map_err(|_| Status::internal("invalid packet id"))?,
-            payload: payload.as_deref(),
-        };
+        let packet = Packet::with_raw_id_and_payload(
+            packet_id as u8,
+            payload.as_deref(),
+        );
 
         let res =
             self.bancho_service.process_bancho_packet(user_id, packet).await?;
