@@ -35,7 +35,6 @@ pub struct ChatServiceImpl {
     pub user_sessions: Arc<UserSessions>,
     pub notify_queue: Arc<BanchoMessageQueue>,
     pub channels: Arc<Channels>,
-    pub channels_info: Arc<RwLock<HashMap<u64, Packet>>>,
     pub users_repository: DynUsersRepository,
 }
 
@@ -46,7 +45,6 @@ impl ChatServiceImpl {
             user_sessions: UserSessions::default().into(),
             notify_queue: Arc::new(BanchoMessageQueue::default()),
             channels: Channels::default().into(),
-            channels_info: Default::default(),
             users_repository,
         }
     }
@@ -70,8 +68,6 @@ impl ChatServiceImpl {
         let mut channel_indexes =
             ChannelIndexes::with_capacity(snapshot.channels.len());
 
-        let mut channels_info = HashMap::new();
-
         for ch in snapshot.channels {
             let user_count = U32::new(ch.users.len() as u32);
             let users = Arc::new(RwLock::new(HashMap::from_iter(
@@ -90,6 +86,7 @@ impl ChatServiceImpl {
                 min_msg_index: ch.min_msg_index.into(),
                 message_queue: Arc::new(ch.message_queue.into()),
                 created_at: ch.created_at,
+                updated_at: ch.updated_at.into(),
             });
 
             // upgrade user's JoinedChannel to real channel's weak ptr
@@ -111,26 +108,15 @@ impl ChatServiceImpl {
                 }
             }
 
-            // Publish channel info update
-            channels_info
-                .insert(channel.id, Packet::Ptr(channel.info_packets().into()));
-
             channel_indexes.add_channel(channel);
         }
 
         let channels = Arc::new(Channels::from_indexes(channel_indexes));
-        let channels_info = Arc::new(RwLock::new(channels_info));
 
         let user_sessions =
             Arc::new(UserSessions::from_indexes(session_indexes));
 
-        Self {
-            user_sessions,
-            notify_queue,
-            channels,
-            channels_info,
-            users_repository,
-        }
+        Self { user_sessions, notify_queue, channels, users_repository }
     }
 
     #[inline]
@@ -437,11 +423,8 @@ impl ChatService for ChatServiceImpl {
                     // remove user from channel
                     Channel::remove(&session, &channel).await;
 
-                    // update channel info
-                    self.channels_info.write().await.insert(
-                        channel.id,
-                        Packet::Ptr(channel.info_packets().into()),
-                    );
+                    // update channel
+                    channel.updated_at.set(Utc::now().into());
                 }
             }
 
@@ -596,11 +579,8 @@ impl ChatService for ChatServiceImpl {
         // add user into channel
         Channel::join(&session, &channel).await;
 
-        // update channel info
-        self.channels_info
-            .write()
-            .await
-            .insert(channel.id, Packet::Ptr(channel.info_packets().into()));
+        // update channel
+        channel.updated_at.set(Utc::now().into());
 
         Ok(ExecSuccess::default())
     }
@@ -631,11 +611,8 @@ impl ChatService for ChatServiceImpl {
         // remove user from channel
         Channel::remove(&session, &channel).await;
 
-        // update channel info
-        self.channels_info
-            .write()
-            .await
-            .insert(channel.id, Packet::Ptr(channel.info_packets().into()));
+        // update channel
+        channel.updated_at.set(Utc::now().into());
 
         Ok(ExecSuccess::default())
     }
@@ -736,16 +713,35 @@ impl ChatService for ChatServiceImpl {
             }
         }
 
-        // receive latest channels info
-        let channels_info = {
-            self.channels_info
+        // TODO: real accessable check
+        let accessable_channels = {
+            self.channels
                 .read()
                 .await
                 .values()
-                .flat_map(|info| info.iter().copied())
-                .collect::<Vec<u8>>()
+                .cloned()
+                .collect::<Vec<Arc<Channel>>>()
         };
-        data.extend(channels_info);
+
+        // receive latest channels info
+        let mut receive_channel_updates =
+            bancho_ext.receive_channel_updates.lock().await;
+
+        for ch in accessable_channels {
+            if let Some(date) = receive_channel_updates.get(&ch.id) {
+                // prevent multiple reception
+                if date == ch.updated_at.load().as_ref() {
+                    continue;
+                }
+            }
+
+            // send channel info
+            data.extend(ch.info_packets());
+
+            // update receive
+            receive_channel_updates
+                .insert(ch.id, ch.updated_at.load().as_ref().clone());
+        }
 
         // receive msg from session queue
         data.extend(bancho_ext.packets_queue.dequeue_all_packets(None).await);

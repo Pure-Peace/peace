@@ -15,7 +15,7 @@ use std::{
     ops::{Deref, DerefMut},
     sync::{Arc, Weak},
 };
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tools::atomic::{
     Atomic, AtomicOperation, AtomicOption, AtomicValue, Usize, U32,
 };
@@ -115,6 +115,7 @@ pub struct JoinedChannelData {
 pub struct BanchoChatExt {
     pub packets_queue: PacketsQueue,
     pub notify_index: Atomic<Ulid>,
+    pub receive_channel_updates: Mutex<HashMap<u64, DateTime<Utc>>>,
 }
 
 impl From<BanchoChatExtData> for BanchoChatExt {
@@ -122,6 +123,7 @@ impl From<BanchoChatExtData> for BanchoChatExt {
         Self {
             packets_queue: PacketsQueue::from(data.packets_queue),
             notify_index: data.notify_index.into(),
+            receive_channel_updates: HashMap::new().into(),
         }
     }
 }
@@ -299,6 +301,7 @@ pub struct Channel {
     pub min_msg_index: AtomicOption<Ulid>,
     pub message_queue: Arc<BanchoMessageQueue>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: Atomic<DateTime<Utc>>,
 }
 
 impl Channel {
@@ -328,6 +331,7 @@ impl Channel {
             min_msg_index: None.into(),
             message_queue: Arc::new(BanchoMessageQueue::default()),
             created_at: Utc::now(),
+            updated_at: Utc::now().into(),
         }
     }
 
@@ -450,6 +454,7 @@ pub struct ChannelData {
     pub min_msg_index: Option<Ulid>,
     pub message_queue: Vec<BanchoMessageData>,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl ChannelData {
@@ -472,6 +477,7 @@ impl ChannelData {
                 .create_snapshot()
                 .await,
             created_at: ch.created_at,
+            updated_at: ch.updated_at.load().as_ref().clone(),
         }
     }
 }
