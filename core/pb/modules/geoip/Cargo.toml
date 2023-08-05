@@ -15,3 +15,5 @@ prost-types = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 pb_base = { workspace = true }
+
+peace_pb = { workspace = true }

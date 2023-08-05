@@ -19,4 +19,4 @@ peace_rpc_error = { workspace = true }
 
 
 [build-dependencies]
-tonic-build = { workspace = true }
+peace_proto_build = { workspace = true }

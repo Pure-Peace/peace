@@ -56,6 +56,7 @@ members = [
     "lib/snapshot",
     "lib/message_queue",
     "lib/unique_id",
+    "lib/proto_build",
 ]
 
 [workspace.package]
@@ -197,6 +198,7 @@ tools = { path = "./lib/tools" }
 peace_snapshot = { path = "./lib/snapshot" }
 peace_message_queue = { path = "./lib/message_queue" }
 peace_unique_id = { path = "./lib/unique_id" }
+peace_proto_build = { path = "./lib/proto_build" }
 
 # infra
 infra_users = { path = "./core/infra/users" }

@@ -13,3 +13,5 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+
+peace_pb = { workspace = true }
