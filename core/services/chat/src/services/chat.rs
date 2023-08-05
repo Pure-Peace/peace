@@ -724,24 +724,26 @@ impl ChatService for ChatServiceImpl {
         };
 
         // receive latest channels info
-        let mut receive_channel_updates =
-            bancho_ext.receive_channel_updates.lock().await;
+        let () = {
+            let mut receive_channel_updates =
+                bancho_ext.receive_channel_updates.lock().await;
 
-        for ch in accessable_channels {
-            if let Some(date) = receive_channel_updates.get(&ch.id) {
-                // prevent multiple reception
-                if date == ch.updated_at.load().as_ref() {
-                    continue;
+            for ch in accessable_channels {
+                if let Some(date) = receive_channel_updates.get(&ch.id) {
+                    // prevent multiple reception
+                    if date == ch.updated_at.load().as_ref() {
+                        continue;
+                    }
                 }
+
+                // send channel info
+                data.extend(ch.info_packets());
+
+                // update receive
+                receive_channel_updates
+                    .insert(ch.id, ch.updated_at.load().as_ref().clone());
             }
-
-            // send channel info
-            data.extend(ch.info_packets());
-
-            // update receive
-            receive_channel_updates
-                .insert(ch.id, ch.updated_at.load().as_ref().clone());
-        }
+        };
 
         // receive msg from session queue
         data.extend(bancho_ext.packets_queue.dequeue_all_packets(None).await);
