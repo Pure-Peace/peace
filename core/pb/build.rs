@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use peace_proto_build::{preset_addr::SERDE, ProtoBuilder};
+use peace_proto_build::{preset_attr::SERDE, ProtoBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let builder = ProtoBuilder::new("proto", "peace", "generated");

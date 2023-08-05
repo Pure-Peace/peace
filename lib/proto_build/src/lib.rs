@@ -75,6 +75,6 @@ macro_rules! define_attr {
     };
 }
 
-pub mod preset_addr {
+pub mod preset_attr {
     define_attr!(SERDE, serde::Deserialize, serde::Serialize);
 }
