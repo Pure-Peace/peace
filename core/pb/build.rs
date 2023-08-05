@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn build_all(builder: ProtoBuilder) -> Result<(), Box<dyn std::error::Error>> {
     builder.build("base")?;
     builder.build("frame.logs")?;
-    builder.build("servifces.chat")?;
+    builder.build("services.chat")?;
     builder.build("services.bancho")?;
     builder.build_with_attrs(
         "services.bancho_state",
