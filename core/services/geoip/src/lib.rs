@@ -19,9 +19,9 @@ pub use traits::*;
 pub mod rpc_config {
     use clap_serde_derive::ClapSerde;
     use pb_geoip as geoip;
-    use peace_api::define_rpc_client_config;
+    use peace_cfg::macro_define_rpc_client_config;
 
-    define_rpc_client_config!(
+    macro_define_rpc_client_config!(
         service_name: geoip,
         config_name: GeoipRpcConfig,
         default_uri: "http://127.0.0.1:5013"

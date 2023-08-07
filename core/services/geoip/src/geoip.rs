@@ -6,7 +6,7 @@ use infra_services::{FromRpcClient, IntoService, RpcClient};
 use maxminddb::{geoip2, Reader};
 use pb_base::ExecSuccess;
 use pb_geoip::{geoip_rpc_client::GeoipRpcClient, GeoDbPath, IpAddress};
-use peace_api::RpcClientConfig;
+use peace_cfg::RpcClientConfig;
 use std::{net::IpAddr, path::Path, sync::Arc};
 use tonic::transport::Channel;
 
@@ -52,7 +52,7 @@ impl GeoipServiceBuilder {
         Geoip service init failed, will not be able to use related features!
 
         Please make sure you have downloaded the \"GeoLite2 City\" database
-        and put it in the specified location (\"GeoLite2-City.mmdb\").
+        and put it in the specified location (\"{DEFAULT_GEO_DB_PATH}\").
         If you have not downloaded it,
         please register and log in to your account here:
         \"https://www.maxmind.com/en/accounts/470006/geoip/downloads\"
