@@ -10,6 +10,7 @@ members = [
     "bin/chat",
     "bin/geoip",
     "bin/signature",
+    "bin/events",
     # db
     "core/db",
     # domain
@@ -27,6 +28,7 @@ members = [
     "core/pb/modules/chat",
     "core/pb/modules/geoip",
     "core/pb/modules/signature",
+    "core/pb/modules/events",
     # repo
     "core/repositories",
     # services
@@ -36,6 +38,8 @@ members = [
     "core/services/chat",
     "core/services/geoip",
     "core/services/signature",
+    "core/services/events",
+    # infra
     "core/infra/users",
     "core/infra/packets",
     "core/infra/services",
@@ -175,6 +179,7 @@ pb_bancho_state = { path = "./core/pb/modules/bancho_state" }
 pb_chat = { path = "./core/pb/modules/chat" }
 pb_geoip = { path = "./core/pb/modules/geoip" }
 pb_signature = { path = "./core/pb/modules/signature" }
+pb_events = { path = "./core/pb/modules/events" }
 
 # domain
 domain_bancho = { path = "./core/domain/bancho" }
@@ -190,6 +195,7 @@ core_gateway = { path = "./core/services/gateway" }
 core_chat = { path = "./core/services/chat" }
 core_geoip = { path = "./core/services/geoip" }
 core_signature = { path = "./core/services/signature" }
+core_events = { path = "./core/services/events" }
 
 # libs
 bancho-packets = { path = "./lib/bancho-packets" }

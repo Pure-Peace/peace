@@ -42,6 +42,7 @@ fn build_all(builder: ProtoBuilder) -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     builder.build("services.signature")?;
+    builder.build("services.events")?;
 
     Ok(())
 }

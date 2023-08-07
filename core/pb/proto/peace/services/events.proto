@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package peace.services.events;
+
+service EventsRPC {
+    rpc ConnectServer (ConnectRequest) returns (stream Event);
+}
+
+message Event {
+    string topic = 1;
+    string content = 2;
+}
+
+message ConnectRequest {}

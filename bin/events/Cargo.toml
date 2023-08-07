@@ -1,0 +1,37 @@
+[package]
+name = "events-server"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+
+
+[[bin]]
+name = "events-server"
+path = "src/main.rs"
+
+
+[dependencies]
+tonic = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive"] }
+clap-serde-derive = { workspace = true }
+
+peace_logs = { workspace = true, features = ["grpc", "cli"] }
+peace_rpc = { workspace = true, features = [
+    "tls",
+    "admin_endpoints",
+    "reflection",
+] }
+peace_runtime = { workspace = true }
+
+pb_base = { workspace = true }
+pb_events = { workspace = true }
+
+core_events = { workspace = true }
+infra_services = { workspace = true }
+
+tools = { workspace = true }
