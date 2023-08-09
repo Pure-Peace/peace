@@ -12,6 +12,7 @@ default = []
 
 [dependencies]
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 tonic = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
@@ -28,6 +29,7 @@ peace_cfg = { workspace = true }
 pb_base = { workspace = true }
 pb_events = { workspace = true }
 
+tools = { workspace = true }
 
 infra_services = { workspace = true }
 

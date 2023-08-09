@@ -80,7 +80,9 @@ prost-types = "0.11"
 
 # async programming
 tokio = "1"
+tokio-stream = "0.1"
 hyper = "0.14"
+h2 = "0.3"
 futures = "0.3"
 futures-util = "0.3"
 async-trait = "0.1"

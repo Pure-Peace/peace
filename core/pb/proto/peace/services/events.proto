@@ -1,9 +1,13 @@
 syntax = "proto3";
 
+import "peace/base.proto";
+
 package peace.services.events;
 
 service EventsRPC {
-    rpc ConnectServer (ConnectRequest) returns (stream Event);
+    rpc CreateSubscription (CreateSubscriptionRequest) returns (stream Event);
+    rpc RemoveSubscription (RemoveSubscriptionRequest) returns (peace.base.ExecSuccess);
+    rpc Publish (PublishRequest) returns (peace.base.ExecSuccess);
 }
 
 message Event {
@@ -11,4 +15,15 @@ message Event {
     string content = 2;
 }
 
-message ConnectRequest {}
+message CreateSubscriptionRequest {
+    string subscriber_key = 1;
+}
+
+message RemoveSubscriptionRequest {
+    string subscriber_key = 1;
+}
+
+message PublishRequest {
+    string subscriber_key = 1;
+    Event event = 2;
+}

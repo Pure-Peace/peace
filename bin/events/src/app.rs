@@ -20,9 +20,6 @@ pub struct EventsConfig {
 
     #[command(flatten)]
     pub frame_cfg: RpcFrameConfig,
-
-    #[arg(long, short = 'P')]
-    pub ed25519_private_key_path: Option<String>,
 }
 
 #[derive(Clone)]

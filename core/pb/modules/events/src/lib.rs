@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
+#![allow(unused_imports)]
 
 mod peace {
     use pb_base as base;
