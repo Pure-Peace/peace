@@ -76,7 +76,7 @@ impl ProtoBuilder {
     }
 
     pub fn configure(&self) -> Result<tonic_build::Builder, std::io::Error> {
-        Ok(tonic_build::configure().out_dir(self.out_dir()?))
+        Ok(tonic_build::configure().out_dir(self.out_dir()?).protoc_arg("--experimental_allow_proto3_optional"))
     }
 
     pub fn configure_with_attrs(
